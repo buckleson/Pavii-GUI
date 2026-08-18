@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2025 AionUi (aionui.com)
+ * Copyright 2025 Pavii.Ai (aionui.com)
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -144,7 +144,7 @@ childProcess.execSync = function mockedExecSync(command) {
     expect(queryScript).toContain("'installer-self-lock'");
     expect(queryScript).toContain('outerInstallerPid');
     expect(queryScript).toContain('currentOutDir');
-    expect(queryScript).toContain("name = 'AionUi installer'");
+    expect(queryScript).toContain("name = 'Pavii.Ai installer'");
   });
 
   it('continues with the bundled uninstaller when installed-uninstaller repair remains locked', () => {
@@ -268,7 +268,7 @@ childProcess.execSync = function mockedExecSync(command) {
       args: ['auto', '--mac', '--x64'],
       expectedArch: 'x64',
     },
-  ])('prepares bundled AionCore for $expectedArch with args $args', ({ args, expectedArch }) => {
+  ])('prepares bundled Pavii Engine for $expectedArch with args $args', ({ args, expectedArch }) => {
     const tempDir = mkdtempSync(join(tmpdir(), 'aionui-build-test-'));
     const hookPath = join(tempDir, 'hook.cjs');
     const callsPath = join(tempDir, 'prepare-calls.json');
@@ -362,9 +362,9 @@ childProcess.execSync = function mockedExecSync(command) {
 
       if (args.includes('--win')) {
         const installUtil = readFileSync(resolveAppBuilderInstallUtil(), 'utf8');
-        expect(installUtil).toContain('AionUi-bundled-uninstaller override source');
-        expect(installUtil).toContain('$PLUGINSDIR\\AionUi-fixed-uninstaller.exe');
-        expect(installUtil.match(/AionUi-bundled-uninstaller override source/g)).toHaveLength(1);
+        expect(installUtil).toContain('Pavii.Ai-bundled-uninstaller override source');
+        expect(installUtil).toContain('$PLUGINSDIR\\Pavii.Ai-fixed-uninstaller.exe');
+        expect(installUtil.match(/Pavii.Ai-bundled-uninstaller override source/g)).toHaveLength(1);
       }
 
       const calls = JSON.parse(readFileSync(callsPath, 'utf8')) as Array<{ arch?: string } | null>;

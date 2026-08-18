@@ -342,7 +342,10 @@ export function buildTreeData(cache: FactCache, expanded: ReadonlySet<PeKey>, ro
         const isDir = entry.kind === 'dir';
         const node: TreeNode = {
           key: peKey(peId, childRel),
-          title: entry.name,
+          // Display-only rebrand of the engine's `.aionrs` metadata dir; the
+          // node key keeps the real name, so file ops still target the actual
+          // on-disk path (which old conversations retain).
+          title: isDir && dirRel === '' && entry.name === '.aionrs' ? '.pavii' : entry.name,
           isLeaf: !isDir,
         };
         if (entry.excluded) node.excluded = true;

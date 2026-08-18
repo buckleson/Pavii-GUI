@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pavii-webui",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "webui"],
+      "port": 25809
+    },
+    {
+      "name": "pavii-site",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", ".workspaces/fluffy-lamp", "dev", "--port", "4321"],
+      "port": 4321
+    }
+  ]
+}

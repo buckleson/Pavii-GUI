@@ -220,20 +220,20 @@ const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ edito
     const optionMap = new Map<string, { value: string; label: string; isAuto?: boolean; disabled?: boolean }>();
 
     pendingSkills.forEach((skill) => {
-      optionMap.set(skill.name, { value: skill.name, label: skill.name });
+      optionMap.set(skill.name, { value: skill.name, label: skill.display_name ?? skill.name });
     });
 
     availableSkills.forEach((skill) => {
       optionMap.set(skill.name, {
         value: skill.name,
-        label: skill.name,
+        label: skill.display_name ?? skill.name,
       });
     });
 
     builtinAutoSkills.forEach((skill) => {
       optionMap.set(skill.name, {
         value: skill.name,
-        label: skill.name,
+        label: skill.display_name ?? skill.name,
         isAuto: true,
       });
     });

@@ -4,13 +4,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Spin, Typography } from '@arco-design/web-react';
-import React from 'react';
+import { Typography } from '@arco-design/web-react';
+import brandLogo from '@renderer/assets/logos/brand/app.png';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { dismissSplash } from '@renderer/utils/ui/splash';
 
 /**
  * Full-screen, benign "backend is still starting" view. Shown while the backend
  * process is alive but not yet ready (reason `backend_startup_pending_slow`).
+ *
+ * Visually continues the index.html launch splash (same mark + ring classes,
+ * defined globally in index.html) so a slow engine start reads as a longer
+ * splash rather than a different screen; the inline splash is dismissed on
+ * mount since this view takes over.
  *
  * This is intentionally NOT an error modal: it carries no report / download /
  * restart buttons and no reinstall / antivirus / missing-resource copy — the
@@ -23,12 +30,18 @@ import { useTranslation } from 'react-i18next';
 const BackendStartingView: React.FC = () => {
   const { t } = useTranslation();
 
+  useEffect(() => {
+    dismissSplash();
+  }, []);
+
   return (
     <div
-      className='min-h-screen bg-bg-1 flex flex-col items-center justify-center gap-16px'
+      className='min-h-screen bg-base flex flex-col items-center justify-center gap-18px'
       data-testid='backend-starting-view'
     >
-      <Spin size={28} />
+      <div className='pavii-splash-mark'>
+        <img src={brandLogo} alt='' />
+      </div>
       <div className='text-center px-24px max-w-480px'>
         <Typography.Title heading={5} className='mb-8px text-t-1'>
           {t('common.backendStartup.pendingSlow.title')}

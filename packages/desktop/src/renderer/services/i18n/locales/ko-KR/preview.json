@@ -65,16 +65,16 @@
     "conversionFailed": "변환 실패"
   },
   "office": {
-    "installLinkText": "officecli 설치 안내 열기",
+    "installLinkText": "Pavii CLI 설치 안내 열기",
     "errors": {
-      "officecliNotFound": "officecli가 설치되어 있지 않습니다.",
-      "installFailed": "officecli 자동 설치에 실패했습니다. 백엔드 로그를 확인한 뒤 다시 시도하세요.",
+      "officecliNotFound": "Pavii CLI가 설치되어 있지 않습니다.",
+      "installFailed": "Pavii CLI 자동 설치에 실패했습니다. 백엔드 로그를 확인한 뒤 다시 시도하세요.",
       "portTimeout": "미리보기 서비스가 시작되었지만 제시간에 준비되지 않았습니다. 다시 시도하세요.",
       "startFailed": "Office 미리보기 서비스 시작에 실패했습니다.",
       "outsideSandbox": "이 파일은 현재 프로젝트 샌드박스 범위 밖에 있습니다."
     },
     "serverInstall": {
-      "hint": "AionUi가 서버에서 실행 중입니다. 미리보기 구성 요소는 해당 서버에 설치해야 합니다. 서버에서 다음 명령을 실행한 후 다시 시도하세요:",
+      "hint": "Pavii.Ai가 서버에서 실행 중입니다. 미리보기 구성 요소는 해당 서버에 설치해야 합니다. 서버에서 다음 명령을 실행한 후 다시 시도하세요:",
       "icuNote": "설치 후에도 시작되지 않으면 서버에 ICU 라이브러리를 설치하세요(Debian/Ubuntu: apt-get install -y libicu-dev)."
     }
   },
@@ -85,9 +85,9 @@
     "loadFailed": "Word 문서를 불러오지 못했습니다",
     "watch": {
       "loading": "Word 문서 로딩 중...",
-      "installing": "officecli 설치 중...",
+      "installing": "Pavii CLI 설치 중...",
       "startFailed": "Word 미리보기 시작 실패",
-      "installHint": "officecli가 필요합니다. 자동으로 설치됩니다."
+      "installHint": "Pavii CLI가 필요합니다. 자동으로 설치됩니다."
     }
   },
   "excel": {
@@ -102,9 +102,9 @@
     "emptySheetHint": "시트에 데이터나 이미지가 포함되어 있는지 확인하세요",
     "watch": {
       "loading": "Excel 파일 로딩 중...",
-      "installing": "officecli 설치 중...",
+      "installing": "Pavii CLI 설치 중...",
       "startFailed": "Excel 미리보기 시작 실패",
-      "installHint": "officecli가 필요합니다. 자동으로 설치됩니다."
+      "installHint": "Pavii CLI가 필요합니다. 자동으로 설치됩니다."
     }
   },
   "pdf": {
@@ -133,7 +133,7 @@
     "loading": "PPT 미리보기 시작 중...",
     "installing": "미리보기 구성 요소 설치 중...",
     "startFailed": "PPT 미리보기 시작 실패",
-    "installHint": "공식 iOfficeAI/OfficeCLI releases 페이지에서 OfficeCLI를 설치하세요"
+    "installHint": "공식 Pavii CLI releases 페이지에서 Pavii CLI를 설치하세요"
   },
   "browser": {
     "newTab": "새 탭",

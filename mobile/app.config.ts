@@ -5,20 +5,20 @@ import VERSION from './versions/version.json';
 export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...config,
-    name: 'AionUi Mobile',
-    slug: 'aionui-mobile',
+    name: 'Pavii.Ai Mobile',
+    slug: 'pavii-ai-mobile',
     version: VERSION.version,
     orientation: 'portrait',
     icon: './assets/images/icon.png',
-    scheme: 'aionui-mobile',
+    scheme: 'pavii-ai-mobile',
     userInterfaceStyle: 'automatic',
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'ai.resopod.aionui',
+      bundleIdentifier: 'com.pavii.ai.mobile',
       buildNumber: String(VERSION.buildNumber),
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
-        NSCameraUsageDescription: 'AionUi needs camera access to scan QR codes for server login.',
+        NSCameraUsageDescription: 'Pavii.Ai needs camera access to scan QR codes for server login.',
       },
     },
     android: {
@@ -26,7 +26,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         foregroundImage: './assets/images/icon.png',
         backgroundColor: '#000000',
       },
-      package: 'ai.resopod.aionui',
+      package: 'com.pavii.ai.mobile',
       versionCode: VERSION.buildNumber,
     },
     web: {

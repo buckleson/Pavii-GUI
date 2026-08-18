@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { resolveGuidAssistantDefaults } from '@/renderer/pages/guid/utils/assistantDefaults';
+import { DEFAULT_ENABLED_SKILL_IDS, resolveGuidAssistantDefaults } from '@/renderer/pages/guid/utils/assistantDefaults';
 import type { AssistantDetail } from '@/common/types/agent/assistantTypes';
 
 const buildDetail = (
@@ -149,6 +149,21 @@ describe('resolveGuidAssistantDefaults', () => {
       disabledBuiltinSkillIds: [],
       mcpIds: [],
     });
+  });
+
+  it('defaults token-optimizer on only while no skill preference was ever recorded', () => {
+    // Never-set preference (undefined): default pack applies.
+    const fresh = resolveGuidAssistantDefaults(
+      buildDetail({ skills: { mode: 'auto', value: [] } }, { last_skill_ids: undefined })
+    );
+    expect(fresh.skillIds).toEqual(DEFAULT_ENABLED_SKILL_IDS);
+    expect(DEFAULT_ENABLED_SKILL_IDS).toContain('token-optimizer');
+
+    // The user deselected everything at least once: their choice sticks.
+    const optedOut = resolveGuidAssistantDefaults(
+      buildDetail({ skills: { mode: 'auto', value: [] } }, { last_skill_ids: [] })
+    );
+    expect(optedOut.skillIds).toEqual([]);
   });
 
   it('returns fixed skill defaults from assistant detail instead of list payload fields', () => {

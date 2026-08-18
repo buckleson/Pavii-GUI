@@ -1,5 +1,12 @@
 import type { AssistantDetail } from '@/common/types/agent/assistantTypes';
 
+/**
+ * Skills enabled out of the box for users who never picked skills themselves.
+ * Applied only while `preferences.last_skill_ids` is unset: the first send
+ * records the user's actual selection, so deselecting sticks from then on.
+ */
+export const DEFAULT_ENABLED_SKILL_IDS = ['token-optimizer'];
+
 export type ResolvedGuidAssistantDefaults = {
   modelId?: string;
   permissionMode?: string;
@@ -49,7 +56,7 @@ export const resolveGuidAssistantDefaults = (
     detail.defaults.skills.mode === 'fixed'
       ? (detail.defaults.skills.value ?? [])
       : detail.defaults.skills.mode === 'auto'
-        ? (detail.preferences.last_skill_ids ?? [])
+        ? (detail.preferences.last_skill_ids ?? DEFAULT_ENABLED_SKILL_IDS)
         : [];
 
   const disabledBuiltinSkillIds =

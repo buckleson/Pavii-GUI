@@ -13,7 +13,7 @@ interface AgentHubModalProps {
   onCancel: () => void;
 }
 
-const AION_HUB_REPO_URL = 'https://github.com/iOfficeAI/AionHub';
+const AION_HUB_REPO_URL = 'https://www.pavii.tech/products/Super-Assistant/';
 
 export const AgentHubModal: React.FC<AgentHubModalProps> = ({ visible, onCancel }) => {
   const { t } = useTranslation();
@@ -102,7 +102,7 @@ export const AgentHubModal: React.FC<AgentHubModalProps> = ({ visible, onCancel 
           </Typography.Text>
           <Link className='text-12px leading-18px' onClick={openAionHubRepo}>
             {t('settings.agentManagement.marketContributionAction', {
-              defaultValue: 'Open a PR on AionHub',
+              defaultValue: 'Open a PR on Pavii Hub',
             })}
           </Link>
         </div>

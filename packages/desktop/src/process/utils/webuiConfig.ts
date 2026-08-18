@@ -7,10 +7,9 @@
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { networkInterfaces } from 'os';
 import { getSystemDir } from './initStorage';
 import { httpRequest } from '@/common/adapter/httpBridge';
-import { startWebHost, type WebHostHandle } from '@aionui/web-host';
+import { getLanIPCandidates, startWebHost, type WebHostHandle } from '@pavii/web-host';
 import { getDataPath } from './utils';
 
 const WEBUI_CONFIG_FILE = 'webui.config.json';
@@ -52,6 +51,26 @@ async function writeWebUIDesktopEnabled(enabled: boolean): Promise<void> {
     await httpRequest<void>('PUT', '/api/settings/client', { [DESKTOP_WEBUI_ENABLED_KEY]: enabled });
   } catch (error) {
     console.error('[WebUI] Failed to reconcile webui.desktop.enabled on backend:', error);
+  }
+}
+
+const TUNNEL_ENABLED_KEY = 'webui.tunnel.enabled';
+
+/** Persisted "Public access" toggle, same backend store as webui.desktop.*. */
+export async function readTunnelEnabledPreference(): Promise<boolean> {
+  try {
+    const settings = await httpRequest<Record<string, unknown>>('GET', '/api/settings/client');
+    return settings?.[TUNNEL_ENABLED_KEY] === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function writeTunnelEnabledPreference(enabled: boolean): Promise<void> {
+  try {
+    await httpRequest<void>('PUT', '/api/settings/client', { [TUNNEL_ENABLED_KEY]: enabled });
+  } catch (error) {
+    console.error('[WebUI] Failed to persist webui.tunnel.enabled:', error);
   }
 }
 
@@ -186,17 +205,10 @@ export function setDesktopWebUIInitialPassword(password: string | undefined): vo
   currentInitialPassword = password;
 }
 
+// Virtual adapters (VMware/Hyper-V/WSL/Docker/VPN) advertise addresses other
+// LAN devices cannot reach; rank real NICs first (shared logic in web-host).
 const getLanIP = (): string | null => {
-  const nets = networkInterfaces();
-  for (const name of Object.keys(nets)) {
-    const netInfo = nets[name];
-    if (!netInfo) continue;
-    for (const net of netInfo) {
-      const isIPv4 = net.family === 'IPv4' || (net.family as unknown) === 4;
-      if (isIPv4 && !net.internal) return net.address;
-    }
-  }
-  return null;
+  return getLanIPCandidates()[0]?.address ?? null;
 };
 
 const toDesktopHandle = (handle: WebHostHandle, allowRemote: boolean): DesktopWebUIHandle => ({
@@ -326,6 +338,13 @@ export const restoreDesktopWebUIFromPreferences = async (): Promise<void> => {
     console.log(
       `[WebUI] Auto-restored from desktop preferences (port=${handle.port}, allowRemote=${handle.allowRemote})`
     );
+    // Restore the public-access tunnel alongside the WebUI it fronts.
+    if (await readTunnelEnabledPreference()) {
+      const { startTunnel } = await import('../services/tunnelService');
+      startTunnel(handle.port)
+        .then((tunnel) => console.log(`[WebUI] Public tunnel restored: ${tunnel.url}`))
+        .catch((error) => console.warn('[WebUI] Public tunnel restore failed:', error));
+    }
   } catch (error) {
     // Reconcile the persisted preference with reality. Leaving enabled=true
     // means every subsequent launch will silently re-fail the same way, and

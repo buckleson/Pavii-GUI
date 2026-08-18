@@ -1,6 +1,6 @@
 {
-  "pageTitle": "AionUi — Вход",
-  "brand": "AionUi",
+  "pageTitle": "Pavii.Ai — Вход",
+  "brand": "Pavii.Ai",
   "subtitle": "Добро пожаловать! Войдите в свой аккаунт",
   "username": "Имя пользователя",
   "usernamePlaceholder": "Введите имя пользователя",
@@ -22,5 +22,6 @@
     "networkError": "Ошибка подключения, попробуйте снова",
     "serverError": "Ошибка сервера, попробуйте позже",
     "unknown": "Ошибка входа, попробуйте снова"
-  }
+  },
+  "qrExpired": "This sign-in link expired. Generate a fresh QR code in the desktop app and try again."
 }

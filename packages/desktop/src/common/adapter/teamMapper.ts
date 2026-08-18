@@ -12,6 +12,7 @@ import type {
   TTeam,
   WorkspaceMode,
 } from '../types/team/teamTypes';
+import { scrubBrandText } from '../utils/assistantBranding';
 
 // ── Parameter types for team API calls ─────────────────────────────────
 
@@ -75,11 +76,12 @@ export function fromBackendAssistant(raw: unknown): TeamAssistant {
     role: toRole(r.role as string | undefined),
     assistant_backend: backend,
     icon: r.icon as string | undefined,
-    assistant_name:
+    assistant_name: scrubBrandText(
       (r.assistant_name as string | undefined) ??
-      (r.agent_name as string | undefined) ??
-      (r.name as string | undefined) ??
-      '',
+        (r.agent_name as string | undefined) ??
+        (r.name as string | undefined) ??
+        ''
+    ),
     status: normalizeTeamStatus(r.status as BackendTeammateStatus | undefined),
     cli_path: r.cli_path as string | undefined,
     assistant_id: r.assistant_id as string | undefined,

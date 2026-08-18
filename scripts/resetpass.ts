@@ -17,7 +17,8 @@
  *      the offline / cold-start path.
  *
  * Usage:
- *   bun run resetpass                 # default work dir
+ *   bun run resetpass                 # default work dir (standalone webui DB)
+ *   bun run resetpass --desktop       # the desktop app's DB (WebUI hosted from the app)
  *   bun run resetpass --data-dir /x   # custom work dir
  *   AIONUI_DATA_DIR=/x bun run resetpass
  *   NODE_ENV=production bun run resetpass
@@ -28,7 +29,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { startBackend, stopBackend } from '@aionui/web-host';
+import { startBackend, stopBackend } from '@pavii/web-host';
 
 const BACKEND_BINARY = process.platform === 'win32' ? 'aioncore.exe' : 'aioncore';
 
@@ -63,7 +64,7 @@ function getFlag(name: string): string | undefined {
 /**
  * Same resolution as scripts/webui.ts:resolveBackendDataDir — keep both in sync
  * so `bun run webui` and `bun run resetpass` always target the same SQLite DB.
- * See the comment there for why the default is `~/.aionui-web*` (not `~/.aionui*`).
+ * See the comment there for why the default is `~/.pavii-web*` (not `~/.pavii*`).
  */
 function resolveWorkDir(): string {
   const override = getFlag('--data-dir') ?? process.env.AIONUI_DATA_DIR;
@@ -72,10 +73,29 @@ function resolveWorkDir(): string {
     fs.mkdirSync(resolved, { recursive: true });
     return resolved;
   }
+  // --desktop targets the Electron app's data dir instead — that is the DB
+  // behind a WebUI enabled from the desktop app's Settings → Remote panel.
+  if (process.argv.includes('--desktop')) {
+    const appData =
+      process.platform === 'win32'
+        ? (process.env.APPDATA ?? path.join(os.homedir(), 'AppData', 'Roaming'))
+        : process.platform === 'darwin'
+          ? path.join(os.homedir(), 'Library', 'Application Support')
+          : path.join(os.homedir(), '.config');
+    const productDir = process.env.NODE_ENV === 'production' ? 'Pavii.Ai' : 'Pavii.Ai-Dev';
+    const dir = path.join(appData, productDir, 'pavii');
+    if (!fs.existsSync(dir)) {
+      log.error(`Desktop data dir not found: ${dir} (has the desktop app run at least once?)`);
+      process.exit(1);
+    }
+    log.info(`Targeting the desktop app database: ${dir}`);
+    return dir;
+  }
   const suffix =
     process.env.NODE_ENV === 'production' ? '' : process.env.AIONUI_MULTI_INSTANCE === '1' ? '-dev-2' : '-dev';
-  const dir = path.join(os.homedir(), `.aionui-web${suffix}`);
+  const dir = path.join(os.homedir(), `.pavii-web${suffix}`);
   fs.mkdirSync(dir, { recursive: true });
+  log.info(`Targeting the standalone webui database: ${dir} (use --desktop for the app-hosted WebUI)`);
   return dir;
 }
 

@@ -242,7 +242,6 @@ describe('classifyBackendStartupFailure', () => {
       missingBackendBinary: true,
       missingBundledAioncoreDir: true,
       missingHubDir: true,
-      missingPetStatesDir: true,
       missingPwaDir: true,
       missingResources: ['bundled-aioncore/', 'bundled-aioncore/win32-x64/'],
       missingRuntimeDir: true,
@@ -269,7 +268,6 @@ describe('classifyBackendStartupFailure', () => {
         'elevate.exe',
         'hub/',
         'manifest.webmanifest',
-        'pet-states/',
         'pwa/',
         'sw.js',
       ],
@@ -282,7 +280,6 @@ describe('classifyBackendStartupFailure', () => {
       missingBackendBinary: true,
       missingBundledAioncoreDir: false,
       missingHubDir: false,
-      missingPetStatesDir: false,
       missingPwaDir: false,
       missingResources: ['bundled-aioncore/win32-x64/managed-resources/', 'bundled-aioncore/win32-x64/aioncore.exe'],
       missingRuntimeDir: false,
@@ -290,7 +287,7 @@ describe('classifyBackendStartupFailure', () => {
   });
 
   it('classifies packaged macOS architecture mismatches separately from generic startup failures', () => {
-    const error = new Error('AionUi package architecture does not match this Mac') as Error & {
+    const error = new Error('Pavii.Ai package architecture does not match this Mac') as Error & {
       details?: Record<string, unknown>;
     };
     error.details = {

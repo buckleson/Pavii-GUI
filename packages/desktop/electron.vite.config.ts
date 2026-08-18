@@ -99,10 +99,10 @@ export default defineConfig(({ mode }) => {
       plugins: [
         // externalizeDepsPlugin replaces our custom getExternalDeps() + pluginExternalizeDynamicImports.
         // 'fix-path' excluded so it gets bundled inline (only 3KB).
-        // '@aionui/web-host' excluded so its TS sources (which use ESM ".js" import specifiers)
-        // are bundled by esbuild rather than left as `require('@aionui/web-host')`, which Node
+        // '@pavii/web-host' excluded so its TS sources (which use ESM ".js" import specifiers)
+        // are bundled by esbuild rather than left as `require('@pavii/web-host')`, which Node
         // cannot resolve because the package ships no compiled .js files (workspace-only).
-        externalizeDepsPlugin({ exclude: ['fix-path', '@aionui/web-host'] }),
+        externalizeDepsPlugin({ exclude: ['fix-path', '@pavii/web-host'] }),
         ...(isDevelopment
           ? [
               {
@@ -179,9 +179,6 @@ export default defineConfig(({ mode }) => {
         rollupOptions: {
           input: {
             index: resolve('packages/desktop/src/preload/main.ts'),
-            petPreload: resolve('packages/desktop/src/preload/petPreload.ts'),
-            petHitPreload: resolve('packages/desktop/src/preload/petHitPreload.ts'),
-            petConfirmPreload: resolve('packages/desktop/src/preload/petConfirmPreload.ts'),
           },
         },
       },
@@ -252,9 +249,6 @@ export default defineConfig(({ mode }) => {
         rollupOptions: {
           input: {
             index: resolve(rendererRoot, 'index.html'),
-            pet: resolve(rendererRoot, 'pet/pet.html'),
-            'pet-hit': resolve(rendererRoot, 'pet/pet-hit.html'),
-            'pet-confirm': resolve(rendererRoot, 'pet/pet-confirm.html'),
           },
           external: ['node:crypto', 'crypto'],
           onwarn(warning, warn) {
@@ -263,8 +257,18 @@ export default defineConfig(({ mode }) => {
           },
           output: {
             manualChunks(id: string) {
+              // Shared interop/babel helpers must live in the root vendor chunk;
+              // letting Rollup hoist them into an arbitrary vendor chunk creates
+              // circular chunk imports (react -> editor -> highlight -> arco -> react)
+              // that leave React uninitialized when vendor-arco evaluates (blank page).
+              if (id.includes('commonjsHelpers')) return 'vendor-react';
               if (!id.includes('node_modules')) return undefined;
-              if (id.includes('/react-dom/') || id.includes('/react/')) return 'vendor-react';
+              if (id.includes('/@babel/runtime/')) return 'vendor-react';
+              if (id.includes('/scheduler/')) return 'vendor-react';
+              // Exact-package match: '/react/' as a substring also matches
+              // @iconify/react and @monaco-editor/react, which import editor/icon
+              // code and would drag foreign dependencies into the react chunk.
+              if (/[\\/]node_modules[\\/](react|react-dom)[\\/]/.test(id)) return 'vendor-react';
               if (id.includes('/@arco-design/')) return 'vendor-arco';
               if (
                 id.includes('/react-markdown/') ||

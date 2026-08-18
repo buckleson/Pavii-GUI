@@ -12,10 +12,10 @@
     "clearWorkspace": "프로젝트 제거",
     "openFolder": "폴더 열기",
     "none": "없음",
-    "quickActionsTitle": "AionUi로 무엇을 할 수 있나요?",
+    "quickActionsTitle": "Pavii.Ai로 무엇을 할 수 있나요?",
     "quickActionFeedback": "문제 보고",
     "quickActionStar": "마음에 드시나요? 별을 주세요!",
-    "skillsMarket": "AionUi Skills Market",
+    "skillsMarket": "Pavii.Ai Skills Market",
     "skillsMarketDesc": "커뮤니티 Skills를 필요에 따라 검색하고 활성화. 한 번 설정하면 모든 Agent에서 사용 가능.",
     "skillsMarketDetails": "자세히 >>"
   },
@@ -306,7 +306,7 @@
       },
       "MCP_HTTP_RESPONSE_READ_FAILED": {
         "title": "Failed to read the team helper response",
-        "body": "AionUi could not read the local team helper response. Retry once, and if it keeps happening, restart the app."
+        "body": "Pavii.Ai could not read the local team helper response. Retry once, and if it keeps happening, restart the app."
       },
       "MCP_TOOL_REMOTE_ERROR": {
         "title": "The local team helper rejected the request",
@@ -314,11 +314,11 @@
       },
       "MCP_TOOL_RESPONSE_UNEXPECTED": {
         "title": "The team helper returned an unexpected response",
-        "body": "AionUi received an unexpected response from the local team helper. Retry once, and report it if the problem persists."
+        "body": "Pavii.Ai received an unexpected response from the local team helper. Retry once, and report it if the problem persists."
       },
       "MCP_TCP_READ_FAILED": {
         "title": "Failed to read from the local team helper",
-        "body": "AionUi could not read the local team helper TCP response. Retry once, and restart the app if it keeps failing."
+        "body": "Pavii.Ai could not read the local team helper TCP response. Retry once, and restart the app if it keeps failing."
       },
       "TEAM_SERVICE_UNAVAILABLE": {
         "title": "Team service is not ready yet",
@@ -668,7 +668,7 @@
         "conflicted": "!",
         "unknown": "?"
       },
-      "conflictedHint": "이 충돌은 AionUi 외부에서 먼저 해결하세요",
+      "conflictedHint": "이 충돌은 Pavii.Ai 외부에서 먼저 해결하세요",
       "opaqueHint": "이 상태는 더 새로운 백엔드에서 왔습니다 — 읽기 전용으로 표시",
       "degraded": "git 인덱스를 갱신할 수 없어 느린 모드로 새로 고치고 있습니다",
       "truncated": "변경이 너무 많아 앞부분만 표시합니다",
@@ -687,7 +687,7 @@
         "discard": "변경 버리기",
         "stageAll": "모두 스테이징",
         "unstageAll": "모두 스테이징 취소",
-        "blockedHint": "스테이징하거나 버리기 전에 AionUi 외부에서 충돌을 해결하세요",
+        "blockedHint": "스테이징하거나 버리기 전에 Pavii.Ai 외부에서 충돌을 해결하세요",
         "confirmDiscardTitle": "변경을 버릴까요?",
         "confirmDiscardTracked": "{{count}}개 파일의 편집 내용이 사라지며 되돌릴 수 없습니다.",
         "confirmDiscardUntracked": "새 파일 {{count}}개가 휴지통으로 이동됩니다.",

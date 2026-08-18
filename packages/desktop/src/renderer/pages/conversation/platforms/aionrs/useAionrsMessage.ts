@@ -281,6 +281,10 @@ export const useAionrsMessage = (
                 },
                 merge_extra: true,
               });
+              // Profile usage ledger: per-turn totals, best-effort only.
+              void ipcBridge.paviiUsage.record
+                .invoke({ tokens: newTokenUsage.total_tokens, backend: 'aionrs' })
+                .catch(() => {});
             }
             setStreamRunning(false);
             setWaitingResponse(false);

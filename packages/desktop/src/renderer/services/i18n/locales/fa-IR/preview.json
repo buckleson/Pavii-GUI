@@ -65,16 +65,16 @@
     "conversionFailed": "تبدیل ناموفق بود"
   },
   "office": {
-    "installLinkText": "باز کردن راهنمای نصب officecli",
+    "installLinkText": "باز کردن راهنمای نصب Pavii CLI",
     "errors": {
-      "officecliNotFound": "officecli نصب نشده است.",
-      "installFailed": "نصب خودکار officecli ناموفق بود. لاگ‌های بک‌اند را بررسی کنید و دوباره تلاش کنید.",
+      "officecliNotFound": "Pavii CLI نصب نشده است.",
+      "installFailed": "نصب خودکار Pavii CLI ناموفق بود. لاگ‌های بک‌اند را بررسی کنید و دوباره تلاش کنید.",
       "portTimeout": "سرویس پیش‌نمایش شروع شد اما به‌موقع آماده نشد. دوباره تلاش کنید.",
       "startFailed": "شروع سرویس پیش‌نمایش Office ناموفق بود.",
       "outsideSandbox": "این فایل خارج از سندباکس پروژه فعلی است."
     },
     "serverInstall": {
-      "hint": "AionUi روی سرور اجرا می‌شود. مؤلفه پیش‌نمایش را روی همان سرور نصب کنید، سپس دوباره تلاش کنید:",
+      "hint": "Pavii.Ai روی سرور اجرا می‌شود. مؤلفه پیش‌نمایش را روی همان سرور نصب کنید، سپس دوباره تلاش کنید:",
       "icuNote": "اگر همچنان شروع نشد، کتابخانه ICU را روی سرور نصب کنید (Debian/Ubuntu: apt-get install -y libicu-dev)."
     }
   },
@@ -85,9 +85,9 @@
     "loadFailed": "بارگذاری سند Word ناموفق بود",
     "watch": {
       "loading": "در حال بارگذاری سند Word...",
-      "installing": "در حال نصب officecli...",
+      "installing": "در حال نصب Pavii CLI...",
       "startFailed": "شروع پیش‌نمایش Word ناموفق بود",
-      "installHint": "نیاز به officecli دارد. به‌صورت خودکار نصب خواهد شد."
+      "installHint": "نیاز به Pavii CLI دارد. به‌صورت خودکار نصب خواهد شد."
     }
   },
   "excel": {
@@ -102,9 +102,9 @@
     "emptySheetHint": "بررسی کنید آیا شیت شامل داده یا تصویر است",
     "watch": {
       "loading": "در حال بارگذاری فایل Excel...",
-      "installing": "در حال نصب officecli...",
+      "installing": "در حال نصب Pavii CLI...",
       "startFailed": "شروع پیش‌نمایش Excel ناموفق بود",
-      "installHint": "نیاز به officecli دارد. به‌صورت خودکار نصب خواهد شد."
+      "installHint": "نیاز به Pavii CLI دارد. به‌صورت خودکار نصب خواهد شد."
     }
   },
   "pdf": {
@@ -133,7 +133,7 @@
     "loading": "در حال شروع پیش‌نمایش PPT...",
     "installing": "در حال نصب مؤلفه پیش‌نمایش...",
     "startFailed": "شروع پیش‌نمایش PPT ناموفق بود",
-    "installHint": "OfficeCLI را از صفحه انتشارات رسمی iOfficeAI/OfficeCli نصب کنید"
+    "installHint": "Pavii CLI را از صفحه انتشارات رسمی Pavii CLI نصب کنید"
   },
   "browser": {
     "newTab": "زبانه جدید",

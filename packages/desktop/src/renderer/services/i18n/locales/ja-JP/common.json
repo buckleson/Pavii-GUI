@@ -61,10 +61,10 @@
   "more": "その他",
   "refresh": "更新",
   "readOnly": "読み取り専用",
-  "tray.showWindow": "AionUi を表示",
+  "tray.showWindow": "Pavii.Ai を表示",
   "tray.newChat": "新しいチャット",
   "tray.closeToTray": "トレイに隠す",
-  "tray.about": "AionUi について",
+  "tray.about": "Pavii.Ai について",
   "tray.restart": "アプリを再起動",
   "tray.quit": "終了",
   "tray.runningTasks": "実行中のタスク",
@@ -75,26 +75,26 @@
   "backendStartup": {
     "incompatibleRuntime": {
       "title": "このシステムは同梱バックエンドに対応していません",
-      "description": "AionUi は開きましたが、ローカルの AionCore バックエンドはこの Linux バージョンでは実行できません。対応している Linux ディストリビューションにアップグレードしてから AionUi を再起動してください。",
+      "description": "Pavii.Ai は開きましたが、ローカルの Pavii Engine バックエンドはこの Linux バージョンでは実行できません。対応している Linux ディストリビューションにアップグレードしてから Pavii.Ai を再起動してください。",
       "requiredVersions": "必要なランタイムシンボル: {{versions}}"
     },
     "incompleteInstallation": {
-      "title": "AionUi のインストールが不完全です",
-      "description": "このインストールには必要なローカルリソースが不足しているため、AionCore を起動できません。最新の AionUi をダウンロードして再インストールしてください。再インストール後も問題が再発する場合は、セキュリティソフトまたはウイルス対策ソフトが AionCore を隔離していないか確認してください。",
+      "title": "Pavii.Ai のインストールが不完全です",
+      "description": "このインストールには必要なローカルリソースが不足しているため、Pavii Engine を起動できません。最新の Pavii.Ai をダウンロードして再インストールしてください。再インストール後も問題が再発する場合は、セキュリティソフトまたはウイルス対策ソフトが Pavii Engine を隔離していないか確認してください。",
       "downloadLatest": "最新版をダウンロード",
       "sendDiagnostics": "診断レポートを送信",
       "diagnosticsSent": "診断レポートを送信済み",
       "diagnosticsReportSuccess": "診断レポートを送信しました",
       "diagnosticsReportFailed": "診断レポートの送信に失敗しました",
-      "runtimeComponentDescription": "このインストールには必要な組み込み実行コンポーネントが不足しているため、{{resource}} を起動できません。最新版の AionUi パッケージを再インストールしてください。再インストール後も続く場合は、セキュリティソフトまたはウイルス対策ソフトが AionUi コンポーネントを隔離していないか確認してください。"
+      "runtimeComponentDescription": "このインストールには必要な組み込み実行コンポーネントが不足しているため、{{resource}} を起動できません。最新版の Pavii.Ai パッケージを再インストールしてください。再インストール後も続く場合は、セキュリティソフトまたはウイルス対策ソフトが Pavii.Ai コンポーネントを隔離していないか確認してください。"
     },
     "packageArchitectureMismatch": {
-      "title": "AionUi package architecture mismatch",
-      "description": "This AionUi package is for {{packageArch}}, but this Mac is {{deviceArch}}. You may have downloaded the wrong package. Please download and install the {{expectedArch}} package."
+      "title": "Pavii.Ai package architecture mismatch",
+      "description": "This Pavii.Ai package is for {{packageArch}}, but this Mac is {{deviceArch}}. You may have downloaded the wrong package. Please download and install the {{expectedArch}} package."
     },
     "dataMigration": {
       "title": "Local data migration failed",
-      "description": "AionUi opened, but AionCore stopped while initializing local data. Reinstalling AionUi may not fix this. Send a diagnostics report or contact support so the local database migration can be inspected.",
+      "description": "Pavii.Ai opened, but Pavii Engine stopped while initializing local data. Reinstalling Pavii.Ai may not fix this. Send a diagnostics report or contact support so the local database migration can be inspected.",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics report sent",
@@ -102,7 +102,7 @@
     },
     "localDataRepair": {
       "title": "Local data repair failed",
-      "description": "AionUi は開きましたが、AionCore は assistant またはエージェントのレコードなどのローカル起動データを準備中に停止しました。AionUi を再インストールしても解決しない可能性があります。ローカルデータベースを確認できるよう、診断レポートを送信するかサポートに連絡してください。",
+      "description": "Pavii.Ai は開きましたが、Pavii Engine は assistant またはエージェントのレコードなどのローカル起動データを準備中に停止しました。Pavii.Ai を再インストールしても解決しない可能性があります。ローカルデータベースを確認できるよう、診断レポートを送信するかサポートに連絡してください。",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics report sent",
@@ -110,7 +110,7 @@
     },
     "startupDirectory": {
       "title": "Startup directory is unavailable",
-      "description": "AionUi opened, but AionCore could not start because the configured work or log directory is missing, unavailable, or blocked by permissions. Check that the configured directories exist and are writable, then restart AionUi.",
+      "description": "Pavii.Ai opened, but Pavii Engine could not start because the configured work or log directory is missing, unavailable, or blocked by permissions. Check that the configured directories exist and are writable, then restart Pavii.Ai.",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics report sent",
@@ -118,7 +118,7 @@
     },
     "recoverableDatabaseCorruption": {
       "title": "ローカルデータが破損しています",
-      "description": "ローカルデータベースの破損を検出したため、AionUi は起動を続行できません。確認後、古いデータベースをバックアップし、新しいローカルデータベースを作成して起動を続行します。過去の会話は表示されなくなり、古いデータベースはバックアップファイルとして保持されます。",
+      "description": "ローカルデータベースの破損を検出したため、Pavii.Ai は起動を続行できません。確認後、古いデータベースをバックアップし、新しいローカルデータベースを作成して起動を続行します。過去の会話は表示されなくなり、古いデータベースはバックアップファイルとして保持されます。",
       "confirmRebuild": "古いDBをバックアップして新しいDBを再作成",
       "sendDiagnostics": "診断レポートを送信",
       "diagnosticsHint": "診断レポートの送信ではローカルデータベースは変更されません。",
@@ -134,8 +134,8 @@
       }
     },
     "transientConcurrentStartup": {
-      "title": "AionUi を起動しています",
-      "description": "このウィンドウを開いたとき、別の AionUi の起動処理がまだローカルデータを使用していました。これは一時的なもので、データは安全です。再インストールの必要はありません。少し待ってから再試行するか、AionUi を再起動してください。",
+      "title": "Pavii.Ai を起動しています",
+      "description": "このウィンドウを開いたとき、別の Pavii.Ai の起動処理がまだローカルデータを使用していました。これは一時的なもので、データは安全です。再インストールの必要はありません。少し待ってから再試行するか、Pavii.Ai を再起動してください。",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics report sent",
@@ -144,11 +144,11 @@
     },
     "pendingSlow": {
       "title": "起動中",
-      "description": "AionCore を起動しています。しばらくお待ちください。しばらく応答がない場合は、アプリを終了してから再度お試しください。"
+      "description": "Pavii Engine を起動しています。しばらくお待ちください。しばらく応答がない場合は、アプリを終了してから再度お試しください。"
     },
     "exited": {
       "title": "起動が完了しませんでした",
-      "description": "AionCore は起動を完了できずに終了しました。アプリを再起動してください。繰り返し発生する場合は、診断情報を送信してください。",
+      "description": "Pavii Engine は起動を完了できずに終了しました。アプリを再起動してください。繰り返し発生する場合は、診断情報を送信してください。",
       "sendDiagnostics": "診断を送信",
       "diagnosticsSent": "診断を送信しました",
       "diagnosticsReportSuccess": "診断情報を送信しました",
@@ -156,7 +156,7 @@
     },
     "portReportTimeout": {
       "title": "起動がタイムアウトしました",
-      "description": "AionCore は想定時間内に起動を完了できませんでした。アプリを再起動してください。繰り返し発生する場合は、診断情報を送信してください。",
+      "description": "Pavii Engine は想定時間内に起動を完了できませんでした。アプリを再起動してください。繰り返し発生する場合は、診断情報を送信してください。",
       "sendDiagnostics": "診断を送信",
       "diagnosticsSent": "診断を送信しました",
       "diagnosticsReportSuccess": "診断情報を送信しました",
@@ -164,7 +164,7 @@
     },
     "startupFailed": {
       "title": "起動に失敗しました",
-      "description": "AionCore を起動できませんでした。アプリを再起動してください。繰り返し発生する場合は、診断情報を送信してください。",
+      "description": "Pavii Engine を起動できませんでした。アプリを再起動してください。繰り返し発生する場合は、診断情報を送信してください。",
       "sendDiagnostics": "診断を送信",
       "diagnosticsSent": "診断を送信しました",
       "diagnosticsReportSuccess": "診断情報を送信しました",
@@ -192,5 +192,40 @@
     "second_short": "秒"
   },
   "selectedCount": "選択済み {{count}}",
-  "selectedSkills": "選択済みスキル"
+  "selectedSkills": "選択済みスキル",
+  "paviiGate.subtitle": "Your one stop to run, manage, and get the most from your AI.",
+  "paviiGate.signIn": "I already have an account",
+  "paviiGate.waiting": "Waiting for your browser...",
+  "paviiGate.error": "Sign-in could not be verified. Please try again.",
+  "paviiGate.signUp": "Create your Pavii account",
+  "paviiGate.titleLead": "Welcome to the world of",
+  "paviiGate.value1": "Optimized context management",
+  "paviiGate.value2": "Every token put to work",
+  "paviiGate.value3": "Your AI is in safe hands",
+  "paviiGate.reopen": "Page did not open? Click here to open it again",
+  "paviiGate.copy": "Or copy the sign-in link for another browser",
+  "paviiGate.copied": "Link copied",
+  "profile.title": "Profile",
+  "profile.share": "Share",
+  "profile.signOut": "Sign out",
+  "profile.lifetimeTokens": "Lifetime tokens",
+  "profile.peakTokens": "Peak day",
+  "profile.longestChat": "Longest chat",
+  "profile.currentStreak": "Current streak",
+  "profile.longestStreak": "Longest streak",
+  "profile.days": "days",
+  "profile.activity": "Token activity",
+  "profile.since": "since {{day}}",
+  "profile.insights": "Activity insights",
+  "profile.mostUsedCli": "Most used CLI",
+  "profile.mostUsedModel": "Most used AI model",
+  "profile.mostAttachedMcp": "Most attached MCP server",
+  "profile.mostAttachedSkill": "Most attached skill",
+  "profile.skillsUsed": "Skills used",
+  "profile.totalChats": "Total chats",
+  "profile.heatmapTokens": "{{count}} tokens on {{day}}",
+  "profile.heatmapActivity": "{{count}} activities on {{day}}",
+  "profile.shareTitle": "Share your activity",
+  "profile.shareSave": "Save image",
+  "profile.shareHint": "Sharing opens a post with your stats. Save the image to attach it."
 }

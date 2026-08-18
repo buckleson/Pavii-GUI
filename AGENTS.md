@@ -1,4 +1,4 @@
-# AionUi - Project Guide
+# Pavii.Ai - Project Guide
 
 All contributors (human and AI) must follow [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR. ([Chinese version](CONTRIBUTING.zh.md))
 
@@ -144,11 +144,49 @@ When opening a PR, fill in the PR body using [.github/pull_request_template.md](
 
 ## Skills Index
 
-| Skill            | Purpose                                                                     | Triggers                                                                                               |
-| ---------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **architecture** | File & directory structure conventions for all process types                | Creating files, adding modules, architectural decisions                                                |
-| **i18n**         | Internationalization workflow and standards                                 | Adding or changing user-facing text, modifying `locales/` or `packages/desktop/src/common/config/i18n` |
-| **testing**      | Testing workflow and quality standards                                      | Writing tests, changing runtime behavior, fixing bugs, or claiming behavior is verified                |
-| **bump-version** | Version bump workflow: update package.json, checks, branch, PR, tag release | Bumping version, `/bump-version`                                                                       |
+| Skill                     | Purpose                                                                     | Triggers                                                                                               |
+| ------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **architecture**          | File & directory structure conventions for all process types                | Creating files, adding modules, architectural decisions                                                |
+| **i18n**                  | Internationalization workflow and standards                                 | Adding or changing user-facing text, modifying `locales/` or `packages/desktop/src/common/config/i18n` |
+| **testing**               | Testing workflow and quality standards                                      | Writing tests, changing runtime behavior, fixing bugs, or claiming behavior is verified                |
+| **bump-version**          | Version bump workflow: update package.json, checks, branch, PR, tag release | Bumping version, `/bump-version`                                                                       |
+| **architecture-recorder** | Maintain concise architectural decisions, context, and codebase navigation  | After material design, implementation, workflow, or repository-structure changes                       |
+| **handoff**               | Prepare a compact continuation document for another agent or session        | Before transferring work or ending a session that will be continued                                    |
 
 > Skills are located in `.claude/skills/` and contain project conventions that apply to **all** agents and contributors.
+
+## Deterministic Agent Workflow
+
+These rules apply to every task in this repository.
+
+### Scope and Storage
+
+- Apply YAGNI: implement only behavior required by the current request and its acceptance criteria. Do not add speculative abstractions, cleanup, compatibility layers, or future-facing options.
+- Write files, downloads, caches, temporary data, dependency data, build output, and generated artifacts only inside `D:\pavii-a\special-enigma`.
+- Do not write to any other drive or directory outside the repository. If a tool cannot be redirected to the repository, do not use it; choose a repository-local alternative or report the blocker.
+- Read-only access outside the repository is allowed only when required to use installed system tooling. It must not create or modify files there.
+
+### Task Decomposition and Test Gates
+
+1. Split each request into the smallest independently verifiable tasks that preserve useful behavior without creating procedural busywork. Keep one explicit current task and complete tasks in dependency order.
+2. Before implementing a task, define its observable completion condition and the narrowest relevant validation.
+3. For every runtime behavior change or bug fix, assign a dedicated **test-author** subagent to write or update focused tests, including applicable boundary, empty, nullish, failure, async, and regression cases from `.claude/skills/testing/SKILL.md`.
+4. After implementation and test authoring are complete, assign a separate **test-runner** subagent to run the narrowest relevant tests first, followed by the required broader checks for the touched area. The test-runner must not edit files and must report exact commands, exit codes, and failing test names. Run `bun run test` before completing or committing a runtime change.
+5. If any check fails, assign a separate **failure-analyst** subagent to identify the root cause, distinguish current-change regressions from unrelated pre-existing failures, and produce a minimal repair plan. The failure-analyst must not edit files. Do not begin a later implementation task until the current task's relevant checks pass.
+6. Apply the repair plan, then have the test-runner rerun the failed checks and any affected regression tests. Repeat until they pass or a genuine external blocker is documented.
+7. Documentation-only, configuration-only, and instruction-only tasks do not require application runtime tests when behavior cannot change. They still require a separate validation pass for syntax, structure, links/paths, and internal consistency.
+
+The environment supports four concurrent agents including the primary agent. Run roles in deterministic waves instead of weakening role separation:
+
+- **Wave A:** primary implementation and test-author may work in parallel only when their file ownership does not overlap.
+- **Wave B:** test-runner works only after the implementation and tests for the current task are ready.
+- **Wave C (failures only):** failure-analyst examines failures; implementation and rerun follow its repair plan.
+- **Wave D:** architecture-recorder updates durable context only after behavior and validation stabilize.
+- **Session boundary:** handoff runs after current validation results and the architecture record are up to date.
+
+### Context Management
+
+- Use `.claude/skills/architecture-recorder/SKILL.md` after material design or implementation decisions. Maintain `docs/agent-context/architecture-record.md` as a concise map of decisions, constraints, changed areas, and where supporting details live.
+- Use `.claude/skills/handoff/SKILL.md` when preparing another session or agent to continue. Maintain `docs/agent-context/handoff.md`, tailored to the next session's stated focus.
+- Context documents must reference existing specs, plans, ADRs, issues, commits, and diffs by repository path or URL instead of duplicating their content.
+- Never claim a task or area is complete until its required validation gate has passed and the result is recorded for the next agent.

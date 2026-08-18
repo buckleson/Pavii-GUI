@@ -171,7 +171,12 @@ describe('static-server', () => {
     const { createHash } = await import('node:crypto');
     const net = await import('node:net');
     const httpMod = await import('node:http');
-    const backendServer = httpMod.createServer();
+    // The mock backend must also answer the session check the WS auth gate
+    // replays before splicing (`/api/auth/user`).
+    const backendServer = httpMod.createServer((req, res) => {
+      if (req.url === '/api/auth/user') res.writeHead(200, { 'content-type': 'application/json' }).end('{}');
+      else res.writeHead(404).end();
+    });
     backendServer.on('upgrade', (req, socket) => {
       const wsKey = (req.headers['sec-websocket-key'] as string) || '';
       const accept = createHash('sha1')
@@ -198,6 +203,7 @@ describe('static-server', () => {
         sock.write(
           'GET /ws HTTP/1.1\r\n' +
             `Host: 127.0.0.1:${publicPort}\r\n` +
+            'Cookie: aionui-session=test-session\r\n' +
             'Upgrade: websocket\r\n' +
             'Connection: Upgrade\r\n' +
             'Sec-WebSocket-Version: 13\r\n' +
@@ -229,7 +235,10 @@ describe('static-server', () => {
     const { createHash } = await import('node:crypto');
     const net = await import('node:net');
     const httpMod = await import('node:http');
-    const backendServer = httpMod.createServer();
+    const backendServer = httpMod.createServer((req, res) => {
+      if (req.url === '/api/auth/user') res.writeHead(200, { 'content-type': 'application/json' }).end('{}');
+      else res.writeHead(404).end();
+    });
     backendServer.on('upgrade', (req, socket) => {
       const wsKey = (req.headers['sec-websocket-key'] as string) || '';
       const accept = createHash('sha1')
@@ -254,6 +263,7 @@ describe('static-server', () => {
         sock.write(
           'GET /api/stt/stream HTTP/1.1\r\n' +
             `Host: 127.0.0.1:${publicPort}\r\n` +
+            'Cookie: aionui-session=test-session\r\n' +
             'Upgrade: websocket\r\n' +
             'Connection: Upgrade\r\n' +
             'Sec-WebSocket-Version: 13\r\n' +
@@ -284,7 +294,10 @@ describe('static-server', () => {
     const { createHash } = await import('node:crypto');
     const net = await import('node:net');
     const httpMod = await import('node:http');
-    const backendServer = httpMod.createServer();
+    const backendServer = httpMod.createServer((req, res) => {
+      if (req.url === '/api/auth/user') res.writeHead(200, { 'content-type': 'application/json' }).end('{}');
+      else res.writeHead(404).end();
+    });
     backendServer.on('upgrade', (req, socket) => {
       const wsKey = (req.headers['sec-websocket-key'] as string) || '';
       const accept = createHash('sha1')
@@ -309,6 +322,7 @@ describe('static-server', () => {
         sock.write(
           'GET /api/stt/stream?lang=en&model=default HTTP/1.1\r\n' +
             `Host: 127.0.0.1:${publicPort}\r\n` +
+            'Cookie: aionui-session=test-session\r\n' +
             'Upgrade: websocket\r\n' +
             'Connection: Upgrade\r\n' +
             'Sec-WebSocket-Version: 13\r\n' +
@@ -333,6 +347,51 @@ describe('static-server', () => {
       }, 3000).unref();
     });
     expect(status).toMatch(/HTTP\/1\.1 101/i);
+  });
+
+  it('/ws upgrade without a session is rejected with 401', async () => {
+    const net = await import('node:net');
+    const httpMod = await import('node:http');
+    const backendServer = httpMod.createServer((req, res) => {
+      if (req.url === '/api/auth/user') res.writeHead(200, { 'content-type': 'application/json' }).end('{}');
+      else res.writeHead(404).end();
+    });
+    await new Promise<void>((r) => backendServer.listen(0, '127.0.0.1', () => r()));
+    stopBackend = () => new Promise<void>((r) => backendServer.close(() => r()));
+    const backendPort = (backendServer.address() as AddressInfo).port;
+
+    handle = await startStaticServer({ staticDir, backendPort, port: 0 });
+
+    const { port: publicPort } = handle;
+    const status: string = await new Promise((resolve, reject) => {
+      const sock = net.connect({ host: '127.0.0.1', port: publicPort }, () => {
+        sock.write(
+          'GET /ws HTTP/1.1\r\n' +
+            `Host: 127.0.0.1:${publicPort}\r\n` +
+            'Upgrade: websocket\r\n' +
+            'Connection: Upgrade\r\n' +
+            'Sec-WebSocket-Version: 13\r\n' +
+            'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n' +
+            '\r\n'
+        );
+      });
+      let buf = Buffer.alloc(0);
+      sock.on('data', (d) => {
+        buf = Buffer.concat([buf, d]);
+        const headEnd = buf.indexOf('\r\n\r\n');
+        if (headEnd >= 0) {
+          const firstLine = buf.slice(0, buf.indexOf(0x0a)).toString('ascii');
+          sock.destroy();
+          resolve(firstLine.trim());
+        }
+      });
+      sock.on('error', reject);
+      setTimeout(() => {
+        sock.destroy();
+        reject(new Error('timeout waiting for 401'));
+      }, 3000).unref();
+    });
+    expect(status).toMatch(/HTTP\/1\.1 401/i);
   });
 
   it('network URL populated only when allowRemote=true', async () => {

@@ -104,7 +104,7 @@ export const MODEL_SELECTOR_BTN = 'button.sendbox-model-btn.guid-config-btn';
 
 // ── Channel list ─────────────────────────────────────────────────────────────
 
-export const CHANNEL_IDS = ['telegram', 'lark', 'dingtalk', 'slack', 'discord'] as const;
+export const CHANNEL_IDS = ['telegram', 'slack', 'discord'] as const;
 export type ChannelId = (typeof CHANNEL_IDS)[number];
 
 /** Match a channel row by channel id. */

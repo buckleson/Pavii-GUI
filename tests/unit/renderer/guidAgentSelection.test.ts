@@ -22,8 +22,56 @@ describe('guid assistant selection helpers', () => {
     expect(resolveAssistantSelectionKey('aionrs', assistants)).toBeUndefined();
   });
 
-  it('defaults to the generated aionrs assistant when available', () => {
+  it('defaults to the generated aionrs assistant when no opencode assistant exists', () => {
     expect(pickDefaultAssistantSelectionKey(assistants)).toBe('bare-aionrs');
+  });
+
+  it('prefers a generated opencode assistant over a generated aionrs one', () => {
+    const list = [
+      ...assistants,
+      assistant({ id: 'gen-opencode', source: 'generated', runtimeKey: 'opencode', sort_order: 40 }),
+    ];
+    expect(pickDefaultAssistantSelectionKey(list)).toBe('gen-opencode');
+  });
+
+  it('prefers a non-generated opencode assistant over a generated aionrs one', () => {
+    const list = [
+      ...assistants,
+      assistant({ id: 'user-opencode', source: 'user', runtimeKey: 'opencode', sort_order: 40 }),
+    ];
+    expect(pickDefaultAssistantSelectionKey(list)).toBe('user-opencode');
+  });
+
+  it('prefers the generated opencode assistant over a non-generated one', () => {
+    const list = [
+      assistant({ id: 'user-opencode', source: 'user', runtimeKey: 'opencode', sort_order: 10 }),
+      assistant({ id: 'gen-opencode', source: 'generated', runtimeKey: 'opencode', sort_order: 20 }),
+    ];
+    expect(pickDefaultAssistantSelectionKey(list)).toBe('gen-opencode');
+  });
+
+  it('ignores disabled opencode assistants and falls back to aionrs', () => {
+    const list = [
+      ...assistants,
+      assistant({ id: 'off-opencode', source: 'generated', runtimeKey: 'opencode', enabled: false }),
+    ];
+    expect(pickDefaultAssistantSelectionKey(list)).toBe('bare-aionrs');
+  });
+
+  it('falls back to a non-generated aionrs assistant when no generated one exists', () => {
+    const list = [
+      assistant({ id: 'builtin-writer', source: 'builtin', runtimeKey: 'claude', sort_order: 10 }),
+      assistant({ id: 'user-aionrs', source: 'user', runtimeKey: 'aionrs', sort_order: 20 }),
+    ];
+    expect(pickDefaultAssistantSelectionKey(list)).toBe('user-aionrs');
+  });
+
+  it('falls back to the first enabled assistant when neither opencode nor aionrs exists', () => {
+    const list = [
+      assistant({ id: 'off-writer', source: 'builtin', runtimeKey: 'claude', enabled: false }),
+      assistant({ id: 'user-research', source: 'user', runtimeKey: 'gemini' }),
+    ];
+    expect(pickDefaultAssistantSelectionKey(list)).toBe('user-research');
   });
 
   it('returns null when no assistants are available', () => {

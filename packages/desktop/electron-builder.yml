@@ -1,12 +1,12 @@
-appId: com.aionui.app
-productName: AionUi
-executableName: AionUi
-copyright: Copyright © 2024 AionUi
+appId: com.pavii.ai
+productName: Pavii.Ai
+executableName: PaviiAi
+copyright: Copyright © 2026 Team Pavii
 
 protocols:
-  - name: AionUi Protocol
+  - name: Pavii.Ai Protocol
     schemes:
-      - aionui
+      - pavii
 
 asar:
   smartUnpack: true
@@ -112,6 +112,9 @@ extraResources:
     to: bundled-aioncore
   - from: resources/hub
     to: hub
+  # Pavii-curated skills auto-imported into the user skills dir on first boot
+  - from: resources/bundled-skills
+    to: bundled-skills
 win:
   target:
     - nsis
@@ -140,6 +143,11 @@ mac:
   gatekeeperAssess: false
   entitlements: entitlements.plist
   entitlementsInherit: entitlements.plist
+  # OS-facing bundle identity (Finder, dock, permission prompts)
+  extendInfo:
+    CFBundleDisplayName: Pavii.Ai
+    NSHumanReadableCopyright: Copyright © 2026 Team Pavii
+    NSMicrophoneUsageDescription: Pavii.Ai uses the microphone for voice input in conversations.
 
 dmg:
   # Use UDZO format which is more reliable on CI
@@ -166,20 +174,27 @@ afterSign: scripts/afterSign.js
 linux:
   target:
     - deb
+    - AppImage
   icon: resources/app.png
   artifactName: ${productName}-${version}-${os}-${arch}.${ext}
   category: Utility
-  maintainer: aionui
-  vendor: aionui
+  maintainer: Team Pavii <info@pavii.tech>
+  vendor: Team Pavii
   synopsis: ${description}
   description: ${description}
   desktop:
     entry:
-      Name: AionUi
+      Name: Pavii.Ai
+      GenericName: AI Workspace
       Comment: ${description}
-      Icon: AionUi
+      # electron-builder installs hicolor icons under the executable name
+      Icon: PaviiAi
       Categories: Office;Utility;
-      MimeType: x-scheme-handler/aionui;
+      Keywords: AI;assistant;chat;agent;
+      # Electron's WM_CLASS derives from the app name — required so
+      # GNOME/KDE docks associate the running window with this entry
+      StartupWMClass: Pavii.Ai
+      MimeType: x-scheme-handler/pavii;
 
 npmRebuild: false
 buildDependenciesFromSource: false
@@ -216,9 +231,12 @@ removePackageScripts: true
 electronDownload:
   cache: ${env.ELECTRON_CACHE}
 
+# Releases live on GitHub. The release workflow uploads with `gh release upload`
+# (build-with-builder.js hardcodes --publish=never), and electron-updater uses
+# this provider to find updates.
 publish:
   provider: github
-  owner: iOfficeAI
-  repo: AionUi
+  owner: vjk7989
+  repo: pavii-ai
   publishAutoUpdate: true
   releaseType: release

@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="../../resources/aionui-banner-1.png" alt="AionUi - Cowork with AI Agents" width="100%">
+  <img src="../../resources/pavii-ai-banner-1.png" alt="Pavii.Ai - Cowork with AI Agents" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/iOfficeAI/AionUi?style=flat-square&color=32CD32" alt="Version">
+  <img src="https://img.shields.io/github/v/release/vjk7989/pavii-ai?style=flat-square&color=32CD32" alt="Version">
   &nbsp;
   <img src="https://img.shields.io/badge/license-Apache--2.0-32CD32?style=flat-square&logo=apache&logoColor=white" alt="License">
   &nbsp;
@@ -24,37 +24,37 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/iOfficeAI/AionUi/releases">
+  <a href="https://www.pavii.tech/products/Super-Assistant/">
     <img src="https://img.shields.io/badge/⬇️%20Baixar%20agora-Última%20versão-32CD32?style=for-the-badge&logo=github&logoColor=white" alt="Baixar a última versão" height="50">
   </a>
 </p>
 
 <p align="center">
-  <a href="../../readme.md">English</a> | <a href="./readme_ch.md">简体中文</a> | <a href="./readme_tw.md">繁體中文</a> | <a href="./readme_jp.md">日本語</a> | <a href="./readme_ko.md">한국어</a> | <a href="./readme_es.md">Español</a> | <strong>Português</strong> | <a href="./readme_tr.md">Türkçe</a> | <a href="./readme_ru.md">Русский</a> | <a href="./readme_uk.md">Українська</a> | <a href="https://www.aionui.com" target="_blank">Site oficial</a>
+  <a href="../../readme.md">English</a> | <a href="./readme_ch.md">简体中文</a> | <a href="./readme_tw.md">繁體中文</a> | <a href="./readme_jp.md">日本語</a> | <a href="./readme_ko.md">한국어</a> | <a href="./readme_es.md">Español</a> | <strong>Português</strong> | <a href="./readme_tr.md">Türkçe</a> | <a href="./readme_ru.md">Русский</a> | <a href="./readme_uk.md">Українська</a> | <a href="https://www.pavii.tech/products/Super-Assistant/" target="_blank">Site oficial</a>
 </p>
 
 <p align="center">
-  <strong>💬 Comunidade:</strong> <a href="https://discord.gg/2QAwJn7Egx" target="_blank">Discord (English)</a> | <a href="../../resources/wx-19.png" target="_blank">微信 (中文群)</a> | <a href="https://twitter.com/AionUI" target="_blank">Twitter</a>
+  <strong>💬 Comunidade:</strong> <a href="https://discord.gg/2QAwJn7Egx" target="_blank">Discord (English)</a> | <a href="../../resources/wx-19.png" target="_blank">微信 (中文群)</a> | <a href="https://twitter.com/Pavii.Ai" target="_blank">Twitter</a>
 </p>
 
 ---
 
 <p align="center">
-  <a href="https://x.com/AionUi/status/2079493379914961069">
-    <img src="../../resources/kimi/contributor-bonus-black-blue.jpg" alt="AionUi × Kimi Bônus para Contribuidores" width="600">
+  <a href="https://x.com/Pavii.Ai/status/2079493379914961069">
+    <img src="../../resources/kimi/contributor-bonus-black-blue.jpg" alt="Pavii.Ai × Kimi Bônus para Contribuidores" width="600">
   </a>
 </p>
 
 <p align="center">
-  🎁 <strong>Parceria AionUi × Kimi</strong>: planos premium <strong>Kimi "Allegretto" grátis (valor de US$ 39/mês · ¥199/mês)</strong> para nossos contribuidores!
+  🎁 <strong>Parceria Pavii.Ai × Kimi</strong>: planos premium <strong>Kimi "Allegretto" grátis (valor de US$ 39/mês · ¥199/mês)</strong> para nossos contribuidores!
 </p>
 
 <h3 align="center">
-  <a href="https://x.com/AionUi/status/2079493379914961069">Ver detalhes da campanha e como resgatar →</a>
+  <a href="https://x.com/Pavii.Ai/status/2079493379914961069">Ver detalhes da campanha e como resgatar →</a>
 </h3>
 
 <p align="center">
-  <sub><strong>Kimi K3</strong> chegou e funciona de imediato no AionUi — <a href="https://www.kimi.com/code?aff=aionui" target="_blank">assine um plano Kimi For Coding</a> ou obtenha uma chave de API (<a href="https://platform.kimi.ai?track_id=track-32e04532b08d460fac729191744fa75c&aff=aionui" target="_blank">Global</a> / <a href="https://platform.kimi.com?track_id=track-98f92981df1c4c61b2c68930ba3ab658&aff=aionui" target="_blank">China</a>)</sub>
+  <sub><strong>Kimi K3</strong> chegou e funciona de imediato no Pavii.Ai — <a href="https://www.kimi.com/code?aff=pavii-ai" target="_blank">assine um plano Kimi For Coding</a> ou obtenha uma chave de API (<a href="https://platform.kimi.ai?track_id=track-32e04532b08d460fac729191744fa75c&aff=pavii-ai" target="_blank">Global</a> / <a href="https://platform.kimi.com?track_id=track-98f92981df1c4c61b2c68930ba3ab658&aff=pavii-ai" target="_blank">China</a>)</sub>
 </p>
 
 ---
@@ -64,7 +64,7 @@
 <p align="center">
 
 [✨ Cowork em ação](#-cowork-em-ação) ·
-[🤔 Por que escolher AionUi?](#-por-que-escolher-aionui-sobre-claude-cowork) ·
+[🤔 Por que escolher Pavii.Ai?](#-por-que-escolher-pavii-ai-sobre-claude-cowork) ·
 [🚀 Início rápido](#-início-rápido) ·
 [💬 Comunidade](#-comunidade-e-suporte)
 
@@ -74,9 +74,9 @@
 
 ## Cowork — AI Agents que trabalham com você
 
-**AionUi é mais que um cliente de chat.** É uma plataforma Cowork onde os AI Agents trabalham com você no seu computador — lendo arquivos, escrevendo código, navegando na web e automatizando tarefas. Você pode ver tudo que o Agent faz e sempre está no controle.
+**Pavii.Ai é mais que um cliente de chat.** É uma plataforma Cowork onde os AI Agents trabalham com você no seu computador — lendo arquivos, escrevendo código, navegando na web e automatizando tarefas. Você pode ver tudo que o Agent faz e sempre está no controle.
 
-|                                              | Clientes de chat AI tradicionais | **AionUi (Cowork)**                                                                                                                |
+|                                              | Clientes de chat AI tradicionais | **Pavii.Ai (Cowork)**                                                                                                              |
 | :------------------------------------------- | :------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
 | AI pode operar em seus arquivos              | Limitado ou Não                  | **Sim — Agent integrado com acesso completo a arquivos**                                                                           |
 | AI pode executar tarefas de múltiplas etapas | Limitado                         | **Sim — autônomo com sua aprovação**                                                                                               |
@@ -86,14 +86,14 @@
 | Preço                                        | Grátis / Pago                    | **Gratuito e de código aberto**                                                                                                    |
 
 <p align="center">
-  <img src="../../resources/offica-ai BANNER-function.png" alt="AionUi Cowork Platform" width="800">
+  <img src="../../resources/offica-ai BANNER-function.png" alt="Pavii.Ai Cowork Platform" width="800">
 </p>
 
 ---
 
 ## Agent integrado — Instale e use, configuração zero
 
-AionUi vem com um motor de Agent AI completo. Diferente de ferramentas que exigem instalar CLI Agents separadamente, **AionUi funciona no momento em que você o instala**.
+Pavii.Ai vem com um motor de Agent AI completo. Diferente de ferramentas que exigem instalar CLI Agents separadamente, **Pavii.Ai funciona no momento em que você o instala**.
 
 - **Sem ferramentas CLI para instalar** — o motor Agent está integrado
 - **Sem configuração complexa** — cole qualquer chave API para começar
@@ -159,7 +159,7 @@ Esses assistentes transformam pedidos em arquivos editáveis e reutilizáveis. O
 
 ## Modo Multi-Agent — Já tem CLI Agents? Traga-os
 
-Se você já usa Claude Code, Codex, Hermes Agent ou OpenClaw, AionUi os detecta automaticamente e permite fazer Cowork com todos eles — junto com o Agent integrado.
+Se você já usa Claude Code, Codex, Hermes Agent ou OpenClaw, Pavii.Ai os detecta automaticamente e permite fazer Cowork com todos eles — junto com o Agent integrado.
 
 **Agents compatíveis:** Agent integrado (alimentado pelo motor [aionrs](https://github.com/iOfficeAI/aionrs) incorporado) • Claude Code • Codex • Qwen Code • Gemini CLI • Goose • OpenClaw • Augment Code • CodeBuddy • Kimi CLI • OpenCode • Factory Droid • GitHub Copilot • Qoder • Mistral Vibe • Nanobot • Snow • Hermes • Cursor Agent • Pi • MiMo Code • omp • Antigravity e mais
 
@@ -170,7 +170,7 @@ Se você já usa Claude Code, Codex, Hermes Agent ou OpenClaw, AionUi os detecta
 - **Detecção automática** — reconhece automaticamente as ferramentas CLI instaladas
 - **Interface unificada** — uma plataforma Cowork para todos os seus AI Agents
 - **Sessões paralelas** — execute múltiplos Agents simultaneamente com contexto independente
-- **Gestão unificada de MCP** — gerencie ferramentas MCP (Model Context Protocol) em um só lugar; o AionUi injeta ou sincroniza transportes compatíveis conforme os recursos de cada Agent
+- **Gestão unificada de MCP** — gerencie ferramentas MCP (Model Context Protocol) em um só lugar; o Pavii.Ai injeta ou sincroniza transportes compatíveis conforme os recursos de cada Agent
 - **Modo YOLO / totalmente automático** — Agents compatíveis podem oferecer execução sem supervisão; modos e permissões dependem do Agent selecionado
 
 ### Team Mode — Colaboração Multi-Agent Coordenada
@@ -181,8 +181,8 @@ Execute múltiplos AI Agents como uma equipe organizada: um agente **Leader** re
   <img src="../../resources/AionUi_team.gif" alt="Team Mode overview" width="800">
 </p>
 
-- **Execução paralela multi-agent** — Leader divide e delega tarefas a Teammates em paralelo; Agents externos se conectam via ACP (Agent Client Protocol) e o AionUi coordena a equipe
-- **Orquestração do Leader** — Leader atribui, rastreia e agrega resultados; backends suportados: Claude Code, Codex, Hermes Agent, Gemini, Snow CLI e Aion CLI
+- **Execução paralela multi-agent** — Leader divide e delega tarefas a Teammates em paralelo; Agents externos se conectam via ACP (Agent Client Protocol) e o Pavii.Ai coordena a equipe
+- **Orquestração do Leader** — Leader atribui, rastreia e agrega resultados; backends suportados: Claude Code, Codex, Hermes Agent, Gemini, Snow CLI e Pavii CLI
 - **Workspace isolado por equipe** — todos os Agents compartilham a mesma pasta; cada um tem seu próprio diálogo de permissões com badge na barra lateral para aprovações pendentes
 
 <details>
@@ -191,7 +191,7 @@ Execute múltiplos AI Agents como uma equipe organizada: um agente **Leader** re
 <br>
 
 - **Workspace compartilhado** — todos os Agents leem/escrevem na mesma pasta; o painel de arquivos fica visível durante todo o processo
-- **Backends suportados** — Claude Code, Codex, Gemini, Snow CLI, Aion CLI (aionrs); outros backends ACP com `mcpCapabilities.stdio` são suportados automaticamente
+- **Backends suportados** — Claude Code, Codex, Gemini, Snow CLI, Pavii CLI (aionrs); outros backends ACP com `mcpCapabilities.stdio` são suportados automaticamente
 - **Escalabilidade dinâmica** — adicione ou remova Teammates enquanto a equipe estiver em execução; agentes silenciosos são automaticamente escalados para falha com remoção em um clique
 - **Permissões granulares** — cada Agent tem seu próprio diálogo de confirmação de permissões; badge na barra lateral mostra aprovações pendentes
 - **Compartilhamento de arquivos** — Leader pode passar anexos de arquivo para Teammates
@@ -202,7 +202,7 @@ Execute múltiplos AI Agents como uma equipe organizada: um agente **Leader** re
 
 ## Qualquer chave API, poder completo do Cowork Agent
 
-Outros apps de AI te dão uma caixa de chat com sua chave API. **AionUi te dá um Cowork Agent completo.**
+Outros apps de AI te dão uma caixa de chat com sua chave API. **Pavii.Ai te dá um Cowork Agent completo.**
 
 | Sua chave API              | O que você obtém                   |
 | :------------------------- | :--------------------------------- |
@@ -212,7 +212,7 @@ Outros apps de AI te dão uma caixa de chat com sua chave API. **AionUi te dá u
 | Ollama / LM Studio (local) | Cowork Agent de modelo local       |
 | NewAPI Gateway             | Acesso unificado a 20+ modelos     |
 
-As mesmas capacidades do Agent — leitura/escrita de arquivos, busca na web, geração de imagens, uso de ferramentas — independentemente do modelo que o alimenta. AionUi suporta **30+ plataformas AI** incluindo serviços em nuvem e implantações locais.
+As mesmas capacidades do Agent — leitura/escrita de arquivos, busca na web, geração de imagens, uso de ferramentas — independentemente do modelo que o alimenta. Pavii.Ai suporta **30+ plataformas AI** incluindo serviços em nuvem e implantações locais.
 
 <p align="center">
   <img src="../../resources/llm_newapi.png" alt="Multi-Model Support" width="800">
@@ -231,7 +231,7 @@ As mesmas capacidades do Agent — leitura/escrita de arquivos, busca na web, ge
 - **Plataformas internacionais** — DeepSeek, MiniMax, Novita, OpenRouter, SiliconFlow, xAI, Ark (Volcengine), Poe
 - **Modelos locais** — Ollama, LM Studio (através de plataforma personalizada com endpoint API local)
 
-AionUi também suporta o serviço de gateway [NewAPI](https://github.com/QuantumNous/new-api) — um hub unificado de modelos AI que agrega e distribui vários LLMs. Alterne flexivelmente entre diferentes modelos na mesma interface para atender a vários requisitos de tarefas.
+Pavii.Ai também suporta o serviço de gateway [NewAPI](https://github.com/QuantumNous/new-api) — um hub unificado de modelos AI que agrega e distribui vários LLMs. Alterne flexivelmente entre diferentes modelos na mesma interface para atender a vários requisitos de tarefas.
 
 </details>
 
@@ -242,7 +242,7 @@ AionUi também suporta o serviço de gateway [NewAPI](https://github.com/Quantum
 _Sistema de assistentes extensível com 21 assistentes profissionais integrados e um sistema de habilidades de três camadas. Crie e gerencie seus próprios assistentes e habilidades._
 
 - **Criar assistentes personalizados** — Defina seus próprios assistentes com regras e capacidades personalizadas
-- **Habilidades de três camadas** — Habilidades integradas (incluídas com o AionUi), habilidades personalizadas (suas próprias) e habilidades de Extension (contribuídas por extensões de terceiros); habilite/desabilite por conversa com o indicador de habilidades
+- **Habilidades de três camadas** — Habilidades integradas (incluídas com o Pavii.Ai), habilidades personalizadas (suas próprias) e habilidades de Extension (contribuídas por extensões de terceiros); habilite/desabilite por conversa com o indicador de habilidades
 - **Controle por conversa** — Um indicador de habilidades no cabeçalho do chat mostra as habilidades ativas para a conversa atual; pesquise e exclua habilidades conforme necessário
 
 <p align="center">
@@ -254,7 +254,7 @@ _Sistema de assistentes extensível com 21 assistentes profissionais integrados 
 
 <br>
 
-AionUi inclui **21 assistentes profissionais** com capacidades predefinidas, extensíveis através de habilidades personalizadas:
+Pavii.Ai inclui **21 assistentes profissionais** com capacidades predefinidas, extensíveis através de habilidades personalizadas:
 
 - **🤝 Cowork** — Execução autônoma de tarefas (operações de arquivos, processamento de documentos, planejamento de fluxo de trabalho)
 - **📊 PPT Creator / Morph PPT / Morph PPT 3D** — Gera e anima apresentações PPTX com transições Morph
@@ -275,11 +275,11 @@ AionUi inclui **21 assistentes profissionais** com capacidades predefinidas, ext
 - **🔧 Configuração OpenClaw** — Assistente de configuração e instalação para integração OpenClaw
 - **📖 Roleplay de história** — Roleplay de história imersivo com cartas de personagens e informações do mundo (compatível com SillyTavern)
 
-- **🧭 AionUi Butler** — Orientação do produto, ajuda de configuração e solução de problemas dentro do AionUi
+- **🧭 Your Pavii** — Orientação do produto, ajuda de configuração e solução de problemas dentro do Pavii.Ai
 
 **Habilidades personalizadas**: Importe ou crie habilidades em **Configurações → Skills** e vincule-as aos assistentes necessários. As habilidades vêm de três fontes: integradas, personalizadas e Extension. As integradas incluem `pptx`, `docx`, `pdf`, `xlsx`, `mermaid` e mais.
 
-> 💡 As definições integradas oficiais estão no [catálogo de assistentes](https://github.com/iOfficeAI/AionCore/blob/main/crates/aionui-app/assets/builtin-assistants/assistants.json) do AionCore. As regras continuam em Markdown e podem ser personalizadas no AionUi.
+> 💡 As definições integradas oficiais estão no [catálogo de assistentes](https://github.com/iOfficeAI/AionCore/blob/main/crates/aionui-app/assets/builtin-assistants/assistants.json) do Pavii Engine. As regras continuam em Markdown e podem ser personalizadas no Pavii.Ai.
 
 </details>
 
@@ -287,7 +287,7 @@ AionUi inclui **21 assistentes profissionais** com capacidades predefinidas, ext
 
 ## Cowork de qualquer lugar
 
-_Seu assistente AI 24/7 — acesse AionUi de qualquer dispositivo, em qualquer lugar._
+_Seu assistente AI 24/7 — acesse Pavii.Ai de qualquer dispositivo, em qualquer lugar._
 
 - **Modo WebUI** — acesse via navegador de telefone, tablet ou qualquer computador. Suporta LAN, rede cruzada e implantação em servidor. Login com código QR ou senha.
 
@@ -298,7 +298,7 @@ _Seu assistente AI 24/7 — acesse AionUi de qualquer dispositivo, em qualquer l
   - **WeChat** — Integração com conta pessoal do WeChat
   - **WeCom (企业微信), Slack, Discord** e mais plataformas em breve
 
-> **Configuração:** AionUi Settings → WebUI Settings → Channel, configure o Bot Token.
+> **Configuração:** Pavii.Ai Settings → WebUI Settings → Channel, configure o Bot Token.
 
 <p align="center">
   <img src="../../resources/webui-remote.gif" alt="WebUI remote access demo" width="800">
@@ -306,7 +306,7 @@ _Seu assistente AI 24/7 — acesse AionUi de qualquer dispositivo, em qualquer l
 
 <p align="center"><em>Controle e monitore seu agente remotamente — Claude, Gemini, Codex. Pelo navegador ou celular, como o Claude Code remote.</em></p>
 
-> [Tutorial de acesso remoto à Internet](https://github.com/iOfficeAI/AionUi/wiki/Remote-Internet-Access-Guide-Chinese)
+> [Tutorial de acesso remoto à Internet](https://www.pavii.tech/products/Super-Assistant/)
 
 ## ✨ Cowork em ação
 
@@ -344,7 +344,7 @@ _Configure uma vez, o AI Agent executa automaticamente conforme o cronograma —
 - **Vinculado à conversa** — Cada tarefa agendada está vinculada a uma conversa, mantendo contexto e histórico
 - **Execução automática** — As tarefas são executadas automaticamente nos horários agendados, enviando mensagens para a conversa
 - **Gerenciamento fácil** — Crie, modifique, habilite/desabilite, exclua e visualize tarefas agendadas a qualquer momento
-- **Evitar suspensão** — O AionUi previne automaticamente a suspensão do sistema enquanto as tarefas estão ativas e detecta acionamentos perdidos após o despertar
+- **Evitar suspensão** — O Pavii.Ai previne automaticamente a suspensão do sistema enquanto as tarefas estão ativas e detecta acionamentos perdidos após o despertar
 - **Configuração avançada** — cada tarefa pode ter seu próprio modelo, diretório de workspace e configurações de esforço de raciocínio
 
 **Exemplos do mundo real:**
@@ -393,7 +393,7 @@ _10+ formatos: PDF, Word, Excel, PPT, código, Markdown, imagens, HTML, Diff —
 _Renomeação em lote, organização automática, classificação inteligente, mesclagem de arquivos — o Cowork Agent cuida disso para você._
 
 <p align="center">
-  <img src="../../resources/aionui sort file 2.gif" alt="Smart File Management" width="800">
+  <img src="../../resources/pavii-ai sort file 2.gif" alt="Smart File Management" width="800">
 </p>
 
 <details>
@@ -465,7 +465,7 @@ _Geração, edição e reconhecimento inteligente de imagens, alimentado por Gem
 
 </details>
 
-> [Guia de configuração do modelo de geração de imagens](https://github.com/iOfficeAI/AionUi/wiki/AionUi-Image-Generation-Tool-Model-Configuration-Guide)
+> [Guia de configuração do modelo de geração de imagens](https://www.pavii.tech/products/Super-Assistant/)
 
 ---
 
@@ -522,16 +522,16 @@ _Abra múltiplas conversas, as tarefas não se misturam, memória independente, 
 
 ---
 
-## 🤔 Por que escolher AionUi sobre Claude Cowork?
+## 🤔 Por que escolher Pavii.Ai sobre Claude Cowork?
 
 <details>
 <summary><strong>Clique para ver a comparação detalhada</strong></summary>
 
 <br>
 
-AionUi é um **Desktop Multi-AI Agent gratuito e de código aberto**. Comparado ao Claude Cowork que só roda no macOS e está bloqueado ao Claude, AionUi é sua versão aprimorada de modelo completo e multiplataforma.
+Pavii.Ai é um **Desktop Multi-AI Agent gratuito e de código aberto**. Comparado ao Claude Cowork que só roda no macOS e está bloqueado ao Claude, Pavii.Ai é sua versão aprimorada de modelo completo e multiplataforma.
 
-| Dimensão           | Claude Cowork  | AionUi                                              |
+| Dimensão           | Claude Cowork  | Pavii.Ai                                            |
 | :----------------- | :------------- | :-------------------------------------------------- |
 | SO                 | Apenas macOS   | macOS / Windows / Linux                             |
 | Suporte de modelos | Apenas Claude  | Gemini, Claude, DeepSeek, OpenAI, Ollama, ...       |
@@ -554,17 +554,17 @@ Suporte a cenários de escritório AI profundos:
 
 <details>
 <summary><strong>P: Preciso instalar primeiro Gemini CLI ou Claude Code?</strong></summary>
-R: <strong>Não.</strong> AionUi tem um AI Agent integrado que funciona imediatamente após a instalação. Basta inserir qualquer chave API para começar. Se você também tiver ferramentas CLI como Claude Code ou Gemini CLI instaladas, AionUi as detectará e integrará automaticamente para ainda mais capacidades.
+R: <strong>Não.</strong> Pavii.Ai tem um AI Agent integrado que funciona imediatamente após a instalação. Basta inserir qualquer chave API para começar. Se você também tiver ferramentas CLI como Claude Code ou Gemini CLI instaladas, Pavii.Ai as detectará e integrará automaticamente para ainda mais capacidades.
 </details>
 
 <details>
-<summary><strong>P: O que posso fazer com AionUi?</strong></summary>
-R: AionUi é seu <strong>espaço de trabalho Cowork privado</strong>. O Agent integrado pode organizar pastas em lote, processar dados do Excel, gerar documentos, buscar na web e gerar imagens. Com o Modo Multi-Agent, você também pode aproveitar Claude Code, Codex e outros Agents CLI poderosos através da mesma interface.
+<summary><strong>P: O que posso fazer com Pavii.Ai?</strong></summary>
+R: Pavii.Ai é seu <strong>espaço de trabalho Cowork privado</strong>. O Agent integrado pode organizar pastas em lote, processar dados do Excel, gerar documentos, buscar na web e gerar imagens. Com o Modo Multi-Agent, você também pode aproveitar Claude Code, Codex e outros Agents CLI poderosos através da mesma interface.
 </details>
 
 <details>
 <summary><strong>P: É gratuito?</strong></summary>
-R: AionUi é completamente gratuito e de código aberto. Você paga apenas pelo uso da API do provedor que escolher, e pode usar chaves API de qualquer provedor que preferir.
+R: Pavii.Ai é completamente gratuito e de código aberto. Você paga apenas pelo uso da API do provedor que escolher, e pode usar chaves API de qualquer provedor que preferir.
 </details>
 
 <details>
@@ -574,7 +574,7 @@ R: Todos os dados são armazenados localmente em um banco de dados SQLite. Nada 
 
 ---
 
-## Veja como as pessoas usam AionUi
+## Veja como as pessoas usam Pavii.Ai
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=vWxE6VO9TKo" target="_blank">
@@ -608,7 +608,7 @@ R: Todos os dados são armazenados localmente em um banco de dados SQLite. Nada 
 - [Fazer pessoas comuns usarem Claude Code como um APP](https://mp.weixin.qq.com/s/TsMojSbkUUFvsd-HQCazZg) — Gato preguiçoso ama pescar
 - [5500 Stars: Como o código aberto quebra o fosso de ferramentas AI da Anthropic](https://mp.weixin.qq.com/s/saEk49cYV6MqBgw19Lw6Gw) — Momento de silício AI
 
-> **Fez um vídeo sobre AionUi?** [Avise-nos no X](https://x.com/AionUi) e vamos destacá-lo aqui!
+> **Fez um vídeo sobre Pavii.Ai?** [Avise-nos no X](https://x.com/Pavii.Ai) e vamos destacá-lo aqui!
 
 ---
 
@@ -625,7 +625,7 @@ R: Todos os dados são armazenados localmente em um banco de dados SQLite. Nada 
 ### Instalar
 
 <p>
-  <a href="https://github.com/iOfficeAI/AionUi/releases">
+  <a href="https://www.pavii.tech/products/Super-Assistant/">
     <img src="https://img.shields.io/badge/Baixar-Última%20versão-32CD32?style=for-the-badge&logo=github&logoColor=white" alt="Baixar a última versão" height="50">
   </a>
 </p>
@@ -634,12 +634,12 @@ Clique no botão acima para ir à página de Releases e baixar o instalador para
 
 ```bash
 # Ou, macOS via Homebrew
-brew install aionui
+brew install pavii-ai
 ```
 
 ### Comece em 3 passos
 
-1. **Instale** AionUi
+1. **Instale** Pavii.Ai
 2. **Insira** qualquer chave API para começar
 3. **Comece a fazer Cowork** — o AI Agent integrado está pronto para usar
 
@@ -652,23 +652,23 @@ brew install aionui
 
 **🚀 Início rápido**
 
-- [📖 Guia de instalação completo](https://github.com/iOfficeAI/AionUi/wiki/Getting-Started) — Passos detalhados do download à configuração
-- [⚙️ Guia de configuração LLM](https://github.com/iOfficeAI/AionUi/wiki/LLM-Configuration) — Configuração de modelos AI multiplataforma
-- [🤖 Configuração do modo Multi-Agent](https://github.com/iOfficeAI/AionUi/wiki/ACP-Setup) — Integrar Agents AI de terminal
-- [🔌 Configuração de ferramentas MCP](https://github.com/iOfficeAI/AionUi/wiki/MCP-Configuration-Guide) — Configuração do servidor Model Context Protocol
-- [🌐 Guia de configuração WebUI](https://github.com/iOfficeAI/AionUi/wiki/WebUI-Configuration-Guide) — Tutorial completo de configuração e instalação do WebUI
+- [📖 Guia de instalação completo](https://www.pavii.tech/products/Super-Assistant/) — Passos detalhados do download à configuração
+- [⚙️ Guia de configuração LLM](https://www.pavii.tech/products/Super-Assistant/) — Configuração de modelos AI multiplataforma
+- [🤖 Configuração do modo Multi-Agent](https://www.pavii.tech/products/Super-Assistant/) — Integrar Agents AI de terminal
+- [🔌 Configuração de ferramentas MCP](https://www.pavii.tech/products/Super-Assistant/) — Configuração do servidor Model Context Protocol
+- [🌐 Guia de configuração WebUI](https://www.pavii.tech/products/Super-Assistant/) — Tutorial completo de configuração e instalação do WebUI
 
 **🎯 Casos de uso**
 
-- [📁 Gerenciamento de arquivos](https://github.com/iOfficeAI/AionUi/wiki/file-management) — Organização inteligente de arquivos
-- [📊 Processamento de Excel](https://github.com/iOfficeAI/AionUi/wiki/excel-processing) — Processamento de dados alimentado por AI
-- [🎨 Geração de imagens](https://github.com/iOfficeAI/AionUi/wiki/AionUi-Image-Generation-Tool-Model-Configuration-Guide) — Criação de imagens AI
-- [📚 Mais casos de uso](https://github.com/iOfficeAI/AionUi/wiki/Use-Cases-Overview)
+- [📁 Gerenciamento de arquivos](https://www.pavii.tech/products/Super-Assistant/) — Organização inteligente de arquivos
+- [📊 Processamento de Excel](https://www.pavii.tech/products/Super-Assistant/) — Processamento de dados alimentado por AI
+- [🎨 Geração de imagens](https://www.pavii.tech/products/Super-Assistant/) — Criação de imagens AI
+- [📚 Mais casos de uso](https://www.pavii.tech/products/Super-Assistant/)
 
 **❓ Suporte e ajuda**
 
-- [❓ FAQ](https://github.com/iOfficeAI/AionUi/wiki/FAQ) — Perguntas e solução de problemas
-- [🔧 Tutoriais de configuração e uso](https://github.com/iOfficeAI/AionUi/wiki/Configuration-Guides) — Documentação de configuração completa
+- [❓ FAQ](https://www.pavii.tech/products/Super-Assistant/) — Perguntas e solução de problemas
+- [🔧 Tutoriais de configuração e uso](https://www.pavii.tech/products/Super-Assistant/) — Documentação de configuração completa
 
 </details>
 
@@ -679,14 +679,14 @@ brew install aionui
 **Suas ideias importam!** Valorizamos cada sugestão e feedback.
 
 <p align="center">
-  <a href="https://x.com/AionUi" target="_blank">
+  <a href="https://x.com/Pavii.Ai" target="_blank">
     <img src="../../resources/contactus-x.png" alt="Contact Us on X" width="600">
   </a>
 </p>
 
-- [GitHub Discussions](https://github.com/iOfficeAI/AionUi/discussions) — compartilhe ideias e troque dicas
-- [Reportar problemas](https://github.com/iOfficeAI/AionUi/issues) — bugs e solicitações de recursos
-- [Atualizações de lançamento](https://github.com/iOfficeAI/AionUi/releases) — obtenha a última versão
+- [GitHub Discussions](https://www.pavii.tech/products/Super-Assistant/) — compartilhe ideias e troque dicas
+- [Reportar problemas](https://www.pavii.tech/products/Super-Assistant/) — bugs e solicitações de recursos
+- [Atualizações de lançamento](https://www.pavii.tech/products/Super-Assistant/) — obtenha a última versão
 - [Comunidade Discord](https://discord.gg/2QAwJn7Egx) — comunidade em inglês
 - [Grupo WeChat](../../resources/wx-19.png) — comunidade chinesa
 
@@ -702,7 +702,7 @@ Por favor, leia [CONTRIBUTING.md](../../CONTRIBUTING.md) antes de abrir um PR.
 
 ### Configuração de desenvolvimento
 
-O desenvolvimento local do AionUi usa dois repositórios: AionUi para o frontend Electron e AionCore para o backend local. Consulte o [guia de desenvolvimento](../contributing/development.md) para a configuração completa no macOS, Linux e Windows.
+O desenvolvimento local do Pavii.Ai usa dois repositórios: Pavii.Ai para o frontend Electron e Pavii Engine para o backend local. Consulte o [guia de desenvolvimento](../contributing/development.md) para a configuração completa no macOS, Linux e Windows.
 
 ---
 
@@ -715,16 +715,16 @@ Este projeto está licenciado sob [Apache-2.0](../../LICENSE).
 ## Contribuidores
 
 <p align="center">
-  <a href="https://github.com/iOfficeAI/AionUi/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=iOfficeAI/AionUi&max=100" alt="Contributors" />
+  <a href="https://www.pavii.tech/products/Super-Assistant/">
+    <img src="https://contrib.rocks/image?repo=vjk7989/pavii-ai&max=100" alt="Contributors" />
   </a>
 </p>
 
 ## Histórico de estrelas
 
 <p align="center">
-  <a href="https://www.star-history.com/#iOfficeAI/aionui&Date" target="_blank">
-    <img src="https://api.star-history.com/svg?repos=iOfficeAI/aionui&type=Date" alt="Star History" width="600">
+  <a href="https://www.star-history.com/#vjk7989/pavii-ai&Date" target="_blank">
+    <img src="https://api.star-history.com/svg?repos=vjk7989/pavii-ai&type=Date" alt="Star History" width="600">
   </a>
 </p>
 
@@ -732,6 +732,6 @@ Este projeto está licenciado sob [Apache-2.0](../../LICENSE).
 
 **Se você gostou, nos dê uma estrela**
 
-[Reportar bug](https://github.com/iOfficeAI/AionUi/issues) · [Solicitar recurso](https://github.com/iOfficeAI/AionUi/issues)
+[Reportar bug](https://www.pavii.tech/products/Super-Assistant/) · [Solicitar recurso](https://www.pavii.tech/products/Super-Assistant/)
 
 </div>

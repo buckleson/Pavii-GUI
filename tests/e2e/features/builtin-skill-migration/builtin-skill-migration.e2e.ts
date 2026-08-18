@@ -467,7 +467,7 @@ test.describe('Built-in Skill Migration (T3)', () => {
       //
       // Then, on the host side, we check the most likely cache locations
       // for a leftover `builtin-skills/` directory under the canonical
-      // `~/.aionui-config` tree. Failing that we at least assert the
+      // `~/.pavii-config` tree. Failing that we at least assert the
       // helper is non-destructive when no legacy dir exists — we do so
       // by seeding one under the sibling backend's data-dir and observing
       // that it is ignored (the *backend* does not own this cleanup; it
@@ -499,15 +499,15 @@ test.describe('Built-in Skill Migration (T3)', () => {
       // The authoritative assertion is Vitest on
       // `cleanupLegacyBuiltinSkillsDir` plus T4 packaging smoke.
       const candidates = [
-        path.join(os.homedir(), '.aionui-config', 'builtin-skills'),
-        path.join(os.homedir(), '.aionui-config-dev', 'builtin-skills'),
+        path.join(os.homedir(), '.pavii-config', 'builtin-skills'),
+        path.join(os.homedir(), '.pavii-config-dev', 'builtin-skills'),
       ];
       const survivors = candidates.filter((p) => fs.existsSync(p));
       test.info().annotations.push({
         type: 'note',
         description:
           survivors.length === 0
-            ? 'no legacy builtin-skills cache dirs detected under ~/.aionui-config*'
+            ? 'no legacy builtin-skills cache dirs detected under ~/.pavii-config*'
             : `legacy dirs still present (async cleanup pending): ${survivors.join(', ')}`,
       });
     });

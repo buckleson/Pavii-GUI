@@ -32,7 +32,7 @@ import {
   type AgentAvailabilityFilter,
 } from './agentFilters';
 
-const LOCAL_AGENT_SETUP_GUIDE_URL = 'https://github.com/iOfficeAI/AionUi/wiki/ACP-Setup';
+const LOCAL_AGENT_SETUP_GUIDE_URL = 'https://www.pavii.tech/products/Super-Assistant/';
 
 const LocalAgents: React.FC = () => {
   const { t, i18n } = useTranslation();

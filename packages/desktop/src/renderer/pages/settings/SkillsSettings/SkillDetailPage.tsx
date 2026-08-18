@@ -32,6 +32,8 @@ import { getAssistantsUsingSkill } from './SkillUsedByStack';
 
 interface SkillInfo {
   name: string;
+  /** Rebranded name for display; `name` stays the operative backend key. */
+  display_name?: string;
   description: string;
   location: string;
   is_auto_inject: boolean;
@@ -210,11 +212,11 @@ const SkillDetailPage: React.FC = () => {
                 <div
                   className={`h-48px w-48px shrink-0 rounded-12px flex items-center justify-center text-18px font-bold shadow-sm text-transform-uppercase ${getAvatarColorClass(skill.name)}`}
                 >
-                  {skill.name.charAt(0).toUpperCase()}
+                  {(skill.display_name ?? skill.name).charAt(0).toUpperCase()}
                 </div>
                 <div className='min-w-0 flex flex-col gap-6px'>
                   <div className='flex items-center gap-8px'>
-                    <span className='text-16px font-600 text-t-primary'>{skill.name}</span>
+                    <span className='text-16px font-600 text-t-primary'>{skill.display_name ?? skill.name}</span>
                     <span className='rounded-4px border border-border-2 bg-fill-1 px-6px py-1px text-11px text-t-secondary'>
                       {sourceLabel(skill)}
                     </span>

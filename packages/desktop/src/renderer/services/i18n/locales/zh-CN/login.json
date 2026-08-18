@@ -1,6 +1,6 @@
 {
-  "pageTitle": "AionUi - 登录",
-  "brand": "AionUi",
+  "pageTitle": "Pavii.Ai - 登录",
+  "brand": "Pavii.Ai",
   "subtitle": "欢迎回来，请登录您的账户",
   "username": "用户名",
   "usernamePlaceholder": "请输入用户名",
@@ -22,5 +22,6 @@
     "networkError": "连接失败，请稍后重试",
     "serverError": "服务器开小差了，请稍后重试",
     "unknown": "登录失败，请稍后再试"
-  }
+  },
+  "qrExpired": "登录链接已过期。请在桌面应用中重新生成二维码后重试。"
 }

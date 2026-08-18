@@ -16,14 +16,14 @@ import {
 test.describe('Extension: Channel Plugins', () => {
   test('channels page renders', async ({ page }) => {
     await goToChannelsTab(page);
-    await expectBodyContainsAny(page, ['Telegram', 'Lark', 'DingTalk', 'Channel', '频道']);
+    await expectBodyContainsAny(page, ['Telegram', 'Channel', '频道']);
   });
 
   test('built-in channels still visible alongside extension channels', async ({ page }) => {
     await goToChannelsTab(page);
 
     const body = await page.locator('body').textContent();
-    const builtIn = ['Telegram', 'Lark', 'DingTalk'];
+    const builtIn = ['Telegram'];
     const found = builtIn.filter((ch) => body?.includes(ch));
     expect(found.length).toBeGreaterThanOrEqual(1);
   });

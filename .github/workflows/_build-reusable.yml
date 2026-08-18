@@ -1,0 +1,130 @@
+name: Build (reusable)
+
+# One job per platform+arch. This is mandatory: build-with-builder.js prepares
+# the engine once using the FIRST --arch flag, so a multi-arch invocation ships
+# an app with no engine and fails afterPack's bundle verification.
+on:
+  workflow_call:
+    inputs:
+      upload-artifacts:
+        description: Upload build output as workflow artifacts
+        type: boolean
+        default: true
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            runner: windows-latest
+            artifact: windows-build-x64
+            build: build-win:x64
+            rust-target: x86_64-pc-windows-msvc
+          - name: windows-arm64
+            runner: windows-11-arm
+            artifact: windows-build-arm64
+            build: build-win:arm64
+            rust-target: aarch64-pc-windows-msvc
+          - name: macos-arm64
+            runner: macos-14
+            artifact: macos-build-arm64
+            build: build-mac:arm64
+            rust-target: aarch64-apple-darwin
+          - name: macos-x64
+            runner: macos-13
+            artifact: macos-build-x64
+            build: build-mac:x64
+            rust-target: x86_64-apple-darwin
+          - name: linux-x64
+            runner: ubuntu-latest
+            artifact: linux-build-x64
+            build: linux-x64
+            rust-target: x86_64-unknown-linux-gnu
+          - name: linux-arm64
+            runner: ubuntu-24.04-arm
+            artifact: linux-build-arm64
+            build: linux-arm64
+            rust-target: aarch64-unknown-linux-gnu
+
+    env:
+      ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
+      # Sentry stays disabled: no DSN is configured for Pavii builds.
+      SENTRY_DSN: ''
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux packaging deps
+        if: startsWith(matrix.name, 'linux')
+        run: sudo apt-get update && sudo apt-get install -y fakeroot dpkg rpm libarchive-tools
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: the-remaa/AionCore -> target
+          key: ${{ matrix.name }}
+
+      # The engine is built from the vendored source so every platform gets the
+      # Pavii-branded binary (identity, prompts, embedded version info).
+      - name: Build Pavii Engine (aioncore)
+        working-directory: the-remaa/AionCore
+        run: cargo build --release --bin aioncore
+
+      - name: Locate engine binary
+        shell: bash
+        run: |
+          BIN="the-remaa/AionCore/target/release/aioncore"
+          [ "${{ runner.os }}" = "Windows" ] && BIN="$BIN.exe"
+          test -f "$BIN" || { echo "engine binary missing at $BIN"; exit 1; }
+          echo "AIONUI_BACKEND_LOCAL_BINARY=$(pwd)/$BIN" >> "$GITHUB_ENV"
+
+      # bun (not npm): the 7zip-bin patch lives in bun's patchedDependencies and
+      # is required for the macOS zip target.
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build application
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          case "${{ matrix.build }}" in
+            linux-x64)   node scripts/build-with-builder.js x64 --linux --x64 ;;
+            linux-arm64) node scripts/build-with-builder.js arm64 --linux --arm64 ;;
+            *)           bun run ${{ matrix.build }} ;;
+          esac
+
+      - name: Upload artifacts
+        if: inputs.upload-artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            out/Pavii.Ai-*.exe
+            out/Pavii.Ai-*.dmg
+            out/Pavii.Ai-*-mac-*.zip
+            out/Pavii.Ai-*.deb
+            out/Pavii.Ai-*.AppImage
+            out/latest*.yml

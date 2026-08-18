@@ -207,12 +207,12 @@ function getInstallPathKind(resourcesPath: unknown): string | undefined {
   if (!pathValue) return undefined;
 
   const normalized = pathValue.replace(/\//g, '\\').toLowerCase();
-  if (normalized.includes('\\appdata\\local\\programs\\aionui\\resources')) {
+  if (normalized.includes('\\appdata\\local\\programs\\pavii.ai\\resources')) {
     return 'user_local_programs';
   }
   if (
-    normalized.includes('\\program files\\aionui\\resources') ||
-    normalized.includes('\\program files (x86)\\aionui\\resources')
+    normalized.includes('\\program files\\pavii.ai\\resources') ||
+    normalized.includes('\\program files (x86)\\pavii.ai\\resources')
   ) {
     return 'program_files';
   }
@@ -287,7 +287,6 @@ export async function captureBackendStartupFailure(error: unknown): Promise<void
       ['aionui.backend_startup.missing_runtime_dir', getBooleanTagValue(failureInfo.missingRuntimeDir)],
       ['aionui.backend_startup.missing_binary', getBooleanTagValue(failureInfo.missingBackendBinary)],
       ['aionui.backend_startup.missing_hub_dir', getBooleanTagValue(failureInfo.missingHubDir)],
-      ['aionui.backend_startup.missing_pet_states_dir', getBooleanTagValue(failureInfo.missingPetStatesDir)],
       ['aionui.backend_startup.missing_pwa_dir', getBooleanTagValue(failureInfo.missingPwaDir)],
       ['aionui.backend_startup.install_path_kind', getInstallPathKind(details?.resourcesPath)],
       ['aionui.backend_startup.last_update_status', getString(autoUpdateDiagnostics?.lastEvent?.status)],

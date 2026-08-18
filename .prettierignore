@@ -1,1 +1,7 @@
 mobile/
+out/
+dist-web-cli/
+.workspaces/
+resources/bundled-aioncore/
+resources/hub/
+the-remaa/

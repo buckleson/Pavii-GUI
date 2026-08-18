@@ -51,6 +51,7 @@ vi.mock('@/common/config/constants', () => ({
   },
 }));
 vi.mock('@/renderer/components/layout/PwaPullToRefresh', () => ({ default: () => null }));
+vi.mock('@renderer/components/base/PaviiSignInGate', () => ({ default: () => null }));
 vi.mock('@/renderer/components/layout/Titlebar', () => ({ default: () => null }));
 vi.mock('@/renderer/components/settings/UpdateModal', () => ({ default: () => null }));
 vi.mock('@renderer/hooks/system/useDeepLink', () => ({ useDeepLink: () => {} }));
@@ -159,7 +160,7 @@ describe('Layout sider brand Home button', () => {
 
     // No actionable role/label in chat routes.
     expect(screen.queryByLabelText(BACK_KEY)).toBeNull();
-    const wordmark = screen.getByText('AionUi');
+    const wordmark = screen.getByText('Pavii.Ai');
     fireEvent.click(wordmark);
     expect(navigate).not.toHaveBeenCalled();
   });
@@ -168,7 +169,7 @@ describe('Layout sider brand Home button', () => {
     currentPathname = '/conversation/xyz';
     renderLayout();
 
-    fireEvent.click(screen.getByText('AionUi'));
+    fireEvent.click(screen.getByText('Pavii.Ai'));
     expect(navigate).not.toHaveBeenCalled();
   });
 
@@ -199,10 +200,11 @@ describe('Layout sider brand Home button', () => {
   it('clicking the logo icon counts toward the devtools easter-egg and never navigates', () => {
     currentPathname = '/settings/about';
     sessionStorage.setItem('aion:last-non-settings-path', '/conversation/abc');
-    const { container } = renderLayout();
+    renderLayout();
 
-    // The icon is the SVG-wrapping div (bg-black), separate from the wordmark.
-    const icon = container.querySelector('.bg-black') as HTMLElement;
+    // The icon is the brand logo <img> (clicks bubble to its wrapping div's
+    // onClick), separate from the wordmark text element.
+    const icon = screen.getByAltText('Pavii.Ai');
     expect(icon).toBeTruthy();
     for (let i = 0; i < 4; i++) fireEvent.click(icon);
     expect(openDevTools).toHaveBeenCalled();

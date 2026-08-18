@@ -28,8 +28,6 @@ describe('resolveFeedbackModule', () => {
     ['/settings/skills/detail/my-skill', 'skills-plugin'],
     ['/settings/skills/import-history', 'skills-plugin'],
     ['/settings/tools', 'mcp-tools'],
-    ['/settings/appearance', 'display-desktop'],
-    ['/settings/pet', 'display-desktop'],
     ['/settings/webui', 'webui-remote'],
     ['/settings/ext/telegram', 'channel'],
     ['/settings/system', 'system-settings'],
@@ -57,8 +55,9 @@ describe('resolveFeedbackModule', () => {
       'utf-8'
     );
     // Pages where preselecting a module makes no sense (multi-purpose or
-    // pre-auth surfaces where the user picks the module themselves).
-    const moduleLess = new Set(['/guid', '/login', '/test/components']);
+    // pre-auth surfaces where the user picks the module themselves; the
+    // profile page is an account/stats surface with no matching module).
+    const moduleLess = new Set(['/guid', '/login', '/test/components', '/profile']);
     const paths = [...routerSrc.matchAll(/path='([^*'][^']*)'/g)].map((m) => m[1]);
     expect(paths.length).toBeGreaterThan(10);
     for (const routePath of paths) {

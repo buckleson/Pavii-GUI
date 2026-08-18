@@ -7,7 +7,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { registerWindowsAppUserModelId, WINDOWS_APP_USER_MODEL_ID } from '@/process/startup/windowsAppUserModelId';
+import {
+  registerWindowsAppUserModelId,
+  WINDOWS_APP_USER_MODEL_ID,
+  WINDOWS_DEV_APP_USER_MODEL_ID,
+} from '@/process/startup/windowsAppUserModelId';
 
 const makeApp = (isPackaged: boolean) => ({
   isPackaged,
@@ -17,16 +21,16 @@ const makeApp = (isPackaged: boolean) => ({
 describe('registerWindowsAppUserModelId', () => {
   it('registers the electron-builder appId on packaged win32 builds', () => {
     const app = makeApp(true);
-    registerWindowsAppUserModelId({ app, platform: 'win32', execPath: 'C:\\app\\AionUi.exe' });
+    registerWindowsAppUserModelId({ app, platform: 'win32', execPath: 'C:\\app\\PaviiAi.exe' });
     expect(app.setAppUserModelId).toHaveBeenCalledTimes(1);
     expect(app.setAppUserModelId).toHaveBeenCalledWith(WINDOWS_APP_USER_MODEL_ID);
   });
 
-  it('registers process.execPath on win32 development builds', () => {
+  it('registers the stable Pavii dev id on win32 development builds', () => {
     const app = makeApp(false);
     registerWindowsAppUserModelId({ app, platform: 'win32', execPath: 'C:\\dev\\electron.exe' });
     expect(app.setAppUserModelId).toHaveBeenCalledTimes(1);
-    expect(app.setAppUserModelId).toHaveBeenCalledWith('C:\\dev\\electron.exe');
+    expect(app.setAppUserModelId).toHaveBeenCalledWith(WINDOWS_DEV_APP_USER_MODEL_ID);
   });
 
   it('does not register on non-win32 platforms', () => {

@@ -11,17 +11,16 @@ const AssistantSettings = React.lazy(() => import('@renderer/pages/settings/Assi
 const SkillsSettings = React.lazy(() => import('@renderer/pages/settings/SkillsSettings/SkillsHubSettings'));
 const SkillDetailPage = React.lazy(() => import('@renderer/pages/settings/SkillsSettings/SkillDetailPage'));
 const ToolsSettings = React.lazy(() => import('@renderer/pages/settings/ToolsSettings'));
-const AppearanceSettings = React.lazy(() => import('@renderer/pages/settings/AppearanceSettings'));
 const ModeSettings = React.lazy(() => import('@renderer/pages/settings/ModeSettings'));
 const SystemSettings = React.lazy(() => import('@renderer/pages/settings/SystemSettings'));
 const WebuiSettings = React.lazy(() => import('@renderer/pages/settings/WebuiSettings'));
-const PetSettings = React.lazy(() => import('@renderer/pages/settings/PetSettings'));
 const ExtensionSettingsPage = React.lazy(() => import('@renderer/pages/settings/ExtensionSettingsPage'));
 const LoginPage = React.lazy(() => import('@renderer/pages/login'));
 const ComponentsShowcase = React.lazy(() => import('@renderer/pages/TestShowcase'));
 const ScheduledTasksPage = React.lazy(() => import('@renderer/pages/cron/ScheduledTasksPage'));
 const TaskDetailPage = React.lazy(() => import('@renderer/pages/cron/ScheduledTasksPage/TaskDetailPage'));
 const TeamIndex = React.lazy(() => import('@renderer/pages/team'));
+const ProfilePage = React.lazy(() => import('@renderer/pages/profile'));
 
 const withRouteFallback = (Component: React.LazyExoticComponent<React.ComponentType>) => (
   <Suspense fallback={<AppLoader />}>
@@ -90,15 +89,17 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
             element={<Navigate to='/settings/skills/import-history' replace />}
           />
           <Route path='/settings/skills-hub' element={<Navigate to='/settings/skills' replace />} />
-          <Route path='/settings/appearance' element={withRouteFallback(AppearanceSettings)} />
-          <Route path='/settings/display' element={<Navigate to='/settings/appearance' replace />} />
+          {/* The Appearance page was removed; keep redirects so old deep links still land somewhere sensible. */}
+          <Route path='/settings/appearance' element={<Navigate to='/settings/system' replace />} />
+          <Route path='/settings/display' element={<Navigate to='/settings/system' replace />} />
           <Route path='/settings/webui' element={withRouteFallback(WebuiSettings)} />
-          <Route path='/settings/pet' element={withRouteFallback(PetSettings)} />
+          <Route path='/settings/pet' element={<Navigate to='/settings/system' replace />} />
           <Route path='/settings/system' element={withRouteFallback(SystemSettings)} />
           <Route path='/settings/about' element={withRouteFallback(SystemSettings)} />
           <Route path='/settings/ext/:tabId' element={withRouteFallback(ExtensionSettingsPage)} />
           <Route path='/settings' element={<Navigate to='/settings/agent' replace />} />
           <Route path='/test/components' element={withRouteFallback(ComponentsShowcase)} />
+          <Route path='/profile' element={withRouteFallback(ProfilePage)} />
           <Route path='/scheduled' element={withRouteFallback(ScheduledTasksPage)} />
           <Route path='/scheduled/:job_id' element={withRouteFallback(TaskDetailPage)} />
         </Route>

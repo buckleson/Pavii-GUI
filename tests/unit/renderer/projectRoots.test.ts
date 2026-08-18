@@ -13,6 +13,38 @@ const entry = (over: Partial<ProjectEntryDto> = {}): ProjectEntryDto => ({
   ...over,
 });
 
+describe('temporary workspace display rename', () => {
+  it('shows the localized label for engine temp workspace roots', () => {
+    const ref = entryToRootRef(
+      entry({ display_name: null, display_path: 'C:\\data\\aionrs-temp-08b5edfd' }),
+      'Temporary Space'
+    );
+    expect(ref.title).toBe('Temporary Space');
+  });
+
+  it('scrubs the old prefix when no label is supplied', () => {
+    expect(entryToRootRef(entry({ display_name: null, display_path: '/x/aionrs-temp-abc' })).title).toBe(
+      'pavii-temp-abc'
+    );
+  });
+
+  it('labels rebranded pavii-temp roots too', () => {
+    expect(
+      entryToRootRef(entry({ display_name: null, display_path: '/x/pavii-temp-abc' }), 'Temporary Space').title
+    ).toBe('Temporary Space');
+  });
+
+  it('leaves non-workspace roots untouched even when named like temp dirs', () => {
+    expect(
+      entryToRootRef(entry({ role: 'linked', display_name: null, display_path: '/x/aionrs-temp-abc' }), 'Temp').title
+    ).toBe('aionrs-temp-abc');
+  });
+
+  it('leaves ordinary workspace folders untouched', () => {
+    expect(entryToRootRef(entry({ display_name: null, display_path: '/Users/me/app' }), 'Temp').title).toBe('app');
+  });
+});
+
 describe('entryToRootRef title fallback', () => {
   it('uses the user display_name when present', () => {
     expect(entryToRootRef(entry({ display_name: 'My App' })).title).toBe('My App');

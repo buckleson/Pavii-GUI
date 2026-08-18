@@ -354,7 +354,7 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
   // another project's tree.
   if (!detail && isLoading) return <Spin loading />;
 
-  const roots = detail ? toRootRefs(detail) : [];
+  const roots = detail ? toRootRefs(detail, t('conversation.workspace.temporarySpace')) : [];
   // Search roots = the project's pe roots (each folder root, rel=''). fs/search
   // spans all bound folders; the front-end ranks the merged hit stream.
   const searchRoots = roots.map((root) => ({ pe_id: root.pe_id, relative_path: '' }));

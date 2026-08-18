@@ -17,6 +17,10 @@ import { buildSkillImportNotice, getSkillImportErrorMessage } from './skillImpor
 // Skill 信息类型 / Skill info type
 interface SkillInfo {
   name: string;
+  /** Rebranded name for display; `name` stays the operative backend key. */
+  display_name?: string;
+  /** Display grouping override: bundled pack skills show on the Official tab. */
+  display_source?: 'official';
   description: string;
   location: string;
   /**
@@ -168,12 +172,17 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
     [activeTab, navigate]
   );
 
-  // "Custom" tab: only user-imported skills.
-  const mySkills = useMemo(() => availableSkills.filter((s) => s.source === 'custom'), [availableSkills]);
-  // "Official" tab: built-in non-auto-injected skills shown as the primary list,
+  // "Custom" tab: only user-imported skills (the bundled Pavii pack is
+  // display-tagged official and lives on the Official tab instead).
+  const mySkills = useMemo(
+    () => availableSkills.filter((s) => s.source === 'custom' && s.display_source !== 'official'),
+    [availableSkills]
+  );
+  // "Official" tab: built-in non-auto-injected skills plus the bundled pack,
   // with extension skills and auto-injected skills kept as separate read-only sections.
   const officialSkills = useMemo(
-    () => availableSkills.filter((s) => s.source === 'builtin' && !s.is_auto_inject),
+    () =>
+      availableSkills.filter((s) => (s.source === 'builtin' && !s.is_auto_inject) || s.display_source === 'official'),
     [availableSkills]
   );
   const builtinAutoSkills = useMemo(() => availableSkills.filter(isAutoInjectedBuiltinSkill), [availableSkills]);
@@ -187,6 +196,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
       return list.filter(
         (s) =>
           s.name.toLowerCase().includes(lowerQuery) ||
+          (s.display_name && s.display_name.toLowerCase().includes(lowerQuery)) ||
           (s.description && s.description.toLowerCase().includes(lowerQuery))
       );
     },
@@ -227,7 +237,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
     if (!highlightName || loading) return;
     const target = availableSkills.find((s) => s.name === highlightName);
     if (target) {
-      setActiveTab(target.source === 'custom' ? 'custom' : 'official');
+      setActiveTab(target.source === 'custom' && target.display_source !== 'official' ? 'custom' : 'official');
     }
   }, [highlightName, loading, availableSkills]);
 
@@ -671,12 +681,12 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
             <div
               className={`w-40px h-40px rd-10px flex items-center justify-center font-bold text-16px shadow-sm text-transform-uppercase ${getAvatarColorClass(skill.name)}`}
             >
-              {skill.name.charAt(0).toUpperCase()}
+              {(skill.display_name ?? skill.name).charAt(0).toUpperCase()}
             </div>
           )}
         </div>
         <div className='flex-1 min-w-0 flex flex-col justify-center gap-4px'>
-          <h3 className='text-14px font-semibold text-t-primary/90 truncate m-0'>{skill.name}</h3>
+          <h3 className='text-14px font-semibold text-t-primary/90 truncate m-0'>{skill.display_name ?? skill.name}</h3>
           {skill.description && (
             <p className='text-13px text-t-secondary leading-relaxed line-clamp-2 m-0' title={skill.description}>
               {skill.description}
@@ -855,12 +865,14 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
                 <div
                   className={`w-40px h-40px rd-10px flex items-center justify-center font-bold text-16px shadow-sm text-transform-uppercase ${getAvatarColorClass(skill.name)}`}
                 >
-                  {skill.name.charAt(0).toUpperCase()}
+                  {(skill.display_name ?? skill.name).charAt(0).toUpperCase()}
                 </div>
               </div>
 
               <div className='flex-1 min-w-0 flex flex-col justify-center gap-4px'>
-                <h3 className='text-14px font-semibold text-t-primary/90 truncate m-0'>{skill.name}</h3>
+                <h3 className='text-14px font-semibold text-t-primary/90 truncate m-0'>
+                  {skill.display_name ?? skill.name}
+                </h3>
                 {skill.description && (
                   <p className='text-13px text-t-secondary leading-relaxed line-clamp-2 m-0' title={skill.description}>
                     {skill.description}
@@ -882,8 +894,8 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
                           <div>
                             <div>
                               {t('settings.skillsHub.deleteConfirmContent', {
-                                name: skill.name,
-                                defaultValue: `Are you sure you want to delete "${skill.name}"?`,
+                                name: skill.display_name ?? skill.name,
+                                defaultValue: `Are you sure you want to delete "${skill.display_name ?? skill.name}"?`,
                               })}
                             </div>
                             <div className='text-12px text-t-tertiary mt-8px'>
@@ -927,7 +939,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
       <div data-testid='official-skills-section'>
         <p className='m-0 mb-12px text-12px leading-relaxed text-t-tertiary'>
           {t('settings.skillsHub.officialHint', {
-            defaultValue: 'Built-in skills maintained by AionUi — read-only and updated with each release.',
+            defaultValue: 'Built-in skills maintained by Pavii.Ai — read-only and updated with each release.',
           })}
         </p>
         {officialSkills.length > 0 ? (

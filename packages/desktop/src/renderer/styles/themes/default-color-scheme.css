@@ -1,25 +1,29 @@
-/* Default Color Scheme - AOU Purple Theme */
+/* Default Color Scheme — Pavii.Ai
+ * Light: "Violet Bloom" palette (tweakcn violet-bloom)
+ * Dark:  "Vercel" monochrome palette (tweakcn vercel)
+ * oklch sources converted to sRGB hex; token semantics documented in docs/theming/tokens.md
+ */
 
-/* Light Mode */
+/* Light Mode — Violet Bloom */
 :root,
 [data-color-scheme='default'] {
-  /* AOU Brand Colors - Light Mode */
-  --aou-1: #eff0f6;
-  --aou-2: #e5e7f0;
-  --aou-3: #d1d5e5;
-  --aou-4: #b5bcd6;
-  --aou-5: #97a0c5;
-  --aou-6: #7583b2;
-  --aou-7: #596590;
-  --aou-8: #3f4868;
-  --aou-9: #262c41;
-  --aou-10: #0d101c;
+  /* Brand ramp (violet) - Light Mode */
+  --aou-1: #f2f2ff;
+  --aou-2: #e9e8ff;
+  --aou-3: #d7d5ff;
+  --aou-4: #bfb9ff;
+  --aou-5: #9f91ff;
+  --aou-6: #7033ff;
+  --aou-7: #5c26d6;
+  --aou-8: #4621a2;
+  --aou-9: #2d1a6a;
+  --aou-10: #150c37;
 
   /* Background Colors - Light Mode */
-  --bg-base: #ffffff; /* bg-0 - 主背景 */
-  --bg-1: #f9fafb; /* 次级背景 */
-  --bg-2: #f2f3f5; /* 三级背景 */
-  --bg-3: #e5e6eb; /* 边框/分隔 */
+  --bg-base: #fdfdfd; /* bg-0 - 主背景 */
+  --bg-1: #f5f8fb; /* 次级背景 (sidebar) */
+  --bg-2: #f5f5f5; /* 三级背景 (muted) */
+  --bg-3: #e7e7ee; /* 边框/分隔 (border) */
   --bg-4: #c9cdd4;
   --bg-5: #adb4c1;
   --bg-6: #86909c; /* 禁用/次要文字 */
@@ -28,38 +32,38 @@
   --bg-10: #0c0e12;
 
   /* Interactive State Colors - Light Mode */
-  --bg-hover: #f3f4f6; /* 悬停背景 - 在 bg-1 和 bg-2 之间 */
-  --bg-active: #e5e6eb; /* 激活/按下背景 */
+  --bg-hover: #f1f1f6; /* 悬停背景 */
+  --bg-active: #e7e7ee; /* 激活/按下背景 */
 
   /* Text Colors - Light Mode */
   --text-primary: #000000; /* 主要文字 */
   --color-text-1: #000000; /* Arco 主文字 — 与 --text-primary 对齐 */
-  --text-secondary: #454d5f; /* 次要文字 — 加深至 ~7.5:1 对比度 */
+  --text-secondary: #525252; /* 次要文字 (muted-foreground) */
   --text-disabled: #c9cdd4; /* 禁用文字 */
 
   /* Semantic Colors - Light Mode */
-  --primary: #165dff;
+  --primary: #7033ff;
   --success: #00b42a;
   --warning: #ff7d00;
-  --danger: #f53f3f;
-  --info: #165dff;
+  --danger: #e54b4f;
+  --info: #1e69dc;
 
   /* Border Colors - Light Mode */
-  --border-base: #e5e6eb; /* 基础边框 */
-  --border-light: #f2f3f5; /* 浅色边框 */
+  --border-base: #e7e7ee; /* 基础边框 */
+  --border-light: #edf0f4; /* 浅色边框 (secondary) */
 
   /* Brand Colors - Light Mode */
-  --brand: #7583b2; /* 品牌色 */
-  --brand-light: #eff0f6; /* 品牌浅色背景 */
-  --brand-hover: #b5bcd6; /* 品牌色悬停 */
+  --brand: #7033ff; /* 品牌色 */
+  --brand-light: #f2f2ff; /* 品牌浅色背景 */
+  --brand-hover: #886cff; /* 品牌色悬停 */
 
   /* Message & UI Component Colors - Light Mode */
-  --message-user-bg: #e9efff; /* 用户消息背景（浅蓝） */
-  --message-tips-bg: #f0f4ff; /* 提示信息背景（浅蓝） */
-  --workspace-btn-bg: #eff0f1; /* 工作区按钮背景 */
+  --message-user-bg: #eeeeff; /* 用户消息背景（浅紫） */
+  --message-tips-bg: #eef3ff; /* 提示信息背景（浅蓝紫） */
+  --workspace-btn-bg: #f1f1f6; /* 工作区按钮背景 */
 
   /* Special Colors - Light Mode */
-  --fill: #f7f8fa; /* 填充色 */
+  --fill: #f5f5f5; /* 填充色 */
   --inverse: #ffffff; /* 反色（黑白切换）*/
 
   /* Custom Colors - Light Mode */
@@ -69,76 +73,94 @@
   --fill-0: #ffffff; /* 填充色 0 */
   --fill-white-to-black: #ffffff; /* 白到黑填充色 */
   --border-special: var(--bg-3); /* 特殊边框色 */
-  --color-guid-agent-bar: #eaecf7; /* 首页 Agent 选择条背景 - 亮色 */
+  --color-guid-agent-bar: #e2ebff; /* 首页 Agent 选择条背景 - 亮色 (accent) */
+
+  /* Arco palette bridge (RGB triplets) — components using rgb(var(--primary-6)) follow the violet brand */
+  --primary-1: 242, 242, 255;
+  --primary-2: 233, 232, 255;
+  --primary-3: 215, 213, 255;
+  --primary-4: 191, 185, 255;
+  --primary-5: 136, 108, 255;
+  --primary-6: 112, 51, 255;
+  --primary-7: 92, 38, 214;
 }
 
-/* Dark Mode */
+/* Dark Mode — Vercel */
 [data-color-scheme='default'][data-theme='dark'] {
-  /* AOU Brand Colors - Dark Mode */
-  --aou-1: #2a2a2a;
-  --aou-2: #3d4150;
+  /* Brand ramp (inverted monochrome) - Dark Mode */
+  --aou-1: #1d1d1d;
+  --aou-2: #222222;
   --color-guid-agent-bar: var(--aou-2); /* 首页 Agent 选择条背景 - 暗色沿用 aou-2 */
-  --aou-3: #525a77;
-  --aou-4: #6a749b;
-  --aou-5: #838fba;
-  --aou-6: #a1aacb;
-  --aou-7: #b5bcd6;
-  --aou-8: #d1d5e5;
-  --aou-9: #e5e7f0;
-  --aou-10: #eff0f6;
+  --aou-3: #333333;
+  --aou-4: #424242;
+  --aou-5: #525252;
+  --aou-6: #747474;
+  --aou-7: #a4a4a4;
+  --aou-8: #bebebe;
+  --aou-9: #e4e4e4;
+  --aou-10: #f5f5f5;
 
   /* Background Colors - Dark Mode */
-  --bg-base: #0e0e0e; /* 主背景 */
-  --bg-1: #1a1a1a; /* 次级背景 */
-  --bg-2: #262626; /* 三级背景 */
-  --bg-3: #333333; /* 边框/分隔 */
-  --bg-4: #404040;
-  --bg-5: #4d4d4d;
-  --bg-6: #5a5a5a; /* 禁用/次要文字 */
-  --bg-8: #737373;
-  --bg-9: #a6a6a6;
-  --bg-10: #d9d9d9;
+  --bg-base: #000000; /* 主背景 */
+  --bg-1: #111111; /* 次级背景 (card) */
+  --bg-2: #1d1d1d; /* 三级背景 (muted) */
+  --bg-3: #2a2a2a; /* 边框/分隔 */
+  --bg-4: #333333; /* input/accent */
+  --bg-5: #424242;
+  --bg-6: #525252; /* 禁用/次要文字 */
+  --bg-8: #747474;
+  --bg-9: #a4a4a4;
+  --bg-10: #e4e4e4;
 
   /* Interactive State Colors - Dark Mode */
-  --bg-hover: #1f1f1f; /* 悬停背景 */
-  --bg-active: #2d2d2d; /* 激活/按下背景 */
+  --bg-hover: #161616; /* 悬停背景 */
+  --bg-active: #222222; /* 激活/按下背景 (secondary) */
 
   /* Text Colors - Dark Mode */
   --text-primary: #ffffff; /* 主要文字 */
   --color-text-1: #ffffff; /* Arco 主文字 — 与 --text-primary 对齐 */
-  --text-secondary: #ced3da; /* 次要文字 — 提亮至 ~11:1 对比度 */
-  --text-disabled: #737373; /* 禁用文字 */
+  --text-secondary: #a4a4a4; /* 次要文字 (muted-foreground) */
+  --text-disabled: #525252; /* 禁用文字 */
 
   /* Semantic Colors - Dark Mode */
-  --primary: #4d9fff;
+  --primary: #5895ff;
   --success: #23c343;
   --warning: #ff9a2e;
-  --danger: #f76560;
-  --info: #4d9fff;
+  --danger: #ff5b5b;
+  --info: #5895ff;
 
   /* Border Colors - Dark Mode */
-  --border-base: #333333; /* 基础边框 */
-  --border-light: #262626; /* 浅色边框 */
+  --border-base: #2a2a2a; /* 基础边框 */
+  --border-light: #1d1d1d; /* 浅色边框 */
 
   /* Brand Colors - Dark Mode */
-  --brand: #a1aacb; /* 品牌色 */
-  --brand-light: #3d4150; /* 品牌深色背景 */
-  --brand-hover: #6a749b; /* 品牌色悬停 */
+  --brand: #e4e4e4; /* 品牌色（Vercel 单色风格） */
+  --brand-light: #222222; /* 品牌深色背景 */
+  --brand-hover: #424242; /* 品牌色悬停 */
 
   /* Message & UI Component Colors - Dark Mode */
-  --message-user-bg: #1e2a3a; /* 用户消息背景（深蓝灰） */
-  --message-tips-bg: #1a2333; /* 提示信息背景（深蓝灰） */
-  --workspace-btn-bg: #1f1f1f; /* 工作区按钮背景 */
+  --message-user-bg: #1d1d1d; /* 用户消息背景（中性深灰） */
+  --message-tips-bg: #161616; /* 提示信息背景 */
+  --workspace-btn-bg: #161616; /* 工作区按钮背景 */
 
   /* Special Colors - Dark Mode */
-  --fill: #1a1a1a; /* 填充色 */
+  --fill: #111111; /* 填充色 */
   --inverse: #ffffff; /* 反色（黑白切换）*/
 
   /* Custom Colors - Dark Mode */
-  --dialog-fill-0: #333333; /* 对话框填充色 */
+  --dialog-fill-0: #1d1d1d; /* 对话框填充色 */
   --text-0: #ffffff; /* 纯黑文字色（暗色模式下为白色） */
   --text-white: #ffffff; /* 纯白文字色 */
   --fill-0: rgba(255, 255, 255, 0.08); /* 填充色 0 - 暗色模式下为半透明白色 */
   --fill-white-to-black: #000000; /* 白到黑填充色（暗色模式下为黑色） */
-  --border-special: #60677e; /* 特殊边框色 */
+  --border-special: #3a3a3a; /* 特殊边框色 */
+
+  /* Arco palette bridge (RGB triplets) — accessible blue accent on the Vercel monochrome base */
+  --primary-1: 20, 30, 54;
+  --primary-2: 26, 42, 78;
+  --primary-3: 33, 58, 110;
+  --primary-4: 44, 80, 156;
+  --primary-5: 59, 111, 209;
+  --primary-6: 88, 149, 255;
+  --primary-7: 124, 171, 255;
 }

@@ -28,14 +28,14 @@ import { shouldRegisterBackendStartup } from './process/startup/singleInstanceGa
 import { ProcessConfig } from './process/utils/initStorage';
 import type { BackendStartupFailureInfo } from './common/types/platform/electron';
 import { registerWindowMaximizeListeners } from '@process/bridge';
-import { BackendLifecycleManager } from '@aionui/web-host';
+import { BackendLifecycleManager } from '@pavii/web-host';
 import { resolveBinaryPath } from '@process/backend';
 import './process/bridge/feedbackBridge';
 import { wasLaunchedAtLogin } from '@process/bridge/applicationBridge';
 import { onLanguageChanged } from './process/bridge/systemSettingsBridge';
 import { setInitialLanguage } from '@process/services/i18n';
 import { setupApplicationMenu } from './process/utils/appMenu';
-import { startWebHost } from '@aionui/web-host';
+import { startWebHost } from '@pavii/web-host';
 import { initializeZoomFactor, setupZoomForWindow } from './process/utils/zoom';
 import { hydrateWindowsProcessPath } from './process/startup/windowsPath';
 import { registerWindowsAppUserModelId } from './process/startup/windowsAppUserModelId';
@@ -375,6 +375,49 @@ function markBackendReady(backendPort: number, source: string): void {
   broadcastBackendStartupState(null);
   void ensureAdminUserOnce(backendPort);
   scheduleBackendMigrations();
+  void ensureDefaultOpencodeAgent();
+  // Channel bridges (Slack/Discord) need the backend port; restore any that
+  // the user previously enabled.
+  void import('./process/services/channels/slackBridge')
+    .then(({ restoreSlackBridge }) => restoreSlackBridge())
+    .catch((error) => console.warn('[AionUi] slack bridge restore failed:', error));
+  void import('./process/services/channels/discordBridge')
+    .then(({ restoreDiscordBridge }) => restoreDiscordBridge())
+    .catch((error) => console.warn('[AionUi] discord bridge restore failed:', error));
+  // One-time import of the bundled Pavii skill pack (Token Optimizer, etc.).
+  void import('./process/startup/ensureBundledSkills')
+    .then(({ ensureBundledSkills }) => ensureBundledSkills(backendPort))
+    .catch((error) => console.warn('[AionUi] bundled skills import failed:', error));
+}
+
+/**
+ * Pavii.Ai ships OpenCode as a default agent: install it (best-effort,
+ * non-blocking) into the app-managed tools dir and refresh agent detection.
+ */
+async function ensureDefaultOpencodeAgent(): Promise<void> {
+  try {
+    const { ensureOpencodeInstalled } = await import('./process/startup/ensureOpencode');
+    const { getDataPath } = await import('./process/utils/utils');
+    const installed = await ensureOpencodeInstalled({
+      dataDir: getDataPath(),
+      resourcesPath: process.resourcesPath,
+      devResourcesFallback: app.isPackaged ? undefined : path.join(process.cwd(), 'resources'),
+      log: (message) => console.log(message),
+      logError: (message, error) => console.error(message, error),
+    });
+    if (installed) {
+      try {
+        await ipcBridge.acpConversation.refreshCustomAgents.invoke();
+      } catch {
+        // Not fatal: some engine versions have no refresh route. Detection
+        // happens at every launch (PATH is registered pre-spawn), so a
+        // just-installed OpenCode appears at the next start regardless.
+        console.log('[opencode] agent refresh unavailable; OpenCode appears after next launch');
+      }
+    }
+  } catch (error) {
+    console.error('[opencode] ensureDefaultOpencodeAgent failed:', error);
+  }
 }
 
 function resolveDebugBackendStartupFailure(): BackendStartupFailureInfo | null {
@@ -538,10 +581,13 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
           await backendManager.stop();
         });
         // Check for updates after 3 seconds delay. Skipped in the discontinued
-        // build: AionUi's final version guides users to the website instead of
+        // build: the app's final version guides users to the website instead of
         // auto-checking, so startup stays silent. The flag is a compile-time
         // literal, so this branch is tree-shaken out of non-discontinued builds.
         // 3秒后检查更新。停更版启动静默，不做应用内检测。
+        // checkForUpdatesAndNotify() is itself a no-op unless a Pavii-owned
+        // update feed is configured (see process/services/updateFeed.ts), so no
+        // launch-time request ever reaches a third party by default.
         if (!process.env.IS_DISCONTINUED_BUILD) {
           setTimeout(() => {
             void autoUpdaterService.checkForUpdatesAndNotify();
@@ -766,6 +812,11 @@ const handleAppReady = async (): Promise<void> => {
         });
         const { getDataPath } = await import('./process/utils/utils');
         const { getSystemDir } = await import('./process/utils/initStorage');
+        // Must run before the backend spawn: aioncore inherits a snapshot of
+        // process.env, and agent detection (incl. the default OpenCode agent)
+        // resolves CLIs from that PATH.
+        const { registerManagedToolsOnPath } = await import('./process/startup/ensureOpencode');
+        registerManagedToolsOnPath(getDataPath());
         const sysDir = getSystemDir();
         return backendManager.start(
           getDataPath(),
@@ -870,14 +921,14 @@ const handleAppReady = async (): Promise<void> => {
     const resolvedPort = resolveWebUIPort(userConfigInfo.config, getSwitchValue);
     const allowRemote = resolveRemoteAccess(userConfigInfo.config, isRemoteMode);
     try {
-      // Inside Electron (`AionUi --webui` or packaged `aionui-web` mode that
+      // Inside Electron (`Pavii.Ai --webui` or packaged `pavii-web` mode that
       // launches via the Electron shell), reuse the desktop app's data-dir so
       // that conversations / cron jobs created in any path show up everywhere.
       // Matches the desktop IPC path at line 493 above.
       const { getDataPath } = await import('./process/utils/utils');
       const { getSystemDir } = await import('./process/utils/initStorage');
       const sysDirWebUI = getSystemDir();
-      // M6: Switch to @aionui/web-host
+      // M6: Switch to @pavii/web-host
       const handle = await startWebHost({
         app: {
           version: app.getVersion(),
@@ -955,25 +1006,6 @@ const handleAppReady = async (): Promise<void> => {
     appReadyDone = true;
     mark('createWindow');
 
-    // Initialize desktop pet (delayed to not block main window)
-    setTimeout(() => {
-      void (async () => {
-        try {
-          const petEnabled = await ProcessConfig.get('pet.enabled');
-          if (petEnabled === true) {
-            // Read pet sub-settings before creating the pet so flags are honored
-            // on the first createPetWindow() call (which is sync).
-            const confirmEnabled = (await ProcessConfig.get('pet.confirmEnabled')) ?? true;
-            const { createPetWindow, setPetConfirmEnabled } = await import('./process/pet/petManager');
-            setPetConfirmEnabled(confirmEnabled);
-            createPetWindow();
-          }
-        } catch (error) {
-          console.error('[Pet] Failed to initialize:', error);
-        }
-      })();
-    }, 3000);
-
     // 读取语言设置并初始化主进程 i18n，然后刷新托盘菜单
     // Read language setting and initialize main process i18n, then refresh tray menu
     try {
@@ -1009,7 +1041,7 @@ const handleAppReady = async (): Promise<void> => {
 };
 
 // ============ Protocol Registration ============
-// Register aionui:// as the default protocol client
+// Register pavii:// as the default protocol client
 if (process.defaultApp) {
   // Dev mode: need to pass execPath explicitly
   app.setAsDefaultProtocolClient(PROTOCOL_SCHEME, process.execPath, [path.resolve(process.argv[1])]);
@@ -1017,7 +1049,7 @@ if (process.defaultApp) {
   app.setAsDefaultProtocolClient(PROTOCOL_SCHEME);
 }
 
-// macOS: handle aionui:// URLs via the open-url event
+// macOS: handle pavii:// URLs via the open-url event
 app.on('open-url', (event, url) => {
   event.preventDefault();
   handleDeepLinkUrl(url);
@@ -1095,10 +1127,6 @@ installQuitCleanup({
   // Stop aioncore subprocess — backend shutdown kills all agent children
   // transitively (no separate frontend workerTaskManager remains).
   stopBackend: () => backendManager.stop(),
-  destroyPetWindow: async () => {
-    const { destroyPetWindow } = await import('./process/pet/petManager');
-    destroyPetWindow();
-  },
   logInfo: console.log,
   logWarn: console.warn,
   logError: console.error,

@@ -1,6 +1,6 @@
 {
-  "pageTitle": "AionUi - ورود",
-  "brand": "AionUi",
+  "pageTitle": "Pavii.Ai - ورود",
+  "brand": "Pavii.Ai",
   "subtitle": "خوش آمدید، لطفاً به حساب خود وارد شوید",
   "username": "نام کاربری",
   "usernamePlaceholder": "نام کاربری خود را وارد کنید",
@@ -22,5 +22,6 @@
     "networkError": "اتصال ناموفق بود، لطفاً دوباره تلاش کنید",
     "serverError": "خطای سرور، لطفاً بعداً دوباره تلاش کنید",
     "unknown": "ورود ناموفق بود، لطفاً دوباره تلاش کنید"
-  }
+  },
+  "qrExpired": "This sign-in link expired. Generate a fresh QR code in the desktop app and try again."
 }

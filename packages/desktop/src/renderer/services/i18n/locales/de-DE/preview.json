@@ -65,16 +65,16 @@
     "conversionFailed": "Konvertierung fehlgeschlagen"
   },
   "office": {
-    "installLinkText": "officecli-Installationsanleitung öffnen",
+    "installLinkText": "Pavii CLI-Installationsanleitung öffnen",
     "errors": {
-      "officecliNotFound": "officecli ist nicht installiert.",
-      "installFailed": "Automatische Installation von officecli fehlgeschlagen. Überprüfe Backend-Logs und versuche es erneut.",
+      "officecliNotFound": "Pavii CLI ist nicht installiert.",
+      "installFailed": "Automatische Installation von Pavii CLI fehlgeschlagen. Überprüfe Backend-Logs und versuche es erneut.",
       "portTimeout": "Vorschau-Dienst gestartet, wurde aber nicht rechtzeitig bereit. Versuche es erneut.",
       "startFailed": "Office-Vorschau-Dienst konnte nicht gestartet werden.",
       "outsideSandbox": "Diese Datei befindet sich außerhalb der aktuellen Projekt-Sandbox."
     },
     "serverInstall": {
-      "hint": "AionUi läuft auf einem Server. Installiere die Vorschau-Komponente auf diesem Server und versuche es erneut:",
+      "hint": "Pavii.Ai läuft auf einem Server. Installiere die Vorschau-Komponente auf diesem Server und versuche es erneut:",
       "icuNote": "Falls es immer noch nicht startet, installiere die ICU-Bibliothek auf dem Server (Debian/Ubuntu: apt-get install -y libicu-dev)."
     }
   },
@@ -85,9 +85,9 @@
     "loadFailed": "Word-Dokument konnte nicht geladen werden",
     "watch": {
       "loading": "Word-Dokument wird geladen...",
-      "installing": "officecli wird installiert...",
+      "installing": "Pavii CLI wird installiert...",
       "startFailed": "Word-Vorschau konnte nicht gestartet werden",
-      "installHint": "Erfordert officecli. Wird automatisch installiert."
+      "installHint": "Erfordert Pavii CLI. Wird automatisch installiert."
     }
   },
   "excel": {
@@ -102,9 +102,9 @@
     "emptySheetHint": "Prüfe ob das Blatt Daten oder Bilder enthält",
     "watch": {
       "loading": "Excel-Datei wird geladen...",
-      "installing": "officecli wird installiert...",
+      "installing": "Pavii CLI wird installiert...",
       "startFailed": "Excel-Vorschau konnte nicht gestartet werden",
-      "installHint": "Erfordert officecli. Wird automatisch installiert."
+      "installHint": "Erfordert Pavii CLI. Wird automatisch installiert."
     }
   },
   "pdf": {
@@ -133,7 +133,7 @@
     "loading": "PPT-Vorschau wird gestartet...",
     "installing": "Vorschau-Komponente wird installiert...",
     "startFailed": "PPT-Vorschau konnte nicht gestartet werden",
-    "installHint": "Installiere OfficeCLI über die offizielle iOfficeAI/OfficeCLI releases-Seite"
+    "installHint": "Installiere Pavii CLI über die offizielle Pavii CLI releases-Seite"
   },
   "browser": {
     "newTab": "Neuer Tab",

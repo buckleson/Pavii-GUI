@@ -6,6 +6,12 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// The update feed is unset by default (Pavii never ships a vendor feed);
+// these tests configure one so the CDN paths under test are exercised.
+process.env.PAVII_UPDATE_FEED_URL = 'https://static.aionui.com/releases';
+// Release-notes lookups need an explicit repo too — there is no default.
+process.env.AIONUI_GITHUB_REPO = 'iOfficeAI/AionUi';
+
 vi.mock('@/common/platform/bridge', () => ({
   bridge: {
     buildProvider: vi.fn(() => {

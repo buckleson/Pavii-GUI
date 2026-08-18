@@ -5,19 +5,15 @@
  */
 
 import { WEBUI_DEFAULT_PORT } from '@/common/config/constants';
-import { shell, webui, type IWebUIStatus } from '@/common/adapter/ipcBridge';
+import { paviiTunnel, shell, webui, type IWebUIStatus, type PaviiTunnelState } from '@/common/adapter/ipcBridge';
 import { isBackendHttpError } from '@/common/adapter/httpBridge';
 import { configService } from '@/common/config/configService';
 import AionModal from '@/renderer/components/base/AionModal';
 import AionScrollArea from '@/renderer/components/base/AionScrollArea';
 import { useTalkToButler } from '@/renderer/hooks/assistant/useTalkToButler';
-import ChannelDingTalkLogo from '@/renderer/assets/channel-logos/dingtalk.svg';
 import ChannelDiscordLogo from '@/renderer/assets/channel-logos/discord.svg';
-import ChannelLarkLogo from '@/renderer/assets/channel-logos/lark.svg';
 import ChannelSlackLogo from '@/renderer/assets/channel-logos/slack.svg';
 import ChannelTelegramLogo from '@/renderer/assets/channel-logos/telegram.svg';
-import ChannelWecomLogo from '@/renderer/assets/channel-logos/wecom.svg';
-import ChannelWeixinLogo from '@/renderer/assets/channel-logos/weixin.svg';
 import { isElectronDesktop } from '@/renderer/utils/platform';
 import { Button, Form, Input, Message, Switch, Tabs, Tooltip } from '@arco-design/web-react';
 import { CheckOne, Communication, Copy, Earth, EditTwo, Refresh } from '@icon-park/react';
@@ -49,10 +45,6 @@ const PreferenceRow: React.FC<{
 
 const CHANNEL_LOGOS = [
   { src: ChannelTelegramLogo, alt: 'Telegram' },
-  { src: ChannelLarkLogo, alt: 'Lark' },
-  { src: ChannelDingTalkLogo, alt: 'DingTalk' },
-  { src: ChannelWeixinLogo, alt: 'WeChat' },
-  { src: ChannelWecomLogo, alt: 'WeCom' },
   { src: ChannelSlackLogo, alt: 'Slack' },
   { src: ChannelDiscordLogo, alt: 'Discord' },
 ] as const;
@@ -98,11 +90,49 @@ const WebuiModalContent: React.FC = () => {
   const [form] = Form.useForm();
   const [usernameForm] = Form.useForm();
 
+  // Public-access tunnel (Cloudflare quick tunnel managed by the main process)
+  const [tunnelState, setTunnelState] = useState<PaviiTunnelState | null>(null);
+  const [tunnelLoading, setTunnelLoading] = useState(false);
+
   // 二维码登录相关状态 / QR code login related state
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [qrExpiresAt, setQrExpiresAt] = useState<number | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
   const qrRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const loadTunnelStatus = useCallback(async () => {
+    try {
+      setTunnelState(await paviiTunnel.getStatus.invoke());
+    } catch {
+      setTunnelState(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isDesktop) void loadTunnelStatus();
+  }, [isDesktop, loadTunnelStatus]);
+
+  const handleTunnelToggle = useCallback(
+    async (checked: boolean) => {
+      setTunnelLoading(true);
+      try {
+        if (checked) {
+          const next = await paviiTunnel.start.invoke();
+          setTunnelState(next);
+          Message.success(t('settings.webui.tunnelStarted', { defaultValue: 'Public link is live.' }));
+        } else {
+          await paviiTunnel.stop.invoke();
+          setTunnelState({ running: false, starting: false });
+        }
+      } catch (error) {
+        Message.error(error instanceof Error ? error.message : String(error));
+        await loadTunnelStatus();
+      } finally {
+        setTunnelLoading(false);
+      }
+    },
+    [t, loadTunnelStatus]
+  );
 
   // 加载状态 / Load status
   const loadStatus = useCallback(async () => {
@@ -224,16 +254,16 @@ const WebuiModalContent: React.FC = () => {
     return null;
   }, [status?.lanIP, cachedIP, status?.networkUrl]);
 
-  // 获取显示的 URL / Get display URL
+  // 获取显示的 URL / Get display URL.
+  // The public tunnel URL wins whenever it is live; otherwise localhost. The
+  // LAN-IP URL is deliberately never shown — it silently fails under router
+  // AP isolation (observed live) and confused remote access more than it
+  // helped. Devices off this machine should use the tunnel.
   const getDisplayUrl = useCallback(() => {
-    const currentIP = getLocalIP();
+    if (tunnelState?.running && tunnelState.url) return tunnelState.url;
     const currentPort = status?.port || port;
-    const useRemote = status?.running ? status.allowRemote : allowRemotePreference;
-    if (useRemote && currentIP) {
-      return `http://${currentIP}:${currentPort}`;
-    }
     return `http://localhost:${currentPort}`;
-  }, [allowRemotePreference, getLocalIP, status?.allowRemote, status?.port, status?.running, port]);
+  }, [status?.port, port, tunnelState?.running, tunnelState?.url]);
 
   // 启动/停止 WebUI / Start/Stop WebUI
   const handleToggle = async (enabled: boolean) => {
@@ -479,10 +509,14 @@ const WebuiModalContent: React.FC = () => {
       const qrData = await webui.generateQRToken.invoke();
 
       if (qrData) {
+        // The public tunnel URL wins: it works from any network (the LAN URL
+        // fails under router AP isolation, which is common).
         const baseUrl =
-          status.allowRemote && status.networkUrl
-            ? status.networkUrl
-            : (status.localUrl ?? `http://localhost:${status.port ?? port}`);
+          tunnelState?.running && tunnelState.url
+            ? tunnelState.url
+            : status.allowRemote && status.networkUrl
+              ? status.networkUrl
+              : (status.localUrl ?? `http://localhost:${status.port ?? port}`);
         setQrUrl(`${baseUrl}/qr-login?token=${qrData.token}`);
         setQrExpiresAt(qrData.expires_at_ms);
 
@@ -507,11 +541,27 @@ const WebuiModalContent: React.FC = () => {
     } finally {
       setQrLoading(false);
     }
-  }, [status?.running, status?.allowRemote, status?.networkUrl, status?.localUrl, status?.port, port, t]);
+  }, [
+    status?.running,
+    status?.allowRemote,
+    status?.networkUrl,
+    status?.localUrl,
+    status?.port,
+    port,
+    t,
+    tunnelState?.running,
+    tunnelState?.url,
+  ]);
 
-  // 当服务器启动且允许远程访问时自动生成二维码 / Auto-generate QR code when server starts and remote access is allowed
+  // Regenerate the QR when the tunnel flips: its URL should always win.
   useEffect(() => {
-    if (status?.running && status.allowRemote && !qrUrl) {
+    setQrUrl(null);
+  }, [tunnelState?.running, tunnelState?.url]);
+
+  // QR codes only make sense with a link phones can actually reach: generate
+  // them only while the public tunnel is live.
+  useEffect(() => {
+    if (status?.running && tunnelState?.running && tunnelState.url && !qrUrl) {
       void generateQRCode();
     }
     // 清理定时器 / Cleanup timer
@@ -520,11 +570,11 @@ const WebuiModalContent: React.FC = () => {
         clearTimeout(qrRefreshTimerRef.current);
       }
     };
-  }, [status?.allowRemote, status?.running, generateQRCode, qrUrl]);
+  }, [status?.running, tunnelState?.running, tunnelState?.url, generateQRCode, qrUrl]);
 
-  // 服务器停止或关闭远程访问时清除二维码 / Clear QR code when server stops or remote access is disabled
+  // 服务器停止或隧道关闭时清除二维码 / Clear QR code when server or tunnel stops
   useEffect(() => {
-    if (!status?.running || !status.allowRemote) {
+    if (!status?.running || !tunnelState?.running) {
       setQrUrl(null);
       setQrExpiresAt(null);
       if (qrRefreshTimerRef.current) {
@@ -532,7 +582,7 @@ const WebuiModalContent: React.FC = () => {
         qrRefreshTimerRef.current = null;
       }
     }
-  }, [status?.allowRemote, status?.running]);
+  }, [tunnelState?.running, status?.running]);
 
   // 格式化过期时间 / Format expiration time
   const formatExpiresAt = (timestamp: number) => {
@@ -668,7 +718,7 @@ const WebuiModalContent: React.FC = () => {
                     void talkToButler({
                       prompt: t('settings.talkToButler.prompt.setupRemote', {
                         defaultValue:
-                          'Help me set up remote access so I can open AionUi from my phone or over the internet.',
+                          'Help me set up remote access so I can open Pavii.Ai from my phone or over the internet.',
                       }),
                     })
                   }
@@ -679,6 +729,27 @@ const WebuiModalContent: React.FC = () => {
             }
           >
             <Switch checked={allowRemotePreference} onChange={handleAllowRemoteChange} />
+          </PreferenceRow>
+
+          {/* Public access via Cloudflare quick tunnel */}
+          <PreferenceRow
+            label={t('settings.webui.tunnel', { defaultValue: 'Public access (Cloudflare Tunnel)' })}
+            description={t('settings.webui.tunnelDesc', {
+              defaultValue:
+                'Get a temporary public HTTPS link that works from any network. The link changes each time it starts; first start may download the tunnel helper.',
+            })}
+            extra={
+              tunnelState?.error && !tunnelState.running ? (
+                <span className='text-12px text-danger'>{tunnelState.error}</span>
+              ) : null
+            }
+          >
+            <Switch
+              checked={tunnelState?.running || false}
+              loading={tunnelLoading}
+              disabled={!status?.running}
+              onChange={handleTunnelToggle}
+            />
           </PreferenceRow>
         </div>
 
@@ -733,7 +804,7 @@ const WebuiModalContent: React.FC = () => {
           </div>
 
           {/* 二维码登录（仅服务器运行且允许远程访问时显示）/ QR Code Login (only when server running and remote access allowed) */}
-          {status?.running && status.allowRemote && (
+          {status?.running && tunnelState?.running && (
             <>
               <div className='border-t border-line my-12px' />
               <div className='text-14px font-500 mb-4px text-t-primary'>{t('settings.webui.qrLogin')}</div>

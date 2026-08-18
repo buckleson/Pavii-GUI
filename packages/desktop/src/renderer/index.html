@@ -3,16 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="application-name" content="AionUi" />
+    <meta name="application-name" content="Pavii.Ai" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="AionUi" />
+    <meta name="apple-mobile-web-app-title" content="Pavii.Ai" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#4E5969" />
     <link rel="icon" type="image/png" href="./pwa/icon-192.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./pwa/icon-180.png" />
-    <title>AionUi</title>
+    <title>Pavii.Ai</title>
     <script>
       // Synchronously restore theme appearance from localStorage to prevent theme flash
       (function () {
@@ -32,6 +32,109 @@
         padding: 0;
         overflow: hidden;
       }
+      /* Launch splash: painted before any JS bundle loads; removed by dismissSplash(). */
+      #pavii-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: #ffffff;
+        opacity: 1;
+        transition: opacity 280ms ease-out;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      }
+      html[data-theme='dark'] #pavii-splash {
+        background: #000000;
+      }
+      #pavii-splash.pavii-splash-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .pavii-splash-mark {
+        position: relative;
+        width: 84px;
+        height: 84px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .pavii-splash-mark img {
+        width: 72px;
+        height: 72px;
+        border-radius: 16px;
+        animation: pavii-breathe 2000ms ease-in-out infinite;
+      }
+      .pavii-splash-mark::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 22px;
+        border: 2px solid rgba(112, 51, 255, 0.55);
+        animation: pavii-ring 2000ms ease-out infinite;
+      }
+      html[data-theme='dark'] .pavii-splash-mark::after {
+        border-color: rgba(88, 149, 255, 0.55);
+      }
+      .pavii-splash-word {
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        color: #16161a;
+        opacity: 0;
+        animation: pavii-word-in 600ms ease-out 250ms forwards;
+      }
+      html[data-theme='dark'] .pavii-splash-word {
+        color: #f2f2f2;
+      }
+      @keyframes pavii-breathe {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+      @keyframes pavii-ring {
+        0% {
+          transform: scale(0.92);
+          opacity: 0;
+        }
+        45% {
+          opacity: 0.9;
+        }
+        100% {
+          transform: scale(1.35);
+          opacity: 0;
+        }
+      }
+      @keyframes pavii-word-in {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .pavii-splash-mark img,
+        .pavii-splash-mark::after,
+        .pavii-splash-word {
+          animation: none;
+        }
+        .pavii-splash-mark::after {
+          display: none;
+        }
+        .pavii-splash-word {
+          opacity: 1;
+        }
+      }
     </style>
   </head>
   <body>
@@ -42,6 +145,10 @@
         if (t) document.body.setAttribute('arco-theme', t);
       } catch (e) {}
     </script>
+    <div id="pavii-splash" aria-hidden="true">
+      <div class="pavii-splash-mark"><img src="./pwa/icon-192.png" alt="" /></div>
+      <div class="pavii-splash-word">Pavii.Ai</div>
+    </div>
     <div id="root"></div>
     <script type="module" src="./main.tsx"></script>
   </body>

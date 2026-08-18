@@ -16,7 +16,15 @@ import type { App } from 'electron';
  * Squirrel.Windows installers only, so NSIS builds must do it themselves.
  * Consistency with electron-builder.yml is guarded by a unit test.
  */
-export const WINDOWS_APP_USER_MODEL_ID = 'com.aionui.app';
+export const WINDOWS_APP_USER_MODEL_ID = 'com.pavii.ai';
+
+/**
+ * Stable AppUserModelID for unpackaged (dev) runs. Using the execPath (the
+ * Electron tutorial default) makes the dev taskbar/toasts identify as
+ * "Electron"; a stable Pavii dev id keeps grouping and toast attribution under
+ * our identity wherever Windows honors an unregistered AUMID.
+ */
+export const WINDOWS_DEV_APP_USER_MODEL_ID = 'com.pavii.ai.dev';
 
 type AppUserModelIdTarget = Pick<App, 'isPackaged' | 'setAppUserModelId'>;
 
@@ -29,16 +37,16 @@ type RegisterWindowsAppUserModelIdOptions = {
 /**
  * Register the process-side AppUserModelID so Windows can deliver toast
  * notifications for NSIS-installed builds. Packaged builds register the
- * electron-builder appId; development builds fall back to process.execPath
- * per the Electron notifications tutorial. No-op on non-Windows platforms.
+ * electron-builder appId; development builds register a stable Pavii dev id.
+ * No-op on non-Windows platforms.
  *
  * Must be called at main-process module load, before app.whenReady() and
  * before any notification path runs.
  */
 export function registerWindowsAppUserModelId(options: RegisterWindowsAppUserModelIdOptions): void {
-  const { app, platform = process.platform, execPath = process.execPath } = options;
+  const { app, platform = process.platform } = options;
   if (platform !== 'win32') {
     return;
   }
-  app.setAppUserModelId(app.isPackaged ? WINDOWS_APP_USER_MODEL_ID : execPath);
+  app.setAppUserModelId(app.isPackaged ? WINDOWS_APP_USER_MODEL_ID : WINDOWS_DEV_APP_USER_MODEL_ID);
 }

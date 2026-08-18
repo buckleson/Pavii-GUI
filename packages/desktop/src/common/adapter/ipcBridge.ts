@@ -114,6 +114,15 @@ import {
   wsEmitter,
   wsMappedEmitter,
 } from './httpBridge';
+import {
+  applyAgentBranding,
+  applyAssistantDetailBranding,
+  brandAgents,
+  brandAssistants,
+  brandGenericRows,
+  brandHubExtensions,
+} from '../utils/assistantBranding';
+import { applySkillBranding, brandSkills } from '../utils/skillBranding';
 import { fromApiSearchResult, type ApiMessageSearchItem } from './searchMapper';
 import type { IAddTeamAssistantParams, ICreateTeamParams } from './teamMapper';
 import {
@@ -160,10 +169,14 @@ export const shell = {
 // ---------------------------------------------------------------------------
 
 export const assistants = {
-  list: httpGet<Assistant[], void>('/api/assistants'),
-  get: httpGet<AssistantDetail, { id: string; locale?: string }>(
-    ({ id, locale }) =>
-      `/api/assistants/${encodeURIComponent(id)}${locale ? `?locale=${encodeURIComponent(locale)}` : ''}`
+  // Display-level rebrand of the backend-supplied built-in assistant (see assistantBranding.ts)
+  list: withResponseMap(httpGet<Assistant[], void>('/api/assistants'), brandAssistants),
+  get: withResponseMap(
+    httpGet<AssistantDetail, { id: string; locale?: string }>(
+      ({ id, locale }) =>
+        `/api/assistants/${encodeURIComponent(id)}${locale ? `?locale=${encodeURIComponent(locale)}` : ''}`
+    ),
+    applyAssistantDetailBranding
   ),
   create: httpPost<Assistant, CreateAssistantRequest>('/api/assistants'),
   update: httpPut<Assistant, UpdateAssistantRequest>((p) => `/api/assistants/${p.id}`),
@@ -544,6 +557,69 @@ export interface IRendererLogEntry {
 // Application — stays IPC (Electron-native)
 // ---------------------------------------------------------------------------
 
+// Pavii account (Firebase via pavii.tech/login) — Electron-local providers.
+export const paviiAuth = {
+  /** Current persisted session, token-free ({uid,email,name,signedInAt} | null). */
+  getSession: bridge.buildProvider<{ uid: string; email?: string; name?: string; signedInAt: number } | null, void>(
+    'pavii-auth.get-session'
+  ),
+  /** Open pavii.tech/login in the default browser; resolves with the sign-in URL for retry/copy. */
+  signIn: bridge.buildProvider<string, { mode?: 'signin' | 'signup' } | void>('pavii-auth.sign-in'),
+  signOut: bridge.buildProvider<void, void>('pavii-auth.sign-out'),
+};
+
+/**
+ * App-hosted channel bridges (Slack today, Discord next). These run in the
+ * Electron main process (Socket Mode / Gateway), not in aioncore — the engine
+ * has no support for these platforms.
+ */
+export type PaviiChannelState = {
+  running: boolean;
+  enabled: boolean;
+  botUser?: string;
+  team?: string;
+  error?: string;
+  handledMessages: number;
+};
+
+export const paviiChannels = {
+  getStatus: bridge.buildProvider<Record<'slack' | 'discord', PaviiChannelState>, void>('pavii-channels.get-status'),
+  enable: bridge.buildProvider<
+    PaviiChannelState,
+    { platform: 'slack' | 'discord'; credentials: { botToken: string; appToken?: string } }
+  >('pavii-channels.enable'),
+  disable: bridge.buildProvider<void, { platform: 'slack' | 'discord' }>('pavii-channels.disable'),
+};
+
+/**
+ * Public-access tunnel for the WebUI (Cloudflare quick tunnel managed by the
+ * main process — see process/services/tunnelService.ts).
+ */
+export type PaviiTunnelState = { running: boolean; starting: boolean; url?: string; error?: string };
+
+export const paviiTunnel = {
+  getStatus: bridge.buildProvider<PaviiTunnelState, void>('pavii-tunnel.get-status'),
+  start: bridge.buildProvider<PaviiTunnelState, void>('pavii-tunnel.start'),
+  stop: bridge.buildProvider<void, void>('pavii-tunnel.stop'),
+};
+
+/** Local per-day usage ledger backing the Profile page (see process/services/usageLedger.ts). */
+export const paviiUsage = {
+  record: bridge.buildProvider<void, { tokens: number; model?: string; backend?: string; at?: number }>(
+    'pavii-usage.record'
+  ),
+  get: bridge.buildProvider<
+    {
+      version: 1;
+      days: Record<
+        string,
+        { tokens: number; turns: number; byModel: Record<string, number>; byBackend: Record<string, number> }
+      >;
+    },
+    void
+  >('pavii-usage.get'),
+};
+
 export const application = {
   restart: bridge.buildProvider<IAppRestartResult, void>('restart-app'),
   openDevTools: bridge.buildProvider<boolean, void>('open-dev-tools'),
@@ -776,23 +852,31 @@ export const fs = {
   deleteAssistantRule: httpDelete<boolean, { assistant_id: string }>(
     (p) => `/api/skills/assistant-rule/${p.assistant_id}`
   ),
-  listAvailableSkills: httpGet<
-    Array<{
-      name: string;
-      description: string;
-      location: string;
-      relative_location?: string;
-      is_auto_inject: boolean;
-      is_custom: boolean;
-      source: 'builtin' | 'custom' | 'cron' | 'extension';
-    }>,
-    void
-  >('/api/skills'),
+  // Display-level rebrand: raw `name` stays the backend key, `display_name`
+  // and the description are rewritten for the UI (see skillBranding.ts).
+  listAvailableSkills: withResponseMap(
+    httpGet<
+      Array<{
+        name: string;
+        description: string;
+        location: string;
+        relative_location?: string;
+        is_auto_inject: boolean;
+        is_custom: boolean;
+        source: 'builtin' | 'custom' | 'cron' | 'extension';
+      }>,
+      void
+    >('/api/skills'),
+    brandSkills
+  ),
   materializeSkillsForAgent: httpPost<
     { skills: Array<{ name: string; source_path: string }> },
     { conversation_id: string; skills: string[] }
   >('/api/skills/materialize-for-agent'),
-  readSkillInfo: httpPost<{ name: string; description: string }, { skill_path: string }>('/api/skills/info'),
+  readSkillInfo: withResponseMap(
+    httpPost<{ name: string; description: string }, { skill_path: string }>('/api/skills/info'),
+    applySkillBranding
+  ),
   importSkill: httpPost<
     {
       skill_name: string;
@@ -972,18 +1056,25 @@ export const mode = {
 export const acpConversation = {
   sendMessage: conversation.sendMessage,
   responseStream: conversation.responseStream,
-  /** Management view used by Agent settings. */
-  getManagedAgents: httpGet<import('@/renderer/utils/model/agentTypes').ManagedAgent[], void>('/api/agents/management'),
+  /** Management view used by Agent settings. Display names are rebranded (see assistantBranding.ts). */
+  getManagedAgents: withResponseMap(
+    httpGet<import('@/renderer/utils/model/agentTypes').ManagedAgent[], void>('/api/agents/management'),
+    brandAgents
+  ),
   getAgentOverrides: httpGet<
     { command_override?: string; env_override: { name: string; value: string }[] },
     { id: string }
   >((p) => `/api/agents/${encodeURIComponent(p.id)}/overrides`),
-  setAgentOverrides: httpPut<
-    import('@/renderer/utils/model/agentTypes').ManagedAgent,
-    { id: string; command_override?: string | null; env_override?: { name: string; value: string }[] }
-  >(
-    (p) => `/api/agents/${encodeURIComponent(p.id)}/overrides`,
-    (p) => ({ command_override: p.command_override, env_override: p.env_override })
+  /** Save-and-test result feeds toasts with the agent name — rebrand it. */
+  setAgentOverrides: withResponseMap(
+    httpPut<
+      import('@/renderer/utils/model/agentTypes').ManagedAgent,
+      { id: string; command_override?: string | null; env_override?: { name: string; value: string }[] }
+    >(
+      (p) => `/api/agents/${encodeURIComponent(p.id)}/overrides`,
+      (p) => ({ command_override: p.command_override, env_override: p.env_override })
+    ),
+    applyAgentBranding
   ),
   refreshCustomAgents: httpPost<void, void>('/api/agents/refresh'),
   testCustomAgent: httpPost<
@@ -1030,13 +1121,20 @@ export const acpConversation = {
     }
   ),
   deleteCustomAgent: httpDelete<{ deleted: boolean }, { id: string }>((p) => `/api/agents/custom/${p.id}`),
-  setAgentEnabled: httpPatch<AgentMetadata, { id: string; enabled: boolean }>(
-    (p) => `/api/agents/${p.id}/enabled`,
-    (p) => ({ enabled: p.enabled })
+  setAgentEnabled: withResponseMap(
+    httpPatch<AgentMetadata, { id: string; enabled: boolean }>(
+      (p) => `/api/agents/${p.id}/enabled`,
+      (p) => ({ enabled: p.enabled })
+    ),
+    applyAgentBranding
   ),
-  checkManagedAgentHealthById: httpPost<import('@/renderer/utils/model/agentTypes').ManagedAgent, { id: string }>(
-    (p) => `/api/agents/${p.id}/health-check`,
-    () => undefined
+  /** Health-check result carries the display name shown in toasts — rebrand it. */
+  checkManagedAgentHealthById: withResponseMap(
+    httpPost<import('@/renderer/utils/model/agentTypes').ManagedAgent, { id: string }>(
+      (p) => `/api/agents/${p.id}/health-check`,
+      () => undefined
+    ),
+    applyAgentBranding
   ),
   checkProviderHealth: httpPost<ProviderHealthCheckResponse, ProviderHealthCheckRequest>(
     '/api/agents/provider-health-check'
@@ -1364,14 +1462,6 @@ export const systemSettings = {
   setSaveUploadToWorkspace: httpPut<void, { enabled: boolean }>('/api/settings/client', (p) => ({
     saveUploadToWorkspace: p.enabled,
   })),
-  getPetEnabled: bridge.buildProvider<boolean, void>('system-settings:get-pet-enabled'),
-  setPetEnabled: bridge.buildProvider<void, { enabled: boolean }>('system-settings:set-pet-enabled'),
-  getPetSize: bridge.buildProvider<number, void>('system-settings:get-pet-size'),
-  setPetSize: bridge.buildProvider<void, { size: number }>('system-settings:set-pet-size'),
-  getPetDnd: bridge.buildProvider<boolean, void>('system-settings:get-pet-dnd'),
-  setPetDnd: bridge.buildProvider<void, { dnd: boolean }>('system-settings:set-pet-dnd'),
-  getPetConfirmEnabled: bridge.buildProvider<boolean, void>('system-settings:get-pet-confirm-enabled'),
-  setPetConfirmEnabled: bridge.buildProvider<void, { enabled: boolean }>('system-settings:set-pet-confirm-enabled'),
   ensureNodeRuntime: httpPost<{ ready: boolean }, { scope: IRuntimeStatusScope }>('/api/system/ensure-node-runtime'),
   ensureManagedAcpTool: httpPost<{ ready: boolean }, { scope: IRuntimeStatusScope; tool_id: string }>(
     '/api/system/ensure-managed-acp-tool'
@@ -1912,7 +2002,10 @@ export const extensions = {
   getLoadedExtensions: httpGet<IExtensionInfo[], void>('/api/extensions'),
   getAssistants: httpGet<Record<string, unknown>[], void>('/api/extensions/assistants'),
   getAgents: httpGet<Record<string, unknown>[], void>('/api/extensions/agents'),
-  getAcpAdapters: httpGet<Record<string, unknown>[], void>('/api/extensions/acp-adapters'),
+  getAcpAdapters: withResponseMap(
+    httpGet<Record<string, unknown>[], void>('/api/extensions/acp-adapters'),
+    brandGenericRows
+  ),
   getMcpServers: httpGet<Record<string, unknown>[], void>('/api/extensions/mcp-servers'),
   getSkills: httpGet<Array<{ name: string; description: string; location: string }>, void>('/api/extensions/skills'),
   getSettingsTabs: httpGet<IExtensionSettingsTab[], void>('/api/extensions/settings-tabs'),
@@ -2052,7 +2145,7 @@ export const channel = {
 
 import type { HubExtensionStatus, IHubAgentItem } from '@/common/types/agent/hub';
 export const hub = {
-  getExtensionList: httpGet<IHubAgentItem[], void>('/api/hub/extensions'),
+  getExtensionList: withResponseMap(httpGet<IHubAgentItem[], void>('/api/hub/extensions'), brandHubExtensions),
   install: httpPost<void, { name: string }>('/api/hub/install'),
   uninstall: httpPost<void, { name: string }>('/api/hub/uninstall'),
   retryInstall: httpPost<void, { name: string }>('/api/hub/retry-install'),

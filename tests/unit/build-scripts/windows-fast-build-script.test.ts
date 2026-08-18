@@ -7,13 +7,20 @@ const packageJson = JSON.parse(readFileSync('package.json', 'utf8')) as {
 const buildScript = readFileSync('scripts/build-with-builder.js', 'utf8');
 
 describe('Windows fast build scripts', () => {
-  it('provides an x64 fast installer build that lowers compression and skips executable editing', () => {
+  it('provides an x64 fast installer build that lowers compression but keeps exe branding', () => {
     const script = packageJson.scripts['build-win:x64:fast'];
 
     expect(script).toBeTypeOf('string');
     expect(script).toContain('ELECTRON_BUILDER_COMPRESSION_LEVEL=1');
     expect(script).toContain('node scripts/build-with-builder.js x64 --win --x64');
-    expect(script).toContain('--config.win.signAndEditExecutable=false');
+    // Skipping rcedit leaves Electron's stock ProductName/FileDescription and
+    // icon on PaviiAi.exe — the OS would identify the app as "Electron".
+    expect(script).not.toContain('--config.win.signAndEditExecutable=false');
+  });
+
+  it('warns that the rcedit-skipping fallback build is not shippable', () => {
+    expect(buildScript).toContain('--config.win.signAndEditExecutable=false');
+    expect(buildScript).toMatch(/WARNING: the retried exe keeps Electron stock version info\/icon/);
   });
 
   it('supports a temporary build-time auto-update version override', () => {

@@ -35,7 +35,7 @@ export interface UpdateCheckResult {
 
 export interface UpdateCheckRequest {
   includePrerelease?: boolean;
-  /** Defaults to iOfficeAI/AionUi when omitted */
+  /** Falls back to the AIONUI_GITHUB_REPO env repo; unset means updates are disabled */
   repo?: string;
 }
 

@@ -1,0 +1,118 @@
+/**
+ * Staged entrance + button styling for the Pavii welcome gate.
+ * Buttons follow the app themes: violet-bloom (light) solid violet,
+ * vercel (dark) white-on-black. Colors come from theme tokens where a
+ * token exists; the vercel monochrome button surface is intentionally
+ * literal white/near-black per that theme's signature look.
+ */
+
+.stage {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: gate-rise 480ms ease-out forwards;
+}
+
+.stage1 {
+  animation-delay: 0ms;
+}
+.stage2 {
+  animation-delay: 60ms;
+}
+.stage3 {
+  animation-delay: 120ms;
+}
+.stage4 {
+  animation-delay: 180ms;
+}
+.stage5 {
+  animation-delay: 240ms;
+}
+
+@keyframes gate-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.primaryCta:global(.arco-btn) {
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    filter 140ms ease,
+    background-color 140ms ease;
+}
+
+.primaryCta:global(.arco-btn):hover:not(:disabled) {
+  background: var(--primary);
+  color: #ffffff;
+  filter: brightness(0.94);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(var(--primary-6), 0.28);
+}
+
+.primaryCta:global(.arco-btn):active:not(:disabled) {
+  background: var(--primary);
+  color: #ffffff;
+  transform: scale(0.98);
+  box-shadow: none;
+}
+
+/* Keep the brand surface while Arco marks the button as loading. */
+.primaryCta:global(.arco-btn-loading) {
+  background: var(--primary);
+  color: #ffffff;
+  opacity: 0.85;
+}
+
+/* Vercel (dark): white button, near-black text. */
+:global(html[data-theme='dark']) .primaryCta:global(.arco-btn),
+:global(html[data-theme='dark']) .primaryCta:global(.arco-btn-loading) {
+  background: #ffffff;
+  color: #0a0a0a;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+:global(html[data-theme='dark']) .primaryCta:global(.arco-btn):hover:not(:disabled) {
+  background: #e5e5e5;
+  color: #0a0a0a;
+  filter: none;
+  box-shadow: 0 6px 18px rgba(255, 255, 255, 0.12);
+}
+
+:global(html[data-theme='dark']) .primaryCta:global(.arco-btn):active:not(:disabled) {
+  background: #e5e5e5;
+  color: #0a0a0a;
+  box-shadow: none;
+}
+
+.secondaryCta:global(.arco-btn) {
+  color: var(--text-secondary);
+}
+
+.secondaryCta:global(.arco-btn):hover:not(:disabled) {
+  color: var(--primary);
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .primaryCta:global(.arco-btn):hover:not(:disabled),
+  .primaryCta:global(.arco-btn):active:not(:disabled) {
+    transform: none;
+  }
+}

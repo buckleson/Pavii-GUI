@@ -103,7 +103,12 @@ function persistGuidAssistantSelectionKey(assistantId: string): void {
 
 export function pickDefaultAssistantSelectionKey(assistants: Assistant[]): string | null {
   const enabledAssistants = assistants.filter((assistant) => assistant.enabled !== false);
+  // OpenCode first: it is the only CLI that hands new users free keys, so it is
+  // the launch default. The built-in engine CLI stays as the fallback.
+  const isOpencodeAssistant = (assistant: Assistant) => assistantRuntimeKey(assistant) === 'opencode';
   const preferred =
+    enabledAssistants.find((assistant) => assistant.source === 'generated' && isOpencodeAssistant(assistant)) ??
+    enabledAssistants.find(isOpencodeAssistant) ??
     enabledAssistants.find((assistant) => assistant.source === 'generated' && isAionrsAssistant(assistant)) ??
     enabledAssistants.find((assistant) => isAionrsAssistant(assistant)) ??
     enabledAssistants[0];

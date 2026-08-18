@@ -99,6 +99,7 @@ import Sider from './components/layout/Sider';
 import { useAuth } from './hooks/context/AuthContext';
 import { ConversationHistoryProvider } from './hooks/context/ConversationHistoryContext';
 import HOC from './utils/ui/HOC';
+import { dismissSplash } from './utils/ui/splash';
 import type { BackendStartupFailureInfo } from '@/common/types/platform/electron';
 import type { IRuntimeStatusEvent, RuntimeFailureKind } from '@/common/adapter/ipcBridge';
 import {
@@ -320,6 +321,10 @@ const Main = () => {
     void repairAllCronJobTimeZonesOnce();
   }, [ready]);
 
+  useEffect(() => {
+    if (ready && configReady) dismissSplash();
+  }, [ready, configReady]);
+
   if (!ready || !configReady) {
     return null;
   }
@@ -339,6 +344,10 @@ const App = HOC.Wrapper(Config)(Main);
 
 const BackendStartupFailureDialog: React.FC<{ failure: BackendStartupFailureInfo }> = ({ failure }) => {
   const { t } = useTranslation();
+
+  useEffect(() => {
+    dismissSplash();
+  }, []);
 
   const isIncompatibleRuntime = failure.reason === 'backend_incompatible_runtime';
   const isPackageArchitectureMismatch = failure.reason === 'backend_package_architecture_mismatch';

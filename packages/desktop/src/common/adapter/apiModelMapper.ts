@@ -5,6 +5,8 @@
  */
 
 import type { TProviderWithModel } from '../config/storage';
+import { applyAssistantBranding, isUpstreamAionLogo, scrubBrandText } from '../utils/assistantBranding';
+import { PAVII_AVATAR_DATA_URI } from '../utils/paviiAvatarDataUri';
 
 export type ApiProviderWithModel = {
   provider_id: string;
@@ -108,6 +110,28 @@ export function fromApiConversation<T>(raw: T): T {
       ...extra,
       custom_workspace: workspace.length > 0 && !isTemporary,
     };
+  }
+
+  // Conversations snapshot the assistant identity at creation time, so rows
+  // created before the rebrand still carry upstream names/logos. Brand the
+  // snapshot here — the one choke point every conversation surface reads
+  // (headers, sider history, search, mobile titlebar).
+  const assistant = (next as { assistant?: { id?: string; name?: string; avatar?: string } }).assistant;
+  if (assistant && typeof assistant === 'object') {
+    let branded = { ...assistant };
+    if (typeof branded.id === 'string' && typeof branded.name === 'string') {
+      // Full branding when the snapshot carries an id: the butler branch also
+      // replaces its engine-served avatar URL / emoji with the Pavii mark.
+      branded = applyAssistantBranding(branded as typeof branded & { id: string; name: string });
+    } else {
+      if (typeof branded.name === 'string') branded.name = scrubBrandText(branded.name);
+      if (isUpstreamAionLogo(branded.avatar)) branded.avatar = PAVII_AVATAR_DATA_URI;
+    }
+    (next as { assistant?: unknown }).assistant = branded;
+  }
+  const nextExtra = next.extra;
+  if (nextExtra && typeof nextExtra === 'object' && typeof nextExtra.agent_name === 'string') {
+    next.extra = { ...nextExtra, agent_name: scrubBrandText(nextExtra.agent_name) };
   }
 
   return next;

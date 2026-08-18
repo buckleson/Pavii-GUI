@@ -214,7 +214,7 @@ dist-server/
 .claude/teams/
 
 # Locally auto-injected agent skills: these are SYMLINKS into a developer's own
-# machine (e.g. ~/.aionui-dev/builtin-skills/...), so committing them gives
+# machine (e.g. ~/.pavii-dev/builtin-skills/...), so committing them gives
 # everyone else broken links. The repo's own skills live in real directories
 # next to them (.claude/skills/architecture/, /testing/, ...) and stay tracked.
 .aionrs/skills/
@@ -245,3 +245,13 @@ resources/*.png
 resources/**/*.gif
 resources/**/*.mp4
 resources/**/*.png
+.workspaces/
+dist-web-cli/
+
+# Vendored engine/tool sources (built separately, never linted or committed here)
+# Vendored upstream sources. Only the engine (AionCore) is committed — CI builds
+# it per platform — and never its multi-GB cargo build cache.
+the-remaa/*
+!the-remaa/AionCore/
+the-remaa/AionCore/target/
+the-remaa/AionCore/**/node_modules/

@@ -13,20 +13,9 @@ export type ConfigFile = {
 };
 
 const LEGACY_MCP_CONFIG_KEY = 'mcp.config' as const;
-const LEGACY_CHANNEL_KEYS = [
-  'assistant.telegram.defaultModel',
-  'assistant.telegram.agent',
-  'assistant.lark.defaultModel',
-  'assistant.lark.agent',
-  'assistant.dingtalk.defaultModel',
-  'assistant.dingtalk.agent',
-  'assistant.weixin.defaultModel',
-  'assistant.weixin.agent',
-  'assistant.wecom.defaultModel',
-  'assistant.wecom.agent',
-] as const;
+const LEGACY_CHANNEL_KEYS = ['assistant.telegram.defaultModel', 'assistant.telegram.agent'] as const;
 
-const LEGACY_CHANNEL_PLATFORMS = ['telegram', 'lark', 'dingtalk', 'weixin', 'wecom'] as const;
+const LEGACY_CHANNEL_PLATFORMS = ['telegram'] as const;
 
 type LegacyChannelConfigKey = (typeof LEGACY_CHANNEL_KEYS)[number];
 type LegacyChannelPlatform = (typeof LEGACY_CHANNEL_PLATFORMS)[number];
@@ -71,10 +60,6 @@ const ALL_LEGACY_KEYS: LegacyConfigKey[] = [
   'workspace.pasteConfirm',
   'upload.saveToWorkspace',
   'skillsMarket.enabled',
-  'pet.enabled',
-  'pet.size',
-  'pet.dnd',
-  'pet.confirmEnabled',
   'system.closeToTray',
   'system.notificationEnabled',
   'system.cronNotificationEnabled',

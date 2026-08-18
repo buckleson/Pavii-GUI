@@ -61,10 +61,10 @@
   "more": "More",
   "refresh": "Refresh",
   "readOnly": "Read only",
-  "tray.showWindow": "Show AionUi",
+  "tray.showWindow": "Show Pavii.Ai",
   "tray.newChat": "New Chat",
   "tray.closeToTray": "Hide to Tray",
-  "tray.about": "About AionUi",
+  "tray.about": "About Pavii.Ai",
   "tray.restart": "Restart App",
   "tray.quit": "Quit",
   "tray.runningTasks": "Running Tasks",
@@ -75,26 +75,26 @@
   "backendStartup": {
     "incompatibleRuntime": {
       "title": "This system is not supported by the bundled backend",
-      "description": "AionUi opened, but the local AionCore backend cannot run on this Linux version. Please upgrade to a supported Linux distribution and restart AionUi.",
+      "description": "Pavii.Ai opened, but the local Pavii Engine backend cannot run on this Linux version. Please upgrade to a supported Linux distribution and restart Pavii.Ai.",
       "requiredVersions": "Required runtime symbols: {{versions}}"
     },
     "incompleteInstallation": {
-      "title": "AionUi installation is incomplete",
-      "description": "This installation is missing required local resources, so AionCore cannot start. Please download and reinstall the latest AionUi. If the issue returns after reinstalling, check whether security or antivirus software quarantined AionCore.",
+      "title": "Pavii.Ai installation is incomplete",
+      "description": "This installation is missing required local resources, so Pavii Engine cannot start. Please download and reinstall the latest Pavii.Ai. If the issue returns after reinstalling, check whether security or antivirus software quarantined Pavii Engine.",
       "downloadLatest": "Download latest",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics report sent",
       "diagnosticsReportFailed": "Failed to send diagnostics report",
-      "runtimeComponentDescription": "This installation is missing required bundled runtime components, so {{resource}} cannot start. Reinstall the latest AionUi package. If it still happens after reinstalling, check whether security or antivirus software quarantined AionUi components."
+      "runtimeComponentDescription": "This installation is missing required bundled runtime components, so {{resource}} cannot start. Reinstall the latest Pavii.Ai package. If it still happens after reinstalling, check whether security or antivirus software quarantined Pavii.Ai components."
     },
     "packageArchitectureMismatch": {
-      "title": "AionUi package architecture mismatch",
-      "description": "This AionUi package is for {{packageArch}}, but this Mac is {{deviceArch}}. You may have downloaded the wrong package. Please download and install the {{expectedArch}} package."
+      "title": "Pavii.Ai package architecture mismatch",
+      "description": "This Pavii.Ai package is for {{packageArch}}, but this Mac is {{deviceArch}}. You may have downloaded the wrong package. Please download and install the {{expectedArch}} package."
     },
     "dataMigration": {
       "title": "Local data migration failed",
-      "description": "AionUi opened, but AionCore stopped while initializing local data. Reinstalling AionUi may not fix this. Send a diagnostics report or contact support so the local database migration can be inspected.",
+      "description": "Pavii.Ai opened, but Pavii Engine stopped while initializing local data. Reinstalling Pavii.Ai may not fix this. Send a diagnostics report or contact support so the local database migration can be inspected.",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics report sent",
@@ -102,7 +102,7 @@
     },
     "localDataRepair": {
       "title": "Local data repair failed",
-      "description": "AionUi opened, but AionCore stopped while preparing local startup data such as assistant or agent records. Reinstalling AionUi may not fix this. Send a diagnostics report or contact support so the local database can be inspected.",
+      "description": "Pavii.Ai opened, but Pavii Engine stopped while preparing local startup data such as assistant or agent records. Reinstalling Pavii.Ai may not fix this. Send a diagnostics report or contact support so the local database can be inspected.",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics report sent",
@@ -110,7 +110,7 @@
     },
     "startupDirectory": {
       "title": "Startup directory is unavailable",
-      "description": "AionUi opened, but AionCore could not start because the configured work or log directory is missing, unavailable, or blocked by permissions. Check that the configured directories exist and are writable, then restart AionUi.",
+      "description": "Pavii.Ai opened, but Pavii Engine could not start because the configured work or log directory is missing, unavailable, or blocked by permissions. Check that the configured directories exist and are writable, then restart Pavii.Ai.",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics report sent",
@@ -118,7 +118,7 @@
     },
     "recoverableDatabaseCorruption": {
       "title": "Local data is corrupted",
-      "description": "AionUi detected that the local database is corrupted and cannot continue startup. After confirmation, AionUi will back up the old database and create a new local database to continue startup. Past conversations will no longer be shown, and the old database will be kept as a backup file.",
+      "description": "Pavii.Ai detected that the local database is corrupted and cannot continue startup. After confirmation, Pavii.Ai will back up the old database and create a new local database to continue startup. Past conversations will no longer be shown, and the old database will be kept as a backup file.",
       "confirmRebuild": "Back up old DB and rebuild new DB",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsHint": "Sending diagnostics will not modify the local database.",
@@ -134,8 +134,8 @@
       }
     },
     "transientConcurrentStartup": {
-      "title": "AionUi is starting up",
-      "description": "Another AionUi startup was still using the local data when this window opened. This is temporary and your data is safe — no reinstall is needed. Please wait a moment and try again, or restart AionUi.",
+      "title": "Pavii.Ai is starting up",
+      "description": "Another Pavii.Ai startup was still using the local data when this window opened. This is temporary and your data is safe — no reinstall is needed. Please wait a moment and try again, or restart Pavii.Ai.",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics report sent",
@@ -144,11 +144,11 @@
     },
     "pendingSlow": {
       "title": "Starting up",
-      "description": "AionCore is starting up, please wait. If it doesn't respond after a while, you can quit and reopen the app."
+      "description": "Pavii Engine is starting up, please wait. If it doesn't respond after a while, you can quit and reopen the app."
     },
     "exited": {
       "title": "Startup didn't complete",
-      "description": "AionCore couldn't finish starting and has exited. Please restart the app; if this keeps happening, please send diagnostics.",
+      "description": "Pavii Engine couldn't finish starting and has exited. Please restart the app; if this keeps happening, please send diagnostics.",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics reported",
@@ -156,7 +156,7 @@
     },
     "portReportTimeout": {
       "title": "Startup timed out",
-      "description": "AionCore didn't finish starting within the expected time. Please restart the app; if this keeps happening, please send diagnostics.",
+      "description": "Pavii Engine didn't finish starting within the expected time. Please restart the app; if this keeps happening, please send diagnostics.",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics reported",
@@ -164,7 +164,7 @@
     },
     "startupFailed": {
       "title": "Startup failed",
-      "description": "AionCore failed to start. Please restart the app; if this keeps happening, please send diagnostics.",
+      "description": "Pavii Engine failed to start. Please restart the app; if this keeps happening, please send diagnostics.",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics reported",
@@ -192,5 +192,40 @@
     "second_short": "s"
   },
   "selectedCount": "Selected {{count}}",
-  "selectedSkills": "Selected skills"
+  "selectedSkills": "Selected skills",
+  "paviiGate.subtitle": "Your one stop to run, manage, and get the most from your AI.",
+  "paviiGate.signIn": "I already have an account",
+  "paviiGate.waiting": "Waiting for your browser...",
+  "paviiGate.error": "Sign-in could not be verified. Please try again.",
+  "paviiGate.signUp": "Create your Pavii account",
+  "paviiGate.titleLead": "Welcome to the world of",
+  "paviiGate.value1": "Optimized context management",
+  "paviiGate.value2": "Every token put to work",
+  "paviiGate.value3": "Your AI is in safe hands",
+  "paviiGate.reopen": "Page did not open? Click here to open it again",
+  "paviiGate.copy": "Or copy the sign-in link for another browser",
+  "paviiGate.copied": "Link copied",
+  "profile.title": "Profile",
+  "profile.share": "Share",
+  "profile.signOut": "Sign out",
+  "profile.lifetimeTokens": "Lifetime tokens",
+  "profile.peakTokens": "Peak day",
+  "profile.longestChat": "Longest chat",
+  "profile.currentStreak": "Current streak",
+  "profile.longestStreak": "Longest streak",
+  "profile.days": "days",
+  "profile.activity": "Token activity",
+  "profile.since": "since {{day}}",
+  "profile.insights": "Activity insights",
+  "profile.mostUsedCli": "Most used CLI",
+  "profile.mostUsedModel": "Most used AI model",
+  "profile.mostAttachedMcp": "Most attached MCP server",
+  "profile.mostAttachedSkill": "Most attached skill",
+  "profile.skillsUsed": "Skills used",
+  "profile.totalChats": "Total chats",
+  "profile.heatmapTokens": "{{count}} tokens on {{day}}",
+  "profile.heatmapActivity": "{{count}} activities on {{day}}",
+  "profile.shareTitle": "Share your activity",
+  "profile.shareSave": "Save image",
+  "profile.shareHint": "Sharing opens a post with your stats. Save the image to attach it."
 }

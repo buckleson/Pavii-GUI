@@ -1,5 +1,5 @@
 /**
- * Butler diagnose button — the "Ask the Butler" chip next to the feedback
+ * Butler diagnose button — the "Ask Your Pavii" chip next to the feedback
  * pill on conversation error bubbles. Clicking it must jump to the home chat
  * with a diagnosis prompt (containing the error text) pre-filled, mirroring
  * the report modal's "Solve via chat" flow.
@@ -76,7 +76,7 @@ test('error bubble butler chip pre-fills a diagnosis prompt in the home chat', a
     );
 
     // The error bubble should surface both chips.
-    const butlerChip = page.locator('button:has-text("找管家排查"), button:has-text("Ask the Butler")').first();
+    const butlerChip = page.locator('button:has-text("找 Your Pavii 排查"), button:has-text("Ask Your Pavii")').first();
     await expect(butlerChip).toBeVisible({ timeout: 10_000 });
     await expect(page.locator('button:has-text("反馈问题"), button:has-text("Report Issue")').first()).toBeVisible();
 

@@ -24,7 +24,7 @@ import {
   recordAutoUpdateQuitAndInstall,
   recordAutoUpdateStatus,
 } from './autoUpdateDiagnostics';
-import { buildCdnFeedOptions } from './updateFeed';
+import { buildCdnFeedOptions, buildGithubFeedOptions } from './updateFeed';
 
 const FORCE_DEV_AUTO_UPDATE_ENV = 'AIONUI_FORCE_DEV_AUTO_UPDATE';
 const DEBUG_AUTO_UPDATE_CURRENT_VERSION_ENV = 'AIONUI_DEBUG_AUTO_UPDATE_CURRENT_VERSION';
@@ -140,6 +140,14 @@ class AutoUpdaterService extends EventEmitter {
       autoUpdater.channel = channel;
       log.info(`Update channel set to: ${channel}`);
     }
+    if (!cdnFeedOptions) {
+      // Default path: GitHub releases of the Pavii repo. Never the upstream
+      // vendor's CDN (see updateFeed.ts).
+      const githubFeed = buildGithubFeedOptions();
+      autoUpdater.setFeedURL(githubFeed);
+      log.info(`[auto-update] feed set to GitHub releases (${githubFeed.owner}/${githubFeed.repo})`);
+      return;
+    }
     autoUpdater.setFeedURL(cdnFeedOptions);
     log.info('Update feed set to CDN provider');
     log.debug('[auto-update] CDN feed configured', {
@@ -198,7 +206,7 @@ class AutoUpdaterService extends EventEmitter {
       const devConfig = [
         'provider: generic',
         `url: ${cdnFeedOptions.url}`,
-        'updaterCacheDirName: com.aionui.app',
+        'updaterCacheDirName: com.pavii.ai',
         '',
       ].join('\n');
       const configPath = path.join(app.getPath('userData'), 'dev-app-update.yml');

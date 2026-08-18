@@ -76,6 +76,11 @@ export function resolveBinaryPath(): string {
   const bundled = bundledPath(runtimeKey, binaryName, diagnostics);
   if (bundled) return bundled;
 
+  // Dev fallback: unpackaged runs launch from the repo root, where
+  // `node scripts/prepareAioncore.js` places the engine (same layout webui uses).
+  const repoBundled = join(process.cwd(), 'resources', 'bundled-aioncore', runtimeKey, binaryName);
+  if (existsSync(repoBundled)) return repoBundled;
+
   const fromPath = resolveFromSystemPATH(diagnostics);
   if (fromPath) return fromPath;
 

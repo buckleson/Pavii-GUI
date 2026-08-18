@@ -9,6 +9,10 @@ import { rmSync } from 'fs';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// The update feed is unset by default (Pavii never ships a vendor feed);
+// these tests configure one so the CDN paths under test are exercised.
+process.env.PAVII_UPDATE_FEED_URL = 'https://static.aionui.com/releases';
+
 const autoUpdaterMock = vi.hoisted(() => ({
   logger: null as unknown,
   autoDownload: true,

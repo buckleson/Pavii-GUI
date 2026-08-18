@@ -445,6 +445,31 @@ function prepareAioncore(options) {
   const runtimeKey = `${platform}-${arch}`;
   const actionsRunId = (process.env.AIONUI_BACKEND_RUN_ID || '').trim();
 
+  // Engines built from the vendored source (the-remaa/AionCore) are deployed
+  // in place with a `local-source-build` manifest. Never overwrite them with
+  // an upstream download — that would silently strip the Pavii rebrand.
+  {
+    const existingDir = path.join(projectRoot, 'resources', 'bundled-aioncore', runtimeKey);
+    const existingManifestPath = path.join(existingDir, 'manifest.json');
+    const existingBinaryPath = path.join(existingDir, getBinaryName(platform));
+    if (fs.existsSync(existingManifestPath) && fs.existsSync(existingBinaryPath)) {
+      let pinnedToLocalBuild = false;
+      try {
+        pinnedToLocalBuild =
+          JSON.parse(fs.readFileSync(existingManifestPath, 'utf-8')).sourceType === 'local-source-build';
+      } catch {
+        // Unreadable manifest: fall through to the normal preparation path.
+      }
+      if (pinnedToLocalBuild) {
+        console.log(`  Keeping local-source-build aioncore for ${runtimeKey} (manifest pins it; skipping download)`);
+        // A broken pinned bundle must FAIL the build, not silently fall back to
+        // the upstream download (that would strip the Pavii rebrand).
+        verifyPreparedAioncoreBundle(projectRoot, platform, arch);
+        return { prepared: true, dir: existingDir, sourceType: 'local-source-build' };
+      }
+    }
+  }
+
   let tag = null;
   if (!actionsRunId) {
     // Resolve the actual version tag — release asset filenames include the tag.

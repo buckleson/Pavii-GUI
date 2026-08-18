@@ -33,14 +33,39 @@ export type StaticServerHandle = {
 
 const DEFAULT_PORT = 25808;
 
-function getLanIP(): string | null {
+/**
+ * Interface names that belong to virtual adapters (VMware, Hyper-V/WSL,
+ * VirtualBox, Docker, VPN tunnels). Their addresses are unreachable from
+ * other devices on the real LAN, so advertising them breaks phone access
+ * (observed: VMware VMnet1 192.168.160.1 handed out as the "network URL").
+ */
+const VIRTUAL_IFACE_PATTERN =
+  /vmware|vmnet|vethernet|virtualbox|vbox|wsl|hyper-v|docker|tailscale|zerotier|tun|tap|loopback/i;
+
+/** Physical-adapter names get first pick (Windows "Wi-Fi"/"Ethernet", unix wlan0/eth0/en0). */
+const PHYSICAL_IFACE_PATTERN = /^(wi-?fi|ethernet(?! adapter vmware)|wlan\d*|eth\d*|en\d+)/i;
+
+/** All non-internal IPv4 addresses, most-likely-reachable first. */
+export function getLanIPCandidates(): Array<{ name: string; address: string }> {
   const nets = networkInterfaces();
+  const physical: Array<{ name: string; address: string }> = [];
+  const unknown: Array<{ name: string; address: string }> = [];
+  const virtual: Array<{ name: string; address: string }> = [];
   for (const name of Object.keys(nets)) {
     for (const iface of nets[name] || []) {
-      if (iface.family === 'IPv4' && !iface.internal) return iface.address;
+      const isIPv4 = iface.family === 'IPv4' || (iface.family as unknown) === 4;
+      if (!isIPv4 || iface.internal) continue;
+      const row = { name, address: iface.address };
+      if (VIRTUAL_IFACE_PATTERN.test(name)) virtual.push(row);
+      else if (PHYSICAL_IFACE_PATTERN.test(name)) physical.push(row);
+      else unknown.push(row);
     }
   }
-  return null;
+  return [...physical, ...unknown, ...virtual];
+}
+
+function getLanIP(): string | null {
+  return getLanIPCandidates()[0]?.address ?? null;
 }
 
 function forwardToBackend(req: IncomingMessage, res: ServerResponse, backendPort: number): void {
@@ -71,6 +96,42 @@ function forwardToBackend(req: IncomingMessage, res: ServerResponse, backendPort
 // haven't seen a newline after 4 KB the client is sending something weird —
 // hand it to the internal HTTP server and let it return 400.
 const PEEK_LIMIT_BYTES = 4096;
+
+// Upper bound while buffering a WS upgrade's full header block for the auth
+// gate; a well-formed upgrade request is well under 8 KB.
+const WS_HEADER_LIMIT_BYTES = 16384;
+
+/**
+ * Authorize a WS upgrade by replaying its Cookie/Authorization headers against
+ * the backend's session endpoint. The backend itself accepts any /ws client,
+ * so this gate is what keeps remote (LAN/tunnel) visitors from watching the
+ * event stream without logging in.
+ */
+function verifyWsSession(upgradeHeaderText: string, backendPort: number): Promise<boolean> {
+  const cookieMatch = upgradeHeaderText.match(/\r\nCookie:\s*([^\r\n]*)/i);
+  const authMatch = upgradeHeaderText.match(/\r\nAuthorization:\s*([^\r\n]*)/i);
+  if (!cookieMatch && !authMatch) return Promise.resolve(false);
+  return new Promise((resolve, reject) => {
+    const check = http.request(
+      {
+        hostname: '127.0.0.1',
+        port: backendPort,
+        path: '/api/auth/user',
+        method: 'GET',
+        headers: {
+          ...(cookieMatch ? { cookie: cookieMatch[1] } : {}),
+          ...(authMatch ? { authorization: authMatch[1] } : {}),
+        },
+      },
+      (res) => {
+        res.resume();
+        resolve(res.statusCode !== undefined && res.statusCode >= 200 && res.statusCode < 300);
+      }
+    );
+    check.on('error', reject);
+    check.end();
+  });
+}
 
 /**
  * Splice `client` to a TCP endpoint on `targetPort`. Any bytes already read
@@ -146,10 +207,23 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
         return;
       }
 
-      // static files + SPA fallback
+      // static files + SPA fallback. The HTML shell must never be cached:
+      // after an update, a cached shell references hashed chunks that no
+      // longer exist and the page dies with MIME errors (observed on mobile).
+      // Hashed assets under /assets stay long-cacheable — their names change
+      // with every content change.
+      if (!req.url.startsWith('/assets/')) {
+        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+      }
       await serveHandler(req, res, {
         public: opts.staticDir,
         rewrites: [{ source: '**', destination: '/index.html' }],
+        headers: [
+          {
+            source: 'assets/**',
+            headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+          },
+        ],
       });
     } catch (err) {
       if (!res.headersSent) {
@@ -181,6 +255,9 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
   const tcp_server = net.createServer((client: Socket) => {
     let peeked = Buffer.alloc(0);
     let settled = false;
+    // WS routes need the full header block (for the auth cookie), not just
+    // the request line.
+    let awaitingWsHeaders = false;
     const cleanup = (): void => {
       if (settled) return;
       settled = true;
@@ -188,13 +265,45 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
       client.removeListener('error', onEarlyError);
       client.removeListener('end', onEarlyEnd);
     };
+    const rejectUnauthorized = (): void => {
+      cleanup();
+      client.end('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+    };
+    const settleWsRoute = (): void => {
+      // The backend broadcasts events to every /ws client without its own
+      // auth check, so the gate lives here: only splice once the upgrade
+      // request carries a session that the backend accepts.
+      cleanup();
+      const headerText = peeked.toString('latin1');
+      verifyWsSession(headerText, opts.backendPort)
+        .then((authorized) => {
+          if (authorized) {
+            spliceToTcpEndpoint(client, opts.backendPort, peeked);
+          } else {
+            client.end('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+          }
+        })
+        .catch(() => {
+          client.end('HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+        });
+    };
     const onData = (chunk: Buffer): void => {
       peeked = Buffer.concat([peeked, chunk]);
+      if (awaitingWsHeaders) {
+        if (peeked.includes('\r\n\r\n')) settleWsRoute();
+        else if (peeked.length >= WS_HEADER_LIMIT_BYTES) rejectUnauthorized();
+        return;
+      }
       const decision = peekWsRoute(peeked);
       if (decision === null && peeked.length < PEEK_LIMIT_BYTES) return;
+      if (decision === true) {
+        awaitingWsHeaders = true;
+        if (peeked.includes('\r\n\r\n')) settleWsRoute();
+        else if (peeked.length >= WS_HEADER_LIMIT_BYTES) rejectUnauthorized();
+        return;
+      }
       cleanup();
-      const target = decision === true ? opts.backendPort : internalPort;
-      spliceToTcpEndpoint(client, target, peeked);
+      spliceToTcpEndpoint(client, internalPort, peeked);
     };
     const onEarlyError = (): void => {
       cleanup();

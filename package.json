@@ -1,12 +1,12 @@
 {
-  "name": "AionUi",
+  "name": "pavii-ai",
   "version": "2.1.52",
-  "description": "Transform your command-line AI agent into a modern, efficient AI Chat interface.",
+  "description": "Pavii.Ai — your personal AI workspace",
   "keywords": [],
   "license": "Apache-2.0",
   "author": {
-    "name": "AionUi",
-    "email": "service@aionui.com"
+    "name": "Team Pavii",
+    "email": "info@pavii.tech"
   },
   "workspaces": [
     "packages/*"
@@ -35,7 +35,7 @@
     "build-mac:x64": "node scripts/build-with-builder.js x64 --mac --x64",
     "build-win:arm64": "node scripts/build-with-builder.js arm64 --win --arm64",
     "build-win:x64": "node scripts/build-with-builder.js x64 --win --x64",
-    "build-win:x64:fast": "cross-env ELECTRON_BUILDER_COMPRESSION_LEVEL=1 node scripts/build-with-builder.js x64 --win --x64 --config.win.signAndEditExecutable=false",
+    "build-win:x64:fast": "cross-env ELECTRON_BUILDER_COMPRESSION_LEVEL=1 node scripts/build-with-builder.js x64 --win --x64",
     "build-win:x64:debug-versions": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-fast-debug-versions.ps1",
     "build": "node scripts/build-with-builder.js auto --mac --arm64 --x64",
     "lint": "oxlint",
@@ -76,7 +76,6 @@
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.18.2",
-    "@aionui/web-host": "workspace:*",
     "@anthropic-ai/sdk": "^0.71.2",
     "@arco-design/web-react": "^2.66.1",
     "@aws-sdk/client-bedrock": "^3.987.0",
@@ -103,6 +102,7 @@
     "@lezer/highlight": "^1.2.3",
     "@modelcontextprotocol/sdk": "^1.20.0",
     "@monaco-editor/react": "^4.7.0",
+    "@pavii/web-host": "workspace:*",
     "@sentry/electron": "^7.10.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
@@ -265,5 +265,5 @@
   "patchedDependencies": {
     "7zip-bin@5.2.0": "patches/7zip-bin@5.2.0.patch"
   },
-  "productName": "AionUi"
+  "productName": "Pavii.Ai"
 }

@@ -18,6 +18,7 @@ import type { IStartOnBootStatus } from '@/common/adapter/ipcBridge';
 import { restartApplication } from './restartApplication';
 
 let mainWindowRef: BrowserWindow | null = null;
+let pendingAuthCallback: import('../services/paviiAuthCallbackServer').AuthCallbackHandle | null = null;
 
 const START_ON_BOOT_UNSUPPORTED_MESSAGE = 'Start on boot is only available in packaged macOS and Windows apps.';
 export const START_ON_BOOT_WINDOWS_ARG = '--start-on-boot';
@@ -100,6 +101,133 @@ export function setApplicationMainWindow(win: BrowserWindow): void {
 export function initApplicationBridge(): void {
   // Platform-agnostic handlers: systemInfo, updateSystemInfo, getPath
   initApplicationBridgeCore();
+
+  // Pavii account (Firebase via pavii.tech/login)
+  ipcBridge.paviiAuth.getSession.provider(async () => {
+    const { readStoredSession } = await import('../services/paviiAuth');
+    const { getConfigPath } = await import('../utils/utils');
+    return readStoredSession(getConfigPath());
+  });
+
+  ipcBridge.paviiAuth.signIn.provider(async (params) => {
+    const { buildSignInUrl } = await import('../services/paviiAuth');
+    const { shell } = await import('electron');
+    const mode = params && typeof params === 'object' ? params.mode : undefined;
+    // Prefer a loopback callback: browsers can silently refuse to launch the
+    // pavii:// scheme (stale handler caches), while a 127.0.0.1 delivery from
+    // the login page always reaches us. pavii://auth stays as the fallback.
+    let redirectUri = 'pavii://auth';
+    try {
+      const { startAuthCallbackServer } = await import('../services/paviiAuthCallbackServer');
+      const { completeAuthSignIn } = await import('../utils/deepLink');
+      pendingAuthCallback?.close();
+      pendingAuthCallback = await startAuthCallbackServer((idToken) => completeAuthSignIn(idToken), {
+        onFocus: () => {
+          if (!mainWindowRef || mainWindowRef.isDestroyed()) return;
+          if (mainWindowRef.isMinimized()) mainWindowRef.restore();
+          mainWindowRef.show();
+          mainWindowRef.focus();
+        },
+      });
+      redirectUri = `http://127.0.0.1:${pendingAuthCallback.port}/auth`;
+    } catch (error) {
+      console.warn('[PaviiAuth] loopback callback unavailable, falling back to pavii://', error);
+    }
+    const signInUrl = buildSignInUrl(redirectUri, mode);
+    await shell.openExternal(signInUrl);
+    // Returned so the gate can offer "open again" / "copy link" fallbacks when
+    // the OS default browser is not the one the user wanted.
+    return signInUrl;
+  });
+
+  ipcBridge.paviiAuth.signOut.provider(async () => {
+    const { clearStoredSession } = await import('../services/paviiAuth');
+    const { getConfigPath } = await import('../utils/utils');
+    await clearStoredSession(getConfigPath());
+  });
+
+  // App-hosted channel bridges (Slack/Discord)
+  ipcBridge.paviiChannels.getStatus.provider(async () => {
+    const { getSlackBridgeState } = await import('../services/channels/slackBridge');
+    const { getDiscordBridgeState } = await import('../services/channels/discordBridge');
+    const { readChannelStore } = await import('../services/channels/channelStore');
+    const store = await readChannelStore();
+    const slack = getSlackBridgeState();
+    const discord = getDiscordBridgeState();
+    return {
+      slack: { ...slack, enabled: store.slack?.enabled === true },
+      discord: { ...discord, enabled: store.discord?.enabled === true },
+    };
+  });
+
+  ipcBridge.paviiChannels.enable.provider(async ({ platform, credentials }) => {
+    if (platform === 'slack') {
+      if (!credentials.botToken || !credentials.appToken) {
+        throw new Error('Slack needs both a bot token (xoxb-...) and an app-level token (xapp-...)');
+      }
+      const { startSlackBridge } = await import('../services/channels/slackBridge');
+      const bridgeState = await startSlackBridge({
+        botToken: credentials.botToken,
+        appToken: credentials.appToken,
+      });
+      return { ...bridgeState, enabled: true };
+    }
+    if (platform === 'discord') {
+      if (!credentials.botToken) throw new Error('Discord needs a bot token');
+      const { startDiscordBridge } = await import('../services/channels/discordBridge');
+      const bridgeState = await startDiscordBridge({ botToken: credentials.botToken });
+      return { ...bridgeState, enabled: true };
+    }
+    throw new Error(`Channel bridge not available: ${platform as string}`);
+  });
+
+  ipcBridge.paviiChannels.disable.provider(async ({ platform }) => {
+    if (platform === 'slack') {
+      const { stopSlackBridge } = await import('../services/channels/slackBridge');
+      await stopSlackBridge();
+    } else if (platform === 'discord') {
+      const { stopDiscordBridge } = await import('../services/channels/discordBridge');
+      await stopDiscordBridge();
+    }
+  });
+
+  // Public-access tunnel for the WebUI
+  ipcBridge.paviiTunnel.getStatus.provider(async () => {
+    const { getTunnelState } = await import('../services/tunnelService');
+    return getTunnelState();
+  });
+
+  ipcBridge.paviiTunnel.start.provider(async () => {
+    const { startTunnel } = await import('../services/tunnelService');
+    const { getDesktopWebUIStatus, writeTunnelEnabledPreference } = await import('../utils/webuiConfig');
+    const webuiStatus = getDesktopWebUIStatus();
+    if (!webuiStatus.running || !webuiStatus.port) {
+      throw new Error('Enable the WebUI first, then turn on public access.');
+    }
+    const tunnelState = await startTunnel(webuiStatus.port);
+    await writeTunnelEnabledPreference(true);
+    return tunnelState;
+  });
+
+  ipcBridge.paviiTunnel.stop.provider(async () => {
+    const { stopTunnel } = await import('../services/tunnelService');
+    const { writeTunnelEnabledPreference } = await import('../utils/webuiConfig');
+    await stopTunnel();
+    await writeTunnelEnabledPreference(false);
+  });
+
+  // Usage ledger (Profile page stats)
+  ipcBridge.paviiUsage.record.provider(async (entry) => {
+    const { recordUsage } = await import('../services/usageLedger');
+    const { getConfigPath } = await import('../utils/utils');
+    await recordUsage(getConfigPath(), entry);
+  });
+
+  ipcBridge.paviiUsage.get.provider(async () => {
+    const { readUsageLedger } = await import('../services/usageLedger');
+    const { getConfigPath } = await import('../utils/utils');
+    return readUsageLedger(getConfigPath());
+  });
 
   ipcBridge.application.restart.provider(async () => {
     // Backend subprocess shutdown is handled by backendManager.stop() in the

@@ -76,7 +76,9 @@ const GuidPage: React.FC = () => {
   // Skill metadata comes from the database-backed catalog. Built-in auto-inject
   // skills default checked; the rest are opt-in per conversation or pre-checked
   // by assistant defaults.
-  const [allSkills, setAllSkills] = useState<Array<{ name: string; description: string; isAuto: boolean }>>([]);
+  const [allSkills, setAllSkills] = useState<
+    Array<{ name: string; display_name?: string; description: string; isAuto: boolean }>
+  >([]);
   const [guidDisabledBuiltinSkills, setGuidDisabledBuiltinSkills] = useState<string[] | undefined>(undefined);
   const [guidEnabledSkills, setGuidEnabledSkills] = useState<string[] | undefined>(undefined);
   const [availableMcpServers, setAvailableMcpServers] = useState<IMcpServer[]>([]);
@@ -89,6 +91,7 @@ const GuidPage: React.FC = () => {
         setAllSkills(
           availableSkills.map((s) => ({
             name: s.name,
+            display_name: s.display_name,
             description: s.description,
             isAuto: s.source === 'builtin' && s.is_auto_inject,
           }))

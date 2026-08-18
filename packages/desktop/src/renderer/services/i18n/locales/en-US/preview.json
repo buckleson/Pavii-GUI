@@ -65,16 +65,16 @@
     "conversionFailed": "Conversion failed"
   },
   "office": {
-    "installLinkText": "Open officecli install guide",
+    "installLinkText": "Open Pavii CLI install guide",
     "errors": {
-      "officecliNotFound": "officecli is not installed.",
-      "installFailed": "Failed to install officecli automatically. Check backend logs and retry.",
+      "officecliNotFound": "Pavii CLI is not installed.",
+      "installFailed": "Failed to install Pavii CLI automatically. Check backend logs and retry.",
       "portTimeout": "Preview service started but did not become ready in time. Retry.",
       "startFailed": "Failed to start the Office preview service.",
       "outsideSandbox": "This file is outside the current project sandbox."
     },
     "serverInstall": {
-      "hint": "AionUi is running on a server. Install the preview component on that server, then retry:",
+      "hint": "Pavii.Ai is running on a server. Install the preview component on that server, then retry:",
       "icuNote": "If it still fails to start, install the ICU library on the server (Debian/Ubuntu: apt-get install -y libicu-dev)."
     }
   },
@@ -85,9 +85,9 @@
     "loadFailed": "Failed to load Word document",
     "watch": {
       "loading": "Loading Word document...",
-      "installing": "Installing officecli...",
+      "installing": "Installing Pavii CLI...",
       "startFailed": "Failed to start Word preview",
-      "installHint": "Requires officecli. It will be installed automatically."
+      "installHint": "Requires Pavii CLI. It will be installed automatically."
     }
   },
   "excel": {
@@ -102,9 +102,9 @@
     "emptySheetHint": "Check whether the sheet contains data or images",
     "watch": {
       "loading": "Loading Excel file...",
-      "installing": "Installing officecli...",
+      "installing": "Installing Pavii CLI...",
       "startFailed": "Failed to start Excel preview",
-      "installHint": "Requires officecli. It will be installed automatically."
+      "installHint": "Requires Pavii CLI. It will be installed automatically."
     }
   },
   "pdf": {
@@ -133,7 +133,7 @@
     "loading": "Starting PPT preview...",
     "installing": "Installing preview component...",
     "startFailed": "Failed to start PPT preview",
-    "installHint": "Install OfficeCLI from the official iOfficeAI/OfficeCLI releases page"
+    "installHint": "Install Pavii CLI from the official Pavii CLI releases page"
   },
   "browser": {
     "newTab": "New tab",

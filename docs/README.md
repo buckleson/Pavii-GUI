@@ -1,4 +1,4 @@
-# AionUi Docs
+# Pavii.Ai Docs
 
 Documentation is organized by reader intent, not by document type.
 

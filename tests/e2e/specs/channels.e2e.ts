@@ -10,7 +10,7 @@
 import { test, expect } from '../fixtures';
 import { goToChannelsTab, channelItemById, channelSwitchById, takeScreenshot, waitForClassChange } from '../helpers';
 
-const ACTIVE_CHANNEL_IDS = ['telegram', 'lark', 'dingtalk'] as const;
+const ACTIVE_CHANNEL_IDS = ['telegram'] as const;
 const COMING_SOON_CHANNEL_IDS = ['slack', 'discord'] as const;
 
 test.describe('Channels', () => {

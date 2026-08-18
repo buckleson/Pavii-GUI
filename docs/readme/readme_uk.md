@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="../../resources/aionui-banner-1.png" alt="AionUi - Спільна робота з AI-агентами" width="100%">
+  <img src="../../resources/pavii-ai-banner-1.png" alt="Pavii.Ai - Спільна робота з AI-агентами" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/iOfficeAI/AionUi?style=flat-square&color=32CD32" alt="Версія">
+  <img src="https://img.shields.io/github/v/release/vjk7989/pavii-ai?style=flat-square&color=32CD32" alt="Версія">
   &nbsp;
   <img src="https://img.shields.io/badge/license-Apache--2.0-32CD32?style=flat-square&logo=apache&logoColor=white" alt="Ліцензія">
   &nbsp;
@@ -24,37 +24,37 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/iOfficeAI/AionUi/releases">
+  <a href="https://www.pavii.tech/products/Super-Assistant/">
     <img src="https://img.shields.io/badge/⬇️%20Завантажити-Останній%20реліз-32CD32?style=for-the-badge&logo=github&logoColor=white" alt="Завантажити останній реліз" height="50">
   </a>
 </p>
 
 <p align="center">
-  <a href="../../readme.md">English</a> | <a href="./readme_ch.md">简体中文</a> | <a href="./readme_tw.md">繁體中文</a> | <a href="./readme_jp.md">日本語</a> | <a href="./readme_ko.md">한국어</a> | <a href="./readme_es.md">Español</a> | <a href="./readme_pt.md">Português</a> | <a href="./readme_tr.md">Türkçe</a> | <a href="./readme_ru.md">Русский</a> | <strong>Українська</strong> | <a href="https://www.aionui.com" target="_blank">Офіційний сайт</a>
+  <a href="../../readme.md">English</a> | <a href="./readme_ch.md">简体中文</a> | <a href="./readme_tw.md">繁體中文</a> | <a href="./readme_jp.md">日本語</a> | <a href="./readme_ko.md">한국어</a> | <a href="./readme_es.md">Español</a> | <a href="./readme_pt.md">Português</a> | <a href="./readme_tr.md">Türkçe</a> | <a href="./readme_ru.md">Русский</a> | <strong>Українська</strong> | <a href="https://www.pavii.tech/products/Super-Assistant/" target="_blank">Офіційний сайт</a>
 </p>
 
 <p align="center">
-  <strong>💬 Спільнота:</strong> <a href="https://discord.gg/2QAwJn7Egx" target="_blank">Discord (English)</a> | <a href="../../resources/wx-19.png" target="_blank">微信 (中文群)</a> | <a href="https://twitter.com/AionUI" target="_blank">Twitter</a>
+  <strong>💬 Спільнота:</strong> <a href="https://discord.gg/2QAwJn7Egx" target="_blank">Discord (English)</a> | <a href="../../resources/wx-19.png" target="_blank">微信 (中文群)</a> | <a href="https://twitter.com/Pavii.Ai" target="_blank">Twitter</a>
 </p>
 
 ---
 
 <p align="center">
-  <a href="https://x.com/AionUi/status/2079493379914961069">
-    <img src="../../resources/kimi/contributor-bonus-black-blue.jpg" alt="AionUi × Kimi Бонус для контриб’юторів" width="600">
+  <a href="https://x.com/Pavii.Ai/status/2079493379914961069">
+    <img src="../../resources/kimi/contributor-bonus-black-blue.jpg" alt="Pavii.Ai × Kimi Бонус для контриб’юторів" width="600">
   </a>
 </p>
 
 <p align="center">
-  🎁 <strong>Партнерство AionUi × Kimi</strong>: безкоштовні преміум-плани <strong>Kimi «Allegretto» (вартістю $39/міс · ¥199/міс)</strong> для наших контриб’юторів!
+  🎁 <strong>Партнерство Pavii.Ai × Kimi</strong>: безкоштовні преміум-плани <strong>Kimi «Allegretto» (вартістю $39/міс · ¥199/міс)</strong> для наших контриб’юторів!
 </p>
 
 <h3 align="center">
-  <a href="https://x.com/AionUi/status/2079493379914961069">Деталі акції та як отримати →</a>
+  <a href="https://x.com/Pavii.Ai/status/2079493379914961069">Деталі акції та як отримати →</a>
 </h3>
 
 <p align="center">
-  <sub><strong>Kimi K3</strong> вже тут і працює в AionUi одразу — <a href="https://www.kimi.com/code?aff=aionui" target="_blank">оформіть план Kimi For Coding</a> або отримайте API-ключ (<a href="https://platform.kimi.ai?track_id=track-32e04532b08d460fac729191744fa75c&aff=aionui" target="_blank">Global</a> / <a href="https://platform.kimi.com?track_id=track-98f92981df1c4c61b2c68930ba3ab658&aff=aionui" target="_blank">Китай</a>)</sub>
+  <sub><strong>Kimi K3</strong> вже тут і працює в Pavii.Ai одразу — <a href="https://www.kimi.com/code?aff=pavii-ai" target="_blank">оформіть план Kimi For Coding</a> або отримайте API-ключ (<a href="https://platform.kimi.ai?track_id=track-32e04532b08d460fac729191744fa75c&aff=pavii-ai" target="_blank">Global</a> / <a href="https://platform.kimi.com?track_id=track-98f92981df1c4c61b2c68930ba3ab658&aff=pavii-ai" target="_blank">Китай</a>)</sub>
 </p>
 
 ---
@@ -64,7 +64,7 @@
 <p align="center">
 
 [✨ Cowork у дії](#-cowork-у-дії) ·
-[🤔 Чому варто обрати AionUi?](#-чому-варто-обрати-aionui-замість-claude-cowork) ·
+[🤔 Чому варто обрати Pavii.Ai?](#-чому-варто-обрати-pavii-ai-замість-claude-cowork) ·
 [🚀 Швидкий старт](#-швидкий-старт) ·
 [💬 Спільнота](#-спільнота--підтримка)
 
@@ -74,9 +74,9 @@
 
 ## Cowork — AI-агенти, що працюють разом із вами
 
-**AionUi — це більше, ніж просто чат-клієнт.** Це платформа для спільної роботи (Cowork), де AI-агенти працюють пліч-о-пліч із вами на вашому комп'ютері: читають файли, пишуть код, шукають в інтернеті та автоматизують завдання. Ви бачите все, що робить агент, і завжди зберігаєте контроль.
+**Pavii.Ai — це більше, ніж просто чат-клієнт.** Це платформа для спільної роботи (Cowork), де AI-агенти працюють пліч-о-пліч із вами на вашому комп'ютері: читають файли, пишуть код, шукають в інтернеті та автоматизують завдання. Ви бачите все, що робить агент, і завжди зберігаєте контроль.
 
-|                                    | Традиційні AI чат-клієнти | **AionUi (Cowork)**                                                                                                     |
+|                                    | Традиційні AI чат-клієнти | **Pavii.Ai (Cowork)**                                                                                                   |
 | :--------------------------------- | :------------------------ | :---------------------------------------------------------------------------------------------------------------------- |
 | AI може працювати з вашими файлами | Обмежено або ні           | **Так — вбудований агент із повним доступом до файлів**                                                                 |
 | AI може виконувати багато кроків   | Обмежено                  | **Так — автономно за вашим підтвердженням**                                                                             |
@@ -86,14 +86,14 @@
 | Ціна                               | Безкоштовно / Платно      | **Безкоштовно та з відкритим кодом**                                                                                    |
 
 <p align="center">
-  <img src="../../resources/offica-ai BANNER-function.png" alt="AionUi Cowork Platform" width="800">
+  <img src="../../resources/offica-ai BANNER-function.png" alt="Pavii.Ai Cowork Platform" width="800">
 </p>
 
 ---
 
 ## Вбудований агент — Встанови та працюй, Нуль налаштувань
 
-AionUi постачається з повноцінним рушієм AI-агентів. На відміну від інструментів, що вимагають окремого встановлення CLI-агентів, **AionUi працює одразу після встановлення**.
+Pavii.Ai постачається з повноцінним рушієм AI-агентів. На відміну від інструментів, що вимагають окремого встановлення CLI-агентів, **Pavii.Ai працює одразу після встановлення**.
 
 - **Не потрібно встановлювати CLI-інструменти** — рушій агента вже вбудований
 - **Жодних складних налаштувань** — додайте будь-який API ключ, щоб почати
@@ -106,7 +106,7 @@ AionUi постачається з повноцінним рушієм AI-аге
 
 ### **Офісні асистенти — PPT, Word та Excel**
 
-Ці напрямки відповідають реальним можливостям додатка: пресети **Morph PPT** та навички **`pptx` / `docx` / `xlsx`**. Канонічні [визначення асистентів](https://github.com/iOfficeAI/AionCore/blob/main/crates/aionui-app/assets/builtin-assistants/assistants.json) і [вбудовані навички](https://github.com/iOfficeAI/AionCore/tree/main/crates/aionui-app/assets/builtin-skills) підтримуються в AionCore. Потрібні документи чи таблиці? Вбудований **[OfficeCLI](https://github.com/iOfficeAI/OfficeCLI)** допомагає створювати PPT (Morph), Word (`.docx`) та Excel (`.xlsx/.xlsm/.csv`) швидше та надійніше.
+Ці напрямки відповідають реальним можливостям додатка: пресети **Morph PPT** та навички **`pptx` / `docx` / `xlsx`**. Канонічні [визначення асистентів](https://github.com/iOfficeAI/AionCore/blob/main/crates/aionui-app/assets/builtin-assistants/assistants.json) і [вбудовані навички](https://github.com/iOfficeAI/AionCore/tree/main/crates/aionui-app/assets/builtin-skills) підтримуються в Pavii Engine. Потрібні документи чи таблиці? Вбудований **[OfficeCLI](https://github.com/iOfficeAI/OfficeCLI)** допомагає створювати PPT (Morph), Word (`.docx`) та Excel (`.xlsx/.xlsm/.csv`) швидше та надійніше.
 
 #### **Асистент PPT**
 
@@ -160,7 +160,7 @@ AionUi постачається з повноцінним рушієм AI-аге
 
 ## Мульти-агентний режим — Вже маєте CLI-агентів? Додайте їх
 
-Якщо ви вже використовуєте Claude Code, Codex, Hermes Agent або OpenClaw, AionUi автоматично виявить їх і дозволить працювати з усіма ними разом із вбудованим агентом.
+Якщо ви вже використовуєте Claude Code, Codex, Hermes Agent або OpenClaw, Pavii.Ai автоматично виявить їх і дозволить працювати з усіма ними разом із вбудованим агентом.
 
 **Підтримувані агенти:** Вбудований агент (на вбудованому рушії [aionrs](https://github.com/iOfficeAI/aionrs)) • Claude Code • Codex • Qwen Code • Gemini CLI • Goose • OpenClaw • Augment Code • CodeBuddy • Kimi CLI • OpenCode • Factory Droid • GitHub Copilot • Qoder • Mistral Vibe • Nanobot • Snow • Hermes • Cursor Agent • Pi • MiMo Code • omp • Antigravity та інші
 
@@ -171,7 +171,7 @@ AionUi постачається з повноцінним рушієм AI-аге
 - **Автовизначення** — автоматично розпізнає встановлені CLI-інструменти
 - **Єдиний інтерфейс** — одна платформа для всіх ваших AI-агентів
 - **Паралельні сесії** — запуск кількох агентів одночасно з незалежними контекстами
-- **Єдине керування MCP** — керуйте MCP-інструментами в одному місці; AionUi додає або синхронізує сумісні транспорти відповідно до можливостей кожного агента
+- **Єдине керування MCP** — керуйте MCP-інструментами в одному місці; Pavii.Ai додає або синхронізує сумісні транспорти відповідно до можливостей кожного агента
 - **YOLO / повністю автоматичний режим** — підтримувані агенти можуть працювати без нагляду; доступні режими та дозволи залежать від обраного агента
 
 ### Team Mode — Скоординована мульти-агентна співпраця
@@ -182,8 +182,8 @@ AionUi постачається з повноцінним рушієм AI-аге
   <img src="../../resources/AionUi_team.gif" alt="Team Mode overview" width="800">
 </p>
 
-- **Паралельне виконання кількох агентів** — Leader ділить і делегує завдання Teammate-агентам; зовнішні агенти підключаються через ACP (Agent Client Protocol), а AionUi координує команду
-- **Оркестрація Leader** — Leader призначає, відстежує та агрегує результати; підтримувані бекенди: Claude Code, Codex, Hermes Agent, Gemini, Snow CLI, Aion CLI
+- **Паралельне виконання кількох агентів** — Leader ділить і делегує завдання Teammate-агентам; зовнішні агенти підключаються через ACP (Agent Client Protocol), а Pavii.Ai координує команду
+- **Оркестрація Leader** — Leader призначає, відстежує та агрегує результати; підтримувані бекенди: Claude Code, Codex, Hermes Agent, Gemini, Snow CLI, Pavii CLI
 - **Ізольований робочий простір команди** — всі агенти спільно використовують одну папку; кожен має свій діалог підтвердження дозволів із значком на бічній панелі для очікуваних підтверджень
 
 <details>
@@ -192,7 +192,7 @@ AionUi постачається з повноцінним рушієм AI-аге
 <br>
 
 - **Спільний робочий простір** — всі агенти читають/записують одну папку; файлова панель залишається видимою протягом усього процесу
-- **Підтримувані бекенди** — Claude Code, Codex, Gemini, Snow CLI, Aion CLI (aionrs); інші ACP-бекенди з `mcpCapabilities.stdio` підтримуються автоматично
+- **Підтримувані бекенди** — Claude Code, Codex, Gemini, Snow CLI, Pavii CLI (aionrs); інші ACP-бекенди з `mcpCapabilities.stdio` підтримуються автоматично
 - **Динамічне масштабування** — додавайте або видаляйте Teammate-агентів під час роботи команди; мовчазні агенти автоматично переходять у статус failed із можливістю видалення в один клік
 - **Детальні дозволи** — кожен агент має свій діалог підтвердження дозволів; значок на бічній панелі показує очікувані підтвердження
 - **Обмін файлами** — Leader може передавати вкладення файлів Teammate-агентам
@@ -203,7 +203,7 @@ AionUi постачається з повноцінним рушієм AI-аге
 
 ## Будь-який API ключ, Повна потужність Cowork
 
-Інші додатки дають лише вікно чату. **AionUi дає повноцінного агента для спільної роботи.**
+Інші додатки дають лише вікно чату. **Pavii.Ai дає повноцінного агента для спільної роботи.**
 
 | Ваш API ключ                  | Що ви отримуєте             |
 | :---------------------------- | :-------------------------- |
@@ -213,7 +213,7 @@ AionUi постачається з повноцінним рушієм AI-аге
 | Ollama / LM Studio (локально) | Локальний Cowork агент      |
 | Шлюз NewAPI                   | Доступ до 20+ моделей       |
 
-Ті ж самі можливості — читання/запис файлів, веб-пошук, генерація зображень — незалежно від того, яка модель використовується. AionUi підтримує **30+ AI-платформ**.
+Ті ж самі можливості — читання/запис файлів, веб-пошук, генерація зображень — незалежно від того, яка модель використовується. Pavii.Ai підтримує **30+ AI-платформ**.
 
 <p align="center">
   <img src="../../resources/llm_newapi.png" alt="Підтримка багатьох моделей" width="800">
@@ -241,7 +241,7 @@ AionUi постачається з повноцінним рушієм AI-аге
 _Система асистентів із 21 вбудованим професіоналом та трирівневою системою навичок. Створюйте та керуйте власними асистентами та навичками._
 
 - **Створюйте власних асистентів** — визначте правила та можливості
-- **Трирівневі навички** — вбудовані навички (поставляються з AionUi), власні навички (ваші особисті) та Extension-навички (від сторонніх розширень); вмикайте/вимикайте для кожної розмови з індикатором навичок
+- **Трирівневі навички** — вбудовані навички (поставляються з Pavii.Ai), власні навички (ваші особисті) та Extension-навички (від сторонніх розширень); вмикайте/вимикайте для кожної розмови з індикатором навичок
 - **Контроль для кожної розмови** — індикатор навичок у заголовку чату показує активні навички поточної розмови
 
 <p align="center">
@@ -274,11 +274,11 @@ _Система асистентів із 21 вбудованим професі
 - **🔧 OpenClaw Setup** — Налаштування інтеграції з OpenClaw
 - **📖 Story Roleplay** — Рольові ігри (сумісно з SillyTavern)
 
-- **🧭 AionUi Butler** — Поради щодо продукту, допомога з налаштуванням і усунення несправностей в AionUi
+- **🧭 Your Pavii** — Поради щодо продукту, допомога з налаштуванням і усунення несправностей в Pavii.Ai
 
 **Навички**: імпортуйте або створюйте навички в **Налаштування → Skills** і призначайте їх потрібним асистентам. Джерела навичок: вбудовані, власні та Extension. Серед вбудованих: `pptx`, `docx`, `pdf`, `xlsx`, `mermaid` та інші.
 
-> 💡 Канонічні вбудовані визначення містяться в [каталозі асистентів](https://github.com/iOfficeAI/AionCore/blob/main/crates/aionui-app/assets/builtin-assistants/assistants.json) AionCore. Правила залишаються у Markdown і налаштовуються в AionUi.
+> 💡 Канонічні вбудовані визначення містяться в [каталозі асистентів](https://github.com/iOfficeAI/AionCore/blob/main/crates/aionui-app/assets/builtin-assistants/assistants.json) Pavii Engine. Правила залишаються у Markdown і налаштовуються в Pavii.Ai.
 
 </details>
 
@@ -338,7 +338,7 @@ _Налаштуйте один раз, і AI-агент працюватиме �
 - **Прив'язка до розмови** — кожне завдання прив'язане до розмови, зберігаючи контекст та історію
 - **Автоматичне виконання** — завдання виконуються автоматично у запланований час, надсилаючи повідомлення до розмови
 - **Просте керування** — створюйте, змінюйте, вмикайте/вимикайте, видаляйте та переглядайте заплановані завдання у будь-який час
-- **Режим без сну** — AionUi автоматично запобігає переходу системи у сплячий режим, поки активні завдання, та визначає пропущені тригери після пробудження
+- **Режим без сну** — Pavii.Ai автоматично запобігає переходу системи у сплячий режим, поки активні завдання, та визначає пропущені тригери після пробудження
 - **Розширена конфігурація** — кожне завдання може мати власні налаштування моделі, робочого каталогу та інтенсивності міркувань
 
 </details>
@@ -360,16 +360,16 @@ _10+ форматів: PDF, Word, Excel, PPT, код, Markdown, зображен
 _Пакетне перейменування, автоматичне впорядкування, розумна класифікація та злиття файлів._
 
 <p align="center">
-  <img src="../../resources/aionui sort file 2.gif" alt="Керування файлами" width="800">
+  <img src="../../resources/pavii-ai sort file 2.gif" alt="Керування файлами" width="800">
 </p>
 
 ---
 
-## 🤔 Чому варто обрати AionUi замість Claude Cowork?
+## 🤔 Чому варто обрати Pavii.Ai замість Claude Cowork?
 
-AionUi — це **безкоштовний Multi-AI Agent десктоп**. На відміну від Claude Cowork, який працює лише на macOS і обмежений лише Claude, AionUi — це версія з підтримкою всіх моделей та платформ.
+Pavii.Ai — це **безкоштовний Multi-AI Agent десктоп**. На відміну від Claude Cowork, який працює лише на macOS і обмежений лише Claude, Pavii.Ai — це версія з підтримкою всіх моделей та платформ.
 
-| Параметр      | Claude Cowork | AionUi                                                |
+| Параметр      | Claude Cowork | Pavii.Ai                                              |
 | :------------ | :------------ | :---------------------------------------------------- |
 | ОС            | Тільки macOS  | macOS / Windows / Linux                               |
 | Моделі        | Тільки Claude | Gemini, Claude, DeepSeek, OpenAI, Ollama, ...         |
@@ -384,7 +384,7 @@ AionUi — це **безкоштовний Multi-AI Agent десктоп**. На
 ### Встановлення
 
 <p>
-  <a href="https://github.com/iOfficeAI/AionUi/releases">
+  <a href="https://www.pavii.tech/products/Super-Assistant/">
     <img src="https://img.shields.io/badge/Завантажити-Останній%20реліз-32CD32?style=for-the-badge&logo=github&logoColor=white" alt="Завантажити останній реліз" height="50">
   </a>
 </p>
@@ -393,12 +393,12 @@ AionUi — це **безкоштовний Multi-AI Agent десктоп**. На
 
 ```bash
 # Або macOS через Homebrew
-brew install aionui
+brew install pavii-ai
 ```
 
 ### Початок роботи за 3 кроки
 
-1. **Встановіть** AionUi
+1. **Встановіть** Pavii.Ai
 2. **Додайте** будь-який API ключ, щоб почати
 3. **Почніть працювати** — вбудований агент уже готовий до дії
 
@@ -409,13 +409,13 @@ brew install aionui
 **Ваші ідеї важливі!** Ми цінуємо кожен відгук.
 
 <p align="center">
-  <a href="https://x.com/AionUi" target="_blank">
+  <a href="https://x.com/Pavii.Ai" target="_blank">
     <img src="../../resources/contactus-x.png" alt="Зв'яжіться з нами в X" width="600">
   </a>
 </p>
 
-- [GitHub Discussions](https://github.com/iOfficeAI/AionUi/discussions) — діліться ідеями
-- [Повідомити про проблему](https://github.com/iOfficeAI/AionUi/issues) — баги та запити функцій
+- [GitHub Discussions](https://www.pavii.tech/products/Super-Assistant/) — діліться ідеями
+- [Повідомити про проблему](https://www.pavii.tech/products/Super-Assistant/) — баги та запити функцій
 - [Discord](https://discord.gg/2QAwJn7Egx) — англомовна спільнота
 
 ### Внесок у проект
@@ -430,15 +430,15 @@ brew install aionui
 
 ### Налаштування середовища розробки
 
-Локальна розробка AionUi використовує два репозиторії: AionUi для Electron-фронтенду та AionCore для локального backend. Повні інструкції для macOS, Linux і Windows наведені в [Development Guide](../contributing/development.md).
+Локальна розробка Pavii.Ai використовує два репозиторії: Pavii.Ai для Electron-фронтенду та Pavii Engine для локального backend. Повні інструкції для macOS, Linux і Windows наведені в [Development Guide](../contributing/development.md).
 
 ---
 
 ## Contributors
 
 <p align="center">
-  <a href="https://github.com/iOfficeAI/AionUi/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=iOfficeAI/AionUi&max=100" alt="Contributors" />
+  <a href="https://www.pavii.tech/products/Super-Assistant/">
+    <img src="https://contrib.rocks/image?repo=vjk7989/pavii-ai&max=100" alt="Contributors" />
   </a>
 </p>
 

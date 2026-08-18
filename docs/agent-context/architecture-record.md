@@ -1,0 +1,257 @@
+# Architecture Record
+
+## Current Architecture
+
+### Codebase Map
+
+| Area                | Location                                                 | Notes                                                                                             |
+| ------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Agent context       | `docs/agent-context/`                                    | This record and the current handoff.                                                              |
+| Brand assets        | `resources/brand/`, `resources/app.*`                    | Master logo + generated icons; see `scripts/generate-brand-icons.mjs`.                            |
+| Bundled skills      | `resources/bundled-skills/`                              | Pavii-curated skill pack (Token Optimizer + mattpocock set), auto-imported at startup.            |
+| Channel bridges     | `packages/desktop/src/process/services/channels/`        | App-hosted Slack + Discord bridges between chat platforms and backend conversations.              |
+| Desktop application | `packages/desktop/`                                      | Electron application workspace.                                                                   |
+| Display branding    | `packages/desktop/src/common/utils/assistantBranding.ts` | Rebrands backend-supplied assistant/agent names at the HTTP adapter (skills: `skillBranding.ts`). |
+| IPC preload         | `packages/desktop/src/preload/`                          | Boundary between renderer and main process.                                                       |
+| Main process        | `packages/desktop/src/process/`                          | Node.js and Electron main APIs; no DOM.                                                           |
+| Mobile app          | `mobile/`                                                | Expo/React Native remote client (`Pavii.Ai Mobile`).                                              |
+| Profile & usage     | `packages/desktop/src/renderer/pages/profile/`           | Profile page (stats, heatmap, share card); data from the main-process usage ledger.               |
+| Renderer            | `packages/desktop/src/renderer/`                         | React/browser APIs only.                                                                          |
+| Shared code         | `packages/desktop/src/common/`                           | Cross-process-safe types and utilities.                                                           |
+| Tests               | `tests/`                                                 | Unit, integration, regression, and end-to-end suites.                                             |
+| Web host / CLI      | `packages/web-host/`, `packages/web-cli/`                | Headless backend launcher + `pavii-web` CLI.                                                      |
+| Website (external)  | `.workspaces/fluffy-lamp/`                               | Astro marketing/login site; pushed to `vjk7989/fluffy-lamp`, not part of the desktop build.       |
+
+### Process and Module Boundaries
+
+- Main and renderer process constraints are authoritative in `AGENTS.md#architecture`.
+- The engine is now built from vendored source at `the-remaa/AionCore` (gitignored, excluded from lint/format): `cargo build --release --bin aioncore`, deployed to `resources/bundled-aioncore/win32-x64/aioncore.exe` (upstream binary kept as `aioncore.exe.upstream-backup`). Source-level rebrand applied there: butler rules (3 locales) + `assistants.json` name/i18n ("Your Pavii", identity "built by Team Pavii — pavii.tech"), `AgentType::Aionrs.display_name()` → "Pavii CLI", temp workspaces `pavii-temp-<id>`, Pavii avatar/logo embedded. NOT renamed (contracts): ids (`aionui-assistant`, `aionrs`), `AIONUI_*` env vars, `ACP_CLIENT_NAME`, `.aionrs` dot-dir (read back by name), shipped DB migrations (existing DBs keep the seeded agent name "Aion CLI"; the display layer renames it).
+- Cross-process communication must use the IPC bridge in `packages/desktop/src/preload/`.
+- The agent engine is the external `iOfficeAI/AionCore` binary (`aioncore`), spawned as a subprocess and reached over HTTP/WS; the engine inherits a spawn-time snapshot of `process.env` (`packages/web-host/src/backend-launcher.ts` `buildSpawnEnv`), so PATH/env mutations must happen before backend start.
+
+## Active Decisions
+
+### Apply backend-name rebranding at the HTTP adapter choke point
+
+- Status: accepted
+- Decision: Backend-supplied display strings are rebranded in `applyAssistantBranding`/`applyAgentBranding`/`brandHubExtensions` wrappers on `assistants.list/get`, `acpConversation.getManagedAgents`, and `hub.getExtensionList`; the agent predicate matches `agent_type === 'aionrs' || backend === 'aionrs'`; backend ids (`aionui-assistant`, agent kind `aionrs`) never change.
+- Rationale: The engine catalog is owned upstream; a single adapter mapping rebrands every surface without forking the backend.
+- Affects: `packages/desktop/src/common/adapter/ipcBridge.ts`
+- Evidence: `packages/desktop/src/common/utils/assistantBranding.ts`, `tests/unit/common/assistantBranding.test.ts`
+
+### Chinese-ecosystem channels removed from the UI; backend rows filtered
+
+- Status: accepted
+- Decision: Lark/DingTalk/WeChat (weixin)/WeCom are removed from the channels settings UI (4 config forms, logos, and i18n across 13 locales deleted; `ChannelModalContent` trimmed); because the closed aioncore engine still ships these plugins and returns them from `GET /api/channel/plugins`, `ChannelModalContent.tsx` keeps a `HIDDEN_CHANNEL_TYPES` set filtering them out of the extension-row path.
+- Rationale: The engine catalog cannot be changed, so hiding must happen in the renderer; data contracts (`ConversationSource` union, channel types, DB migration history) stay untouched so persisted data remains valid.
+- Affects: `packages/desktop/src/renderer/components/settings/SettingsModal/contents/channels/ChannelModalContent.tsx`
+- Evidence: `packages/desktop/src/renderer/components/settings/SettingsModal/contents/channels/ChannelModalContent.tsx`
+
+### Do not rename upstream and persisted-contract identifiers
+
+- Status: accepted
+- Decision: Keep unchanged: `aioncoreVersion`, aioncore download URLs/binary name, `AIONUI_*` env vars and NSIS defines/error codes, i18n keys (incl. `AIONUI_STREAM_BROKEN`-style backend codes), `aionui-assistant`, `aionrs`, `aion-extension.json`, `.aionui-modal` CSS classes, localStorage keys, `persist:aionui-browser`, `_aionui_` separator, `[AionUi]` log prefixes, Apache license headers.
+- Rationale: These are backend/build/persisted-data contracts; renaming breaks the engine handshake, error-code matching, or existing user data.
+- Affects: `packages/desktop/src/`
+- Evidence: `packages/shared-scripts/src/prepare-aioncore.js`, `packages/desktop/src/common/config/storageKeys.ts`
+
+### Generate all brand icons from one master logo
+
+- Status: accepted
+- Decision: `scripts/generate-brand-icons.mjs` derives every icon (ico/icns/png/PWA/mobile/avatar data URI) from `resources/brand/the-logo.png`, converting the outside of the circular badge to transparency.
+- Rationale: One source of truth; also fixed the previously missing `resources/app.png` referenced by tray/notifications/linux icon.
+- Affects: `resources/`, `public/pwa/`, `packages/desktop/src/common/utils/paviiAvatarDataUri.ts`
+- Evidence: `tests/unit/bootstrap/brandAssets.test.ts`
+
+### Inline the launch splash in the renderer HTML shell
+
+- Status: accepted
+- Decision: A branded launch splash is inlined in `packages/desktop/src/renderer/index.html` (theme-aware via the existing `__aionui_theme` sync script) and dismissed by `dismissSplash()` from `packages/desktop/src/renderer/utils/ui/splash.ts`, called from `main.tsx` (Main `ready && configReady` and `BackendStartupFailureDialog`) and `packages/desktop/src/renderer/components/layout/BackendStartingView.tsx`.
+- Rationale: Splash must paint before the JS bundle loads; the global classes `pavii-splash-mark`/`pavii-splash-word` are intentionally reused by `BackendStartingView` for visual continuity.
+- Affects: `packages/desktop/src/renderer/index.html`
+- Evidence: `tests/unit/renderer/splash.dom.test.ts`
+
+### Install OpenCode as a default agent at startup
+
+- Status: accepted
+- Decision: `ensureOpencodeInstalled` registers `<dataDir>/managed-tools` on PATH before the engine spawns and installs `opencode-ai` with the bundled Node runtime's npm when `opencode` is absent; failures are logged, never fatal.
+- Rationale: Product requirement that every install ships OpenCode; the engine discovers agents via the inherited PATH.
+- Affects: `packages/desktop/src/index.ts`
+- Evidence: `packages/desktop/src/process/startup/ensureOpencode.ts`, `tests/unit/process/startup/ensureOpencode.test.ts`
+
+### Palette light on Violet Bloom, dark on Vercel
+
+- Status: accepted
+- Decision: The default color scheme maps the tweakcn "violet-bloom" palette to the light block and the tweakcn "vercel" monochrome palette to the dark block, including an Arco `--primary-1..7` RGB-triplet bridge; dark keeps a blue interactive accent instead of Vercel's literal white primary.
+- Rationale: Requested brand look; a pure-white primary would collide with components that render white text on the primary color.
+- Affects: `packages/desktop/src/renderer/styles/themes/default-color-scheme.css`
+- Evidence: `docs/theming/tokens.md`
+
+### Pin shared vendor helpers into the react chunk
+
+- Status: accepted
+- Decision: `manualChunks` places `commonjsHelpers`, `@babel/runtime`, and `scheduler` into `vendor-react` and matches react/react-dom by exact package path.
+- Rationale: The prior `'/react/'` substring also matched `@iconify/react` and `@monaco-editor/react`, creating a circular chunk graph that evaluated Arco before React and blanked every production page (pre-existing upstream bug).
+- Affects: `packages/desktop/electron.vite.config.ts`
+- Evidence: `packages/desktop/electron.vite.config.ts` (manualChunks comments)
+
+### Prefer OpenCode over aionrs as the default assistant selection
+
+- Status: accepted
+- Decision: `pickDefaultAssistantSelectionKey` selects an OpenCode assistant when present, falling back to aionrs.
+- Rationale: Product preference for the OpenCode agent as the out-of-box default; OpenCode is guaranteed installed at startup.
+- Affects: `packages/desktop/src/renderer/pages/guid/hooks/useGuidAssistantSelection.ts`
+- Evidence: `packages/desktop/src/renderer/pages/guid/hooks/useGuidAssistantSelection.ts`
+
+### Rebrand as Pavii.Ai with a clean identity break
+
+- Status: accepted
+- Decision: Product identity is Pavii.Ai (appId `com.pavii.ai`, executable `PaviiAi`, scheme `pavii://`, data dirs `~/.pavii*`, workspaces `@pavii/*`, CLI `pavii-web`, publisher Team Pavii <info@pavii.tech>, links to `https://www.pavii.tech/products/Super-Assistant/`); no migration from AionUi identifiers.
+- Rationale: Fork has no installed user base; a clean break avoids migration code (YAGNI).
+- Affects: `packages/desktop/electron-builder.yml`
+- Evidence: `package.json`, `packages/desktop/src/process/startup/windowsAppUserModelId.ts`, `packages/desktop/src/process/utils/deepLink.ts`
+
+### Remove the Appearance settings tab but keep theme data app-wide
+
+- Status: accepted
+- Decision: The Appearance settings tab and its UI (`AppearanceModalContent`, `AppearanceSettings/index.tsx`, CSS-theme components) are removed; `/settings/appearance` and `/settings/display` redirect to `/settings/system`; `AppearanceSettings/presets`, `presets.ts`, and `themeCovers.ts` remain as app-wide theme data consumed by `packages/desktop/src/renderer/theme/builtinThemes.ts`.
+- Rationale: Product decision to drop the settings surface; the theme presets are still runtime data for the whole app, not tab-local UI.
+- Affects: `packages/desktop/src/renderer/pages/settings/AppearanceSettings/`
+- Evidence: `packages/desktop/src/renderer/components/layout/Router.tsx`
+
+### Remove the Desktop Pet feature completely
+
+- Status: accepted
+- Decision: All pet code is deleted: renderer settings tab/page and pet windows (`renderer/pet/`), main `process/pet/` managers, the three pet preloads, `public/pet-states` assets, the `pet` i18n namespace (13 locales plus its `i18n-config.json` module entry), the four `pet.*` config keys, the tray pet submenu, the `petNotifyHook` seam in `packages/desktop/src/common/adapter/main.ts`, the installer-integrity `missingPetStatesDir` sentinel (`backendStartupFailure.ts`, `electron.ts`, `sentry.ts`), and the pet inputs in `packages/desktop/electron.vite.config.ts`; `/settings/pet` redirects to `/settings/system`; `bugReportModuleDisplaySettings` copy was reworded (the `display-desktop` feedback tag is kept).
+- Rationale: Product decision to drop the feature entirely; the redirect preserves old deep links, and the feedback tag is a persisted contract.
+- Affects: `packages/desktop/src/`
+- Evidence: `packages/desktop/src/renderer/components/layout/Router.tsx`
+
+### Sign-in hand-off prefers a loopback callback over the pavii:// deep link
+
+- Status: accepted
+- Decision: The `paviiAuth.signIn` IPC provider starts a single-use `127.0.0.1` ephemeral-port HTTP listener and passes `http://127.0.0.1:<port>/auth` as the login redirect target; the website delivers the Firebase ID token by same-machine fetch (query param). `pavii://auth` (fragment token) is the fallback when the listener cannot start, and the deep-link handler still works; both paths converge on the shared `completeAuthSignIn` in `packages/desktop/src/process/utils/deepLink.ts` (returns boolean). Token verification stays main-process only.
+- Rationale: Browsers can silently refuse to launch the `pavii://` custom scheme (stale protocol-handler caches, observed in Chrome despite a correct HKCU registration); loopback is exempt from mixed-content blocking and lets the success page stay open.
+- Affects: `packages/desktop/src/process/bridge/applicationBridge.ts`, `packages/desktop/src/process/services/paviiAuthCallbackServer.ts`
+- Evidence: `tests/unit/process/services/paviiAuthCallbackServer.test.ts`
+
+### Slack/Discord are app-hosted main-process bridges, not engine channels
+
+- Status: accepted
+- Decision: aioncore has no Slack/Discord support and extension `channelPlugins` are metadata-only (no JS runtime; `webui.apiRoutes` never mounted), so both run as main-process bridges in `packages/desktop/src/process/services/channels/`: `backendConversationClient.ts` (unauthenticated `127.0.0.1` HTTP plus a `/ws` `turn.completed` listener), `slackBridge.ts` (Socket Mode via `apps.connections.open` + ws, DM/app_mention handling, per-channel conversation mapping, `chat.postMessage` replies, reconnect), `discordBridge.ts` (Gateway ws from `GET /gateway/bot`: hello/heartbeat/identify with GUILDS+GUILD_MESSAGES+MESSAGE_CONTENT+DIRECT_MESSAGES intents, DM/@mention handling, 2000-char chunked REST replies, reconnect; REST base overridable via `PAVII_DISCORD_API_BASE`), and `channelStore.ts` (`pavii-channels.json` in the config dir: credentials/enabled/conversation map, local-only); both restore on boot from `markBackendReady` in `packages/desktop/src/index.ts` and are exposed via the `paviiChannels` IPC namespace (`getStatus`/`enable`/`disable`) in `packages/desktop/src/common/adapter/ipcBridge.ts` with providers in `packages/desktop/src/process/bridge/applicationBridge.ts` and renderer `SlackConfigForm.tsx`/`DiscordConfigForm.tsx` guided cards.
+- Rationale: The engine trusts its local process (spawned with `--local`), so the bridge talks to it unauthenticated over loopback; hosting bridges in the app avoids forking the closed engine.
+- Affects: `packages/desktop/src/process/services/channels/`
+- Evidence: `tests/unit/process/channels/`
+
+### Skill rebranding is display-only via display_name; raw names stay backend keys
+
+- Status: accepted
+- Decision: `fs.listAvailableSkills` and `fs.readSkillInfo` are wrapped with `brandSkills`/`applySkillBranding` (`packages/desktop/src/common/utils/skillBranding.ts`): each row gains a `display_name` (prefix rules `officecli-`→`pavii-cli-`, `aionui-`→`pavii-`) and a rebranded description (brand scrub plus English overrides for the Chinese-described builtins `x-recruiter`, `xiaohongshu-recruiter`, `weixin-file-send`); the raw `name` is never rewritten because enable/delete/materialize/slash commands and `enabled_skills`/`skill_ids` all key on it. UI surfaces render `display_name ?? name` (SkillsHubSettings, SkillDetailPage, AssistantEditorSections labels, GuidActionRow skill submenu); in-chat slash surfaces keep raw names since the name is the command.
+- Rationale: Skill names are engine contracts inside the closed aioncore; a display-only field rebrands every list surface without breaking round-trips.
+- Affects: `packages/desktop/src/common/adapter/ipcBridge.ts`
+- Evidence: `tests/unit/common/skillBranding.test.ts`
+
+### Ship a curated skill pack and import it once per install at startup
+
+- Status: accepted
+- Decision: `resources/bundled-skills/` ships `token-optimizer/` (the MIT "caveman" skill rewritten with Token Optimizer identity; original MIT notice kept in its `LICENSE`) and `mattpocock/` (35 MIT skills mirrored in upstream category layout with upstream `LICENSE`); electron-builder copies it via `extraResources` (`bundled-skills`); `packages/desktop/src/process/startup/ensureBundledSkills.ts` runs from `markBackendReady`, resolves the dir (`process.resourcesPath` first, repo `resources/` in dev), and POSTs each skill folder to `/api/skills/import`, recording names in `pavii-bundled-skills.json` in the config dir so a user's deletion is never re-imported; `token-optimizer` is default-enabled client-side in `resolveGuidAssistantDefaults` (`DEFAULT_ENABLED_SKILL_IDS`) only while `preferences.last_skill_ids` is unset, so deselecting sticks.
+- Rationale: The engine's builtin-skill corpus and skills market are closed (hardcoded to the upstream repo), so curated skills must ship in the app and enter through the public import endpoint; the marker file separates "never imported" from "user deleted".
+- Affects: `resources/bundled-skills/`
+- Evidence: `tests/unit/process/startup/ensureBundledSkills.test.ts`, `tests/unit/renderer/assistantDefaults.test.ts`
+
+### No upstream-vendor update endpoint (privacy)
+
+- Status: accepted
+- Decision: The update feed has **no default**. `updateFeed.ts` reads `PAVII_UPDATE_FEED_URL` (unset => `buildCdnFeedOptions()` returns null, `isUpdateFeedConfigured()` false) and `updateBridge.ts` has `DEFAULT_REPO = ''` with `AIONUI_GITHUB_REPO` as the only source; the CDN host/base resolve per call and the download-host allowlist only admits the configured host plus GitHub asset hosts. Startup notify, manual check, and CDN manifest fetch all early-return/throw when unconfigured, so a stock build makes zero update requests.
+- Rationale: The fork previously shipped `static.aionui.com` + `iOfficeAI/AionUi` defaults, which leaked install IP/version/launch timing to the upstream vendor on every launch and could have served their binary as an update to a Pavii install.
+- Affects: `packages/desktop/src/process/services/updateFeed.ts`, `packages/desktop/src/process/bridge/updateBridge.ts`
+- Evidence: `tests/unit/bootstrap/noVendorUpdateEndpoint.test.ts`, `tests/unit/process/services/cdnUpdateFeed.test.ts`
+
+### Removed builtin content is filtered at the display layer for existing installs
+
+- Status: accepted
+- Decision: `x-recruiter` / `xiaohongshu-recruiter` skills and the `social-job-publisher` assistant were deleted from the engine source, and the bundled Pavii skill pack (`BUNDLED_SKILL_NAMES`) is display-tagged `display_source: 'official'` so it renders on the Skills tab's Official section instead of "My Skills". Because the engine indexes builtin skills/assistants into its database and never prunes rows whose source folders disappear, `brandSkills`/`brandAssistants` also filter the removed ids for installs created before the removal.
+- Rationale: An engine rebuild cannot retroactively clean existing user databases; filtering at the single display choke point covers every install without a migration.
+- Affects: `packages/desktop/src/common/utils/skillBranding.ts`, `packages/desktop/src/common/utils/assistantBranding.ts`
+- Evidence: `tests/unit/common/skillBranding.test.ts`, `tests/unit/common/bundledSkillNames.test.ts`
+
+### OS-level identity is owned by packaging config plus an embedded engine resource
+
+- Status: accepted
+- Decision: The packaged app's OS identity comes from electron-builder (`productName: Pavii.Ai` → Windows FileDescription/ProductName, macOS CFBundleName/DisplayName), extended with `mac.extendInfo` (CFBundleDisplayName, NSHumanReadableCopyright, NSMicrophoneUsageDescription) and a corrected Linux desktop entry (`StartupWMClass: Pavii.Ai` for dock association, `Icon: PaviiAi` matching the installed hicolor basename, AppImage beside deb). The **engine** process — the one Windows firewall dialogs name — carries its own version-info resource embedded via `winresource` in `the-remaa/AionCore/crates/aionui-app/build.rs` (FileDescription "Pavii.Ai Engine", CompanyName "Team Pavii", Pavii icon). Dev runs register a stable `com.pavii.ai.dev` AUMID instead of `process.execPath`; the dev process is still `electron.exe` (unavoidable outside packaging).
+- Rationale: Identity must hold for every process the OS surfaces separately; the engine is a top-level process, not an Electron child, so packaging metadata never reaches it.
+- Affects: `packages/desktop/electron-builder.yml`
+- Evidence: `tests/unit/bootstrap/osIdentityConfig.test.ts`, `tests/unit/process/startup/windowsAppUserModelId.test.ts`
+
+### The locally built engine is pinned against upstream re-download
+
+- Status: accepted
+- Decision: `resources/bundled-aioncore/<key>/manifest.json` carries `sourceType: 'local-source-build'`; `packages/shared-scripts/src/prepare-aioncore.js` returns that bundle untouched instead of downloading, and a bundle that fails `verifyPreparedAioncoreBundle` **throws** rather than falling back to the upstream download. `build-win:x64:fast` no longer passes `--config.win.signAndEditExecutable=false` (that flag shipped an exe with Electron's stock metadata/icon); the failure-retry path keeps the flag but warns the artifact is not shippable.
+- Rationale: Packaging previously re-downloaded the upstream engine on every build, which would silently strip the Pavii rebrand baked into the local build.
+- Affects: `packages/shared-scripts/src/prepare-aioncore.js`
+- Evidence: `tests/unit/bootstrap/osIdentityConfig.test.ts`
+
+### Token statistics come from a local per-day usage ledger
+
+- Status: accepted
+- Decision: The backend keeps only a last-snapshot token usage per conversation, so lifetime stats are not reconstructible from it; a main-process service `packages/desktop/src/process/services/usageLedger.ts` (`usage-ledger.json` in the config dir, debounced writes, corrupt-file tolerant) accumulates per-turn frames recorded best-effort from `useAionrsMessage` (finish frame) and `useAcpMessage` (end-of-turn `_meta` counters), exposed via the `paviiUsage` IPC namespace (`record`/`get`) in `packages/desktop/src/common/adapter/ipcBridge.ts` with providers in `packages/desktop/src/process/bridge/applicationBridge.ts`.
+- Rationale: Lifetime/per-day stats require local accumulation; stats therefore start from the first launch of this build.
+- Affects: `packages/desktop/src/process/services/usageLedger.ts`
+- Evidence: `tests/unit/process/services/usageLedger.test.ts`
+
+### Website Google sign-in uses the GIS token flow, not signInWithPopup
+
+- Status: accepted
+- Decision: The website login page uses the Google Identity Services token flow plus Firebase `signInWithCredential` for Google sign-in; GitHub/SAML still use `signInWithPopup` and remain broken until a planned `auth.pavii.tech` Firebase Hosting custom domain becomes the authDomain.
+- Rationale: The page origin `www.pavii.tech` vs authDomain `pavii-ai3.firebaseapp.com` is cross-site, and Chrome storage partitioning breaks the popup handler handoff; the embedded Google Web client ID is a public identifier.
+- Affects: `.workspaces/fluffy-lamp/src/pages/login.astro`
+- Evidence: commit `dcffe50` in `vjk7989/fluffy-lamp`
+
+## Implementation Context
+
+- Dev-mode engine resolution falls back to `<cwd>/resources/bundled-aioncore/<platform-arch>/` in `packages/desktop/src/process/backend/binaryResolver.ts`; run `node scripts/prepareAioncore.js` once per checkout.
+- Displayed names after rebrand: built-in assistant "Your Pavii", built-in `aionrs` agent "Pavii CLI", engine "Pavii Engine", hub "Pavii Hub".
+- NSIS sources keep internal `$AionUi*` variables, bare `Var /GLOBAL AionUi*` declarations, PowerShell `*-AionUi*` function names, and `AIONUI_*` defines; only display strings changed. App exe references are `PaviiAi.exe`; the uninstaller display file is `Uninstall Pavii.Ai.exe` (derived from productName).
+- Release artifacts: `out/Pavii.Ai-<version>-win-x64.exe` (NSIS) via `bun run build-win:x64:fast`; `dist-web-cli/pavii-web-<version>-<platform>.tar.gz` via `node scripts/pack-web-cli.js`. Both re-prepare the engine binary, so no dev instance (electron/aioncore) may be running.
+- Readmes reference marketing images (`resources/*.gif`, `resources/pavii-ai-banner-1.png`) that are not in git — broken links inherited from upstream.
+- `tests/unit/releasePackagingConfig.test.ts` skips workflow assertions while `.github/` is absent from the fork snapshot.
+- Sign-in gate v3: `packages/desktop/src/renderer/components/base/PaviiSignInGate.tsx` + `PaviiSignInGate.module.css` (staged entrance, value row); i18n keys `paviiGate.titleLead`/`subtitle`/`value1-3` replaced `paviiGate.title` across all 13 locales.
+- `tests/unit/renderer/layout/LayoutSiderBrandHome.dom.test.tsx` mocks `PaviiSignInGate` to null (collaborator-trim pattern); keep the mock in sync if the gate's module path changes.
+- Firebase Authorized domains include `pavii.tech` and `www.pavii.tech` (verified via the public `getProjectConfig` endpoint), resolving the earlier `auth/unauthorized-domain` error. Pending user console step: add `https://www.pavii.tech` and `https://pavii.tech` to the OAuth client's Authorized JavaScript origins.
+- Firebase web API key restrictions (website referrers + Identity Toolkit/Token Service APIs) are a pending user console step; the key is a public client identifier by design and is not a secret.
+- Website login success page (`vjk7989/fluffy-lamp`, commits `19b321c`, `3232934`, `618cc7d`): shows confetti, a welcome card, and an "Open Pavii" toast; loopback redirect targets receive the ID token via query param, `pavii://` targets via URL fragment.
+- WebUI QR login: the exchange is implemented client-side in `packages/desktop/src/renderer/pages/login/index.tsx` (POST `/api/auth/qr-login`, field `qr_token`); previously generated QR links were consumed by nothing. New i18n key `login.qrExpired` exists in 14 locales; `channels.slack*` keys in 13.
+- `packages/web-host/src/static-server.ts` serves HTML with `Cache-Control: no-cache` (fixes the stale-shell MIME-error class of failures, observed on mobile) while `/assets/` stay immutable; WS upgrade splices (`/ws`, `/api/stt/stream`) are gated by `verifyWsSession` (replays Cookie/Authorization against `/api/auth/user`; anonymous upgrades get 401 — tests must send a session cookie and mock that endpoint, see `packages/web-host/src/static-server.unit.test.ts`).
+- Conversation snapshots are branded in `fromApiConversation` (`packages/desktop/src/common/adapter/apiModelMapper.ts`): `assistant.name`/`avatar` and `extra.agent_name` are scrubbed so pre-rebrand conversations display Pavii names in headers/sider/search.
+- `preview.office.*` i18n values across 13 locales say "Pavii CLI" (keys like `officecliNotFound` are unchanged contracts); the sweep script pattern lives in the scratchpad, values-only.
+- Privacy posture (audited): the Rust engine has **no telemetry crates**; Sentry (`@sentry/electron`) is DSN-env-gated and no DSN exists in the repo, so crash reporting AND `sendStartupLogReport` (which would upload gzipped app logs) are inert; `analytics.json` holds a random install UUID used only by those dormant paths. Channel plugins are opt-in per user config. Remaining known leaks are outside the app: Google Analytics + PostHog on the pavii.tech website, and secrets (e.g. Telegram bot token) written verbatim into engine logs.
+- **Never edit engine assets (`the-remaa/AionCore/**`) with PowerShell text/JSON cmdlets.** `Get-Content -Raw`decodes BOM-less UTF-8 as Windows-1252 and`Set-Content -Encoding utf8`(PS 5.1) writes a BOM: this silently mojibake'd 293 strings in`builtin-assistants/assistants.json`and the BOM made the engine reject the whole catalog, dropping all 20 builtin assistants (including the butler) from`/api/assistants`. Use the Edit/Write tools or a Node/bun script with explicit UTF-8 (no BOM). Symptom to watch for: `builtin` assistant count 0.
+- `resources/bundled-skills/mattpocock/` intentionally mirrors the upstream repo layout (engineering has 18 children, over the 10-child guideline) because it is vendored third-party content; do not reorganize it.
+- `scripts/resetpass.ts` supports `--desktop` to target the Electron app data dir. Dev ports: `.claude/launch.json` uses 25809 (was 33000); `docs/guides/webui.md` documents 25808/25809 (was 3000).
+- Profile page: `packages/desktop/src/renderer/pages/profile/` (`index.tsx`, pure functions in `profileStats.ts`, `ActivityHeatmap.tsx`, `ShareModal.tsx` canvas share card plus share-intent URLs, `shareCard.ts`); route `/profile` in `packages/desktop/src/renderer/components/layout/Router.tsx` is intentionally module-less for feedback preselection (see `tests/unit/feedback/resolveFeedbackModule.test.ts`); sidebar entry is `packages/desktop/src/renderer/components/layout/Sider/SiderNav/SiderProfileEntry.tsx`; sign-out lives on the profile page; MCP/skill insights are labelled "most attached" because invocation counts are not recorded anywhere.
+
+## Deferred to the services phase
+
+- Auto-update feed: `packages/desktop/src/process/services/updateFeed.ts` (`static.aionui.com`), `packages/desktop/src/process/bridge/updateBridge.ts` (`DEFAULT_REPO iOfficeAI/AionUi`), electron-builder `publish` placeholder `pavii-tech/pavii-ai`.
+- Sentry: DSN is env-only (`SENTRY_DSN`); telemetry tag names still `aionui.*`.
+- Auth (local bcrypt/JWT), database (local SQLite), payments: unchanged; replacement planned with user-owned services.
+- Mobile store binaries require an Expo/EAS account; config identity is already `com.pavii.ai.mobile`.
+- Pre-existing gaps logged, not fixed: `fr-FR` missing from the main-process locale map (`packages/desktop/src/process/services/i18n/index.ts`); `tests/integration/i18n-packaged.test.ts` referenced by scripts but absent.
+
+## Verification Pointers
+
+- Project test standards: `.claude/skills/testing/SKILL.md`
+- Full gate: oxlint 0 errors, format clean, tsc clean, `scripts/check-i18n.js` passes, vitest 4127 passed / 0 assertion failures (2 known environmental preview module-load timeouts, plus the `/profile` feedback-module test which was fixed and passes standalone); focused suites: `tests/unit/bootstrap/brandAssets.test.ts`, `tests/unit/common/assistantBranding.test.ts`, `tests/unit/feedback/resolveFeedbackModule.test.ts`, `tests/unit/process/services/paviiAuthCallbackServer.test.ts`, `tests/unit/process/services/usageLedger.test.ts`, `tests/unit/process/startup/ensureOpencode.test.ts`, `tests/unit/renderer/PaviiSignInGate.dom.test.tsx`, `tests/unit/renderer/profileStats.test.ts`, `tests/unit/renderer/splash.dom.test.ts`.
+- Channels/WebUI change gate: tsc clean, oxlint 0 errors; focused suites green — `tests/unit/process/channels/` (6 files, 53 tests incl. Slack and Discord simulated round-trips), configMigration + channelAssistantBinding suites (26 tests; see `tests/unit/common-config/configMigration.test.ts`, `tests/unit/renderer/channelAssistantBinding.test.ts`).
+- Skills-overhaul gate: tsc clean, oxlint 0 errors, `scripts/check-i18n.js` passes; `tests/unit/common/skillBranding.test.ts` (10), `tests/unit/process/startup/ensureBundledSkills.test.ts` (8), `tests/unit/renderer/assistantDefaults.test.ts` (6), `packages/web-host/src/static-server.unit.test.ts` (13 incl. anonymous-WS 401); full suite 454/456 files passed with only the known environmental preview module-load timeout (passes standalone); live dev backend verified 36 imported custom skills including `token-optimizer`.
+- Runtime verification: WebUI login page renders at `bun run webui` (post chunk fix); desktop app reaches `backendManager.start ready` with engine detection including OpenCode; live end-to-end sign-in confirmed via loopback callback (`[PaviiAuth] signed in as <user>` in main-process logs).
+
+## Referenced Artifacts
+
+- `.claude/skills/architecture-recorder/SKILL.md`
+- `.claude/skills/architecture/SKILL.md`
+- `.claude/skills/handoff/SKILL.md`
+- `.claude/skills/testing/SKILL.md`
+- `AGENTS.md`
+- `docs/agent-context/handoff.md`
+- `scripts/generate-brand-icons.mjs`

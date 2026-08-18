@@ -1,0 +1,38 @@
+name: Track downloads
+
+# Mirrors GitHub's public per-asset download counters into PostHog for product
+# analysis. Adds no telemetry to the app — it only reads GitHub's own numbers.
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Previous counts let us report a per-day delta alongside the total.
+      - name: Restore previous counts
+        uses: actions/cache@v4
+        with:
+          path: .download-counts.json
+          key: download-counts-${{ github.run_id }}
+          restore-keys: download-counts-
+
+      - name: Report download counts to PostHog
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+          POSTHOG_HOST: https://eu.i.posthog.com
+        run: node scripts/track-downloads.mjs

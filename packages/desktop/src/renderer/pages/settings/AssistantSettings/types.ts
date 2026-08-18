@@ -6,6 +6,8 @@ export type SkillSource = 'builtin' | 'custom' | 'cron' | 'extension';
 
 export type SkillInfo = {
   name: string;
+  /** Rebranded name for display; `name` stays the operative backend key. */
+  display_name?: string;
   description: string;
   location: string;
   relative_location?: string;
@@ -32,6 +34,8 @@ export type PendingSkill = {
 // Builtin auto-injected skill info
 export type BuiltinAutoSkill = {
   name: string;
+  /** Rebranded name for display; `name` stays the operative backend key. */
+  display_name?: string;
   description: string;
 };
 
@@ -124,7 +128,7 @@ export type AssistantEditorViewModel = {
     availableSkills: SkillInfo[];
     selectedSkills: string[];
     setSelectedSkills: (value: string[]) => void;
-    pendingSkills: Array<{ name: string; description: string }>;
+    pendingSkills: Array<{ name: string; display_name?: string; description: string }>;
     setDeletePendingSkillName: (value: string | null) => void;
     setDeleteCustomSkillName: (value: string | null) => void;
     builtinAutoSkills: BuiltinAutoSkill[];

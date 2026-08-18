@@ -65,16 +65,16 @@
     "conversionFailed": "Dönüştürme başarısız"
   },
   "office": {
-    "installLinkText": "officecli kurulum kılavuzunu aç",
+    "installLinkText": "Pavii CLI kurulum kılavuzunu aç",
     "errors": {
-      "officecliNotFound": "officecli yüklü değil.",
-      "installFailed": "officecli otomatik olarak yüklenemedi. Arka uç günlüklerini kontrol edip yeniden deneyin.",
+      "officecliNotFound": "Pavii CLI yüklü değil.",
+      "installFailed": "Pavii CLI otomatik olarak yüklenemedi. Arka uç günlüklerini kontrol edip yeniden deneyin.",
       "portTimeout": "Önizleme servisi başladı ancak zamanında hazır olmadı. Yeniden deneyin.",
       "startFailed": "Office önizleme servisi başlatılamadı.",
       "outsideSandbox": "Bu dosya geçerli çalışma alanı sandbox'ının dışında."
     },
     "serverInstall": {
-      "hint": "AionUi bir sunucuda çalışıyor. Önizleme bileşeni o sunucuya kurulmalıdır. Aşağıdaki komutu sunucuda çalıştırıp yeniden deneyin:",
+      "hint": "Pavii.Ai bir sunucuda çalışıyor. Önizleme bileşeni o sunucuya kurulmalıdır. Aşağıdaki komutu sunucuda çalıştırıp yeniden deneyin:",
       "icuNote": "Yine de başlamazsa sunucuya ICU kitaplığını kurun (Debian/Ubuntu: apt-get install -y libicu-dev)."
     }
   },
@@ -85,9 +85,9 @@
     "loadFailed": "Word belgesi yüklenemedi",
     "watch": {
       "loading": "Word belgesi yükleniyor...",
-      "installing": "officecli yükleniyor...",
+      "installing": "Pavii CLI yükleniyor...",
       "startFailed": "Word önizlemesi başlatılamadı",
-      "installHint": "officecli gereklidir. Otomatik olarak yüklenecektir."
+      "installHint": "Pavii CLI gereklidir. Otomatik olarak yüklenecektir."
     }
   },
   "excel": {
@@ -102,9 +102,9 @@
     "emptySheetHint": "Sayfanın veri veya resim içerip içermediğini kontrol edin",
     "watch": {
       "loading": "Excel dosyası yükleniyor...",
-      "installing": "officecli yükleniyor...",
+      "installing": "Pavii CLI yükleniyor...",
       "startFailed": "Excel önizlemesi başlatılamadı",
-      "installHint": "officecli gereklidir. Otomatik olarak yüklenecektir."
+      "installHint": "Pavii CLI gereklidir. Otomatik olarak yüklenecektir."
     }
   },
   "pdf": {
@@ -133,7 +133,7 @@
     "loading": "PPT önizlemesi başlatılıyor...",
     "installing": "Önizleme bileşeni yükleniyor...",
     "startFailed": "PPT önizlemesi başlatılamadı",
-    "installHint": "OfficeCLI'yi resmi iOfficeAI/OfficeCLI releases sayfasından yükleyin"
+    "installHint": "Pavii CLI'yi resmi Pavii CLI releases sayfasından yükleyin"
   },
   "browser": {
     "newTab": "Yeni sekme",

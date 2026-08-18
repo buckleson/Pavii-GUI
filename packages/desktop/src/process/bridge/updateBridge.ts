@@ -24,6 +24,7 @@ import { load as loadYaml } from 'js-yaml';
 import * as path from 'path';
 import semver from 'semver';
 import { autoUpdaterService } from '../services/autoUpdaterService';
+import { getUpdateFeedUrl, GITHUB_RELEASE_OWNER, GITHUB_RELEASE_REPO } from '../services/updateFeed';
 import { consumeInstallerLastFailure } from '../services/installerLastFailure';
 
 /** Lazily loads i18n to avoid pulling in initStorage chain at module load time */
@@ -60,18 +61,35 @@ interface AutoUpdateCheckParams {
   includePrerelease?: boolean;
 }
 
-const DEFAULT_REPO = 'iOfficeAI/AionUi';
-const DEFAULT_USER_AGENT = 'AionUi';
+// Pavii releases live on this GitHub repo (matches electron-builder.yml
+// `publish` and updateFeed.ts). Never the upstream vendor's repo.
+const DEFAULT_REPO = `${GITHUB_RELEASE_OWNER}/${GITHUB_RELEASE_REPO}`;
+const DEFAULT_USER_AGENT = 'Pavii.Ai';
 const ALLOWED_ASSET_EXTS = new Set(['.exe', '.msi', '.dmg', '.zip', '.deb', '.rpm']);
-const CDN_HOST = 'static.aionui.com';
-const CDN_BASE_URL = `https://${CDN_HOST}/releases`;
-const ALLOWED_DOWNLOAD_HOSTS = new Set<string>([
-  CDN_HOST,
+// The update CDN is whatever Pavii-owned feed is configured (updateFeed.ts).
+// There is no vendor fallback: unset feed => no CDN host, no manifest fetch.
+// Resolved per call so the feed can be configured at runtime, not just build time.
+const cdnBaseUrl = (): string => getUpdateFeedUrl() ?? '';
+const cdnHost = (): string => {
+  const base = cdnBaseUrl();
+  if (!base) return '';
+  try {
+    return new URL(base).hostname;
+  } catch {
+    return '';
+  }
+};
+const GITHUB_DOWNLOAD_HOSTS = new Set<string>([
   'github.com',
   'objects.githubusercontent.com',
   'github-releases.githubusercontent.com',
   'release-assets.githubusercontent.com',
 ]);
+const isAllowedDownloadHost = (hostname: string): boolean => {
+  if (GITHUB_DOWNLOAD_HOSTS.has(hostname)) return true;
+  const host = cdnHost();
+  return host !== '' && hostname === host;
+};
 const MAX_REDIRECTS = 8;
 
 const isAllowedAssetName = (name: string) => {
@@ -93,7 +111,7 @@ const normalizeTagToSemver = (tag: string): string | null => {
  * matching electron-builder's artifactName output, so no name conversion is needed.
  */
 const rewriteAssetUrlToCDN = (assetName: string, version: string): string => {
-  return `${CDN_BASE_URL}/${version}/${assetName}`;
+  return `${cdnBaseUrl()}/${version}/${assetName}`;
 };
 
 type RuntimePlatformInfo = {
@@ -206,6 +224,32 @@ export const resolveCdnChannelFile = (
   return isArm64 ? 'latest-linux-arm64.yml' : 'latest-linux.yml';
 };
 
+/**
+ * Build an UpdateReleaseInfo straight from a GitHub release. Used when no CDN
+ * override is configured — GitHub Releases is then the source of truth.
+ */
+export const mapGitHubReleaseToRelease = (release: GitHubReleaseApi): UpdateReleaseInfo | null => {
+  const version = semver.valid(release.tag_name) || semver.coerce(release.tag_name)?.version || null;
+  if (!version) return null;
+  const assets: GitHubReleaseAsset[] = (release.assets ?? [])
+    .filter((asset) => isAllowedAssetName(asset.name))
+    .map((asset) => ({
+      name: asset.name,
+      url: asset.browser_download_url,
+      size: asset.size ?? 0,
+    }));
+  return {
+    tagName: release.tag_name,
+    version,
+    htmlUrl: release.html_url ?? '',
+    publishedAt: release.published_at,
+    prerelease: Boolean(release.prerelease),
+    draft: Boolean(release.draft),
+    assets,
+    recommendedAsset: pickRecommendedAsset(assets),
+  };
+};
+
 /** Parse an electron-builder channel yml; null when the shape is unusable. */
 export const parseCdnManifest = (raw: string): CdnLatestManifest | null => {
   let doc: unknown;
@@ -263,8 +307,7 @@ export const mapCdnManifestToRelease = (manifest: CdnLatestManifest, repo: strin
 
 const resolveRepo = (requestRepo?: string): string => {
   const envRepo = process.env.AIONUI_GITHUB_REPO?.trim();
-  const repo = (requestRepo || envRepo || DEFAULT_REPO).trim();
-  return repo || DEFAULT_REPO;
+  return (requestRepo || envRepo || DEFAULT_REPO).trim();
 };
 
 const assertAllowedUrl = async (rawUrl: string) => {
@@ -278,7 +321,7 @@ const assertAllowedUrl = async (rawUrl: string) => {
   if (parsed.protocol !== 'https:') {
     throw new Error((await getI18n()).t('update.errors.httpsOnly'));
   }
-  if (!ALLOWED_DOWNLOAD_HOSTS.has(parsed.hostname)) {
+  if (!isAllowedDownloadHost(parsed.hostname)) {
     throw new Error((await getI18n()).t('update.errors.hostNotAllowed', { host: parsed.hostname }));
   }
 };
@@ -313,6 +356,11 @@ const fetchWithAllowlistedRedirects = async (rawUrl: string, signal: AbortSignal
 };
 
 const fetchGitHubReleases = async (repo: string, timeoutMs = 30000): Promise<GitHubReleaseApi[]> => {
+  if (!repo) {
+    // Guard: without a configured Pavii repo there is nothing to query, and we
+    // must not fall back to the upstream vendor's releases.
+    throw new Error('update-repo-not-configured');
+  }
   const url = `https://api.github.com/repos/${repo}/releases`;
 
   // 添加超时控制，防止网络问题导致无限等待 / Add timeout to prevent infinite wait on network issues
@@ -356,7 +404,11 @@ const GITHUB_NOTES_TIMEOUT_MS = 10000;
  * single source of truth for "is there an update".
  */
 const fetchCdnManifest = async (): Promise<CdnLatestManifest> => {
-  const url = `${CDN_BASE_URL}/${resolveCdnChannelFile()}`;
+  const base = cdnBaseUrl();
+  if (!base) {
+    throw new Error('update-feed-not-configured');
+  }
+  const url = `${base}/${resolveCdnChannelFile()}`;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), CDN_MANIFEST_TIMEOUT_MS);
 
@@ -431,7 +483,7 @@ const sanitizeFileName = (name: string): string => {
   // Keep only base name and trim weird whitespace.
   const base = path.basename(name).trim();
   // Avoid empty names.
-  return base || `AionUi-update-${Date.now()}`;
+  return base || `Pavii.Ai-update-${Date.now()}`;
 };
 
 const ensureUniquePath = (target: string): string => {
@@ -689,10 +741,17 @@ export function initUpdateBridge(): void {
         // 若要 dev/预发布版本更新可靠生效，需要 CI 在 dev 构建时把 `package.json#version`
         // 注入为带 prerelease 的 semver（如 `1.7.2-dev.1234+sha.abcdef0`），以保证比较顺序正确。
 
-        // The CDN channel manifest is the authoritative source. It serves a single
-        // stable channel, so `includePrerelease` no longer affects detection.
-        const manifest = await fetchCdnManifest();
-        const latest = mapCdnManifestToRelease(manifest, repo);
+        // Source of truth: the CDN channel manifest when a CDN feed is
+        // configured, otherwise the repo's GitHub releases.
+        let latest: UpdateReleaseInfo | null;
+        if (cdnBaseUrl()) {
+          const manifest = await fetchCdnManifest();
+          latest = mapCdnManifestToRelease(manifest, repo);
+        } else {
+          const releases = await fetchGitHubReleases(repo);
+          const candidate = releases.find((release) => !release.draft && !release.prerelease) ?? releases[0];
+          latest = candidate ? mapGitHubReleaseToRelease(candidate) : null;
+        }
 
         const currentSemver = semver.valid(currentVersion) || semver.coerce(currentVersion)?.version;
         if (!currentSemver || !latest) {

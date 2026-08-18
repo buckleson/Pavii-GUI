@@ -93,18 +93,18 @@ test.describe('Extension: Settings Tabs Position Anchoring', () => {
     expect(beforeAboutIdx).toBeLessThan(aboutIdx);
   });
 
-  test('tab with anchor "display/after" appears after Display in sidebar', async ({ page }) => {
-    await goToSettings(page, 'display');
+  test('tab with anchor "webui/after" appears after WebUI in sidebar', async ({ page }) => {
+    await goToSettings(page, 'webui');
     await waitForExtensionSettingsTabs(page);
 
     const siderItemIds = await getSiderItemIds(page);
 
-    const displayIdx = siderItemIds.indexOf('display');
+    const webuiIdx = siderItemIds.indexOf('webui');
     const helloIdx = siderItemIds.indexOf(EXT_HELLO_SETTINGS_ID);
 
-    expect(displayIdx).toBeGreaterThanOrEqual(0);
+    expect(webuiIdx).toBeGreaterThanOrEqual(0);
     expect(helloIdx).toBeGreaterThanOrEqual(0);
-    expect(helloIdx).toBeGreaterThan(displayIdx);
+    expect(helloIdx).toBeGreaterThan(webuiIdx);
   });
 });
 

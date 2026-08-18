@@ -65,16 +65,16 @@
     "conversionFailed": "Error de conversión"
   },
   "office": {
-    "installLinkText": "Abrir guía de instalación de officecli",
+    "installLinkText": "Abrir guía de instalación de Pavii CLI",
     "errors": {
-      "officecliNotFound": "officecli no está instalado.",
-      "installFailed": "Error al instalar officecli automáticamente. Revisa los registros del backend y reintenta.",
+      "officecliNotFound": "Pavii CLI no está instalado.",
+      "installFailed": "Error al instalar Pavii CLI automáticamente. Revisa los registros del backend y reintenta.",
       "portTimeout": "El servicio de vista previa inició pero no estuvo listo a tiempo. Reintenta.",
       "startFailed": "Error al iniciar el servicio de vista previa de Office.",
       "outsideSandbox": "Este archivo está fuera del sandbox del proyecto actual."
     },
     "serverInstall": {
-      "hint": "AionUi se está ejecutando en un servidor. Instala el componente de vista previa en ese servidor y reintenta:",
+      "hint": "Pavii.Ai se está ejecutando en un servidor. Instala el componente de vista previa en ese servidor y reintenta:",
       "icuNote": "Si sigue sin iniciar, instala la biblioteca ICU en el servidor (Debian/Ubuntu: apt-get install -y libicu-dev)."
     }
   },
@@ -85,9 +85,9 @@
     "loadFailed": "Error al cargar el documento Word",
     "watch": {
       "loading": "Cargando documento Word...",
-      "installing": "Instalando officecli...",
+      "installing": "Instalando Pavii CLI...",
       "startFailed": "Error al iniciar la vista previa de Word",
-      "installHint": "Requiere officecli. Se instalará automáticamente."
+      "installHint": "Requiere Pavii CLI. Se instalará automáticamente."
     }
   },
   "excel": {
@@ -102,9 +102,9 @@
     "emptySheetHint": "Verifica si la hoja contiene datos o imágenes",
     "watch": {
       "loading": "Cargando archivo Excel...",
-      "installing": "Instalando officecli...",
+      "installing": "Instalando Pavii CLI...",
       "startFailed": "Error al iniciar la vista previa de Excel",
-      "installHint": "Requiere officecli. Se instalará automáticamente."
+      "installHint": "Requiere Pavii CLI. Se instalará automáticamente."
     }
   },
   "pdf": {
@@ -133,7 +133,7 @@
     "loading": "Iniciando vista previa de PPT...",
     "installing": "Instalando componente de vista previa...",
     "startFailed": "Error al iniciar la vista previa de PPT",
-    "installHint": "Instala OfficeCLI desde la página oficial de versiones de iOfficeAI/OfficeCLI"
+    "installHint": "Instala Pavii CLI desde la página oficial de versiones de Pavii CLI"
   },
   "browser": {
     "newTab": "Nueva pestaña",

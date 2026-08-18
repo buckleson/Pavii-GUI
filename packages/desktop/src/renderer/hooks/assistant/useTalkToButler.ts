@@ -12,7 +12,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mutate as swrMutate } from 'swr';
 
-/** Backend manifest id of the built-in AionUi Butler assistant. */
+/** Backend manifest id of the built-in Your Pavii assistant. */
 const BUTLER_ASSISTANT_ID = 'aionui-assistant';
 
 export type TalkToButlerArgs = {
@@ -23,7 +23,7 @@ export type TalkToButlerArgs = {
 };
 
 /**
- * Resolve the Butler assistant from the catalog, tolerating the `builtin-`
+ * Resolve Your Pavii assistant from the catalog, tolerating the `builtin-`
  * prefix the frontend sometimes carries on built-in ids.
  */
 const findButler = (assistants: Assistant[]): Assistant | undefined => {
@@ -35,8 +35,8 @@ const findButler = (assistants: Assistant[]): Assistant | undefined => {
 
 /**
  * Shared entry point behind every "via chat" action: jump to the home page,
- * select the AionUi Butler, and pre-fill the chat input with a ready-made
- * prompt (and optional attachments). Auto-enables the Butler if the user has
+ * select the Your Pavii, and pre-fill the chat input with a ready-made
+ * prompt (and optional attachments). Auto-enables Your Pavii if the user has
  * disabled it, since clicking the action is an explicit intent to use it.
  *
  * Reuses the home page's `prefillPrompt` navigation contract (added with the
@@ -59,9 +59,7 @@ export const useTalkToButler = (): ((args: TalkToButlerArgs) => Promise<void>) =
           if (butler.enabled === false) {
             await ipcBridge.assistants.setState.invoke({ id: butler.id, enabled: true });
             await swrMutate('assistants.list');
-            Message.success(
-              t('settings.talkToButler.enabledToast', { defaultValue: 'Enabled the AionUi Butler for you' })
-            );
+            Message.success(t('settings.talkToButler.enabledToast', { defaultValue: 'Enabled Your Pavii for you' }));
           }
         }
       } catch (error) {

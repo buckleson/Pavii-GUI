@@ -18,7 +18,6 @@ export const ROUTES = {
     assistants: '#/settings/assistants',
     skills: '#/settings/skills',
     tools: '#/settings/tools',
-    display: '#/settings/appearance',
     webui: '#/settings/webui',
     system: '#/settings/system',
     about: '#/settings/about',
@@ -194,9 +193,7 @@ let _onChannelsTab = false;
  * Uses a session-level flag to skip re-navigation when already on the tab.
  */
 export async function goToChannelsTab(page: Page): Promise<void> {
-  const channelItem = page
-    .locator(`${channelItemById('telegram')}, ${channelItemById('lark')}, ${channelItemById('dingtalk')}`)
-    .first();
+  const channelItem = page.locator(channelItemById('telegram')).first();
 
   // Quick check: if we're already on the channels tab, verify a channel item is still visible
   if (_onChannelsTab && isAlreadyAt(page, ROUTES.settings.webui)) {

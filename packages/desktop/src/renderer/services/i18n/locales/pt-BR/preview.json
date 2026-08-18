@@ -65,16 +65,16 @@
     "conversionFailed": "A conversão falhou"
   },
   "office": {
-    "installLinkText": "Abrir guia de instalação do officecli",
+    "installLinkText": "Abrir guia de instalação do Pavii CLI",
     "errors": {
-      "officecliNotFound": "officecli não está instalado.",
-      "installFailed": "Falha ao instalar o officecli automaticamente. Verifique os logs do backend e tente novamente.",
+      "officecliNotFound": "Pavii CLI não está instalado.",
+      "installFailed": "Falha ao instalar o Pavii CLI automaticamente. Verifique os logs do backend e tente novamente.",
       "portTimeout": "O serviço de visualização iniciou, mas não ficou pronto a tempo. Tente novamente.",
       "startFailed": "Falha ao iniciar o serviço de visualização do Office.",
       "outsideSandbox": "Este arquivo está fora da sandbox atual do projeto."
     },
     "serverInstall": {
-      "hint": "O AionUi está sendo executado em um servidor. O componente de pré-visualização precisa ser instalado nesse servidor. Execute o comando abaixo no servidor e tente novamente:",
+      "hint": "O Pavii.Ai está sendo executado em um servidor. O componente de pré-visualização precisa ser instalado nesse servidor. Execute o comando abaixo no servidor e tente novamente:",
       "icuNote": "Se ainda não iniciar, instale a biblioteca ICU no servidor (Debian/Ubuntu: apt-get install -y libicu-dev)."
     }
   },
@@ -85,9 +85,9 @@
     "loadFailed": "Falha ao carregar o documento Word",
     "watch": {
       "loading": "Carregando documento Word...",
-      "installing": "Instalando officecli...",
+      "installing": "Instalando Pavii CLI...",
       "startFailed": "Falha ao iniciar a visualização do Word",
-      "installHint": "Requer officecli. Será instalado automaticamente."
+      "installHint": "Requer Pavii CLI. Será instalado automaticamente."
     }
   },
   "excel": {
@@ -102,9 +102,9 @@
     "emptySheetHint": "Verifique se a planilha contém dados ou imagens",
     "watch": {
       "loading": "Carregando arquivo Excel...",
-      "installing": "Instalando officecli...",
+      "installing": "Instalando Pavii CLI...",
       "startFailed": "Falha ao iniciar a visualização do Excel",
-      "installHint": "Requer officecli. Será instalado automaticamente."
+      "installHint": "Requer Pavii CLI. Será instalado automaticamente."
     }
   },
   "pdf": {
@@ -133,7 +133,7 @@
     "loading": "Iniciando visualização do PPT...",
     "installing": "Instalando componente de visualização...",
     "startFailed": "Falha ao iniciar a visualização do PPT",
-    "installHint": "Instale o OfficeCLI pela página oficial de releases iOfficeAI/OfficeCLI"
+    "installHint": "Instale o Pavii CLI pela página oficial de releases Pavii CLI"
   },
   "browser": {
     "newTab": "Nova aba",

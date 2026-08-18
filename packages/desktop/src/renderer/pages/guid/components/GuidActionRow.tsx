@@ -102,7 +102,7 @@ type GuidActionRowProps = {
   onModeSelect: (mode: string) => void;
 
   // Skills management
-  allSkills: Array<{ name: string; description: string; isAuto: boolean }>;
+  allSkills: Array<{ name: string; display_name?: string; description: string; isAuto: boolean }>;
   disabledBuiltinSkills: string[];
   enabledSkills: string[];
   onToggleSkill: (name: string, isAuto: boolean) => void;
@@ -204,7 +204,7 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
 
   const skillKeyword = skillQuery.trim().toLowerCase();
   const filteredSkills = skillKeyword
-    ? allSkills.filter((skill) => skill.name.toLowerCase().includes(skillKeyword))
+    ? allSkills.filter((skill) => (skill.display_name ?? skill.name).toLowerCase().includes(skillKeyword))
     : allSkills;
   const mcpKeyword = mcpQuery.trim().toLowerCase();
   const filteredMcpServers = mcpKeyword
@@ -363,7 +363,7 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
           multiSelect: true,
           options: allSkills.map((skill) => ({
             key: skill.name,
-            label: skill.name,
+            label: skill.display_name ?? skill.name,
             description: skill.description || undefined,
             active: isSkillChecked(skill),
           })),

@@ -1,6 +1,6 @@
 {
-  "pageTitle": "AionUi - ログイン",
-  "brand": "AionUi",
+  "pageTitle": "Pavii.Ai - ログイン",
+  "brand": "Pavii.Ai",
   "subtitle": "おかえりなさい。アカウントにサインインしてください",
   "username": "ユーザー名",
   "usernamePlaceholder": "ユーザー名を入力してください",
@@ -22,5 +22,6 @@
     "networkError": "接続に失敗しました。後でもう一度お試しください",
     "serverError": "サーバーで問題が発生しました。しばらく待ってから再試行してください",
     "unknown": "ログインに失敗しました。後でもう一度お試しください"
-  }
+  },
+  "qrExpired": "This sign-in link expired. Generate a fresh QR code in the desktop app and try again."
 }

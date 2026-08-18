@@ -1,0 +1,31 @@
+# =============================================================================
+# REFERENCE TEMPLATE ONLY - DO NOT MODIFY
+# =============================================================================
+# This file is a reference template for the Homebrew cask definition of
+# Pavii.Ai. Update the url and sha256 values when publishing a release.
+# =============================================================================
+
+cask "pavii-ai" do
+  arch arm: "arm64", intel: "x64"
+
+  version "2.1.52"
+  sha256 arm:   "REPLACE_WITH_ARM64_SHA256",
+         intel: "REPLACE_WITH_X64_SHA256"
+
+  # Download URL placeholder — see https://www.pavii.tech/products/Super-Assistant/
+  url "https://www.pavii.tech/products/Super-Assistant/downloads/Pavii.Ai-#{version}-mac-#{arch}.dmg"
+  name "Pavii.Ai"
+  desc "Pavii.Ai — your personal AI workspace"
+  homepage "https://www.pavii.tech/products/Super-Assistant/"
+
+  auto_updates true
+  depends_on macos: ">= :big_sur"
+
+  app "Pavii.Ai.app"
+
+  zap trash: [
+    "~/Library/Application Support/Pavii.Ai",
+    "~/Library/Preferences/com.pavii.ai.plist",
+    "~/Library/Saved Application State/com.pavii.ai.savedState",
+  ]
+end

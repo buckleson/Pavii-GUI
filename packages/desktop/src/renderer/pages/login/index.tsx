@@ -34,7 +34,7 @@ const deobfuscate = (text: string): string => {
 const LoginPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { status, login } = useAuth();
+  const { status, login, refresh } = useAuth();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -90,6 +90,38 @@ const LoginPage: React.FC = () => {
       void navigate('/guid', { replace: true });
     }
   }, [navigate, status]);
+
+  // QR auto sign-in: the desktop Settings panel hands out
+  // `<origin>/qr-login?token=...` links. The token exchange lives at
+  // POST /api/auth/qr-login (field `qr_token`); tokens are short-lived and
+  // single-use, so failures fall back to the normal credential form.
+  useEffect(() => {
+    const qrToken = new URLSearchParams(window.location.search).get('token');
+    if (!qrToken || !window.location.pathname.startsWith('/qr-login')) return;
+    setLoading(true);
+    fetch('/api/auth/qr-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ qr_token: qrToken }),
+      credentials: 'include',
+    })
+      .then(async (response) => {
+        const data = (await response.json().catch((): null => null)) as { success?: boolean } | null;
+        if (response.ok && data?.success !== false) {
+          // Drop the spent token from the address bar before entering the app.
+          window.history.replaceState(null, '', '/');
+          await refresh();
+        } else {
+          showMessage({ type: 'error', text: t('login.qrExpired') });
+        }
+      })
+      .catch(() => {
+        showMessage({ type: 'error', text: t('login.errors.networkError') });
+      })
+      .finally(() => setLoading(false));
+    // Run once on mount: the token comes from the initial URL only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const clearMessageLater = useCallback(() => {
     if (messageTimer.current) {
