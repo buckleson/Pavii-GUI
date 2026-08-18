@@ -36,6 +36,9 @@
  */
 
 /** 伪造的稳定 id：只有一个目标，不需要真的分配。/ Fixed ids — there is only ever one target. */
+// Internal CDP wire ids exchanged between our bridge and chrome-devtools-mcp
+// within a single session. Never surfaced to users, so they keep their original
+// spelling rather than risk churn in the debugger protocol handshake.
 export const SINGLE_TARGET_ID = 'aionui-browser-target';
 export const SINGLE_SESSION_ID = 'aionui-browser-session';
 export const SINGLE_BROWSER_CONTEXT_ID = 'aionui-browser-context';

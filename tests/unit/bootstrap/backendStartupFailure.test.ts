@@ -122,6 +122,30 @@ describe('classifyBackendStartupFailure', () => {
     });
   });
 
+  it('does not blame data migration when the engine had already served traffic', () => {
+    // Regression: an engine killed mid-session (antivirus, OOM, sleep/resume, an
+    // operator killing the process) was reported as "local data migration
+    // failed", telling users their data was damaged and to reinstall.
+    const error = new Error('aioncore exited before health check passed') as Error & {
+      details?: Record<string, unknown>;
+    };
+    error.details = {
+      stage: 'early_exit',
+      backendBoundaryCode: 'BOOTSTRAP_DATA_INIT_FAILED',
+      backendBoundaryStage: 'database.migration',
+      stderrTail:
+        'BOOTSTRAP_DATA_INIT_FAILED stage=database.migration databasePath=/db/aionui-backend.db: failed to initialize application data',
+    };
+
+    expect(classifyBackendStartupFailure(error, { backendWasReady: true }).reason).not.toBe(
+      'backend_data_migration_failed'
+    );
+    // First boot keeps the original, accurate diagnosis.
+    expect(classifyBackendStartupFailure(error, { backendWasReady: false }).reason).toBe(
+      'backend_data_migration_failed'
+    );
+  });
+
   it('classifies recoverable database corruption boundary failures separately from data migration failures', () => {
     const error = new Error('aioncore exited before health check passed') as Error & {
       details?: Record<string, unknown>;

@@ -82,3 +82,18 @@ describe('isBrowserMcpSettled', () => {
     expect(isBrowserMcpSettled('text', [mcpEntry('Success')])).toBe(false);
   });
 });
+
+describe('browser MCP rename back-compat', () => {
+  it('recognises both the current and pre-rebrand server names', () => {
+    // Conversations created before aionui-browser -> pavii-browser recorded the
+    // old name in their tool calls; their browser badge must keep working.
+    expect(isBrowserMcpActivity('tool_group', [{ name: 'pavii-browser__navigate_page', status: 'Executing' }])).toBe(
+      true
+    );
+    expect(isBrowserMcpActivity('tool_group', [{ name: 'aionui-browser__navigate_page', status: 'Executing' }])).toBe(
+      true
+    );
+    expect(isBrowserMcpActivity('tool_group', [mcpEntry('Executing', 'aionui-browser')])).toBe(true);
+    expect(isBrowserMcpActivity('tool_group', [{ name: 'other-mcp__navigate_page', status: 'Executing' }])).toBe(false);
+  });
+});

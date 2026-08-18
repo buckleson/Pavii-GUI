@@ -28,6 +28,10 @@
  * state must be shared across all tabs and projects and survive restarts, so a
  * user can log in once on the agent's behalf.
  */
+// NOTE: keeps the legacy spelling on purpose. This is a persisted Electron
+// session partition holding the user's browser cookies/logins; renaming it
+// would orphan every saved sign-in. The user-visible MCP name below is what
+// carries the Pavii branding.
 export const BROWSER_SESSION_PARTITION = 'persist:aionui-browser';
 
 /**
@@ -45,7 +49,14 @@ export const BROWSER_SESSION_PARTITION = 'persist:aionui-browser';
  * light up the activity badge. Both sides must agree exactly; separate copies would
  * eventually drift, and the symptom of drift is a badge that silently never lights.
  */
-export const BUILTIN_BROWSER_MCP_NAME = 'aionui-browser';
+export const BUILTIN_BROWSER_MCP_NAME = 'pavii-browser';
+
+/**
+ * Pre-rebrand name of the same server. Still recognised so browser activity in
+ * conversations created before the rename keeps rendering, and so startup
+ * migration can rename the existing row instead of inserting a duplicate.
+ */
+export const LEGACY_BUILTIN_BROWSER_MCP_NAME = 'aionui-browser';
 
 // ===== 文件处理相关常量 =====
 

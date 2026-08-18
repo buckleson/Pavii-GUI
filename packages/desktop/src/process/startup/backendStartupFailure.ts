@@ -278,7 +278,18 @@ function classifyPortReportTimeout(details: ErrorWithDetails['details']): Backen
   return { reason: 'backend_startup_port_report_timeout' };
 }
 
-export function classifyBackendStartupFailure(error: unknown): BackendStartupFailureInfo {
+/**
+ * Whether the backend had already served traffic in this session.
+ *
+ * A data-migration diagnosis is only credible on first boot. Once the engine
+ * has been ready, an abrupt exit means it died (antivirus, OOM, sleep/resume,
+ * a killed process) — reporting that as "local data migration failed" is both
+ * false and alarming, and pushes users toward reinstalling for no reason.
+ */
+export function classifyBackendStartupFailure(
+  error: unknown,
+  options?: { backendWasReady?: boolean }
+): BackendStartupFailureInfo {
   const details = getBackendStartupDetails(error);
   const packageArchitectureMismatch = classifyPackageArchitectureMismatch(details);
   if (packageArchitectureMismatch) return packageArchitectureMismatch;
@@ -325,6 +336,7 @@ export function classifyBackendStartupFailure(error: unknown): BackendStartupFai
   }
 
   if (
+    !options?.backendWasReady &&
     backendBoundaryCode === 'BOOTSTRAP_DATA_INIT_FAILED' &&
     backendBoundaryStage &&
     DATA_MIGRATION_BOUNDARY_STAGES.has(backendBoundaryStage)

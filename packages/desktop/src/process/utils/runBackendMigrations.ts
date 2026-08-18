@@ -9,7 +9,7 @@ import { migrateConfigStorage, migrateLegacyMcpConfigToDb, migrateProviders } fr
 import { httpRequest } from '@/common/adapter/httpBridge';
 import { mcpService } from '@/common/adapter/ipcBridge';
 import type { ImageGenerationModelSetting } from '@/common/config/clientSettings';
-import { BUILTIN_BROWSER_MCP_NAME } from '@/common/config/constants';
+import { BUILTIN_BROWSER_MCP_NAME, LEGACY_BUILTIN_BROWSER_MCP_NAME } from '@/common/config/constants';
 import {
   removeImageGenerationEnvKeys,
   resolveImageGenerationMcpEnv,
@@ -242,6 +242,30 @@ async function isCommandAvailable(command: string): Promise<boolean> {
   });
 }
 
+/**
+ * Record a connection result for the built-in browser MCP.
+ *
+ * The Tools list derives its status icon from `last_test_status`; with no test
+ * ever recorded the row renders as "Not tested" (ⓘ) with an empty tool list,
+ * which reads as broken even though the server is fine. chrome-devtools gets a
+ * preflight below, this one never did — so run one test per launch when the row
+ * has no result yet, which both populates the tool list and surfaces a genuine
+ * failure as a real error instead of an ambiguous ⓘ.
+ */
+async function ensureBuiltinBrowserAvailability(server?: IMcpServer): Promise<void> {
+  if (!server || server.name !== BUILTIN_BROWSER_MCP_NAME) {
+    return;
+  }
+  if (server.last_test_status === 'connected' || server.last_test_status === 'error') {
+    return;
+  }
+  try {
+    await mcpService.testMcpConnection.invoke(server);
+  } catch (error) {
+    console.warn('[Migration] browser MCP preflight failed', error);
+  }
+}
+
 async function ensureBuiltinChromeDevtoolsAvailability(server?: IMcpServer): Promise<void> {
   if (
     !server ||
@@ -300,7 +324,28 @@ async function ensureBootstrapMcpServersInDb(configFile: ConfigFile): Promise<vo
   ]);
   const imageConfig = resolveImageGenerationMigrationConfig(backendPrefs, fileImageConfig);
   const imageConfigSource = resolveImageGenerationMigrationConfigSource(backendPrefs, fileImageConfig);
-  const existing = await mcpService.listServers.invoke();
+  let existing = await mcpService.listServers.invoke();
+
+  /**
+   * The built-in browser MCP was renamed (aionui-browser -> pavii-browser). The
+   * engine rejects renames outright ("MCP server name cannot be changed during
+   * edit"), and the row is `builtin`, so the UI offers no delete — leaving the
+   * old row would strand a second, undeletable browser server in the Tools list.
+   * Delete it here; the missing-defaults import below re-adds it under the new
+   * name. Saved browser logins are unaffected: they live in the Electron session
+   * partition, not in this row.
+   */
+  const legacyBrowserServer = (existing ?? []).find((server) => server.name === LEGACY_BUILTIN_BROWSER_MCP_NAME);
+  if (legacyBrowserServer) {
+    try {
+      await mcpService.deleteServer.invoke({ id: legacyBrowserServer.id });
+      console.info('[Migration] removed pre-rebrand browser MCP row, id: %s', legacyBrowserServer.id);
+      existing = await mcpService.listServers.invoke();
+    } catch (error) {
+      console.warn('[Migration] failed to remove pre-rebrand browser MCP row', error);
+    }
+  }
+
   const existingByName = new Map((existing ?? []).map((server) => [server.name, server]));
   const existingImageServer = existingByName.get(BUILTIN_IMAGE_GEN_NAME);
   const existingImageEnv =
@@ -336,6 +381,7 @@ async function ensureBootstrapMcpServersInDb(configFile: ConfigFile): Promise<vo
   const refreshedServers = await mcpService.listServers.invoke();
   const chromeDevtoolsServer = refreshedServers.find((server) => server.name === BUILTIN_CHROME_DEVTOOLS_NAME);
   await ensureBuiltinChromeDevtoolsAvailability(chromeDevtoolsServer);
+  await ensureBuiltinBrowserAvailability(refreshedServers.find((server) => server.name === BUILTIN_BROWSER_MCP_NAME));
 
   if (
     imageEnvResolution.ok === true &&

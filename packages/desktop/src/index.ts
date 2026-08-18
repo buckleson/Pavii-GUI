@@ -295,7 +295,10 @@ function broadcastBackendStartupState(state: BackendStartupFailureInfo | null): 
 
 function markBackendStartupFailed(error: unknown): void {
   backendStartupFailed = true;
-  backendStartupFailureInfo = classifyBackendStartupFailure(error);
+  // `backendStartedOk` tells the classifier whether this is a first-boot
+  // failure or a crash of an engine that was already serving traffic; only the
+  // former can honestly be a local-data migration problem.
+  backendStartupFailureInfo = classifyBackendStartupFailure(error, { backendWasReady: backendStartedOk });
   (globalThis as typeof globalThis & { __backendStartupFailed?: boolean }).__backendStartupFailed = true;
   broadcastBackendStartupState(backendStartupFailureInfo);
 }
@@ -363,16 +366,31 @@ function ensureAdminUserOnce(backendPort: number): Promise<void> {
 }
 
 function markBackendReady(backendPort: number, source: string): void {
-  if (backendStartedOk) return;
+  const isFirstReady = !backendStartedOk;
   console.log(`[AionUi] ${source} ready (port=${backendPort})`);
+
+  /**
+   * Runs on EVERY ready event, including a restart after the engine died
+   * mid-session (antivirus, OOM, sleep/resume, an operator killing the
+   * process). This half used to sit behind an early `if (backendStartedOk)
+   * return`, so a recovered backend never cleared the failure state and the
+   * renderer kept showing the startup-failure dialog forever even though the
+   * app was healthy again. The port also changes across restarts, so it has to
+   * be re-exposed here.
+   */
   exposeBackendPort(backendPort);
-  registerCronResumeBridge(backendPort);
   backendStartedOk = true;
   backendStartupFailed = false;
   backendStartupFailureInfo = null;
   (globalThis as typeof globalThis & { __backendStartupFailed?: boolean }).__backendStartupFailed = false;
-  // Backend is ready: tell the renderer to drop any "starting" view and show the App.
+  // Backend is ready: tell the renderer to drop any "starting"/failure view and show the App.
   broadcastBackendStartupState(null);
+
+  // Everything below is one-time bootstrap: repeating it on a reconnect would
+  // re-run migrations and re-import bundled content on every engine restart.
+  if (!isFirstReady) return;
+
+  registerCronResumeBridge(backendPort);
   void ensureAdminUserOnce(backendPort);
   scheduleBackendMigrations();
   void ensureDefaultOpencodeAgent();
