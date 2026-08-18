@@ -48,6 +48,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Feedback: forward diagnostics logs to the main process console
   logFeedbackEvent: (payload: { details?: unknown; level: 'info' | 'warn' | 'error'; message: string }) =>
     ipcRenderer.send('feedback:renderer-log', payload),
+  // Feedback: describe the host so the issue body carries version and OS
+  getIssueEnvironment: () => ipcRenderer.invoke('feedback:issue-environment'),
+  // Feedback: file the report as a GitHub issue (proxy, else prefilled browser form)
+  submitIssueReport: (payload: { attachments?: Array<{ data: number[]; filename: string }>; body: string; title: string }) =>
+    ipcRenderer.invoke('feedback:submit-issue', payload),
   recoverCorruptedDatabase: () => ipcRenderer.invoke('backend:recover-corrupted-database'),
 });
 

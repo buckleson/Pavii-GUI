@@ -1,285 +1,126 @@
+/**
+ * @license
+ * Copyright 2026 Team Pavii
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { submitFeedbackReport } from '@/renderer/services/feedback/submitFeedbackReport';
 
-const sentryMocks = vi.hoisted(() => {
-  const setTag = vi.fn();
-  const flush = vi.fn(async () => true);
-  return {
-    captureEvent: vi.fn(() => 'event-id'),
-    flush,
-    getClient: vi.fn(() => ({ flush })),
-    setTag,
-    withScope: vi.fn((callback: (scope: { setTag: typeof setTag }) => void) => {
-      callback({ setTag });
-    }),
-  };
-});
+/**
+ * Reports used to go to Sentry, which was gated on a DSN that was never
+ * configured - every submission was silently discarded. They now become GitHub
+ * issues, so these tests assert on the delivery bridge instead.
+ */
 
-vi.mock('@sentry/electron/renderer', () => sentryMocks);
+type SubmitIssuePayload = {
+  attachments?: Array<{ data: number[]; filename: string }>;
+  body: string;
+  title: string;
+};
+
+const baseInput = {
+  description: '  Engine   cannot start  ',
+  module: 'installation-integrity',
+  moduleLabel: 'Installation is incomplete',
+};
+
+function stubElectronAPI(overrides: Record<string, unknown> = {}) {
+  const submitIssueReport = vi.fn(async () => ({ mode: 'browser' as const, issueUrl: 'https://github.example/issue/1' }));
+  const logFeedbackEvent = vi.fn();
+  const getIssueEnvironment = vi.fn(async () => ({ appVersion: '2.1.52', arch: 'x64', platform: 'win32' }));
+
+  vi.stubGlobal('window', {
+    electronAPI: { emit: vi.fn(), on: vi.fn(), submitIssueReport, logFeedbackEvent, getIssueEnvironment, ...overrides },
+  });
+
+  return { submitIssueReport, logFeedbackEvent, getIssueEnvironment };
+}
 
 describe('submitFeedbackReport', () => {
   beforeEach(() => {
-    sentryMocks.captureEvent.mockClear();
-    sentryMocks.captureEvent.mockReturnValue('event-id');
-    sentryMocks.flush.mockClear();
-    sentryMocks.flush.mockResolvedValue(true);
-    sentryMocks.getClient.mockClear();
-    sentryMocks.getClient.mockReturnValue({ flush: sentryMocks.flush });
-    sentryMocks.setTag.mockClear();
-    sentryMocks.withScope.mockClear();
-    vi.stubGlobal('window', { electronAPI: undefined });
+    vi.unstubAllGlobals();
   });
 
-  it('submits a user-feedback event with tags, extra context, logs, and attachments', async () => {
-    const collectFeedbackLogs = vi.fn().mockResolvedValue({
-      filename: 'aionui-logs.log.gz',
-      data: [1, 2, 3],
-    });
-    const logFeedbackEvent = vi.fn();
-    vi.stubGlobal('window', {
-      electronAPI: {
-        collectFeedbackLogs,
-        emit: vi.fn(),
-        logFeedbackEvent,
-        on: vi.fn(),
-      },
-    });
+  it('delivers the report through the issue bridge and returns the result', async () => {
+    const { submitIssueReport } = stubElectronAPI();
+
+    const result = await submitFeedbackReport(baseInput);
+
+    expect(submitIssueReport).toHaveBeenCalledOnce();
+    const payload = submitIssueReport.mock.calls[0][0] as unknown as SubmitIssuePayload;
+    expect(payload.title).toBe('[Installation is incomplete] Engine cannot start');
+    expect(payload.body).toContain('Engine cannot start');
+    expect(payload.body).toContain('| App version | 2.1.52 |');
+    expect(result.mode).toBe('browser');
+    expect(result.issueUrl).toBe('https://github.example/issue/1');
+  });
+
+  it('collects logs and puts them ahead of caller attachments', async () => {
+    const collectFeedbackLogs = vi.fn().mockResolvedValue({ filename: 'pavii-logs.log.gz', data: [1, 2, 3] });
+    const { submitIssueReport } = stubElectronAPI({ collectFeedbackLogs });
 
     await submitFeedbackReport({
-      attachments: [
-        {
-          filename: 'screenshot.png',
-          data: new Uint8Array([4, 5, 6]),
-          contentType: 'image/png',
-        },
-      ],
+      ...baseInput,
       collectLogs: true,
-      description: '  AionCore   cannot start  ',
-      extra: {
-        installation_integrity: {
-          source: 'backend_startup_failure',
-        },
-      },
-      module: 'installation-integrity',
-      moduleLabel: 'AionUi installation is incomplete',
-      tags: {
-        'aionui.installation_integrity.report_source': 'backend_startup_failure',
-      },
+      attachments: [{ filename: 'screenshot.png', data: new Uint8Array([4, 5, 6]), contentType: 'image/png' }],
     });
 
     expect(collectFeedbackLogs).toHaveBeenCalledOnce();
-    expect(sentryMocks.setTag).toHaveBeenCalledWith('type', 'user-feedback');
-    expect(sentryMocks.setTag).toHaveBeenCalledWith('module', 'installation-integrity');
-    expect(sentryMocks.setTag).toHaveBeenCalledWith(
-      'aionui.installation_integrity.report_source',
-      'backend_startup_failure'
-    );
-    expect(sentryMocks.captureEvent).toHaveBeenCalledWith(
-      {
-        level: 'info',
-        message: 'AionUi installation is incomplete: AionCore cannot start',
-        extra: {
-          description: 'AionCore cannot start',
-          installation_integrity: {
-            source: 'backend_startup_failure',
-          },
-        },
-      },
-      {
-        attachments: [
-          {
-            filename: 'aionui-logs.log.gz',
-            data: new Uint8Array([1, 2, 3]),
-            contentType: 'application/gzip',
-          },
-          {
-            filename: 'screenshot.png',
-            data: new Uint8Array([4, 5, 6]),
-            contentType: 'image/png',
-          },
-        ],
-      }
-    );
-    expect(sentryMocks.flush).not.toHaveBeenCalled();
-    expect(logFeedbackEvent).toHaveBeenCalledOnce();
-    expect(logFeedbackEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        level: 'info',
-        message: 'submitted',
-      })
-    );
+    const payload = submitIssueReport.mock.calls[0][0] as unknown as SubmitIssuePayload;
+    expect(payload.attachments?.map((a) => a.filename)).toEqual(['pavii-logs.log.gz', 'screenshot.png']);
+    // The body must name the files, since neither delivery path can upload them.
+    expect(payload.body).toContain('`pavii-logs.log.gz`');
+    expect(payload.body).toContain('`screenshot.png`');
   });
 
-  it('continues without logs when log collection is unavailable', async () => {
-    await submitFeedbackReport({
-      collectLogs: true,
-      description: 'No logs available',
-      module: 'installation-integrity',
-      moduleLabel: 'AionUi installation is incomplete',
-    });
+  it('still submits when log collection is unavailable', async () => {
+    const { submitIssueReport } = stubElectronAPI();
 
-    expect(sentryMocks.captureEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        extra: {
-          description: 'No logs available',
-        },
-      }),
-      { attachments: [] }
-    );
+    await expect(submitFeedbackReport({ ...baseInput, collectLogs: true })).resolves.toBeDefined();
+
+    expect(submitIssueReport).toHaveBeenCalledOnce();
   });
 
-  it('attaches db diagnostics when collection succeeds', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          success: true,
-          data: {
-            schema_version: 'feedback-diagnostics/v1',
-            profiles: [{ name: 'conversation-session', mode: 'detail', data: { conversation: { id: 'conv-1' } } }],
-            privacy: { raw_content_included: false, api_keys_included: false },
-          },
-        }),
-        {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      )
-    );
-    vi.stubGlobal('fetch', fetchMock);
-    vi.stubGlobal('window', {
-      electronAPI: {
-        emit: vi.fn(),
-        on: vi.fn(),
-      },
-    });
+  it('folds tags and extra context into the issue body', async () => {
+    const { submitIssueReport } = stubElectronAPI();
 
     await submitFeedbackReport({
-      collectDbDiagnostics: {
-        routeAtOpen: '#/conversation/conv-1',
-        routeAtSubmit: '#/conversation/conv-1',
-        selectedModule: 'conversation-session',
-        explicitContext: {
-          conversationId: 'conv-1',
-        },
-      },
-      collectLogs: false,
-      description: 'Conversation stuck',
-      module: 'conversation-session',
-      moduleLabel: 'Conversation & Sessions',
+      ...baseInput,
+      extra: { conversationId: 'abc-123' },
+      tags: { report_source: 'backend_startup_failure' },
     });
 
-    expect(fetchMock).toHaveBeenCalledOnce();
-    const [path, options] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(path).toContain('/api/system/diagnostics/feedback-report?');
-    expect(path).toContain('route_at_open=%23%2Fconversation%2Fconv-1');
-    expect(path).toContain('route_at_submit=%23%2Fconversation%2Fconv-1');
-    expect(path).toContain('selected_module=conversation-session');
-    expect(path).toContain('conversation_id=conv-1');
-    expect(options.method).toBe('GET');
-    expect(sentryMocks.captureEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        extra: {
-          description: 'Conversation stuck',
-        },
-      }),
-      {
-        attachments: [
-          expect.objectContaining({
-            filename: expect.stringMatching(/^db-diagnostics\.json(?:\.gz)?$/),
-            data: expect.any(Uint8Array),
-            contentType: expect.stringMatching(/^application\/(?:gzip|json)$/),
-          }),
-        ],
-      }
-    );
+    const payload = submitIssueReport.mock.calls[0][0] as unknown as SubmitIssuePayload;
+    expect(payload.body).toContain('report_source');
+    expect(payload.body).toContain('backend_startup_failure');
+    expect(payload.body).toContain('abc-123');
   });
 
-  it('continues without db diagnostics when collection fails', async () => {
-    const fetchMock = vi.fn(async () => {
-      throw new Error('db locked');
-    });
-    vi.stubGlobal('fetch', fetchMock);
-    vi.stubGlobal('window', {
-      electronAPI: {
-        emit: vi.fn(),
-        on: vi.fn(),
-      },
-    });
+  it('logs a submitted diagnostic on success', async () => {
+    const { logFeedbackEvent } = stubElectronAPI();
 
-    await submitFeedbackReport({
-      collectDbDiagnostics: {
-        routeAtOpen: '#/conversation/conv-1',
-        selectedModule: 'conversation-session',
-      },
-      collectLogs: false,
-      description: 'Conversation stuck',
-      module: 'conversation-session',
-      moduleLabel: 'Conversation & Sessions',
-    });
+    await submitFeedbackReport(baseInput);
 
-    expect(fetchMock).toHaveBeenCalledOnce();
-    expect(sentryMocks.captureEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        extra: {
-          description: 'Conversation stuck',
-        },
-      }),
-      { attachments: [] }
-    );
+    expect(logFeedbackEvent).toHaveBeenCalledWith(expect.objectContaining({ level: 'info', message: 'submitted' }));
   });
 
-  it('flushes when requested', async () => {
-    await submitFeedbackReport({
-      collectLogs: false,
-      description: 'Flush me',
-      flushTimeoutMs: 2000,
-      module: 'installation-integrity',
-      moduleLabel: 'AionUi installation is incomplete',
-    });
+  it('reports failure loudly instead of swallowing it', async () => {
+    const submitIssueReport = vi.fn().mockRejectedValue(new Error('bridge exploded'));
+    const { logFeedbackEvent } = stubElectronAPI({ submitIssueReport });
 
-    expect(sentryMocks.captureEvent).toHaveBeenCalledOnce();
-    expect(sentryMocks.getClient).toHaveBeenCalledOnce();
-    expect(sentryMocks.flush).toHaveBeenCalledWith(2000);
+    await expect(submitFeedbackReport(baseInput)).rejects.toThrow('bridge exploded');
+
+    expect(logFeedbackEvent).toHaveBeenCalledWith(expect.objectContaining({ level: 'error', message: 'failed' }));
   });
 
-  it('rejects when requested flush does not complete', async () => {
-    sentryMocks.flush.mockResolvedValue(false);
-    const logFeedbackEvent = vi.fn();
-    vi.stubGlobal('window', {
-      electronAPI: {
-        logFeedbackEvent,
-      },
-    });
+  it('opens a prefilled issue form when there is no desktop bridge (WebUI)', async () => {
+    const open = vi.fn();
+    vi.stubGlobal('window', { electronAPI: undefined, open });
 
-    await expect(
-      submitFeedbackReport({
-        collectLogs: false,
-        description: 'Flush me',
-        flushTimeoutMs: 2000,
-        module: 'installation-integrity',
-        moduleLabel: 'AionUi installation is incomplete',
-      })
-    ).rejects.toThrow('Failed to flush feedback report (event-id)');
-    expect(logFeedbackEvent).toHaveBeenCalledOnce();
-    expect(logFeedbackEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        level: 'error',
-        message: 'failed',
-      })
-    );
-  });
+    const result = await submitFeedbackReport(baseInput);
 
-  it('rejects when requested flush has no initialized Sentry client', async () => {
-    sentryMocks.getClient.mockReturnValue(undefined);
-
-    await expect(
-      submitFeedbackReport({
-        collectLogs: false,
-        description: 'Flush me',
-        flushTimeoutMs: 2000,
-        module: 'installation-integrity',
-        moduleLabel: 'AionUi installation is incomplete',
-      })
-    ).rejects.toThrow('Sentry is not initialized');
+    expect(open).toHaveBeenCalledOnce();
+    expect(String(open.mock.calls[0][0])).toContain('buckleson/Pavii-Gui-Releases/issues/new');
+    expect(result.mode).toBe('browser');
   });
 });

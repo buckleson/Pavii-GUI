@@ -161,7 +161,7 @@ const FeedbackReportModal: React.FC<FeedbackReportModalProps> = ({
         )
       ).filter((item): item is FeedbackAttachment => item !== null);
 
-      await submitFeedbackReport({
+      const result = await submitFeedbackReport({
         attachments,
         collectDbDiagnostics: {
           explicitContext: feedbackDiagnosticsContext?.explicitContext,
@@ -178,7 +178,27 @@ const FeedbackReportModal: React.FC<FeedbackReportModalProps> = ({
         tags: feedbackTags,
       });
 
-      Message.success(t('settings.bugReportSuccess'));
+      // Say what actually happened: the issue form opens in the browser and the
+      // diagnostics are on disk, because neither path can attach files for the
+      // reporter.
+      if (result.mode === 'proxy') {
+        Message.success(
+          t('settings.bugReportCreated', { defaultValue: 'Issue created on GitHub. Opening it in your browser.' })
+        );
+      } else {
+        Message.success(
+          t('settings.bugReportOpened', {
+            defaultValue: 'Opening a prefilled GitHub issue in your browser - review it and press Submit.',
+          })
+        );
+      }
+      if (result.bundleDir) {
+        Message.info(
+          t('settings.bugReportBundleSaved', {
+            defaultValue: 'Logs and diagnostics were saved to a folder - drag them into the issue to attach them.',
+          })
+        );
+      }
       resetForm();
       onCancel();
     } catch {

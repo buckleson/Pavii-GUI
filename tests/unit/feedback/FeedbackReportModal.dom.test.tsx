@@ -36,18 +36,10 @@ vi.mock('@/renderer/hooks/context/ThemeContext', () => ({
   useThemeContext: () => ({ theme: 'light', fontScale: 1 }),
 }));
 
-const sentryMocks = vi.hoisted(() => {
-  const setTag = vi.fn();
-  return {
-    setTag,
-    captureEvent: vi.fn(),
-    withScope: vi.fn((callback: (scope: { setTag: typeof setTag }) => void) => {
-      callback({ setTag });
-    }),
-  };
-});
-
-vi.mock('@sentry/electron/renderer', () => sentryMocks);
+// Reports become GitHub issues; this stands in for the delivery bridge.
+const issueMocks = vi.hoisted(() => ({
+  submitIssueReport: vi.fn(async () => ({ mode: 'browser' as const, issueUrl: 'https://github.example/issue/1' })),
+}));
 
 import FeedbackReportModal, {
   type PrefilledScreenshot,
@@ -64,11 +56,12 @@ const buildScreenshot = (name: string, byte: number): PrefilledScreenshot => ({
 describe('FeedbackReportModal — prefill', () => {
   beforeEach(() => {
     // Ensure no leftover global electronAPI from other tests interferes.
-    (window as unknown as { electronAPI?: unknown }).electronAPI = undefined;
+    (window as unknown as { electronAPI?: unknown }).electronAPI = {
+      submitIssueReport: issueMocks.submitIssueReport,
+      getIssueEnvironment: async () => ({ appVersion: '2.1.52', arch: 'x64', platform: 'win32' }),
+    };
     window.location.hash = '';
-    sentryMocks.setTag.mockClear();
-    sentryMocks.captureEvent.mockClear();
-    sentryMocks.withScope.mockClear();
+    issueMocks.submitIssueReport.mockClear();
   });
 
   afterEach(() => {
@@ -181,25 +174,13 @@ describe('FeedbackReportModal — prefill', () => {
     await user.click(screen.getByText('settings.bugReportSubmit'));
 
     await waitFor(() => {
-      expect(sentryMocks.captureEvent).toHaveBeenCalledTimes(1);
+      expect(issueMocks.submitIssueReport).toHaveBeenCalledTimes(1);
     });
 
-    expect(sentryMocks.setTag).toHaveBeenCalledWith('type', 'user-feedback');
-    expect(sentryMocks.setTag).toHaveBeenCalledWith('module', 'conversation-session');
-    expect(sentryMocks.setTag).toHaveBeenCalledWith('agent_error_code', 'USER_LLM_PROVIDER_AUTH_FAILED');
-    expect(sentryMocks.setTag).toHaveBeenCalledWith('agent_error_ownership', 'user_llm_provider');
-    expect(sentryMocks.captureEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        extra: {
-          description: 'provider failed',
-          agent_error: {
-            code: 'USER_LLM_PROVIDER_AUTH_FAILED',
-            ownership: 'user_llm_provider',
-          },
-        },
-      }),
-      expect.objectContaining({ attachments: [] })
-    );
+    const payload = issueMocks.submitIssueReport.mock.calls[0][0] as unknown as { body: string; title: string };
+    expect(payload.body).toContain('provider failed');
+    expect(payload.body).toContain('USER_LLM_PROVIDER_AUTH_FAILED');
+    expect(payload.body).toContain('user_llm_provider');
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 

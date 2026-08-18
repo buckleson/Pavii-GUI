@@ -1,0 +1,11 @@
+name = "pavii-issue-proxy"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# GITHUB_TOKEN is a secret, set with `wrangler secret put GITHUB_TOKEN`.
+# Never add it here - this file is committed.
+
+# Create with: wrangler kv namespace create RATE_LIMIT_KV
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "replace-with-your-kv-namespace-id"

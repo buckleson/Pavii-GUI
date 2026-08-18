@@ -10,6 +10,23 @@ export interface WebUIStatus {
   initialPassword?: string;
 }
 
+export type IssueEnvironment = {
+  appVersion: string;
+  arch: string;
+  electronVersion?: string;
+  engineVersion?: string;
+  locale?: string;
+  osRelease?: string;
+  platform: string;
+};
+
+export type IssueReportResult = {
+  bundleDir?: string;
+  issueUrl?: string;
+  mode: 'proxy' | 'browser';
+  proxyError?: string;
+};
+
 export interface ElectronBridgeAPI {
   emit: (name: string, data: unknown) => Promise<unknown> | void;
   on: (callback: (event: { value: string }) => void) => void;
@@ -21,6 +38,14 @@ export interface ElectronBridgeAPI {
   captureFeedbackScreenshot?: () => Promise<{ filename: string; data: number[] } | null>;
   // Forward feedback diagnostics logs to the main process console / 转发反馈诊断日志到主进程控制台
   logFeedbackEvent?: (payload: { details?: unknown; level: 'info' | 'warn' | 'error'; message: string }) => void;
+  // Host details for the issue body / 获取主机信息
+  getIssueEnvironment?: () => Promise<IssueEnvironment>;
+  // File the feedback report as a GitHub issue / 提交为 GitHub issue
+  submitIssueReport?: (payload: {
+    attachments?: Array<{ data: number[]; filename: string }>;
+    body: string;
+    title: string;
+  }) => Promise<IssueReportResult>;
   recoverCorruptedDatabase?: () => Promise<void>;
 }
 
