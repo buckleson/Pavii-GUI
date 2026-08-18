@@ -18,21 +18,34 @@
 
 ## Download
 
-Grab the latest build for your machine — no account required.
+<div align="center">
 
-| Platform    | x64                                                                                                                                                                                                | ARM64                                                                                                                                                                                                  |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Windows** | [Installer (.exe)](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Windows-x64-Setup.exe)                                                                                    | [Installer (.exe)](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Windows-arm64-Setup.exe)                                                                                      |
-| **macOS**   | [Disk image (.dmg)](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-macOS-x64.dmg)                                                                                           | [Disk image (.dmg)](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-macOS-arm64.dmg)                                                                                             |
-| **Linux**   | [AppImage](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Linux-x64.AppImage) · [.deb](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Linux-x64.deb) | [AppImage](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Linux-arm64.AppImage) · [.deb](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Linux-arm64.deb) |
+### Windows
 
-All builds, checksums and release notes live on the [releases page](https://github.com/vjk7989/pavii-ai/releases).
+[<img src="https://img.shields.io/badge/Download-Windows%20x64-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows x64" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Windows-x64-Setup.exe)
+[<img src="https://img.shields.io/badge/Download-Windows%20ARM64-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows ARM64" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Windows-arm64-Setup.exe)
+
+### macOS
+
+[<img src="https://img.shields.io/badge/Download-Apple%20Silicon-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Apple Silicon" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-macOS-arm64.dmg)
+[<img src="https://img.shields.io/badge/Download-Mac%20Intel-555555?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Intel Mac" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-macOS-x64.dmg)
+
+### Linux
+
+[<img src="https://img.shields.io/badge/AppImage-x64-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download AppImage x64" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Linux-x64.AppImage)
+[<img src="https://img.shields.io/badge/AppImage-ARM64-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download AppImage ARM64" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Linux-arm64.AppImage)
+[<img src="https://img.shields.io/badge/.deb-x64-A81D33?style=for-the-badge&logo=debian&logoColor=white" alt="Download deb x64" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Linux-x64.deb)
+[<img src="https://img.shields.io/badge/.deb-ARM64-A81D33?style=for-the-badge&logo=debian&logoColor=white" alt="Download deb ARM64" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Linux-arm64.deb)
+
+<sub>All builds, checksums and release notes: <a href="https://github.com/vjk7989/pavii-ai/releases/latest">releases page</a></sub>
+
+</div>
 
 > **First launch on macOS and Windows.** Releases are not yet code-signed, so the OS shows a warning the first time.
-> On macOS: right-click the app → **Open** → **Open**, or run `xattr -dr com.apple.quarantine "/Applications/Pavii.Ai.app"`.
-> On Windows: **More info** → **Run anyway** on the SmartScreen prompt.
+> On macOS: right-click the app -> **Open** -> **Open**, or run `xattr -dr com.apple.quarantine "/Applications/Pavii.Ai.app"`.
+> On Windows: **More info** -> **Run anyway** on the SmartScreen prompt.
 
-Requirements: Windows 10+, macOS 12+, or a modern Linux desktop · 4 GB RAM · ~1 GB disk.
+Requirements: Windows 10+, macOS 12+, or a modern Linux desktop - 4 GB RAM - ~1 GB disk.
 
 ## Features
 
