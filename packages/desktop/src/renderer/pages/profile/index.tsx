@@ -202,6 +202,7 @@ const ProfilePage: React.FC = () => {
         data={{
           name: displayName,
           handle: session?.email ?? '',
+          initials: initialsOf(session?.name, session?.email),
           totalTokens: stats.totalTokens,
           peakDayTokens: stats.peakDay?.tokens ?? 0,
           currentStreak: stats.currentStreak,

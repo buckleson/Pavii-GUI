@@ -17,6 +17,7 @@ import { formatCompactNumber } from './profileStats';
 export type ShareCardData = {
   name: string;
   handle: string;
+  initials: string;
   totalTokens: number;
   peakDayTokens: number;
   currentStreak: number;
@@ -27,28 +28,36 @@ export type ShareCardData = {
 export type ShareCardTheme = {
   bg: string;
   card: string;
+  border: string;
   text: string;
   muted: string;
   accent: string;
+  avatar: string;
   cellEmpty: string;
 };
 
 export const SHARE_CARD_LIGHT: ShareCardTheme = {
-  bg: '#fdfdfd',
+  // The card has to read as a distinct surface against the backdrop, so the
+  // backdrop is tinted rather than the near-white it used to be.
+  bg: '#eceef3',
   card: '#ffffff',
+  border: '#dfe2ea',
   text: '#16161a',
   muted: '#6b6b76',
   accent: '#7033ff',
-  cellEmpty: '#ececf1',
+  avatar: '#12a67c',
+  cellEmpty: '#e2e5ec',
 };
 
 export const SHARE_CARD_DARK: ShareCardTheme = {
-  bg: '#000000',
-  card: '#111111',
-  text: '#f2f2f2',
-  muted: '#a4a4a4',
-  accent: '#5895ff',
-  cellEmpty: '#1d1d1d',
+  bg: '#0b0b0d',
+  card: '#161619',
+  border: '#232327',
+  text: '#f4f4f6',
+  muted: '#8b8b95',
+  accent: '#3f8cff',
+  avatar: '#17a97f',
+  cellEmpty: '#26262b',
 };
 
 export const SHARE_CARD_WIDTH = 1200;
@@ -77,6 +86,9 @@ const mixWithEmpty = (theme: ShareCardTheme, level: number): string => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+const dayKey = (date: Date): string =>
+  `${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, '0')}-${`${date.getDate()}`.padStart(2, '0')}`;
+
 /** Draw the share card onto a canvas (sized SHARE_CARD_WIDTH x HEIGHT). */
 export function renderShareCard(
   canvas: HTMLCanvasElement,
@@ -92,73 +104,104 @@ export function renderShareCard(
   const font = (size: number, weight = 400) =>
     `${weight} ${size}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
 
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, SHARE_CARD_WIDTH, SHARE_CARD_HEIGHT);
 
   // Card surface
-  const pad = 60;
+  const pad = 64;
+  const cardW = SHARE_CARD_WIDTH - pad * 2;
+  const cardH = SHARE_CARD_HEIGHT - pad * 2;
   ctx.fillStyle = theme.card;
   ctx.beginPath();
-  ctx.roundRect(pad, pad, SHARE_CARD_WIDTH - pad * 2, SHARE_CARD_HEIGHT - pad * 2, 24);
+  ctx.roundRect(pad, pad, cardW, cardH, 28);
+  ctx.fill();
+  ctx.strokeStyle = theme.border;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Identity row: avatar disc with initials, name and handle beside it.
+  const left = pad + 56;
+  const identityY = pad + 88;
+  const avatarR = 34;
+
+  ctx.fillStyle = theme.avatar;
+  ctx.beginPath();
+  ctx.arc(left + avatarR, identityY, avatarR, 0, Math.PI * 2);
   ctx.fill();
 
-  // Identity row
-  const left = pad + 48;
-  let y = pad + 84;
-  if (logo) ctx.drawImage(logo, left, y - 44, 56, 56);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = font(26, 700);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(data.initials.slice(0, 2).toUpperCase(), left + avatarR, identityY + 1);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+
+  const textLeft = left + avatarR * 2 + 24;
   ctx.fillStyle = theme.text;
   ctx.font = font(34, 700);
-  ctx.fillText(data.name, left + (logo ? 76 : 0), y);
-  ctx.fillStyle = theme.muted;
-  ctx.font = font(20);
-  ctx.fillText(data.handle, left + (logo ? 76 : 0), y + 30);
-  ctx.textAlign = 'right';
-  ctx.fillStyle = theme.muted;
+  ctx.fillText(data.name, textLeft, identityY - 2);
+  if (data.handle) {
+    ctx.fillStyle = theme.muted;
+    ctx.font = font(20);
+    ctx.fillText(data.handle, textLeft, identityY + 28);
+  }
+
+  // Brand mark, right aligned on the identity row.
+  const brandRight = pad + cardW - 56;
+  ctx.fillStyle = theme.text;
   ctx.font = font(24, 600);
-  ctx.fillText('Pavii.Ai', SHARE_CARD_WIDTH - pad - 48, y);
+  ctx.textAlign = 'right';
+  ctx.fillText('Pavii.Ai', brandRight, identityY + 8);
+  if (logo) {
+    const brandTextWidth = ctx.measureText('Pavii.Ai').width;
+    ctx.drawImage(logo, brandRight - brandTextWidth - 46, identityY - 16, 34, 34);
+  }
   ctx.textAlign = 'left';
 
   // Heatmap
-  const gridTop = y + 70;
-  const cell = 16;
-  const gap = 5;
-  const gridWidth = WEEKS * (cell + gap);
+  const cell = 20;
+  const gap = 6;
+  const gridWidth = WEEKS * cell + (WEEKS - 1) * gap;
   const gridLeft = (SHARE_CARD_WIDTH - gridWidth) / 2;
+  const gridTop = identityY + 92;
   const byDay = new Map(data.daily.map((d) => [d.day, d]));
   const max = Math.max(...data.daily.map((d) => (d.tokens > 0 ? d.tokens : d.activity)), 1);
   const today = new Date();
+
   for (let w = 0; w < WEEKS; w++) {
     for (let r = 0; r < ROWS; r++) {
       const daysAgo = (WEEKS - 1 - w) * 7 + (ROWS - 1 - r);
       const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysAgo);
-      const key = `${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, '0')}-${`${date.getDate()}`.padStart(2, '0')}`;
-      const row = byDay.get(key);
+      const row = byDay.get(dayKey(date));
       const value = row ? (row.tokens > 0 ? row.tokens : row.activity) : 0;
       ctx.fillStyle = mixWithEmpty(theme, intensityOf(value, max));
       ctx.beginPath();
-      ctx.roundRect(gridLeft + w * (cell + gap), gridTop + r * (cell + gap), cell, cell, 4);
+      ctx.roundRect(gridLeft + w * (cell + gap), gridTop + r * (cell + gap), cell, cell, 5);
       ctx.fill();
     }
   }
 
   // Stat row
-  const statsY = gridTop + ROWS * (cell + gap) + 80;
+  const statsY = gridTop + ROWS * (cell + gap) + 96;
   const stats: Array<[string, string]> = [
     [formatCompactNumber(data.totalTokens), 'lifetime tokens'],
     [formatCompactNumber(data.peakDayTokens), 'peak day'],
     [`${data.currentStreak} days`, 'current streak'],
     [`${data.longestStreak} days`, 'longest streak'],
   ];
-  const slot = (SHARE_CARD_WIDTH - pad * 2) / stats.length;
+  const slot = cardW / stats.length;
   stats.forEach(([value, label], i) => {
     const cx = pad + slot * i + slot / 2;
     ctx.textAlign = 'center';
     ctx.fillStyle = theme.text;
-    ctx.font = font(40, 700);
+    ctx.font = font(42, 700);
     ctx.fillText(value, cx, statsY);
     ctx.fillStyle = theme.muted;
     ctx.font = font(19);
-    ctx.fillText(label, cx, statsY + 32);
+    ctx.fillText(label, cx, statsY + 34);
   });
   ctx.textAlign = 'left';
 }

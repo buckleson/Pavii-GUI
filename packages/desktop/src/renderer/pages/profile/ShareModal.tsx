@@ -8,7 +8,7 @@ import { ipcBridge } from '@/common';
 import brandLogo from '@renderer/assets/logos/brand/app.png';
 import { Button, Modal } from '@arco-design/web-react';
 import { Download } from '@icon-park/react';
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ShareCardData, ShareNetwork } from './shareCard';
 import {
@@ -28,33 +28,75 @@ type ShareModalProps = {
   isDark: boolean;
 };
 
+type ShareAction = {
+  glyph: React.ReactNode;
+  key: string;
+  label: string;
+  onClick: () => void;
+  primary?: boolean;
+};
+
 /** Renders the activity card to a canvas and offers save + share intents. */
 const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose, data, isDark }) => {
   const { t } = useTranslation();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // A ref would still be null when this component's effect first runs: Arco
+  // mounts the modal body on its own later render, so the canvas does not
+  // exist yet and the card was never drawn. Tracking the node in state means
+  // the draw happens as soon as it actually mounts.
+  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    if (!visible || !canvasRef.current) return;
-    const canvas = canvasRef.current;
+    if (!visible || !canvas) return;
     const theme = isDark ? SHARE_CARD_DARK : SHARE_CARD_LIGHT;
+    // Draw straight away rather than waiting on the logo. Hanging the whole
+    // card off an image load means a slow or never-resolving asset leaves the
+    // user staring at a blank canvas; the logo is a garnish, so it just
+    // triggers a redraw when it arrives.
+    renderShareCard(canvas, data, theme);
     const logo = new Image();
     logo.onload = () => renderShareCard(canvas, data, theme, logo);
-    logo.onerror = () => renderShareCard(canvas, data, theme);
     logo.src = brandLogo;
-  }, [visible, data, isDark]);
+  }, [visible, canvas, data, isDark]);
 
-  const saveCard = () => {
-    const canvas = canvasRef.current;
+  const saveCard = useCallback(() => {
     if (!canvas) return;
     const link = document.createElement('a');
     link.download = 'pavii-activity.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
-  };
+  }, [canvas]);
 
-  const shareTo = (network: ShareNetwork) => {
-    void ipcBridge.shell.openExternal.invoke(buildShareIntentUrl(network, buildShareText(data)));
-  };
+  const shareTo = useCallback(
+    (network: ShareNetwork) => {
+      void ipcBridge.shell.openExternal.invoke(buildShareIntentUrl(network, buildShareText(data)));
+    },
+    [data]
+  );
+
+  // icon-park ships no LinkedIn or Reddit mark, and those brands are wordmarks
+  // anyway, so the social buttons use typographic glyphs for a consistent row.
+  const actions: ShareAction[] = [
+    { key: 'x', glyph: <span className='text-18px font-600 leading-none'>X</span>, label: 'X', onClick: () => shareTo('x') },
+    {
+      key: 'linkedin',
+      glyph: <span className='text-15px font-700 leading-none'>in</span>,
+      label: 'LinkedIn',
+      onClick: () => shareTo('linkedin'),
+    },
+    {
+      key: 'reddit',
+      glyph: <span className='text-18px font-700 leading-none'>r</span>,
+      label: 'Reddit',
+      onClick: () => shareTo('reddit'),
+    },
+    {
+      key: 'save',
+      glyph: <Download size={18} />,
+      label: t('profile.shareSave', { defaultValue: 'Save' }),
+      onClick: saveCard,
+      primary: true,
+    },
+  ];
 
   return (
     <Modal
@@ -65,21 +107,30 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose, data, isDark 
       style={{ width: 720 }}
     >
       <canvas
-        ref={canvasRef}
+        ref={setCanvas}
         width={SHARE_CARD_WIDTH}
         height={SHARE_CARD_HEIGHT}
-        className='w-full rounded-12px border border-base'
+        className='w-full rounded-16px'
         data-testid='share-card-canvas'
       />
-      <div className='mt-16px flex items-center justify-center gap-12px'>
-        <Button onClick={() => shareTo('x')}>X</Button>
-        <Button onClick={() => shareTo('linkedin')}>LinkedIn</Button>
-        <Button onClick={() => shareTo('reddit')}>Reddit</Button>
-        <Button type='primary' icon={<Download size={14} />} onClick={saveCard}>
-          {t('profile.shareSave', { defaultValue: 'Save image' })}
-        </Button>
+      <div className='mt-20px flex items-start justify-center gap-24px'>
+        {actions.map((action) => (
+          <div key={action.key} className='flex flex-col items-center gap-6px'>
+            <Button
+              shape='circle'
+              size='large'
+              type={action.primary ? 'primary' : 'secondary'}
+              onClick={action.onClick}
+              aria-label={action.label}
+              data-testid={`share-action-${action.key}`}
+            >
+              {action.glyph}
+            </Button>
+            <span className='text-12px text-t-tertiary'>{action.label}</span>
+          </div>
+        ))}
       </div>
-      <div className='mt-8px text-center text-12px text-t-tertiary'>
+      <div className='mt-12px text-center text-12px text-t-tertiary'>
         {t('profile.shareHint', {
           defaultValue: 'Sharing opens a post with your stats. Save the image to attach it.',
         })}
