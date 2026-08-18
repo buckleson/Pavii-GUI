@@ -11,7 +11,7 @@
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
-const repo = process.env.GITHUB_REPOSITORY || 'vjk7989/pavii-ai';
+const repo = process.env.GITHUB_REPOSITORY || 'buckleson/Pavii-GUI';
 const posthogHost = process.env.POSTHOG_HOST || 'https://eu.i.posthog.com';
 const posthogKey = process.env.POSTHOG_KEY || '';
 const stateFile = process.env.STATE_FILE || '.download-counts.json';

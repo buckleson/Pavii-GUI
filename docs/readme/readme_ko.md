@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/vjk7989/pavii-ai?style=flat-square&color=32CD32" alt="Version">
+  <img src="https://img.shields.io/github/v/release/buckleson/Pavii-GUI?style=flat-square&color=32CD32" alt="Version">
   &nbsp;
   <img src="https://img.shields.io/badge/license-Apache--2.0-32CD32?style=flat-square&logo=apache&logoColor=white" alt="License">
   &nbsp;
@@ -716,15 +716,15 @@ Pavii.Ai 로컬 개발은 Electron 프런트엔드용 Pavii.Ai와 로컬 백엔�
 
 <p align="center">
   <a href="https://www.pavii.tech/products/Super-Assistant/">
-    <img src="https://contrib.rocks/image?repo=vjk7989/pavii-ai&max=100" alt="Contributors" />
+    <img src="https://contrib.rocks/image?repo=buckleson/Pavii-GUI&max=100" alt="Contributors" />
   </a>
 </p>
 
 ## Star 히스토리
 
 <p align="center">
-  <a href="https://www.star-history.com/#vjk7989/pavii-ai&Date" target="_blank">
-    <img src="https://api.star-history.com/svg?repos=vjk7989/pavii-ai&type=Date" alt="Star History" width="600">
+  <a href="https://www.star-history.com/#buckleson/Pavii-GUI&Date" target="_blank">
+    <img src="https://api.star-history.com/svg?repos=buckleson/Pavii-GUI&type=Date" alt="Star History" width="600">
   </a>
 </p>
 

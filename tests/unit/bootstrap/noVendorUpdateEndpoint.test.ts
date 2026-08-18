@@ -34,15 +34,15 @@ describe('no upstream-vendor update endpoint', () => {
     const feed = stripComments(read('packages/desktop/src/process/services/updateFeed.ts'));
     // Updates resolve to our own GitHub releases; any CDN feed is env-supplied,
     // so no third-party URL is ever compiled in.
-    expect(feed).toMatch(/GITHUB_RELEASE_OWNER = 'vjk7989'/);
-    expect(feed).toMatch(/GITHUB_RELEASE_REPO = 'pavii-ai'/);
+    expect(feed).toMatch(/GITHUB_RELEASE_OWNER = 'buckleson'/);
+    expect(feed).toMatch(/GITHUB_RELEASE_REPO = 'Pavii-GUI'/);
     expect(feed).toMatch(/PAVII_UPDATE_FEED_URL/);
     expect(feed).not.toMatch(/https:\/\/[a-z]/);
   });
 
   it('the release repo matches electron-builder publish config', () => {
     const yml = read('packages/desktop/electron-builder.yml');
-    expect(yml).toMatch(/owner: vjk7989/);
-    expect(yml).toMatch(/repo: pavii-ai/);
+    expect(yml).toMatch(/owner: buckleson/);
+    expect(yml).toMatch(/repo: Pavii-GUI/);
   });
 });

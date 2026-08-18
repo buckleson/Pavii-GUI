@@ -6,9 +6,9 @@
   <p><strong>Your personal AI workspace.</strong> Chat with local coding agents, run teams of assistants, automate on a schedule — on your own machine.</p>
 
   <p>
-    <a href="https://github.com/vjk7989/pavii-ai/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/vjk7989/pavii-ai?style=flat-square&color=7c5cff" /></a>
-    <a href="https://github.com/vjk7989/pavii-ai/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/vjk7989/pavii-ai/total?style=flat-square&color=32CD32" /></a>
-    <a href="https://github.com/vjk7989/pavii-ai/actions/workflows/release.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/vjk7989/pavii-ai/release.yml?style=flat-square" /></a>
+    <a href="https://github.com/buckleson/Pavii-GUI/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/buckleson/Pavii-GUI?style=flat-square&color=7c5cff" /></a>
+    <a href="https://github.com/buckleson/Pavii-GUI/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/buckleson/Pavii-GUI/total?style=flat-square&color=32CD32" /></a>
+    <a href="https://github.com/buckleson/Pavii-GUI/actions/workflows/release.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/buckleson/Pavii-GUI/release.yml?style=flat-square" /></a>
     <img alt="Platforms" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational?style=flat-square" />
     <a href="#license"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square" /></a>
   </p>
@@ -22,22 +22,22 @@
 
 ### Windows
 
-[<img src="https://img.shields.io/badge/Download-Windows%20x64-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows x64" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Windows-x64-Setup.exe)
-[<img src="https://img.shields.io/badge/Download-Windows%20ARM64-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows ARM64" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Windows-arm64-Setup.exe)
+[<img src="https://img.shields.io/badge/Download-Windows%20x64-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows x64" height="42" />](https://github.com/buckleson/Pavii-GUI/releases/latest/download/Pavii.Ai-Windows-x64-Setup.exe)
+[<img src="https://img.shields.io/badge/Download-Windows%20ARM64-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows ARM64" height="42" />](https://github.com/buckleson/Pavii-GUI/releases/latest/download/Pavii.Ai-Windows-arm64-Setup.exe)
 
 ### macOS
 
-[<img src="https://img.shields.io/badge/Download-Apple%20Silicon-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Apple Silicon" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-macOS-arm64.dmg)
-[<img src="https://img.shields.io/badge/Download-Mac%20Intel-555555?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Intel Mac" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-macOS-x64.dmg)
+[<img src="https://img.shields.io/badge/Download-Apple%20Silicon-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Apple Silicon" height="42" />](https://github.com/buckleson/Pavii-GUI/releases/latest/download/Pavii.Ai-macOS-arm64.dmg)
+[<img src="https://img.shields.io/badge/Download-Mac%20Intel-555555?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Intel Mac" height="42" />](https://github.com/buckleson/Pavii-GUI/releases/latest/download/Pavii.Ai-macOS-x64.dmg)
 
 ### Linux
 
-[<img src="https://img.shields.io/badge/AppImage-x64-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download AppImage x64" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Linux-x64.AppImage)
-[<img src="https://img.shields.io/badge/AppImage-ARM64-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download AppImage ARM64" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Linux-arm64.AppImage)
-[<img src="https://img.shields.io/badge/.deb-x64-A81D33?style=for-the-badge&logo=debian&logoColor=white" alt="Download deb x64" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Linux-x64.deb)
-[<img src="https://img.shields.io/badge/.deb-ARM64-A81D33?style=for-the-badge&logo=debian&logoColor=white" alt="Download deb ARM64" height="42" />](https://github.com/vjk7989/pavii-ai/releases/latest/download/Pavii.Ai-Linux-arm64.deb)
+[<img src="https://img.shields.io/badge/AppImage-x64-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download AppImage x64" height="42" />](https://github.com/buckleson/Pavii-GUI/releases/latest/download/Pavii.Ai-Linux-x64.AppImage)
+[<img src="https://img.shields.io/badge/AppImage-ARM64-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download AppImage ARM64" height="42" />](https://github.com/buckleson/Pavii-GUI/releases/latest/download/Pavii.Ai-Linux-arm64.AppImage)
+[<img src="https://img.shields.io/badge/.deb-x64-A81D33?style=for-the-badge&logo=debian&logoColor=white" alt="Download deb x64" height="42" />](https://github.com/buckleson/Pavii-GUI/releases/latest/download/Pavii.Ai-Linux-x64.deb)
+[<img src="https://img.shields.io/badge/.deb-ARM64-A81D33?style=for-the-badge&logo=debian&logoColor=white" alt="Download deb ARM64" height="42" />](https://github.com/buckleson/Pavii-GUI/releases/latest/download/Pavii.Ai-Linux-arm64.deb)
 
-<sub>All builds, checksums and release notes: <a href="https://github.com/vjk7989/pavii-ai/releases/latest">releases page</a></sub>
+<sub>All builds, checksums and release notes: <a href="https://github.com/buckleson/Pavii-GUI/releases/latest">releases page</a></sub>
 
 </div>
 

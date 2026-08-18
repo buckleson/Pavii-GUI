@@ -21,8 +21,8 @@ import type { CdnGenericProviderConfiguration } from './cdnGenericProvider';
  */
 
 /** GitHub repo that hosts Pavii.Ai releases (must match electron-builder.yml `publish`). */
-export const GITHUB_RELEASE_OWNER = 'vjk7989';
-export const GITHUB_RELEASE_REPO = 'pavii-ai';
+export const GITHUB_RELEASE_OWNER = 'buckleson';
+export const GITHUB_RELEASE_REPO = 'Pavii-GUI';
 export const UPDATE_FEED_URL_ENV = 'PAVII_UPDATE_FEED_URL';
 
 /** Configured feed base URL, or undefined when updates are intentionally off. */

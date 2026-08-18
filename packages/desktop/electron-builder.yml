@@ -236,7 +236,7 @@ electronDownload:
 # this provider to find updates.
 publish:
   provider: github
-  owner: vjk7989
-  repo: pavii-ai
+  owner: buckleson
+  repo: Pavii-GUI
   publishAutoUpdate: true
   releaseType: release
