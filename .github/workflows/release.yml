@@ -74,12 +74,28 @@ jobs:
           ( cd release && sha256sum * > SHA256SUMS )
           ls -lh release
 
+      # Every download button in the README points at
+      # releases/latest/download/<stable-name>, so the release must contain one
+      # asset per platform before it is published.
+      - name: Verify one installer per platform is present
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for f in Pavii.Ai-Windows-x64-Setup.exe Pavii.Ai-Windows-arm64-Setup.exe                    Pavii.Ai-macOS-arm64.dmg Pavii.Ai-macOS-x64.dmg                    Pavii.Ai-Linux-x64.AppImage Pavii.Ai-Linux-arm64.AppImage                    Pavii.Ai-Linux-x64.deb Pavii.Ai-Linux-arm64.deb; do
+            if [ -f "release/$f" ]; then echo "ok      $f"; else echo "MISSING $f"; missing=1; fi
+          done
+          [ "$missing" -eq 0 ] || { echo "Refusing to publish: a download button would 404."; exit 1; }
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release create "${{ steps.version.outputs.tag }}" release/* \
-            --title "Pavii.Ai ${{ steps.version.outputs.version }}" \
-            --generate-notes \
-            --verify-tag || \
-          gh release upload "${{ steps.version.outputs.tag }}" release/* --clobber
+          set -euo pipefail
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "Pavii.Ai $VERSION" --generate-notes --verify-tag
+          fi
+          gh release upload "$TAG" release/* --clobber
+          gh release view "$TAG" --json assets -q '.assets[].name'
