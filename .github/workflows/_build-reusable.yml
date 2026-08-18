@@ -59,6 +59,9 @@ jobs:
       ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
       # Sentry stays disabled: no DSN is configured for Pavii builds.
       SENTRY_DSN: ''
+      # The renderer bundle is ~10k modules and exceeds Node's default heap on
+      # the smaller runners (macOS arm64 OOM'd at ~2 GB).
+      NODE_OPTIONS: --max-old-space-size=6144
 
     steps:
       - uses: actions/checkout@v4
