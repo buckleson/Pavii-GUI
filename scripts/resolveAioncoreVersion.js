@@ -13,6 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { readJsonFile } = require('../packages/shared-scripts/src/read-json-file.js');
 
 function resolveAioncoreVersion(projectRoot) {
   const envOverride = process.env.AIONUI_BACKEND_VERSION;
@@ -22,7 +23,7 @@ function resolveAioncoreVersion(projectRoot) {
 
   try {
     const pkgPath = path.join(projectRoot, 'package.json');
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    const pkg = readJsonFile(pkgPath);
     if (pkg && typeof pkg.aioncoreVersion === 'string' && pkg.aioncoreVersion.trim()) {
       return pkg.aioncoreVersion.trim();
     }

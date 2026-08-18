@@ -20,6 +20,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { verifyBundledAioncoreResources } = require('./verify-bundled-aioncore-resources');
+const { readJsonFile } = require('./read-json-file.js');
 
 const GITHUB_OWNER = 'iOfficeAI';
 const GITHUB_REPO = 'AionCore';
@@ -455,10 +456,13 @@ function prepareAioncore(options) {
     if (fs.existsSync(existingManifestPath) && fs.existsSync(existingBinaryPath)) {
       let pinnedToLocalBuild = false;
       try {
-        pinnedToLocalBuild =
-          JSON.parse(fs.readFileSync(existingManifestPath, 'utf-8')).sourceType === 'local-source-build';
-      } catch {
-        // Unreadable manifest: fall through to the normal preparation path.
+        // readJsonFile tolerates a UTF-8 BOM. PowerShell writes one, JSON.parse
+        // throws on it, and a swallowed throw here previously let the upstream
+        // download overwrite a locally built, rebranded engine.
+        pinnedToLocalBuild = readJsonFile(existingManifestPath).sourceType === 'local-source-build';
+      } catch (error) {
+        // Never fail silently here: a swallowed parse error costs the rebrand.
+        console.warn(`  Could not read aioncore manifest: ${error.message}`);
       }
       if (pinnedToLocalBuild) {
         console.log(`  Keeping local-source-build aioncore for ${runtimeKey} (manifest pins it; skipping download)`);

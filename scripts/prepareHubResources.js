@@ -14,6 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { readJsonFile } = require('../packages/shared-scripts/src/read-json-file.js');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const HUB_DIR = path.join(PROJECT_ROOT, 'resources', 'hub');
@@ -115,7 +116,7 @@ async function prepareHubResources() {
   console.log(`[hub] index.json downloaded from ${indexUrl}`);
 
   // Step 2: Parse index and download all extension zips
-  const index = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
+  const index = readJsonFile(indexPath);
   const extensions = index.extensions || {};
   const names = Object.keys(extensions);
 

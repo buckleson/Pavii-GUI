@@ -92,7 +92,13 @@ Auto-fix as you edit:
 bun run lint:fix       # auto-fix lint issues (oxlint)
 bun run format         # auto-format all files (oxfmt)
 bunx tsc --noEmit      # verify no type errors
+bun run check:encoding # verify no UTF-8 BOMs, cp1252 mojibake, or lost characters
 ```
+
+**Never edit repository files with PowerShell text cmdlets** (`Set-Content`, `Out-File`, `>`).
+Windows PowerShell 5.1 prepends a UTF-8 BOM and re-decodes UTF-8 as cp1252; two shipped
+regressions came from this. Use the editor tools, Node's `fs.writeFileSync`, or a here-doc.
+`bun run check:encoding` (also run by `just push` and CI) catches the damage.
 
 If your changes touch `packages/desktop/src/renderer/`, `locales/`, or `packages/desktop/src/common/config/i18n`, also run:
 

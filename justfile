@@ -322,12 +322,23 @@ i18n-check:
     bun run i18n:types
     node scripts/check-i18n.js
 
-# Run all checks (lint + format + typecheck + i18n) — mirrors CI code-quality job
-check: lint fmt-check typecheck i18n-check
+# Verify no UTF-8 BOMs, cp1252 mojibake, or lost characters in tracked text files
+encoding-check:
+    node scripts/check-encoding.js
 
-# Pre-push gate: lint + format check + typecheck + i18n + test, then push
+# Build the Pavii Engine from the-remaa/AionCore and deploy it into
+# resources/bundled-aioncore/. Runs the asset test first (a corrupt builtin
+# manifest loads as an empty catalog instead of failing) and writes the bundle
+# manifest through Node so it can never carry a BOM.
+engine-build *ARGS:
+    node scripts/build-aioncore.js {{ ARGS }}
+
+# Run all checks (lint + format + typecheck + encoding + i18n) — mirrors CI code-quality job
+check: lint fmt-check typecheck encoding-check i18n-check
+
+# Pre-push gate: lint + format check + typecheck + encoding + i18n + test, then push
 # Uses --quiet to suppress warnings (exit code is still non-zero on errors)
-push *ARGS: lint-strict fmt-check typecheck i18n-check test
+push *ARGS: lint-strict fmt-check typecheck encoding-check i18n-check test
     git push {{ ARGS }}
 
 # Lint with only errors reported (for CI/push gates)

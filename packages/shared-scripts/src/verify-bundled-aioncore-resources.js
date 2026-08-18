@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { readJsonFile } = require('./read-json-file.js');
 
 const REQUIRED_CLI_NAMES = ['claude', 'codex'];
 
@@ -60,8 +61,11 @@ function requireRelativeDirectory(baseDir, runtimeKey, parts, checked, missing, 
 
 function readManifest(manifestPath) {
   try {
-    return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  } catch {
+    return readJsonFile(manifestPath);
+  } catch (error) {
+    // The caller reports `invalid_json`; without this the reason (very often a
+    // UTF-8 BOM from a PowerShell-written manifest) is invisible.
+    console.warn(`  ${error.message}`);
     return null;
   }
 }
@@ -98,7 +102,7 @@ function verifyBundleManifest(baseDir, runtimeKey, electronPlatformName, targetA
 
 function readManagedResourcesContract(manifestPath) {
   try {
-    return { contract: JSON.parse(fs.readFileSync(manifestPath, 'utf8')) };
+    return { contract: readJsonFile(manifestPath) };
   } catch (error) {
     return { error };
   }

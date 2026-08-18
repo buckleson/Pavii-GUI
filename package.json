@@ -42,6 +42,7 @@
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
+    "check:encoding": "node scripts/check-encoding.js",
     "i18n:types": "node scripts/generate-i18n-types.js",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -14,6 +14,7 @@ const { execSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { readJsonFile } = require('../packages/shared-scripts/src/read-json-file.js');
 
 // DMG retry logic for macOS: detects DMG creation failures by checking artifacts
 // (.app exists but .dmg missing) and retries only the DMG step using
@@ -705,7 +706,7 @@ try {
   restorePackageVersionOverride = applyDebugAutoUpdateVersionOverride(packageJsonPath);
 
   // 1. Ensure package.json main entry is correct for electron-vite
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const packageJson = readJsonFile(packageJsonPath);
   if (packageJson.main !== './out/main/index.js') {
     packageJson.main = './out/main/index.js';
     fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');

@@ -234,17 +234,36 @@ impl Default for BuiltinAssistantRegistry {
     }
 }
 
+/// UTF-8 byte-order mark. Windows editors and PowerShell's
+/// `Set-Content -Encoding utf8` prepend one; `serde_json` rejects it and the
+/// entire assistant catalog then parses as empty. Strip it before parsing.
+const UTF8_BOM: &[u8] = &[0xEF, 0xBB, 0xBF];
+
+fn strip_utf8_bom(bytes: &[u8]) -> &[u8] {
+    bytes.strip_prefix(UTF8_BOM).unwrap_or(bytes)
+}
+
 fn parse_manifest_bytes(bytes: &[u8]) -> HashMap<String, BuiltinAssistant> {
-    match serde_json::from_slice::<Value>(bytes).and_then(parse_manifest_value) {
-        Ok(m) => m.assistants.into_iter().map(|a| (a.id.clone(), a)).collect(),
+    match serde_json::from_slice::<Value>(strip_utf8_bom(bytes)).and_then(parse_manifest_value) {
+        Ok(m) => {
+            let assistants: HashMap<String, BuiltinAssistant> =
+                m.assistants.into_iter().map(|a| (a.id.clone(), a)).collect();
+            // A corrupt embedded manifest degrades to an empty catalog at
+            // runtime instead of failing, so tests are the only place it can
+            // be caught before it ships.
+            debug_assert!(!assistants.is_empty(), "embedded built-in manifest parsed to an empty catalog");
+            assistants
+        }
         Err(e) => {
             error!("Embedded built-in manifest parse failed: {e}");
+            debug_assert!(false, "embedded built-in manifest failed to parse: {e}");
             HashMap::new()
         }
     }
 }
 
 fn parse_manifest_str(content: &str) -> HashMap<String, BuiltinAssistant> {
+    let content = content.strip_prefix('\u{feff}').unwrap_or(content);
     match serde_json::from_str::<Value>(content).and_then(parse_manifest_value) {
         Ok(m) => m.assistants.into_iter().map(|a| (a.id.clone(), a)).collect(),
         Err(e) => {
@@ -298,6 +317,66 @@ mod tests {
         // Sanity-check a couple of known ids from the committed manifest.
         assert!(reg.has("word-creator"));
         assert!(reg.has("cowork"));
+    }
+
+    // The shipped manifest was once rewritten through PowerShell, which added
+    // a UTF-8 BOM and re-encoded 293 strings as cp1252 mojibake. serde_json
+    // rejected the file, the catalog loaded empty, and the app shipped with no
+    // built-in assistants at all. These two tests close that hole.
+
+    #[test]
+    fn embedded_manifest_is_clean_utf8_without_bom() {
+        let bytes = BUILTIN_ASSETS
+            .get_file("assistants.json")
+            .expect("embedded manifest must exist")
+            .contents();
+        assert!(!bytes.starts_with(UTF8_BOM), "embedded manifest must not start with a UTF-8 BOM");
+
+        let text = std::str::from_utf8(bytes).expect("embedded manifest must be valid utf-8");
+        assert!(
+            !text.contains('\u{fffd}'),
+            "embedded manifest contains U+FFFD; characters were lost to a bad decode"
+        );
+        assert!(
+            find_mojibake(text).is_none(),
+            "embedded manifest looks like UTF-8 round-tripped through cp1252; \
+             it was likely rewritten by a PowerShell text cmdlet"
+        );
+    }
+
+    /// Mirrors scripts/check-encoding.js. A distinctive lead character followed
+    /// by a continuation, or two stacked symbols - either way a pair, so that
+    /// ordinary accented prose (where an ASCII character follows) is not
+    /// mistaken for damage.
+    fn find_mojibake(text: &str) -> Option<usize> {
+        // cp1252 renderings of bytes 0x80-0x9F.
+        const CP1252_PUNCTUATION: [char; 27] = [
+            '\u{20ac}', '\u{201a}', '\u{192}', '\u{201e}', '\u{2026}', '\u{2020}', '\u{2021}', '\u{2c6}', '\u{2030}', '\u{160}', '\u{2039}', '\u{152}', '\u{17d}', '\u{2018}', '\u{2019}', '\u{201c}', '\u{201d}',
+            '\u{2022}', '\u{2013}', '\u{2014}', '\u{2dc}', '\u{2122}', '\u{161}', '\u{203a}', '\u{153}', '\u{17e}', '\u{178}',
+        ];
+        // Latin-1 leads that do not occur as ordinary lowercase prose.
+        const LEADS: [char; 10] = ['\u{c2}', '\u{c3}', '\u{c4}', '\u{c5}', '\u{ce}', '\u{cf}', '\u{d0}', '\u{d1}', '\u{e2}', '\u{f0}'];
+
+        let is_continuation = |c: char| ('\u{80}'..='\u{bf}').contains(&c) || CP1252_PUNCTUATION.contains(&c);
+        // 0xA0 is excluded: French writes a non-breaking space in real text.
+        let is_symbol = |c: char| ('\u{a1}'..='\u{bf}').contains(&c);
+
+        let chars: Vec<(usize, char)> = text.char_indices().collect();
+        chars.windows(2).find_map(|pair| {
+            let (index, current) = pair[0];
+            let (_, next) = pair[1];
+            let looks_mangled = (LEADS.contains(&current) && is_continuation(next)) || (is_symbol(current) && is_symbol(next));
+            looks_mangled.then_some(index)
+        })
+    }
+
+    #[test]
+    fn parse_manifest_bytes_tolerates_a_utf8_bom() {
+        let body = br#"{"assistants":[{"id":"bom-test","name":"BOM Test","agent_ref":"aionrs"}]}"#;
+        let mut with_bom = UTF8_BOM.to_vec();
+        with_bom.extend_from_slice(body);
+        let parsed = parse_manifest_bytes(&with_bom);
+        assert!(parsed.contains_key("bom-test"), "a BOM must not empty the catalog");
     }
 
     #[test]

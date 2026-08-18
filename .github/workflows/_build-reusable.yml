@@ -78,6 +78,11 @@ jobs:
         with:
           node-version: 22
 
+      # A UTF-8 BOM or cp1252 mojibake in a shipped asset silently empties the
+      # catalog that parses it. Catch it before anything is built.
+      - name: Check file encodings
+        run: node scripts/check-encoding.js
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust-target }}
@@ -86,6 +91,13 @@ jobs:
         with:
           workspaces: the-remaa/AionCore -> target
           key: ${{ matrix.name }}
+
+      # Guards the embedded builtin-assistant manifest: a corrupt manifest
+      # parses to an empty catalog at runtime instead of failing, so the only
+      # place it surfaces is this test.
+      - name: Verify engine assets
+        working-directory: the-remaa/AionCore
+        run: cargo test -p aionui-assistant builtin
 
       # The engine is built from the vendored source so every platform gets the
       # Pavii-branded binary (identity, prompts, embedded version info).

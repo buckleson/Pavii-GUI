@@ -69,6 +69,17 @@ repos:
         files: \.(ts|tsx|js|jsx|json|css|md|yaml|yml|toml)$
         pass_filenames: true
 
+  # File encoding validation (UTF-8 BOM, cp1252 mojibake, lost characters)
+  # Windows PowerShell text cmdlets corrupt UTF-8 assets this way; two shipped
+  # regressions came from it. See scripts/check-encoding.js.
+  - repo: local
+    hooks:
+      - id: encoding-check
+        name: Encoding Check
+        entry: node scripts/check-encoding.js
+        language: system
+        pass_filenames: true
+
   # i18n translation files validation
   - repo: local
     hooks:
