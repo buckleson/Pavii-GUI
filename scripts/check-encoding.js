@@ -46,6 +46,10 @@ const ALLOWLIST = [
     prefix: 'sentry-feedback-resolutions/',
     reason: 'Bug notes quote GBK-mangled UI strings as the evidence for the bug they describe.',
   },
+  {
+    prefix: 'tests/unit/scripts/checkEncoding.test.ts',
+    reason: 'Fixtures for this checker must contain the byte sequences it rejects.',
+  },
 ];
 
 const BINARY_EXTENSIONS =

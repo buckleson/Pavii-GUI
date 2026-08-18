@@ -272,7 +272,6 @@ Pavii.Ai önceden tanımlanmış yeteneklere sahip **21 profesyonel asistan** i�
 - **📣 Sosyal İş Yayıncısı** — İş ilanı ve yayınlama
 - **🦞 moltbook** — Sıfır dağıtım AI Agent sosyal ağı
 - **📈 Beautiful Mermaid** — Akış şemaları, sıra diyagramları ve daha fazlası
-- **🔧 OpenClaw Kurulumu** — OpenClaw entegrasyonu için kurulum ve yapılandırma asistanı
 - **📖 Hikaye Rol Oynama** — Karakter kartları ve dünya bilgisi ile sürükleyici hikaye rol oynama (SillyTavern uyumlu)
 
 - **🧭 Your Pavii** — Pavii.Ai içinde ürün rehberliği, kurulum yardımı ve sorun giderme

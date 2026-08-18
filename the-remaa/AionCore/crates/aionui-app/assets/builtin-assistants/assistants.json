@@ -484,62 +484,6 @@
       "models": []
     },
     {
-      "id": "openclaw-setup",
-      "sort_order": 170,
-      "default_enabled": false,
-      "name": "OpenClaw Setup Expert",
-      "name_i18n": {
-        "en-US": "OpenClaw Setup Expert",
-        "zh-CN": "OpenClaw 部署专家",
-        "ru-RU": "Эксперт по настройке OpenClaw",
-        "uk-UA": "Експерт з налаштування OpenClaw"
-      },
-      "description": "Expert guide for installing, deploying, configuring, and troubleshooting OpenClaw. Proactively helps with setup, diagnoses issues, and provides security best practices.",
-      "description_i18n": {
-        "en-US": "Expert guide for installing, deploying, configuring, and troubleshooting OpenClaw. Proactively helps with setup, diagnoses issues, and provides security best practices.",
-        "zh-CN": "OpenClaw 安装、部署、配置和故障排查专家。主动协助设置、诊断问题并提供安全最佳实践。",
-        "ru-RU": "Эксперт по установке, развёртыванию, настройке и устранению неполадок OpenClaw. Помогает пройти настройку, диагностирует проблемы и подсказывает безопасные практики.",
-        "uk-UA": "Експертний посібник зі встановлення, розгортання, налаштування та усунення несправностей OpenClaw. Допомагає з налаштуванням та безпекою."
-      },
-      "avatar": "avatars/openclaw-setup.jpg",
-      "agent_ref": "aionrs",
-      "enabled_skills": [
-        "openclaw-setup",
-        "aionui-webui-setup"
-      ],
-      "custom_skill_names": [],
-      "disabled_builtin_skills": [],
-      "rule_file": "rules/openclaw-setup.{locale}.md",
-      "prompts": [
-        "Help me install OpenClaw step by step",
-        "My OpenClaw isn't working, please diagnose the issue",
-        "Configure Telegram channel for OpenClaw integration"
-      ],
-      "prompts_i18n": {
-        "en-US": [
-          "Help me install OpenClaw step by step",
-          "My OpenClaw isn't working, please diagnose the issue",
-          "Configure Telegram channel for OpenClaw integration"
-        ],
-        "zh-CN": [
-          "帮我一步步安装 OpenClaw",
-          "我的 OpenClaw 出问题了，请帮我诊断",
-          "为 OpenClaw 配置 Telegram 渠道"
-        ],
-        "ru-RU": [
-          "Помоги мне установить OpenClaw пошагово",
-          "Мой OpenClaw не работает, пожалуйста, диагностируй проблему",
-          "Настрой Telegram-канал для интеграции с OpenClaw"
-        ],
-        "uk-UA": [
-          "Допоможи мені встановити OpenClaw крок за кроком",
-          "Мій OpenClaw не працює, будь ласка, діагностуй проблему",
-          "Налаштувати канал Telegram для інтеграції з OpenClaw"
-        ]
-      },
-      "models": []
-    },
-    {
       "id": "cowork",
       "sort_order": 160,
       "default_enabled": false,
@@ -1091,6 +1035,165 @@
         ]
       },
       "models": []
+    },
+    {
+      "id": "chief-of-staff",
+      "sort_order": 210,
+      "default_enabled": false,
+      "name": "Chief of Staff",
+      "name_i18n": {
+        "en-US": "Chief of Staff",
+        "zh-CN": "幕僚长",
+        "ru-RU": "Личный помощник руководителя",
+        "uk-UA": "Особистий помічник керівника"
+      },
+      "description": "Runs your week: turns scattered inputs into a ranked plan, prepares you for meetings, and tracks decisions and follow-ups.",
+      "description_i18n": {
+        "en-US": "Runs your week: turns scattered inputs into a ranked plan, prepares you for meetings, and tracks decisions and follow-ups.",
+        "zh-CN": "管理你的一周：把零散的信息整理成排序好的计划，帮你做会议准备，并跟踪决策与待办事项。",
+        "ru-RU": "Ведёт вашу неделю: превращает разрозненные вводные в ранжированный план, готовит к встречам и отслеживает решения и задачи.",
+        "uk-UA": "Веде ваш тиждень: перетворює розрізнені вхідні дані на ранжований план, готує до зустрічей та відстежує рішення й завдання."
+      },
+      "avatar": "🧭",
+      "agent_ref": "aionrs",
+      "rule_file": "rules/chief-of-staff.{locale}.md",
+      "prompts": [
+        "Plan my week from this pile of notes and emails",
+        "Prepare me for tomorrow's meeting and draft an agenda",
+        "What did I decide last month, and what is still open?"
+      ],
+      "prompts_i18n": {
+        "en-US": [
+          "Plan my week from this pile of notes and emails",
+          "Prepare me for tomorrow's meeting and draft an agenda",
+          "What did I decide last month, and what is still open?"
+        ],
+        "zh-CN": [
+          "根据这些笔记和邮件帮我制定本周计划",
+          "帮我准备明天的会议并起草议程",
+          "我上个月做了哪些决定？还有哪些未完成？"
+        ],
+        "ru-RU": [
+          "Спланируй мою неделю по этим заметкам и письмам",
+          "Подготовь меня к завтрашней встрече и составь повестку",
+          "Какие решения я принял за месяц и что ещё открыто?"
+        ],
+        "uk-UA": [
+          "Сплануй мій тиждень за цими нотатками та листами",
+          "Підготуй мене до завтрашньої зустрічі та склади порядок денний",
+          "Які рішення я ухвалив за місяць і що ще відкрите?"
+        ]
+      },
+      "models": [],
+      "enabled_skills": [],
+      "custom_skill_names": [],
+      "disabled_builtin_skills": []
+    },
+    {
+      "id": "tutor",
+      "sort_order": 220,
+      "default_enabled": false,
+      "name": "Tutor",
+      "name_i18n": {
+        "en-US": "Tutor",
+        "zh-CN": "私人导师",
+        "ru-RU": "Репетитор",
+        "uk-UA": "Репетитор"
+      },
+      "description": "Teaches any subject at your level: explains from first principles, builds a study plan, and quizzes you until it sticks.",
+      "description_i18n": {
+        "en-US": "Teaches any subject at your level: explains from first principles, builds a study plan, and quizzes you until it sticks.",
+        "zh-CN": "按你的水平教任何学科：从基本原理讲起，制定学习计划，并不断提问直到你真正掌握。",
+        "ru-RU": "Объясняет любой предмет на вашем уровне: от первых принципов, с планом занятий и проверкой знаний.",
+        "uk-UA": "Пояснює будь-який предмет на вашому рівні: від перших принципів, із планом занять та перевіркою знань."
+      },
+      "avatar": "🎓",
+      "agent_ref": "aionrs",
+      "rule_file": "rules/tutor.{locale}.md",
+      "prompts": [
+        "Explain this topic to me from scratch, then test me",
+        "Build a 4-week study plan for this exam",
+        "I got this question wrong - show me where my thinking broke"
+      ],
+      "prompts_i18n": {
+        "en-US": [
+          "Explain this topic to me from scratch, then test me",
+          "Build a 4-week study plan for this exam",
+          "I got this question wrong - show me where my thinking broke"
+        ],
+        "zh-CN": [
+          "从零开始给我讲解这个主题，然后考我",
+          "为这场考试制定一个四周学习计划",
+          "这道题我做错了，告诉我思路错在哪里"
+        ],
+        "ru-RU": [
+          "Объясни эту тему с нуля, а потом проверь меня",
+          "Составь план подготовки к экзамену на 4 недели",
+          "Я ошибся в этой задаче - покажи, где сломалась логика"
+        ],
+        "uk-UA": [
+          "Поясни цю тему з нуля, а потім перевір мене",
+          "Склади план підготовки до іспиту на 4 тижні",
+          "Я помилився в цій задачі - покажи, де зламалася логіка"
+        ]
+      },
+      "models": [],
+      "enabled_skills": [],
+      "custom_skill_names": [],
+      "disabled_builtin_skills": []
+    },
+    {
+      "id": "research-analyst",
+      "sort_order": 230,
+      "default_enabled": false,
+      "name": "Research Analyst",
+      "name_i18n": {
+        "en-US": "Research Analyst",
+        "zh-CN": "研究分析师",
+        "ru-RU": "Аналитик-исследователь",
+        "uk-UA": "Аналітик-дослідник"
+      },
+      "description": "Investigates a question end to end: gathers sources, weighs the evidence, separates fact from claim, and delivers a brief you can cite.",
+      "description_i18n": {
+        "en-US": "Investigates a question end to end: gathers sources, weighs the evidence, separates fact from claim, and delivers a brief you can cite.",
+        "zh-CN": "完整调查一个问题：收集资料、权衡证据、区分事实与主张，并交付可引用的简报。",
+        "ru-RU": "Полностью изучает вопрос: собирает источники, взвешивает доказательства, отделяет факты от утверждений и готовит справку со ссылками.",
+        "uk-UA": "Повністю вивчає питання: збирає джерела, зважує докази, відокремлює факти від тверджень і готує довідку з посиланнями."
+      },
+      "avatar": "🔍",
+      "agent_ref": "aionrs",
+      "rule_file": "rules/research-analyst.{locale}.md",
+      "prompts": [
+        "Research this question and give me a sourced brief",
+        "Compare these options and tell me which evidence is weak",
+        "Fact-check this article and flag what it cannot support"
+      ],
+      "prompts_i18n": {
+        "en-US": [
+          "Research this question and give me a sourced brief",
+          "Compare these options and tell me which evidence is weak",
+          "Fact-check this article and flag what it cannot support"
+        ],
+        "zh-CN": [
+          "调查这个问题，给我一份带出处的简报",
+          "对比这几个方案，并指出哪些证据较弱",
+          "核实这篇文章，标出无法支撑的内容"
+        ],
+        "ru-RU": [
+          "Исследуй этот вопрос и дай справку со ссылками",
+          "Сравни эти варианты и скажи, где доказательства слабые",
+          "Проверь эту статью и отметь неподтверждённое"
+        ],
+        "uk-UA": [
+          "Досліди це питання й дай довідку з посиланнями",
+          "Порівняй ці варіанти й скажи, де докази слабкі",
+          "Перевір цю статтю й познач непідтверджене"
+        ]
+      },
+      "models": [],
+      "enabled_skills": [],
+      "custom_skill_names": [],
+      "disabled_builtin_skills": []
     }
   ]
 }

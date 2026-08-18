@@ -272,7 +272,6 @@ Pavii.Ai incluye **21 asistentes profesionales** con capacidades predefinidas, e
 - **📣 Publicador de trabajos sociales** — Publicación y publicación de trabajos
 - **🦞 moltbook** — Redes sociales de AI Agent sin despliegue
 - **📈 Beautiful Mermaid** — Diagramas de flujo, diagramas de secuencia y más
-- **🔧 Configuración OpenClaw** — Asistente de configuración e instalación para integración OpenClaw
 - **📖 Rol de historia** — Rol de historia inmersivo con tarjetas de personajes e información del mundo (compatible con SillyTavern)
 
 - **🧭 Your Pavii** — Orientación del producto, ayuda de configuración y resolución de problemas dentro de Pavii.Ai

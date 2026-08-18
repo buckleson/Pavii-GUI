@@ -275,7 +275,6 @@ Pavii.Ai 内置 **21 个专业助手**，每个都有独特能力，还能通过
 - **📣 社交招聘发布** — 帮你发布招聘信息
 - **🦞 moltbook** — 零部署 AI Agent 社交网络
 - **📈 Beautiful Mermaid** — 流程图、时序图等
-- **🔧 OpenClaw 设置** — OpenClaw 集成的设置和配置助手
 - **📖 故事角色扮演** — 沉浸式故事角色扮演，支持角色卡和世界信息（兼容 SillyTavern）
 
 - **🧭 Your Pavii** — 在 Pavii.Ai 内提供产品使用指导、配置帮助和故障排查
