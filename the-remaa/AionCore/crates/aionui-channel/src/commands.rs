@@ -37,7 +37,8 @@ fn normalize(text: &str) -> Option<String> {
 pub fn resolve_command(text: &str) -> Option<CommandAction> {
     let name = normalize(text)?;
     let (category, action) = match name.as_str() {
-        "sessions" | "list" => (ActionCategory::System, "session.list"),
+        // "/session" singular is what people actually type.
+        "sessions" | "session" | "list" => (ActionCategory::System, "session.list"),
         "status" => (ActionCategory::System, "session.status"),
         "new" => (ActionCategory::System, "session.new"),
         "help" => (ActionCategory::System, "help.show"),
@@ -66,6 +67,12 @@ mod tests {
     #[test]
     fn accepts_list_as_an_alias_for_sessions() {
         assert_eq!(resolve_command("/list").unwrap().action, "session.list");
+    }
+
+    #[test]
+    fn accepts_the_singular_session() {
+        // Observed in real use: people type "/session", not "/sessions".
+        assert_eq!(resolve_command("/session").unwrap().action, "session.list");
     }
 
     #[test]
