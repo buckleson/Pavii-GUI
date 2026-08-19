@@ -16,42 +16,20 @@ export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 /**
  * Normalize a language code to a supported BCP 47 tag.
- * e.g. 'zh' → 'zh-CN', 'ja_JP' → 'ja-JP'
+ *
+ * The app ships English only, so everything collapses to `DEFAULT_LANGUAGE`.
+ * This is the single point every entry path goes through - OS locale, a
+ * preference stored by an older multilingual build, and the WebUI hint - so
+ * keeping it total is what guarantees the UI is never half-translated.
+ *
+ * Assistants still reply in whatever language the user writes in; that is model
+ * behaviour and has nothing to do with this.
  */
 export function normalizeLanguageCode(language: string): SupportedLanguage {
   const normalized = language.replace(/_/g, '-');
-
-  if (SUPPORTED_LANGUAGES.includes(normalized as SupportedLanguage)) {
-    return normalized as SupportedLanguage;
-  }
-
-  const langOnly = normalized.toLowerCase().split('-')[0];
-  switch (langOnly) {
-    case 'zh':
-      return 'zh-CN';
-    case 'ja':
-      return 'ja-JP';
-    case 'ko':
-      return 'ko-KR';
-    case 'tr':
-      return 'tr-TR';
-    case 'ru':
-      return 'ru-RU';
-    case 'uk':
-      return 'uk-UA';
-    case 'pt':
-      return 'pt-BR';
-    case 'de':
-      return 'de-DE';
-    case 'es':
-      return 'es-ES';
-    case 'fr':
-      return 'fr-FR';
-    case 'fa':
-      return 'fa-IR';
-    default:
-      return DEFAULT_LANGUAGE;
-  }
+  return SUPPORTED_LANGUAGES.includes(normalized as SupportedLanguage)
+    ? (normalized as SupportedLanguage)
+    : DEFAULT_LANGUAGE;
 }
 
 export function isPlainObject(value: unknown): value is Record<string, unknown> {

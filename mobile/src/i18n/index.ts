@@ -1,29 +1,18 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import * as Localization from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import enUS from './locales/en-US.json';
-import zhCN from './locales/zh-CN.json';
-import ruRU from './locales/ru-RU.json';
-import deDE from './locales/de-DE.json';
 
 const LANGUAGE_KEY = 'aionui_language';
 
+// The app ships English only. Assistants still reply in whatever language the
+// user writes in - that is model behaviour, not app chrome.
 const resources = {
   'en-US': { translation: enUS },
-  'zh-CN': { translation: zhCN },
-  'ru-RU': { translation: ruRU },
-  'de-DE': { translation: deDE },
 };
 
-const detectDeviceLanguage = (): string => {
-  const deviceLocale = Localization.getLocales()[0]?.languageTag || 'en';
-  if (deviceLocale.startsWith('zh')) return 'zh-CN';
-  if (deviceLocale.startsWith('ru')) return 'ru-RU';
-  if (deviceLocale.startsWith('de')) return 'de-DE';
-  return 'en-US';
-};
+const detectDeviceLanguage = (): string => 'en-US';
 
 const getInitialLanguage = async (): Promise<string> => {
   try {

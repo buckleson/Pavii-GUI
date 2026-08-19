@@ -59,17 +59,6 @@ describe('backend startup copy — completeness (AC-6)', () => {
 });
 
 describe('backend startup copy — no misleading reinstall/antivirus wording (AC-4/AC-5)', () => {
-  it('zh-CN pendingSlow and exited descriptions avoid the reinstall / antivirus / missing-resource phrases', () => {
-    const backendStartup = getBackendStartup('zh-CN');
-    const forbidden = ['缺少必要的本地资源', '请下载并重新安装', '重新安装', '重装', '杀毒软件', '隔离'];
-
-    for (const description of [backendStartup.pendingSlow.description, backendStartup.exited.description]) {
-      for (const phrase of forbidden) {
-        expect(description.includes(phrase), `unexpected phrase "${phrase}" in: ${description}`).toBe(false);
-      }
-    }
-  });
-
   it('en-US pendingSlow and exited descriptions avoid reinstall / antivirus wording', () => {
     const backendStartup = getBackendStartup('en-US');
     const forbidden = ['reinstall', 'antivirus', 'quarantine', 'missing required local resources'];
@@ -82,9 +71,9 @@ describe('backend startup copy — no misleading reinstall/antivirus wording (AC
     }
   });
 
-  it('regression: zh-CN incompleteInstallation still keeps the reinstall guidance', () => {
-    const backendStartup = getBackendStartup('zh-CN');
-    expect(backendStartup.incompleteInstallation.description).toContain('重新安装');
+  it('regression: incompleteInstallation still keeps the reinstall guidance', () => {
+    const backendStartup = getBackendStartup('en-US');
+    expect(backendStartup.incompleteInstallation.description.toLowerCase()).toContain('reinstall');
   });
 });
 

@@ -55,7 +55,6 @@ Requirements: Windows 10+, macOS 12+, or a modern Linux desktop - 4 GB RAM - ~1 
 - **Scheduled automation** for recurring jobs
 - **Desktop app + WebUI** — reach your workspace from your phone or another machine
 - **Channels** — talk to your assistant from Telegram, Slack or Discord
-- **13 languages** out of the box
 
 ## Privacy
 

@@ -9,36 +9,20 @@ import { normalizeLanguageCode, DEFAULT_LANGUAGE } from '@/common/config/i18n';
 
 describe('i18n', () => {
   describe('normalizeLanguageCode', () => {
-    it('passes through exact supported tags', () => {
+    it('passes through the one supported tag', () => {
       expect(normalizeLanguageCode('en-US')).toBe('en-US');
-      expect(normalizeLanguageCode('zh-CN')).toBe('zh-CN');
-      expect(normalizeLanguageCode('de-DE')).toBe('de-DE');
-      expect(normalizeLanguageCode('fa-IR')).toBe('fa-IR');
     });
 
-    it('normalizes underscores to hyphens', () => {
-      expect(normalizeLanguageCode('de_DE')).toBe('de-DE');
-      expect(normalizeLanguageCode('fa_IR')).toBe('fa-IR');
-      expect(normalizeLanguageCode('pt_BR')).toBe('pt-BR');
+    it('normalizes underscores to hyphens before matching', () => {
+      expect(normalizeLanguageCode('en_US')).toBe('en-US');
     });
 
-    it('resolves base language codes to their supported region', () => {
-      expect(normalizeLanguageCode('zh')).toBe('zh-CN');
-      expect(normalizeLanguageCode('ja')).toBe('ja-JP');
-      expect(normalizeLanguageCode('ko')).toBe('ko-KR');
-      expect(normalizeLanguageCode('tr')).toBe('tr-TR');
-      expect(normalizeLanguageCode('ru')).toBe('ru-RU');
-      expect(normalizeLanguageCode('uk')).toBe('uk-UA');
-      expect(normalizeLanguageCode('pt')).toBe('pt-BR');
-      expect(normalizeLanguageCode('de')).toBe('de-DE');
-      expect(normalizeLanguageCode('es')).toBe('es-ES');
-      expect(normalizeLanguageCode('fr')).toBe('fr-FR');
-      expect(normalizeLanguageCode('fa')).toBe('fa-IR');
-    });
-
-    it('resolves German regional variants to de-DE', () => {
-      expect(normalizeLanguageCode('de-AT')).toBe('de-DE');
-      expect(normalizeLanguageCode('de-CH')).toBe('de-DE');
+    it('collapses every other language to English', () => {
+      // The app ships English-only chrome. Assistants still reply in whatever
+      // language the user writes in; that is model behaviour, not this.
+      for (const language of ['zh-CN', 'zh', 'ja-JP', 'ja', 'de-DE', 'de-AT', 'pt_BR', 'fa-IR', 'ru', 'fr']) {
+        expect(normalizeLanguageCode(language), language).toBe('en-US');
+      }
     });
 
     it('falls back to the default language for unsupported codes', () => {

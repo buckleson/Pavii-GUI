@@ -9,7 +9,6 @@ import type { IGpuStatus, IStartOnBootStatus } from '@/common/adapter/ipcBridge'
 import { configService } from '@/common/config/configService';
 import AionScrollArea from '@/renderer/components/base/AionScrollArea';
 import FeedbackButton from '@/renderer/components/base/FeedbackButton';
-import LanguageSwitcher from '@/renderer/components/settings/LanguageSwitcher';
 import { getClientBusinessSetting, setClientBusinessSetting } from '@/renderer/services/clientBusinessSettings';
 import {
   DEFAULT_TEXT_PREVIEW_LIMIT_MB,
@@ -338,7 +337,6 @@ const SystemModalContent: React.FC = () => {
   }, [systemInfo, form]);
 
   const preferenceItems = [
-    { key: 'language', label: t('settings.language'), component: <LanguageSwitcher /> },
     {
       key: 'startOnBoot',
       label: t('settings.startOnBoot'),

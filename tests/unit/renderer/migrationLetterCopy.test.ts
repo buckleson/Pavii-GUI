@@ -55,10 +55,10 @@ const locales = fs
   .toSorted();
 
 describe('migration letter data-handover copy', () => {
-  it('ships every supported locale', () => {
-    expect(locales.length).toBeGreaterThanOrEqual(13);
-    expect(locales).toContain('zh-CN');
-    expect(locales).toContain('en-US');
+  it('ships the English catalogue and nothing else', () => {
+    // The app is English-only; assistants still reply in the user's language,
+    // but the chrome ships one locale.
+    expect(locales).toEqual(['en-US']);
   });
 
   it.each(locales)('%s states the migration caveat in promise2 and noRush', (locale) => {
@@ -77,12 +77,6 @@ describe('migration letter data-handover copy', () => {
     expect(letter.noRush.length, `${locale} noRush looks like it lost the sign-in condition`).toBeGreaterThanOrEqual(
       min.noRush
     );
-  });
-
-  it('zh-CN names the migration as one-time and conditions the fallback on sign-in', () => {
-    const letter = readLetter('zh-CN');
-    expect(letter.promise2).toContain('一次性');
-    expect(letter.noRush).toContain('首次登录');
   });
 
   it('en-US names the migration as one-time and conditions the fallback on sign-in', () => {
