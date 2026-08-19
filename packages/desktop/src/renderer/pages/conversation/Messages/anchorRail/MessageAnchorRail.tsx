@@ -197,9 +197,10 @@ const MessageAnchorRail: React.FC = () => {
     [anchors.length, scrollable, viewportHeight]
   );
 
-  // A single anchor carries no navigational value — the whole turn is already on
-  // screen — so the rail stays hidden until there is somewhere to jump to.
-  if (anchors.length < 2) return null;
+  // Shown from the very first prompt. A single tick has little to jump to, but
+  // the rail is also how you preview a turn and reach conversation search, and
+  // appearing only on the second prompt made it look like it was missing.
+  if (anchors.length === 0) return null;
 
   const activeAnchor = activeIndex === null ? undefined : anchors[activeIndex];
   // The card is positioned against the rail, so the tick's offset within the
