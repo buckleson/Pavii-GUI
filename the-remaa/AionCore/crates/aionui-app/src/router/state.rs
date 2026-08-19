@@ -636,12 +636,23 @@ pub async fn build_channel_state(
     let startup_owner_user_id = startup_channel_owner_user_id(services).await;
 
     // Build orchestrator dependencies
-    let action_executor = Arc::new(aionui_channel::action::ActionExecutor::new(
-        Arc::clone(&pairing_service),
+    // The directory backs /sessions, session attachment and /status. It spans
+    // every conversation the owner has, not only channel-created ones, so a
+    // desktop conversation can be picked up from a phone.
+    let session_directory = Arc::new(aionui_channel::session_directory::SessionDirectory::new(
+        Arc::clone(&services.conversation_repo),
         Arc::clone(&session_manager),
-        Arc::clone(&channel_settings),
-        startup_owner_user_id.clone(),
     ));
+
+    let action_executor = Arc::new(
+        aionui_channel::action::ActionExecutor::new(
+            Arc::clone(&pairing_service),
+            Arc::clone(&session_manager),
+            Arc::clone(&channel_settings),
+            startup_owner_user_id.clone(),
+        )
+        .with_session_directory(session_directory),
+    );
 
     let message_service = build_channel_message_service(services, Arc::clone(&channel_settings)).await;
 
