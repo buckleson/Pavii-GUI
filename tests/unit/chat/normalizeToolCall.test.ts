@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { IMessageAcpToolCall } from '@/common/chat/chatLib';
-import { normalizeAcpToolCall } from '@/common/chat/normalizeToolCall';
+import type { IMessageAcpToolCall, IMessageToolCall } from '@/common/chat/chatLib';
+import { normalizeAcpToolCall, normalizeToolCall } from '@/common/chat/normalizeToolCall';
 import { describe, expect, it } from 'vitest';
 
 describe('normalizeAcpToolCall', () => {
@@ -45,5 +45,23 @@ describe('normalizeAcpToolCall', () => {
     expect((normalized as { imagePath?: string } | undefined)?.imagePath).toBe(
       '/Users/test/.codex/generated_images/session/ig_test_image.png'
     );
+  });
+});
+
+describe('normalizeToolCall', () => {
+  it('ignores tool_call messages without call_id', () => {
+    const message: IMessageToolCall = {
+      id: 'msg-1',
+      conversation_id: 'conv-1',
+      type: 'tool_call',
+      content: {
+        call_id: '',
+        name: 'Glob',
+        status: 'running',
+        args: { pattern: '*.rs' },
+      },
+    };
+
+    expect(normalizeToolCall(message)).toBeUndefined();
   });
 });

@@ -2,7 +2,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resolveBinaryPath } from './binaryResolver';
+import { resolveBinaryPath } from '@/process/backend/binaryResolver';
 
 vi.mock('node:child_process', () => ({
   execSync: vi.fn(),
