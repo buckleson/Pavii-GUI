@@ -8,7 +8,7 @@ import classNames from 'classnames';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Empty, Message, Spin, Switch, Tooltip } from '@arco-design/web-react';
+import { Button, Dropdown, Empty, Menu, Message, Spin, Switch, Tooltip } from '@arco-design/web-react';
 import { useLayoutContext } from '@renderer/hooks/context/LayoutContext';
 import { useAllCronJobs } from '@renderer/pages/cron/useCronJobs';
 import { formatSchedule, formatNextRun } from '@renderer/pages/cron/cronUtils';
@@ -24,7 +24,19 @@ import { useAgentLogos } from '@renderer/utils/model/agentLogo';
 import TalkToButlerButton from '@/renderer/components/base/TalkToButlerButton';
 import { AionSearchInput } from '@/renderer/components/base';
 import SettingsPageHeader from '@/renderer/pages/settings/components/SettingsPageHeader';
-import { Attention, Robot } from '@icon-park/react';
+import { Attention, Down, Robot, Search } from '@icon-park/react';
+
+type SortKey = 'nextRun' | 'name' | 'recent';
+
+/**
+ * A job with no next run (paused, or manual-only) sorts last rather than
+ * first - otherwise "Next run" would lead with the tasks that never run.
+ */
+const compareByNextRun = (a: ICronJob, b: ICronJob): number => {
+  const left = a.state.next_run_at_ms ?? Number.POSITIVE_INFINITY;
+  const right = b.state.next_run_at_ms ?? Number.POSITIVE_INFINITY;
+  return left - right;
+};
 
 const ScheduledTasksPage: React.FC = () => {
   const layout = useLayoutContext();
@@ -38,6 +50,8 @@ const ScheduledTasksPage: React.FC = () => {
   const [activeTemplate, setActiveTemplate] = useState<TaskTemplatePrefill | undefined>(undefined);
   const [keepAwake, setKeepAwake] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<SortKey>('nextRun');
 
   useEffect(() => {
     setKeepAwake(configService.get('system.keepAwake') ?? false);
@@ -122,6 +136,24 @@ const ScheduledTasksPage: React.FC = () => {
     });
   }, [jobs, logos, normalizedSearchQuery, presetAssistants, t]);
 
+  const visibleJobs = useMemo(() => {
+    const sorted = [...filteredJobs];
+    if (sortBy === 'name') {
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === 'recent') {
+      sorted.reverse();
+    } else {
+      sorted.sort(compareByNextRun);
+    }
+    return sorted;
+  }, [filteredJobs, sortBy]);
+
+  const sortLabel = {
+    nextRun: t('cron.page.sortNextRun', { defaultValue: 'Next run' }),
+    name: t('cron.page.sortName', { defaultValue: 'Name' }),
+    recent: t('cron.page.sortRecent', { defaultValue: 'Recently added' }),
+  }[sortBy];
+
   const handleToggleEnabled = useCallback(
     async (job: ICronJob) => {
       try {
@@ -155,14 +187,41 @@ const ScheduledTasksPage: React.FC = () => {
             description={t('cron.page.description')}
             actions={
               <>
-                {!isMobile && (
-                  <AionSearchInput
-                    className='shrink-0 w-[200px] hidden md:flex'
-                    data-testid='input-search-scheduled-tasks'
-                    placeholder={t('cron.page.searchPlaceholder', { defaultValue: 'Search tasks...' })}
-                    value={searchQuery}
-                    onChange={setSearchQuery}
-                  />
+                {!isMobile &&
+                  (searchOpen ? (
+                    <AionSearchInput
+                      className='shrink-0 w-[200px] hidden md:flex'
+                      data-testid='input-search-scheduled-tasks'
+                      placeholder={t('cron.page.searchPlaceholder', { defaultValue: 'Search tasks...' })}
+                      value={searchQuery}
+                      onChange={setSearchQuery}
+                    />
+                  ) : (
+                    <Button
+                      shape='circle'
+                      data-testid='button-open-task-search'
+                      aria-label={t('cron.page.search', { defaultValue: 'Search tasks' })}
+                      icon={<Search size={15} />}
+                      onClick={() => setSearchOpen(true)}
+                    />
+                  ))}
+                {jobs.length > 0 && (
+                  <Dropdown
+                    trigger='click'
+                    droplist={
+                      <Menu onClickMenuItem={(key) => setSortBy(key as SortKey)}>
+                        <Menu.Item key='nextRun'>{t('cron.page.sortNextRun', { defaultValue: 'Next run' })}</Menu.Item>
+                        <Menu.Item key='name'>{t('cron.page.sortName', { defaultValue: 'Name' })}</Menu.Item>
+                        <Menu.Item key='recent'>{t('cron.page.sortRecent', { defaultValue: 'Recently added' })}</Menu.Item>
+                      </Menu>
+                    }
+                  >
+                    <Button data-testid='button-sort-scheduled-tasks' className='shrink-0'>
+                      <span className='text-t-tertiary'>{t('cron.page.sortBy', { defaultValue: 'Sort by' })} </span>
+                      <span className='font-600'>{sortLabel}</span>
+                      <Down size={13} className='ml-4px' />
+                    </Button>
+                  </Dropdown>
                 )}
                 <TalkToButlerButton
                   label={t('cron.page.newTask')}
@@ -220,7 +279,7 @@ const ScheduledTasksPage: React.FC = () => {
             </div>
           ) : (
             <div className='w-full'>
-              {filteredJobs.map((job, index) => {
+              {visibleJobs.map((job, index) => {
                 const agentMeta = getJobAgentMeta(job, presetAssistants, logos);
                 const isManualOnly = job.schedule.kind === 'cron' && !job.schedule.expr;
                 const hasError = job.state.last_status === 'error' || job.state.last_status === 'missed';

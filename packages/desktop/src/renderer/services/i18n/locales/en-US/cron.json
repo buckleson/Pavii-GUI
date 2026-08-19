@@ -47,7 +47,7 @@
     "newTask": "New task",
     "createViaChat": "Create via chat",
     "createManually": "Create manually",
-    "description": "Run tasks on a schedule. You can also ask Pavii.Ai in any conversation to create one for you.",
+    "description": "Run tasks on a schedule, or whenever you need them.",
     "awakeBanner": "Scheduled tasks only run while your computer is awake.",
     "keepAwake": "Keep awake",
     "keepAwakeTooltip": "When enabled, Pavii.Ai will prevent your computer from going to sleep",
@@ -136,7 +136,12 @@
       "weekdays": "Weekdays",
       "monthDay": "Day of month",
       "preview": "Generated Cron"
-    }
+    },
+    "sortBy": "Sort by",
+    "sortNextRun": "Next run",
+    "sortName": "Name",
+    "sortRecent": "Recently added",
+    "search": "Search tasks"
   },
   "pauseSuccess": "Task paused",
   "resumeSuccess": "Task resumed",
@@ -164,28 +169,33 @@
     "dailyPlan": {
       "description": "Turns today's schedule and open commitments into a ranked plan.",
       "name": "Daily plan",
-      "prompt": "Look at what is on my plate today - my schedule, open tasks and anything I flagged as unfinished. Give me a ranked plan for the day: what must happen, what can slip, and what I should drop. Keep it short enough to read in a minute, and say explicitly what you are leaving out."
+      "prompt": "Look at what is on my plate today - my schedule, open tasks and anything I flagged as unfinished. Give me a ranked plan for the day: what must happen, what can slip, and what I should drop. Keep it short enough to read in a minute, and say explicitly what you are leaving out.",
+      "preview": "Today's plan"
     },
     "growthReport": {
       "description": "Pulls key metrics and explains what changed and why.",
       "name": "Growth report",
-      "prompt": "Pull our key metrics for the past week and compare them with the week before. Tell me what moved, by how much, and your best read on why. Flag anything that looks like a data problem rather than a real change, and say where you are uncertain."
+      "prompt": "Pull our key metrics for the past week and compare them with the week before. Tell me what moved, by how much, and your best read on why. Flag anything that looks like a data problem rather than a real change, and say where you are uncertain.",
+      "preview": "Week over week"
     },
     "heading": "Start with an automation",
     "inboxSummary": {
       "description": "Summarises unread mail and lists what actually needs a reply.",
       "name": "Inbox summary",
-      "prompt": "Summarise my unread mail. Group it into what needs a reply from me, what is waiting on someone else, and what is just noise. For anything needing a reply, note who is waiting and how long they have been waiting."
+      "prompt": "Summarise my unread mail. Group it into what needs a reply from me, what is waiting on someone else, and what is just noise. For anything needing a reply, note who is waiting and how long they have been waiting.",
+      "preview": "Needs a reply"
     },
     "morningBriefing": {
       "description": "Checks the sources you follow and reports what actually changed.",
       "name": "Morning briefing",
-      "prompt": "Check the sources I follow and tell me what actually changed since yesterday.\n\nSources (replace this list before saving):\n- add a site, feed or dashboard here\n- and another\n\nLead with anything that could change a decision I make today, then anything genuinely worth knowing, and drop the rest. Give each item one line of substance rather than a headline, plus a link. If nothing meaningful changed, say so in one line instead of padding the summary."
+      "prompt": "Check the sources I follow and tell me what actually changed since yesterday.\n\nSources (replace this list before saving):\n- add a site, feed or dashboard here\n- and another\n\nLead with anything that could change a decision I make today, then anything genuinely worth knowing, and drop the rest. Give each item one line of substance rather than a headline, plus a link. If nothing meaningful changed, say so in one line instead of padding the summary.",
+      "preview": "What changed"
     },
     "projectDigest": {
       "description": "Summarises what moved this week and flags what is stalled.",
       "name": "Weekly project digest",
-      "prompt": "Review my project workspace and summarise the week: what shipped, what is in progress, and what has not moved. Call out anything that looks stalled or blocked, and name the single thing most worth attention next week."
+      "prompt": "Review my project workspace and summarise the week: what shipped, what is in progress, and what has not moved. Call out anything that looks stalled or blocked, and name the single thing most worth attention next week.",
+      "preview": "This week"
     },
     "requiresAction": "Add it in Settings -> Tools",
     "requiresAnalytics": "Needs an analytics MCP server",
@@ -194,9 +204,11 @@
     "slackCatchUp": {
       "description": "Digests overnight Slack activity and the asks pointed at you.",
       "name": "Slack catch-up",
-      "prompt": "Catch me up on Slack since I last looked. Summarise the threads that matter, and list anything directed at me that is still waiting on a response. Separate genuine asks from things I was only copied on."
+      "prompt": "Catch me up on Slack since I last looked. Summarise the threads that matter, and list anything directed at me that is still waiting on a response. Separate genuine asks from things I was only copied on.",
+      "preview": "Waiting on you"
     },
-    "subheading": "Pick one to open it prefilled, then choose your assistant and time."
+    "subheading": "Pick one to open it prefilled, then choose your assistant and time.",
+    "emptyTitle": "No scheduled tasks yet."
   },
   "trigger": {
     "runScheduledTask": "Run scheduled task: {{name}}"

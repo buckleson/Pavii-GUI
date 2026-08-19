@@ -4,12 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Card, Tag, Tooltip } from '@arco-design/web-react';
+import { Tag, Tooltip } from '@arco-design/web-react';
+import { Stopwatch, Time } from '@icon-park/react';
 import classNames from 'classnames';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { TASK_TEMPLATES, descriptionKeyOf, nameKeyOf, type TaskTemplate } from './taskTemplates';
+import { TASK_TEMPLATES, descriptionKeyOf, nameKeyOf, previewKeyOf, type TaskTemplate } from './taskTemplates';
 
 type TaskTemplateGridProps = {
   isMobile?: boolean;
@@ -17,8 +18,8 @@ type TaskTemplateGridProps = {
 };
 
 /**
- * Icon tile tints. Kept as literal rgba rather than theme tokens so the tile
- * reads the same in both themes without six new variables.
+ * Icon tile tints. Literal rgba rather than theme tokens so the tile reads the
+ * same in both themes without six new variables.
  */
 const ACCENT_TINT: Record<TaskTemplate['accent'], { bg: string; fg: string }> = {
   violet: { bg: 'rgba(112, 51, 255, 0.12)', fg: '#7033ff' },
@@ -29,19 +30,37 @@ const ACCENT_TINT: Record<TaskTemplate['accent'], { bg: string; fg: string }> = 
   cyan: { bg: 'rgba(20, 165, 190, 0.13)', fg: '#14a5be' },
 };
 
-/** Human-readable schedule for a template card. */
 const useScheduleLabel = (): ((template: TaskTemplate) => string) => {
   const { t } = useTranslation();
   return (template: TaskTemplate) => {
     if (template.frequency === 'weekdays') {
-      return `${t('cron.page.form.weekdays', { defaultValue: 'Weekdays' })} · ${template.time}`;
+      return `${t('cron.page.form.weekdays', { defaultValue: 'Weekdays' })} at ${template.time}`;
     }
     if (template.frequency === 'weekly') {
-      return `${template.weekday ?? ''} · ${template.time}`.trim();
+      return `Every ${template.weekday ?? ''} at ${template.time}`.replace('  ', ' ');
     }
-    return `${t('cron.page.form.daily', { defaultValue: 'Daily' })} · ${template.time}`;
+    return `Every day at ${template.time}`;
   };
 };
+
+/**
+ * Mock of what the task produces, revealed on hover. Deliberately abstract -
+ * a couple of skeleton lines under a label - because a concrete fake result
+ * would be a promise about output we cannot keep.
+ */
+const PreviewCard: React.FC<{ label: string; tint: { bg: string; fg: string } }> = ({ label, tint }) => (
+  <div className='pointer-events-none w-160px rounded-10px border border-solid border-[var(--color-border-2)] bg-fill-1 p-10px shadow-lg'>
+    <div className='mb-8px flex items-center gap-5px'>
+      <span className='h-6px w-6px shrink-0 rounded-full' style={{ background: tint.fg }} />
+      <span className='truncate text-11px font-600 text-t-primary'>{label}</span>
+    </div>
+    <div className='flex flex-col gap-5px'>
+      <span className='block h-5px w-full rounded-3px bg-fill-3' />
+      <span className='block h-5px w-4/5 rounded-3px bg-fill-3' />
+      <span className='block h-5px w-3/5 rounded-3px bg-fill-3' />
+    </div>
+  </div>
+);
 
 /**
  * Starter automations shown when no scheduled tasks exist yet. Picking one
@@ -55,45 +74,59 @@ const TaskTemplateGrid: React.FC<TaskTemplateGridProps> = ({ isMobile = false, o
 
   return (
     <div className='w-full' data-testid='task-template-grid'>
-      <div className='mb-16px'>
-        <div className='text-15px font-600 leading-22px text-t-primary'>
-          {t('cron.templates.heading', { defaultValue: 'Start with an automation' })}
-        </div>
-        <div className='mt-3px text-12px leading-18px text-t-tertiary'>
-          {t('cron.templates.subheading', {
-            defaultValue: 'Pick one to open it prefilled, then choose your assistant and time.',
-          })}
+      {/* Empty state */}
+      <div className='flex flex-col items-center py-40px'>
+        <Stopwatch size={54} className='text-t-tertiary' />
+        <div className='mt-14px text-13px text-t-tertiary'>
+          {t('cron.templates.emptyTitle', { defaultValue: 'No scheduled tasks yet.' })}
         </div>
       </div>
 
-      <div className={classNames('grid gap-10px', isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2')}>
+      {/* Divider between "nothing here" and "here is what you could do" */}
+      <div
+        aria-hidden
+        className='h-6px w-full opacity-40'
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='6' viewBox='0 0 16 6'%3E%3Cpath d='M0 3 Q 4 0 8 3 T 16 3' fill='none' stroke='%23888' stroke-width='1'/%3E%3C/svg%3E\")",
+          backgroundRepeat: 'repeat-x',
+        }}
+      />
+
+      <div className={classNames('mt-28px grid gap-x-24px gap-y-6px', isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2')}>
         {TASK_TEMPLATES.map((template) => {
           const Icon = template.icon;
           const tint = ACCENT_TINT[template.accent];
           return (
-            <Card
+            <div
               key={template.id}
-              hoverable
-              size='small'
+              role='button'
+              tabIndex={0}
               data-testid={`task-template-${template.id}`}
               onClick={() => onPick(template)}
-              className='group h-full cursor-pointer rounded-14px'
-              bodyStyle={{ padding: 14, height: '100%' }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onPick(template);
+                }
+              }}
+              className='group relative cursor-pointer overflow-hidden rounded-12px p-12px transition-colors hover:bg-fill-2'
             >
-              <div className='flex h-full items-start gap-12px'>
+              <div className='flex items-start gap-12px'>
                 <div
-                  className='mt-1px flex h-32px w-32px shrink-0 items-center justify-center rounded-9px'
+                  className='mt-2px flex h-32px w-32px shrink-0 items-center justify-center rounded-9px'
                   style={{ background: tint.bg, color: tint.fg }}
                 >
                   <Icon size={17} />
                 </div>
 
-                <div className='flex min-w-0 flex-1 flex-col gap-4px'>
-                  <div className='truncate text-13px font-600 leading-20px text-t-primary'>{t(nameKeyOf(template))}</div>
-                  <div className='text-12px leading-17px text-t-secondary'>{t(descriptionKeyOf(template))}</div>
+                <div className='flex min-w-0 flex-1 flex-col gap-3px'>
+                  <div className='text-13px font-600 leading-20px text-t-primary'>{t(nameKeyOf(template))}</div>
+                  <div className='text-12px leading-18px text-t-secondary'>{t(descriptionKeyOf(template))}</div>
 
-                  <div className='mt-6px flex flex-wrap items-center gap-6px'>
-                    <span className='rounded-5px bg-fill-2 px-6px py-2px text-11px leading-16px text-t-tertiary'>
+                  <div className='mt-5px flex flex-wrap items-center gap-8px'>
+                    <span className='flex items-center gap-5px text-11px leading-16px text-t-tertiary'>
+                      <Time size={12} />
                       {scheduleLabel(template)}
                     </span>
 
@@ -105,8 +138,8 @@ const TaskTemplateGrid: React.FC<TaskTemplateGridProps> = ({ isMobile = false, o
                           data-testid={`task-template-${template.id}-requires`}
                           className='!text-11px !leading-16px cursor-pointer'
                           onClick={(event: React.MouseEvent) => {
-                            // The card opens the dialog; this goes somewhere
-                            // else, so it must not do both.
+                            // The row opens the dialog; this goes elsewhere, so
+                            // it must not do both.
                             event.stopPropagation();
                             navigate('/settings/tools');
                           }}
@@ -118,7 +151,16 @@ const TaskTemplateGrid: React.FC<TaskTemplateGridProps> = ({ isMobile = false, o
                   </div>
                 </div>
               </div>
-            </Card>
+
+              {/* Peeks in from the right edge on hover, clipped by the row. */}
+              <div
+                aria-hidden
+                data-testid={`task-template-${template.id}-preview`}
+                className='absolute bottom-8px right-0 translate-x-full opacity-0 transition-all duration-200 ease-out group-hover:translate-x-8px group-hover:opacity-100'
+              >
+                <PreviewCard label={t(previewKeyOf(template))} tint={tint} />
+              </div>
+            </div>
           );
         })}
       </div>

@@ -43,6 +43,8 @@ const key = (id: string, field: string): string => `cron.templates.${id}.${field
 export const nameKeyOf = (template: TaskTemplate): string => key(template.id, 'name');
 export const descriptionKeyOf = (template: TaskTemplate): string => key(template.id, 'description');
 export const promptKeyOf = (template: TaskTemplate): string => key(template.id, 'prompt');
+/** Short label on the preview card that peeks out when a row is hovered. */
+export const previewKeyOf = (template: TaskTemplate): string => key(template.id, 'preview');
 
 export const TASK_TEMPLATES: readonly TaskTemplate[] = [
   {
