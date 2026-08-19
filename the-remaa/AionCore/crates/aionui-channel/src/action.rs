@@ -3,11 +3,13 @@ use std::sync::Arc;
 use tracing::{debug, info, warn};
 
 use crate::channel_settings::ChannelSettingsService;
+use crate::commands::resolve_command;
 use crate::error::ChannelError;
 use crate::pairing::PairingService;
 use crate::session::SessionManager;
+use crate::session_directory::{SessionDirectory, page_buttons, page_text};
 use crate::types::{
-    ActionBehavior, ActionButton, ActionCategory, ActionResponse, UnifiedAction, UnifiedIncomingMessage,
+    ActionBehavior, ActionButton, ActionCategory, ActionContext, ActionResponse, UnifiedAction, UnifiedIncomingMessage,
 };
 
 /// Result of processing an incoming message.
@@ -42,6 +44,11 @@ pub struct ActionExecutor {
     session_mgr: Arc<SessionManager>,
     settings: Arc<ChannelSettingsService>,
     owner_user_id: Option<String>,
+    /// Set in production by `build_channel_state`. Optional so the many
+    /// constructor call sites that never exercise session listing stay simple;
+    /// the session actions report plainly when it is absent rather than
+    /// pretending there are no conversations.
+    directory: Option<Arc<SessionDirectory>>,
 }
 
 impl ActionExecutor {
@@ -56,7 +63,21 @@ impl ActionExecutor {
             session_mgr,
             settings,
             owner_user_id,
+            directory: None,
         }
+    }
+
+    /// Attach the session directory that backs `/sessions`, `/status` and
+    /// session attachment.
+    pub fn with_session_directory(mut self, directory: Arc<SessionDirectory>) -> Self {
+        self.directory = Some(directory);
+        self
+    }
+
+    fn directory(&self) -> Result<&Arc<SessionDirectory>, ChannelError> {
+        self.directory
+            .as_ref()
+            .ok_or_else(|| ChannelError::InvalidConfig("session directory is not configured".to_owned()))
     }
 
     pub fn owner_user_id(&self) -> Option<&str> {
@@ -101,7 +122,26 @@ impl ActionExecutor {
             return Ok(MessageResult::Action(response));
         }
 
-        // 3. Text message → session resolution → AI dispatch
+        // 3. Slash commands we own are handled here. Anything else falls through
+        //    to the agent, so an agent's own slash commands keep working.
+        if let Some(command) = resolve_command(&msg.content.text) {
+            let action = UnifiedAction {
+                category: command.category,
+                action: command.action,
+                params: command.params,
+                context: ActionContext {
+                    platform: msg.platform,
+                    user_id: msg.user.id.clone(),
+                    chat_id: msg.chat_id.clone(),
+                    message_id: Some(msg.id.clone()),
+                    session_id: None,
+                },
+            };
+            let response = self.route_action(owner_user_id, &action, &internal_user_id).await?;
+            return Ok(MessageResult::Action(response));
+        }
+
+        // 4. Text message → session resolution → AI dispatch
         let agent_config = self.settings.get_agent_config(owner_user_id, msg.platform).await?;
         let session = self
             .session_mgr
@@ -260,6 +300,74 @@ impl ActionExecutor {
         internal_user_id: &str,
     ) -> Result<ActionResponse, ChannelError> {
         match action.action.as_str() {
+            "session.list" => {
+                let directory = self.directory()?;
+                let agent_config = self
+                    .settings
+                    .get_agent_config(owner_user_id, action.context.platform)
+                    .await?;
+                let attached = directory
+                    .attached_conversation(
+                        owner_user_id,
+                        internal_user_id,
+                        &action.context.chat_id,
+                        &agent_config.agent_type,
+                    )
+                    .await?;
+                let cursor = action.params.as_ref().and_then(|params| params.get("cursor")).cloned();
+
+                let page = directory
+                    .list_page(owner_user_id, cursor, attached.as_ref().map(|row| row.id.as_str()))
+                    .await?;
+
+                let buttons = page_buttons(&page);
+                Ok(ActionResponse {
+                    text: Some(page_text(&page)),
+                    parse_mode: None,
+                    buttons: (!buttons.is_empty()).then_some(buttons),
+                    keyboard: None,
+                    behavior: ActionBehavior::Send,
+                    toast: None,
+                    edit_message_id: None,
+                })
+            }
+
+            "session.attach" => {
+                let directory = self.directory()?;
+                let conversation_id = action
+                    .params
+                    .as_ref()
+                    .and_then(|params| params.get("id"))
+                    .ok_or_else(|| ChannelError::InvalidConfig("session.attach requires an id".to_owned()))?;
+                let agent_config = self
+                    .settings
+                    .get_agent_config(owner_user_id, action.context.platform)
+                    .await?;
+
+                let conversation = directory
+                    .attach(
+                        owner_user_id,
+                        internal_user_id,
+                        &action.context.chat_id,
+                        &agent_config.agent_type,
+                        conversation_id,
+                    )
+                    .await?;
+
+                Ok(ActionResponse {
+                    text: Some(format!(
+                        "Attached to \"{}\". Messages in this chat now go there.",
+                        conversation.name
+                    )),
+                    parse_mode: None,
+                    buttons: None,
+                    keyboard: None,
+                    behavior: ActionBehavior::Send,
+                    toast: Some("Attached".into()),
+                    edit_message_id: None,
+                })
+            }
+
             "session.new" => {
                 let user_id = internal_user_id;
                 let chat_id = &action.context.chat_id;
@@ -302,20 +410,44 @@ impl ActionExecutor {
                     .get_or_create_session(owner_user_id, user_id, chat_id, &agent_config.agent_type, None)
                     .await?;
 
+                // Name the attached conversation when the directory is wired.
+                // Without it the status still reports the session, so callers
+                // that never configured a directory keep working.
+                let attached = match self.directory.as_ref() {
+                    Some(directory) => directory
+                        .attached_conversation(owner_user_id, user_id, chat_id, &agent_config.agent_type)
+                        .await
+                        .ok()
+                        .flatten(),
+                    None => None,
+                };
+                let attached_line = match &attached {
+                    Some(row) => format!("\nAttached to: {}", row.name),
+                    None => String::new(),
+                };
+
                 Ok(ActionResponse {
                     text: Some(format!(
-                        "Session: {}\nAgent: {}\nCreated: {}\nLast active: {}",
+                        "Session: {}\nAgent: {}{}\nCreated: {}\nLast active: {}",
                         &session.id[..8],
                         session.agent_type,
+                        attached_line,
                         session.created_at,
                         session.last_activity,
                     )),
                     parse_mode: None,
-                    buttons: Some(vec![vec![ActionButton {
-                        label: "New Session".into(),
-                        action: "session.new".into(),
-                        params: None,
-                    }]]),
+                    buttons: Some(vec![
+                        vec![ActionButton {
+                            label: "Sessions".into(),
+                            action: "session.list".into(),
+                            params: None,
+                        }],
+                        vec![ActionButton {
+                            label: "New Session".into(),
+                            action: "session.new".into(),
+                            params: None,
+                        }],
+                    ]),
                     keyboard: None,
                     behavior: ActionBehavior::Send,
                     toast: None,

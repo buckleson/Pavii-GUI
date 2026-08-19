@@ -251,7 +251,10 @@ fn parse_manifest_bytes(bytes: &[u8]) -> HashMap<String, BuiltinAssistant> {
             // A corrupt embedded manifest degrades to an empty catalog at
             // runtime instead of failing, so tests are the only place it can
             // be caught before it ships.
-            debug_assert!(!assistants.is_empty(), "embedded built-in manifest parsed to an empty catalog");
+            debug_assert!(
+                !assistants.is_empty(),
+                "embedded built-in manifest parsed to an empty catalog"
+            );
             assistants
         }
         Err(e) => {
@@ -330,7 +333,10 @@ mod tests {
             .get_file("assistants.json")
             .expect("embedded manifest must exist")
             .contents();
-        assert!(!bytes.starts_with(UTF8_BOM), "embedded manifest must not start with a UTF-8 BOM");
+        assert!(
+            !bytes.starts_with(UTF8_BOM),
+            "embedded manifest must not start with a UTF-8 BOM"
+        );
 
         let text = std::str::from_utf8(bytes).expect("embedded manifest must be valid utf-8");
         assert!(
@@ -351,11 +357,14 @@ mod tests {
     fn find_mojibake(text: &str) -> Option<usize> {
         // cp1252 renderings of bytes 0x80-0x9F.
         const CP1252_PUNCTUATION: [char; 27] = [
-            '\u{20ac}', '\u{201a}', '\u{192}', '\u{201e}', '\u{2026}', '\u{2020}', '\u{2021}', '\u{2c6}', '\u{2030}', '\u{160}', '\u{2039}', '\u{152}', '\u{17d}', '\u{2018}', '\u{2019}', '\u{201c}', '\u{201d}',
-            '\u{2022}', '\u{2013}', '\u{2014}', '\u{2dc}', '\u{2122}', '\u{161}', '\u{203a}', '\u{153}', '\u{17e}', '\u{178}',
+            '\u{20ac}', '\u{201a}', '\u{192}', '\u{201e}', '\u{2026}', '\u{2020}', '\u{2021}', '\u{2c6}', '\u{2030}',
+            '\u{160}', '\u{2039}', '\u{152}', '\u{17d}', '\u{2018}', '\u{2019}', '\u{201c}', '\u{201d}', '\u{2022}',
+            '\u{2013}', '\u{2014}', '\u{2dc}', '\u{2122}', '\u{161}', '\u{203a}', '\u{153}', '\u{17e}', '\u{178}',
         ];
         // Latin-1 leads that do not occur as ordinary lowercase prose.
-        const LEADS: [char; 10] = ['\u{c2}', '\u{c3}', '\u{c4}', '\u{c5}', '\u{ce}', '\u{cf}', '\u{d0}', '\u{d1}', '\u{e2}', '\u{f0}'];
+        const LEADS: [char; 10] = [
+            '\u{c2}', '\u{c3}', '\u{c4}', '\u{c5}', '\u{ce}', '\u{cf}', '\u{d0}', '\u{d1}', '\u{e2}', '\u{f0}',
+        ];
 
         let is_continuation = |c: char| ('\u{80}'..='\u{bf}').contains(&c) || CP1252_PUNCTUATION.contains(&c);
         // 0xA0 is excluded: French writes a non-breaking space in real text.
@@ -365,7 +374,8 @@ mod tests {
         chars.windows(2).find_map(|pair| {
             let (index, current) = pair[0];
             let (_, next) = pair[1];
-            let looks_mangled = (LEADS.contains(&current) && is_continuation(next)) || (is_symbol(current) && is_symbol(next));
+            let looks_mangled =
+                (LEADS.contains(&current) && is_continuation(next)) || (is_symbol(current) && is_symbol(next));
             looks_mangled.then_some(index)
         })
     }

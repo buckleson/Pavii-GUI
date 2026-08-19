@@ -11,9 +11,9 @@
 
 use std::sync::Arc;
 
+use aionui_db::ConversationFilters;
 use aionui_db::IConversationRepository;
 use aionui_db::models::ConversationRow;
-use aionui_db::ConversationFilters;
 
 use crate::error::ChannelError;
 use crate::session::SessionManager;
@@ -81,11 +81,7 @@ pub fn page_buttons(page: &SessionPage) -> Vec<Vec<ActionButton>> {
             vec![ActionButton {
                 label: entry_label(entry),
                 action: "session.attach".into(),
-                params: Some(
-                    [("id".to_owned(), entry.conversation_id.clone())]
-                        .into_iter()
-                        .collect(),
-                ),
+                params: Some([("id".to_owned(), entry.conversation_id.clone())].into_iter().collect()),
             }]
         })
         .collect();
@@ -129,7 +125,10 @@ pub struct SessionDirectory {
 
 impl SessionDirectory {
     pub fn new(conversations: Arc<dyn IConversationRepository>, sessions: Arc<SessionManager>) -> Self {
-        Self { conversations, sessions }
+        Self {
+            conversations,
+            sessions,
+        }
     }
 
     /// One page of the owner's conversations, newest first.
@@ -240,7 +239,10 @@ mod tests {
     #[test]
     fn label_marks_the_attached_session() {
         let label = entry_label(&entry("c1", "Refactor the parser", false, true));
-        assert!(label.starts_with('\u{25cf}'), "attached session should be marked: {label}");
+        assert!(
+            label.starts_with('\u{25cf}'),
+            "attached session should be marked: {label}"
+        );
         assert!(label.contains("Refactor the parser"));
     }
 
