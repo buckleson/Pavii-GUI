@@ -23,6 +23,21 @@ Landed and green (`cargo test -p aionui-channel`, clippy clean at `-D warnings`)
 with no duplicates, a failed attach leaving the pointer alone, and approval
 expiry at the exact boundary.
 
+## Next up: `/projects` (plan approved, not started)
+
+Full plan in the session plan file; the essentials:
+
+- `IProjectStore` has **no `list_projects`** — add it plus the Sqlite impl.
+  Do *not* derive projects from conversations' `project_id`: that hides empty
+  projects, which is exactly where you want to start a first conversation.
+- `ConversationFilters` has **no project filter** — add `project_id` and honour
+  it in the query. Filtering after paging would return arbitrary page sizes and
+  skip rows, so it must be in SQL.
+- Then `/projects` -> `project.list` / `project.open` / `project.new_session`,
+  reusing `page_buttons` so it matches `/sessions`.
+
+`/sessions` stays exactly as it is - a flat list of everything.
+
 ## What is left, in the order I would do it
 
 ### 1. Wire approvals into the relay (largest, highest value)
