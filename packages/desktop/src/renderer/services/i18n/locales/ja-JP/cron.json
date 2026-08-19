@@ -1,20 +1,4 @@
 {
-  "scheduledTasks": "スケジュールタスク",
-  "taskCount": "{{count}} 件のタスク",
-  "schedule": "スケジュール",
-  "nextRun": "次回実行",
-  "lastRun": "前回実行",
-  "lastError": "エラー",
-  "message": "実行内容",
-  "goToConversation": "会話に移動",
-  "status": {
-    "active": "実行中",
-    "paused": "一時停止中",
-    "error": "エラー",
-    "unread": "新しい実行",
-    "unconfigured": "スケジュールタスク未設定",
-    "defaultPrompt": "毎日午前10時に、最新のAIニュースを検索し、まとめてインサイトレポートを出力してください。（Pavii.Ai でスケジュールタスクを作成するには、/cron スキルを使用してください。）"
-  },
   "actions": {
     "goTo": "チャットを表示",
     "pause": "一時停止",
@@ -22,26 +6,9 @@
     "delete": "削除",
     "runNow": "今すぐ実行"
   },
+  "allScheduledTasks": "すべてのスケジュールタスク",
   "confirmDeleteWithConversations": "このスケジュールタスクを削除しますか？このタスクのすべての会話も削除されます。",
   "deleteSuccess": "タスクを削除しました",
-  "pauseSuccess": "タスクを一時停止しました",
-  "resumeSuccess": "タスクを再開しました",
-  "drawer.title": "Scheduled Task Details",
-  "drawer.name": "Name",
-  "drawer.namePlaceholder": "Enter task name",
-  "drawer.taskStatus": "Task Status",
-  "drawer.enabled": "Enabled",
-  "drawer.disabled": "Disabled",
-  "drawer.command": "Command",
-  "drawer.commandPlaceholder": "Enter command to execute",
-  "drawer.schedule": "Schedule",
-  "drawer.nextRun": "Next Run",
-  "drawer.save": "Save",
-  "drawer.saveSuccess": "Saved successfully",
-  "message.badge": "Scheduled",
-  "allScheduledTasks": "すべてのスケジュールタスク",
-  "noTasks": "スケジュールタスクがありません",
-  "runNowSuccess": "タスクの実行をトリガーしました",
   "detail": {
     "backToAll": "すべてのスケジュールタスク",
     "runNow": "今すぐ実行",
@@ -56,6 +23,33 @@
     "executionModeDescriptionNew": "実行のたびに新しい会話を作成するため、前回までの文脈は引き継がれません。定期レポートや巡回チェックなど、各回を独立させたいタスクに向いています。",
     "executionModeDescriptionExisting": "実行のたびに同じ会話で続行するため、過去の文脈や結果を引き継げます。前回の内容を踏まえて追跡したい継続タスクに向いています。"
   },
+  "drawer.command": "Command",
+  "drawer.commandPlaceholder": "Enter command to execute",
+  "drawer.disabled": "Disabled",
+  "drawer.enabled": "Enabled",
+  "drawer.name": "Name",
+  "drawer.namePlaceholder": "Enter task name",
+  "drawer.nextRun": "Next Run",
+  "drawer.save": "Save",
+  "drawer.saveSuccess": "Saved successfully",
+  "drawer.schedule": "Schedule",
+  "drawer.taskStatus": "Task Status",
+  "drawer.title": "Scheduled Task Details",
+  "error": {
+    "alreadyExists": "このセッションには既に \"{{name}}\" (ID: {{id}}) というスケジュールタスクが存在します。新規作成ではなく、既存のタスクを変更してください。",
+    "missedJob": "⏰ スケジュールタスク \"{{name}}\" はシステムスリープ中に実行されませんでした。\n予定時刻：{{time}}\nタイマーが再起動され、次回の予定時刻に実行されます。",
+    "jobNotFound": "スクリプトが見つかりません: {{id}}",
+    "conversationNotFound": "会話が見つかりません",
+    "scheduledTimePassed": "予定時刻が過ぎました",
+    "conversationBusy": "会話がビジーです。{{count}} 回の試行後にスキップしました"
+  },
+  "goToConversation": "会話に移動",
+  "lastError": "エラー",
+  "lastRun": "前回実行",
+  "message": "実行内容",
+  "message.badge": "Scheduled",
+  "nextRun": "次回実行",
+  "noTasks": "スケジュールタスクがありません",
   "notification": {
     "taskComplete": "タスク完了",
     "scheduledTask": "スケジュールタスク",
@@ -157,9 +151,11 @@
     "searchPlaceholder": "タスクを検索...",
     "noSearchResults": "一致するスケジュール済みタスクはありません。"
   },
-  "trigger": {
-    "runScheduledTask": "スケジュールタスクを実行：{{name}}"
-  },
+  "pauseSuccess": "タスクを一時停止しました",
+  "resumeSuccess": "タスクを再開しました",
+  "runNowSuccess": "タスクの実行をトリガーしました",
+  "schedule": "スケジュール",
+  "scheduledTasks": "スケジュールタスク",
   "skill": {
     "turnIntoSkill": "このタスクをSkillに変換",
     "save": "Skillとして保存",
@@ -168,12 +164,54 @@
     "saveSuccess": "Skillが保存されました。今後の実行ではこのSkillを使用します",
     "saveFailed": "Skillの保存に失敗しました"
   },
-  "error": {
-    "alreadyExists": "このセッションには既に \"{{name}}\" (ID: {{id}}) というスケジュールタスクが存在します。新規作成ではなく、既存のタスクを変更してください。",
-    "missedJob": "⏰ スケジュールタスク \"{{name}}\" はシステムスリープ中に実行されませんでした。\n予定時刻：{{time}}\nタイマーが再起動され、次回の予定時刻に実行されます。",
-    "jobNotFound": "スクリプトが見つかりません: {{id}}",
-    "conversationNotFound": "会話が見つかりません",
-    "scheduledTimePassed": "予定時刻が過ぎました",
-    "conversationBusy": "会話がビジーです。{{count}} 回の試行後にスキップしました"
+  "status": {
+    "active": "実行中",
+    "paused": "一時停止中",
+    "error": "エラー",
+    "unread": "新しい実行",
+    "unconfigured": "スケジュールタスク未設定",
+    "defaultPrompt": "毎日午前10時に、最新のAIニュースを検索し、まとめてインサイトレポートを出力してください。（Pavii.Ai でスケジュールタスクを作成するには、/cron スキルを使用してください。）"
+  },
+  "taskCount": "{{count}} 件のタスク",
+  "templates": {
+    "dailyPlan": {
+      "description": "Turns today's schedule and open commitments into a ranked plan.",
+      "name": "Daily plan",
+      "prompt": "Look at what is on my plate today - my schedule, open tasks and anything I flagged as unfinished. Give me a ranked plan for the day: what must happen, what can slip, and what I should drop. Keep it short enough to read in a minute, and say explicitly what you are leaving out."
+    },
+    "growthReport": {
+      "description": "Pulls key metrics and explains what changed and why.",
+      "name": "Growth report",
+      "prompt": "Pull our key metrics for the past week and compare them with the week before. Tell me what moved, by how much, and your best read on why. Flag anything that looks like a data problem rather than a real change, and say where you are uncertain."
+    },
+    "heading": "Start with an automation",
+    "inboxSummary": {
+      "description": "Summarises unread mail and lists what actually needs a reply.",
+      "name": "Inbox summary",
+      "prompt": "Summarise my unread mail. Group it into what needs a reply from me, what is waiting on someone else, and what is just noise. For anything needing a reply, note who is waiting and how long they have been waiting."
+    },
+    "morningBriefing": {
+      "description": "Checks the sources you follow and reports what actually changed.",
+      "name": "Morning briefing",
+      "prompt": "Check the sources I follow and tell me what actually changed since yesterday.\n\nSources (replace this list before saving):\n- add a site, feed or dashboard here\n- and another\n\nLead with anything that could change a decision I make today, then anything genuinely worth knowing, and drop the rest. Give each item one line of substance rather than a headline, plus a link. If nothing meaningful changed, say so in one line instead of padding the summary."
+    },
+    "projectDigest": {
+      "description": "Summarises what moved this week and flags what is stalled.",
+      "name": "Weekly project digest",
+      "prompt": "Review my project workspace and summarise the week: what shipped, what is in progress, and what has not moved. Call out anything that looks stalled or blocked, and name the single thing most worth attention next week."
+    },
+    "requiresAction": "Add it in Settings -> Tools",
+    "requiresAnalytics": "Needs an analytics MCP server",
+    "requiresEmail": "Needs an email MCP server",
+    "requiresSlack": "Needs a Slack MCP server",
+    "slackCatchUp": {
+      "description": "Digests overnight Slack activity and the asks pointed at you.",
+      "name": "Slack catch-up",
+      "prompt": "Catch me up on Slack since I last looked. Summarise the threads that matter, and list anything directed at me that is still waiting on a response. Separate genuine asks from things I was only copied on."
+    },
+    "subheading": "Pick one to open it prefilled, then choose your assistant and time."
+  },
+  "trigger": {
+    "runScheduledTask": "スケジュールタスクを実行：{{name}}"
   }
 }

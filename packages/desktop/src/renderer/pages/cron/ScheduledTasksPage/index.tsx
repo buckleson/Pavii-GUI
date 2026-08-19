@@ -17,6 +17,8 @@ import { configService } from '@/common/config/configService';
 import { useConversationAssistants } from '@renderer/pages/conversation/hooks/useConversationAssistants';
 import CronStatusTag from './CronStatusTag';
 import CreateTaskDialog from './CreateTaskDialog';
+import TaskTemplateGrid from './TaskTemplateGrid';
+import { nameKeyOf, promptKeyOf, type TaskTemplate, type TaskTemplatePrefill } from './taskTemplates';
 import { getJobAgentMeta } from './jobAgentMeta';
 import { useAgentLogos } from '@renderer/utils/model/agentLogo';
 import TalkToButlerButton from '@/renderer/components/base/TalkToButlerButton';
@@ -33,6 +35,7 @@ const ScheduledTasksPage: React.FC = () => {
   const { presetAssistants } = useConversationAssistants();
   const logos = useAgentLogos();
   const [createDialogVisible, setCreateDialogVisible] = useState(false);
+  const [activeTemplate, setActiveTemplate] = useState<TaskTemplatePrefill | undefined>(undefined);
   const [keepAwake, setKeepAwake] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -67,7 +70,28 @@ const ScheduledTasksPage: React.FC = () => {
   }, [navigate, t]);
 
   const handleCreateManually = useCallback(() => {
+    // A blank "New task" must not inherit a template picked earlier.
+    setActiveTemplate(undefined);
     setCreateDialogVisible(true);
+  }, []);
+
+  const handlePickTemplate = useCallback(
+    (picked: TaskTemplate) => {
+      setActiveTemplate({
+        frequency: picked.frequency,
+        name: t(nameKeyOf(picked)),
+        prompt: t(promptKeyOf(picked)),
+        time: picked.time,
+        weekday: picked.weekday,
+      });
+      setCreateDialogVisible(true);
+    },
+    [t]
+  );
+
+  const handleCloseCreateDialog = useCallback(() => {
+    setCreateDialogVisible(false);
+    setActiveTemplate(undefined);
   }, []);
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
@@ -189,9 +213,7 @@ const ScheduledTasksPage: React.FC = () => {
               <Spin />
             </div>
           ) : jobs.length === 0 ? (
-            <div className='flex min-h-220px items-center justify-center rounded-16px border border-dashed border-border-2 bg-fill-1'>
-              <Empty description={t('cron.noTasks')} />
-            </div>
+            <TaskTemplateGrid isMobile={isMobile} onPick={handlePickTemplate} />
           ) : filteredJobs.length === 0 ? (
             <div className='flex min-h-220px items-center justify-center rounded-16px border border-dashed border-border-2 bg-fill-1'>
               <Empty description={t('cron.page.noSearchResults', { defaultValue: 'No matching scheduled tasks.' })} />
@@ -277,7 +299,7 @@ const ScheduledTasksPage: React.FC = () => {
         </div>
       </div>
 
-      <CreateTaskDialog visible={createDialogVisible} onClose={() => setCreateDialogVisible(false)} />
+      <CreateTaskDialog visible={createDialogVisible} onClose={handleCloseCreateDialog} template={activeTemplate} />
     </div>
   );
 };

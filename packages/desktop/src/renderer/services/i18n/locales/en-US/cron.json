@@ -1,34 +1,13 @@
 {
-  "scheduledTasks": "Scheduled Tasks",
-  "taskCount": "{{count}} task(s)",
-  "schedule": "Schedule",
-  "nextRun": "Next run",
-  "lastRun": "Last run",
-  "lastError": "Error",
-  "message": "Message",
-  "goToConversation": "Go to conversation",
-  "status": {
-    "active": "Active",
-    "paused": "Paused",
-    "error": "Error",
-    "unread": "New execution",
-    "unconfigured": "No scheduled task",
-    "defaultPrompt": "Every day at 10am, search for the latest AI news, summarize and output an insight report. (Please use the /cron skill to create a scheduled task in Pavii.Ai.)"
-  },
   "actions": {
     "goTo": "View Chat",
     "pause": "Pause",
     "resume": "Resume",
     "delete": "Delete"
   },
+  "allScheduledTasks": "All Scheduled Tasks",
   "confirmDeleteWithConversations": "Are you sure you want to delete this scheduled task? All conversations from this task will also be deleted.",
   "deleteSuccess": "Task deleted",
-  "pauseSuccess": "Task paused",
-  "resumeSuccess": "Task resumed",
-  "message.badge": "Scheduled",
-  "allScheduledTasks": "All Scheduled Tasks",
-  "noTasks": "No scheduled tasks",
-  "runNowSuccess": "Task execution triggered",
   "detail": {
     "backToAll": "All scheduled tasks",
     "runNow": "Run now",
@@ -43,6 +22,21 @@
     "executionModeDescriptionNew": "Each run starts a fresh conversation, so previous context does not carry over. Best for recurring reports or checks that should stay independent.",
     "executionModeDescriptionExisting": "Each run continues in the same conversation, so earlier context and results stay available. Best for follow-up tasks that build on previous runs."
   },
+  "error": {
+    "alreadyExists": "This conversation already has a scheduled task \"{{name}}\" (ID: {{id}}). Please update the existing task instead of creating a new one.",
+    "missedJob": "⏰ Scheduled task \"{{name}}\" was not executed during system sleep.\nScheduled time: {{time}}\nThe timer has been restarted and will run at the next scheduled time.",
+    "jobNotFound": "Task not found: {{id}}",
+    "conversationNotFound": "Conversation not found",
+    "scheduledTimePassed": "Scheduled time has passed",
+    "conversationBusy": "Conversation busy after {{count}} retries"
+  },
+  "goToConversation": "Go to conversation",
+  "lastError": "Error",
+  "lastRun": "Last run",
+  "message": "Message",
+  "message.badge": "Scheduled",
+  "nextRun": "Next run",
+  "noTasks": "No scheduled tasks",
   "notification": {
     "taskComplete": "Task Complete",
     "scheduledTask": "Scheduled Task",
@@ -144,9 +138,11 @@
       "preview": "Generated Cron"
     }
   },
-  "trigger": {
-    "runScheduledTask": "Run scheduled task: {{name}}"
-  },
+  "pauseSuccess": "Task paused",
+  "resumeSuccess": "Task resumed",
+  "runNowSuccess": "Task execution triggered",
+  "schedule": "Schedule",
+  "scheduledTasks": "Scheduled Tasks",
   "skill": {
     "turnIntoSkill": "Turn this task into a skill",
     "save": "Save as Skill",
@@ -155,12 +151,54 @@
     "saveSuccess": "Skill saved — future executions will use it",
     "saveFailed": "Failed to save skill"
   },
-  "error": {
-    "alreadyExists": "This conversation already has a scheduled task \"{{name}}\" (ID: {{id}}). Please update the existing task instead of creating a new one.",
-    "missedJob": "⏰ Scheduled task \"{{name}}\" was not executed during system sleep.\nScheduled time: {{time}}\nThe timer has been restarted and will run at the next scheduled time.",
-    "jobNotFound": "Task not found: {{id}}",
-    "conversationNotFound": "Conversation not found",
-    "scheduledTimePassed": "Scheduled time has passed",
-    "conversationBusy": "Conversation busy after {{count}} retries"
+  "status": {
+    "active": "Active",
+    "paused": "Paused",
+    "error": "Error",
+    "unread": "New execution",
+    "unconfigured": "No scheduled task",
+    "defaultPrompt": "Every day at 10am, search for the latest AI news, summarize and output an insight report. (Please use the /cron skill to create a scheduled task in Pavii.Ai.)"
+  },
+  "taskCount": "{{count}} task(s)",
+  "templates": {
+    "dailyPlan": {
+      "description": "Turns today's schedule and open commitments into a ranked plan.",
+      "name": "Daily plan",
+      "prompt": "Look at what is on my plate today - my schedule, open tasks and anything I flagged as unfinished. Give me a ranked plan for the day: what must happen, what can slip, and what I should drop. Keep it short enough to read in a minute, and say explicitly what you are leaving out."
+    },
+    "growthReport": {
+      "description": "Pulls key metrics and explains what changed and why.",
+      "name": "Growth report",
+      "prompt": "Pull our key metrics for the past week and compare them with the week before. Tell me what moved, by how much, and your best read on why. Flag anything that looks like a data problem rather than a real change, and say where you are uncertain."
+    },
+    "heading": "Start with an automation",
+    "inboxSummary": {
+      "description": "Summarises unread mail and lists what actually needs a reply.",
+      "name": "Inbox summary",
+      "prompt": "Summarise my unread mail. Group it into what needs a reply from me, what is waiting on someone else, and what is just noise. For anything needing a reply, note who is waiting and how long they have been waiting."
+    },
+    "morningBriefing": {
+      "description": "Checks the sources you follow and reports what actually changed.",
+      "name": "Morning briefing",
+      "prompt": "Check the sources I follow and tell me what actually changed since yesterday.\n\nSources (replace this list before saving):\n- add a site, feed or dashboard here\n- and another\n\nLead with anything that could change a decision I make today, then anything genuinely worth knowing, and drop the rest. Give each item one line of substance rather than a headline, plus a link. If nothing meaningful changed, say so in one line instead of padding the summary."
+    },
+    "projectDigest": {
+      "description": "Summarises what moved this week and flags what is stalled.",
+      "name": "Weekly project digest",
+      "prompt": "Review my project workspace and summarise the week: what shipped, what is in progress, and what has not moved. Call out anything that looks stalled or blocked, and name the single thing most worth attention next week."
+    },
+    "requiresAction": "Add it in Settings -> Tools",
+    "requiresAnalytics": "Needs an analytics MCP server",
+    "requiresEmail": "Needs an email MCP server",
+    "requiresSlack": "Needs a Slack MCP server",
+    "slackCatchUp": {
+      "description": "Digests overnight Slack activity and the asks pointed at you.",
+      "name": "Slack catch-up",
+      "prompt": "Catch me up on Slack since I last looked. Summarise the threads that matter, and list anything directed at me that is still waiting on a response. Separate genuine asks from things I was only copied on."
+    },
+    "subheading": "Pick one to open it prefilled, then choose your assistant and time."
+  },
+  "trigger": {
+    "runScheduledTask": "Run scheduled task: {{name}}"
   }
 }

@@ -1,34 +1,13 @@
 {
-  "scheduledTasks": "Tâches planifiées",
-  "taskCount": "{{count}} tâche(s)",
-  "schedule": "Planification",
-  "nextRun": "Prochaine exécution",
-  "lastRun": "Dernière exécution",
-  "lastError": "Erreur",
-  "message": "Message",
-  "goToConversation": "Aller à la conversation",
-  "status": {
-    "active": "Active",
-    "paused": "En pause",
-    "error": "Erreur",
-    "unread": "Nouvelle exécution",
-    "unconfigured": "Aucune tâche planifiée",
-    "defaultPrompt": "Chaque jour à 10h, rechercher les dernières actualités IA, résumer et produire un rapport d'analyse. (Veuillez utiliser la compétence /cron pour créer une tâche planifiée dans Pavii.Ai.)"
-  },
   "actions": {
     "goTo": "Voir le chat",
     "pause": "Mettre en pause",
     "resume": "Reprendre",
     "delete": "Supprimer"
   },
+  "allScheduledTasks": "Toutes les tâches planifiées",
   "confirmDeleteWithConversations": "Êtes-vous sûr de vouloir supprimer cette tâche planifiée ? Toutes les conversations de cette tâche seront également supprimées.",
   "deleteSuccess": "Tâche supprimée",
-  "pauseSuccess": "Tâche mise en pause",
-  "resumeSuccess": "Tâche reprise",
-  "message.badge": "Planifié",
-  "allScheduledTasks": "Toutes les tâches planifiées",
-  "noTasks": "Aucune tâche planifiée",
-  "runNowSuccess": "Exécution de la tâche déclenchée",
   "detail": {
     "backToAll": "Toutes les tâches planifiées",
     "runNow": "Exécuter maintenant",
@@ -43,6 +22,21 @@
     "executionModeDescriptionNew": "Chaque exécution démarre une nouvelle conversation, sans contexte précédent. Idéal pour des rapports ou vérifications périodiques indépendants.",
     "executionModeDescriptionExisting": "Chaque exécution continue dans la même conversation, conservant le contexte. Idéal pour des tâches de suivi qui s'appuient sur les exécutions précédentes."
   },
+  "error": {
+    "alreadyExists": "Cette conversation a déjà une tâche planifiée \"{{name}}\" (ID : {{id}}). Veuillez mettre à jour la tâche existante plutôt que d'en créer une nouvelle.",
+    "missedJob": "⏰ La tâche planifiée \"{{name}}\" n'a pas été exécutée pendant la mise en veille du système.\nHeure prévue : {{time}}\nLe minuteur a été redémarré et s'exécutera à la prochaine heure prévue.",
+    "jobNotFound": "Tâche introuvable : {{id}}",
+    "conversationNotFound": "Conversation introuvable",
+    "scheduledTimePassed": "L'heure planifiée est dépassée",
+    "conversationBusy": "Conversation occupée après {{count}} tentatives"
+  },
+  "goToConversation": "Aller à la conversation",
+  "lastError": "Erreur",
+  "lastRun": "Dernière exécution",
+  "message": "Message",
+  "message.badge": "Planifié",
+  "nextRun": "Prochaine exécution",
+  "noTasks": "Aucune tâche planifiée",
   "notification": {
     "taskComplete": "Tâche terminée",
     "scheduledTask": "Tâche planifiée",
@@ -128,9 +122,11 @@
     "searchPlaceholder": "Rechercher des tâches...",
     "noSearchResults": "Aucune tâche planifiée correspondante."
   },
-  "trigger": {
-    "runScheduledTask": "Exécuter la tâche planifiée : {{name}}"
-  },
+  "pauseSuccess": "Tâche mise en pause",
+  "resumeSuccess": "Tâche reprise",
+  "runNowSuccess": "Exécution de la tâche déclenchée",
+  "schedule": "Planification",
+  "scheduledTasks": "Tâches planifiées",
   "skill": {
     "turnIntoSkill": "Transformer cette tâche en compétence",
     "save": "Enregistrer comme compétence",
@@ -139,12 +135,54 @@
     "saveSuccess": "Compétence enregistrée — les exécutions futures l'utiliseront",
     "saveFailed": "Échec de l'enregistrement de la compétence"
   },
-  "error": {
-    "alreadyExists": "Cette conversation a déjà une tâche planifiée \"{{name}}\" (ID : {{id}}). Veuillez mettre à jour la tâche existante plutôt que d'en créer une nouvelle.",
-    "missedJob": "⏰ La tâche planifiée \"{{name}}\" n'a pas été exécutée pendant la mise en veille du système.\nHeure prévue : {{time}}\nLe minuteur a été redémarré et s'exécutera à la prochaine heure prévue.",
-    "jobNotFound": "Tâche introuvable : {{id}}",
-    "conversationNotFound": "Conversation introuvable",
-    "scheduledTimePassed": "L'heure planifiée est dépassée",
-    "conversationBusy": "Conversation occupée après {{count}} tentatives"
+  "status": {
+    "active": "Active",
+    "paused": "En pause",
+    "error": "Erreur",
+    "unread": "Nouvelle exécution",
+    "unconfigured": "Aucune tâche planifiée",
+    "defaultPrompt": "Chaque jour à 10h, rechercher les dernières actualités IA, résumer et produire un rapport d'analyse. (Veuillez utiliser la compétence /cron pour créer une tâche planifiée dans Pavii.Ai.)"
+  },
+  "taskCount": "{{count}} tâche(s)",
+  "templates": {
+    "dailyPlan": {
+      "description": "Turns today's schedule and open commitments into a ranked plan.",
+      "name": "Daily plan",
+      "prompt": "Look at what is on my plate today - my schedule, open tasks and anything I flagged as unfinished. Give me a ranked plan for the day: what must happen, what can slip, and what I should drop. Keep it short enough to read in a minute, and say explicitly what you are leaving out."
+    },
+    "growthReport": {
+      "description": "Pulls key metrics and explains what changed and why.",
+      "name": "Growth report",
+      "prompt": "Pull our key metrics for the past week and compare them with the week before. Tell me what moved, by how much, and your best read on why. Flag anything that looks like a data problem rather than a real change, and say where you are uncertain."
+    },
+    "heading": "Start with an automation",
+    "inboxSummary": {
+      "description": "Summarises unread mail and lists what actually needs a reply.",
+      "name": "Inbox summary",
+      "prompt": "Summarise my unread mail. Group it into what needs a reply from me, what is waiting on someone else, and what is just noise. For anything needing a reply, note who is waiting and how long they have been waiting."
+    },
+    "morningBriefing": {
+      "description": "Checks the sources you follow and reports what actually changed.",
+      "name": "Morning briefing",
+      "prompt": "Check the sources I follow and tell me what actually changed since yesterday.\n\nSources (replace this list before saving):\n- add a site, feed or dashboard here\n- and another\n\nLead with anything that could change a decision I make today, then anything genuinely worth knowing, and drop the rest. Give each item one line of substance rather than a headline, plus a link. If nothing meaningful changed, say so in one line instead of padding the summary."
+    },
+    "projectDigest": {
+      "description": "Summarises what moved this week and flags what is stalled.",
+      "name": "Weekly project digest",
+      "prompt": "Review my project workspace and summarise the week: what shipped, what is in progress, and what has not moved. Call out anything that looks stalled or blocked, and name the single thing most worth attention next week."
+    },
+    "requiresAction": "Add it in Settings -> Tools",
+    "requiresAnalytics": "Needs an analytics MCP server",
+    "requiresEmail": "Needs an email MCP server",
+    "requiresSlack": "Needs a Slack MCP server",
+    "slackCatchUp": {
+      "description": "Digests overnight Slack activity and the asks pointed at you.",
+      "name": "Slack catch-up",
+      "prompt": "Catch me up on Slack since I last looked. Summarise the threads that matter, and list anything directed at me that is still waiting on a response. Separate genuine asks from things I was only copied on."
+    },
+    "subheading": "Pick one to open it prefilled, then choose your assistant and time."
+  },
+  "trigger": {
+    "runScheduledTask": "Exécuter la tâche planifiée : {{name}}"
   }
 }

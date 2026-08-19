@@ -12,6 +12,7 @@ import { Down, Robot } from '@icon-park/react';
 import { ipcBridge } from '@/common';
 import { resolveLocaleKey } from '@/common/utils';
 import type { ICreateCronJobParams, ICronJob, ICronJobUpdateParams } from '@/common/adapter/ipcBridge';
+import type { TaskTemplatePrefill } from './taskTemplates';
 import { useConversationAssistants } from '@renderer/pages/conversation/hooks/useConversationAssistants';
 import dayjs from 'dayjs';
 import type { TChatConversation, TProviderWithModel } from '@/common/config/storage';
@@ -35,6 +36,11 @@ const Option = Select.Option;
 interface CreateTaskDialogProps {
   visible: boolean;
   onClose: () => void;
+  /**
+   * Starter automation to prefill from. Create mode only - edit mode already
+   * has a job to populate from.
+   */
+  template?: TaskTemplatePrefill;
   /** When provided, the dialog operates in edit mode */
   editJob?: ICronJob;
   conversation_id?: string;
@@ -233,6 +239,7 @@ function resolveTeamIdFromExtra(extra: TChatConversation['extra'] | undefined): 
 const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
   visible,
   onClose,
+  template,
   editJob,
   conversation_id: _conversation_id,
   conversation_title,
@@ -296,10 +303,13 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
       setWorkspace(editJob.metadata.agent_config?.workspace);
     } else {
       form.resetFields();
-      setFrequency('manual');
-      setTime('09:00');
-      setWeekday('MON');
+      setFrequency(template?.frequency ?? 'manual');
+      setTime(template?.time ?? '09:00');
+      setWeekday(template?.weekday ?? 'MON');
       setCustomSchedule(createDefaultCustomSchedule());
+      if (template) {
+        form.setFieldsValue({ name: template.name, prompt: template.prompt });
+      }
       setExecutionMode('new_conversation');
       setQueueEnabled(false);
       setAdvancedOpen(false);
@@ -309,7 +319,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
       setSelectedAssistantId(undefined);
       setTeamOwnershipStatus('standalone');
     }
-  }, [visible, editJob, form]);
+  }, [visible, editJob, template, form]);
 
   useEffect(() => {
     if (!visible || !editJob?.metadata.conversation_id) {

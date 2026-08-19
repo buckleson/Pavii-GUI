@@ -1,34 +1,13 @@
 {
-  "scheduledTasks": "Запланированные задачи",
-  "taskCount": "{{count}} задача(и)",
-  "schedule": "Расписание",
-  "nextRun": "Следующий запуск",
-  "lastRun": "Последний запуск",
-  "lastError": "Ошибка",
-  "message": "Сообщение",
-  "goToConversation": "Перейти к диалогу",
-  "status": {
-    "active": "Активна",
-    "paused": "Приостановлена",
-    "error": "Ошибка",
-    "unread": "Новое выполнение",
-    "unconfigured": "Нет запланированной задачи",
-    "defaultPrompt": "Каждый день в 10 утра искать последние новости ИИ, обобщать и выводить аналитический отчёт. (Пожалуйста, используй навык /cron, чтобы создать запланированную задачу в Pavii.Ai.)"
-  },
   "actions": {
     "goTo": "Открыть чат",
     "pause": "Приостановить",
     "resume": "Возобновить",
     "delete": "Удалить"
   },
+  "allScheduledTasks": "Все запланированные задачи",
   "confirmDeleteWithConversations": "Вы уверены, что хотите удалить эту запланированную задачу? Все диалоги этой задачи также будут удалены.",
   "deleteSuccess": "Задача удалена",
-  "pauseSuccess": "Задача приостановлена",
-  "resumeSuccess": "Задача возобновлена",
-  "message.badge": "Запланировано",
-  "allScheduledTasks": "Все запланированные задачи",
-  "noTasks": "Нет запланированных задач",
-  "runNowSuccess": "Запуск задачи инициирован",
   "detail": {
     "backToAll": "Все запланированные задачи",
     "runNow": "Запустить сейчас",
@@ -43,6 +22,21 @@
     "executionModeDescriptionNew": "Каждый запуск начинает новый диалог, предыдущий контекст не сохраняется. Лучше для периодических отчётов или проверок, которые должны быть независимыми.",
     "executionModeDescriptionExisting": "Каждый запуск продолжается в том же диалоге, предыдущий контекст и результаты остаются доступными. Лучше для задач, которые строятся на предыдущих запусках."
   },
+  "error": {
+    "alreadyExists": "В этом диалоге уже есть запланированная задача \"{{name}}\" (ID: {{id}}). Измените существующую задачу вместо создания новой.",
+    "missedJob": "⏰ Запланированная задача \"{{name}}\" не была выполнена во время сна системы.\nЗапланированное время: {{time}}\nТаймер перезапущен и выполнится в следующее запланированное время.",
+    "jobNotFound": "Задача не найдена: {{id}}",
+    "conversationNotFound": "Диалог не найден",
+    "scheduledTimePassed": "Запланированное время прошло",
+    "conversationBusy": "Диалог занят после {{count}} попыток"
+  },
+  "goToConversation": "Перейти к диалогу",
+  "lastError": "Ошибка",
+  "lastRun": "Последний запуск",
+  "message": "Сообщение",
+  "message.badge": "Запланировано",
+  "nextRun": "Следующий запуск",
+  "noTasks": "Нет запланированных задач",
   "notification": {
     "taskComplete": "Задача завершена",
     "scheduledTask": "Запланированная задача",
@@ -144,9 +138,11 @@
     "searchPlaceholder": "Поиск задач...",
     "noSearchResults": "Нет подходящих запланированных задач."
   },
-  "trigger": {
-    "runScheduledTask": "Запустить запланированную задачу: {{name}}"
-  },
+  "pauseSuccess": "Задача приостановлена",
+  "resumeSuccess": "Задача возобновлена",
+  "runNowSuccess": "Запуск задачи инициирован",
+  "schedule": "Расписание",
+  "scheduledTasks": "Запланированные задачи",
   "skill": {
     "turnIntoSkill": "Превратить эту задачу в навык",
     "save": "Сохранить как навык",
@@ -155,12 +151,54 @@
     "saveSuccess": "Навык сохранён — будущие выполнения будут его использовать",
     "saveFailed": "Не удалось сохранить навык"
   },
-  "error": {
-    "alreadyExists": "В этом диалоге уже есть запланированная задача \"{{name}}\" (ID: {{id}}). Измените существующую задачу вместо создания новой.",
-    "missedJob": "⏰ Запланированная задача \"{{name}}\" не была выполнена во время сна системы.\nЗапланированное время: {{time}}\nТаймер перезапущен и выполнится в следующее запланированное время.",
-    "jobNotFound": "Задача не найдена: {{id}}",
-    "conversationNotFound": "Диалог не найден",
-    "scheduledTimePassed": "Запланированное время прошло",
-    "conversationBusy": "Диалог занят после {{count}} попыток"
+  "status": {
+    "active": "Активна",
+    "paused": "Приостановлена",
+    "error": "Ошибка",
+    "unread": "Новое выполнение",
+    "unconfigured": "Нет запланированной задачи",
+    "defaultPrompt": "Каждый день в 10 утра искать последние новости ИИ, обобщать и выводить аналитический отчёт. (Пожалуйста, используй навык /cron, чтобы создать запланированную задачу в Pavii.Ai.)"
+  },
+  "taskCount": "{{count}} задача(и)",
+  "templates": {
+    "dailyPlan": {
+      "description": "Turns today's schedule and open commitments into a ranked plan.",
+      "name": "Daily plan",
+      "prompt": "Look at what is on my plate today - my schedule, open tasks and anything I flagged as unfinished. Give me a ranked plan for the day: what must happen, what can slip, and what I should drop. Keep it short enough to read in a minute, and say explicitly what you are leaving out."
+    },
+    "growthReport": {
+      "description": "Pulls key metrics and explains what changed and why.",
+      "name": "Growth report",
+      "prompt": "Pull our key metrics for the past week and compare them with the week before. Tell me what moved, by how much, and your best read on why. Flag anything that looks like a data problem rather than a real change, and say where you are uncertain."
+    },
+    "heading": "Start with an automation",
+    "inboxSummary": {
+      "description": "Summarises unread mail and lists what actually needs a reply.",
+      "name": "Inbox summary",
+      "prompt": "Summarise my unread mail. Group it into what needs a reply from me, what is waiting on someone else, and what is just noise. For anything needing a reply, note who is waiting and how long they have been waiting."
+    },
+    "morningBriefing": {
+      "description": "Checks the sources you follow and reports what actually changed.",
+      "name": "Morning briefing",
+      "prompt": "Check the sources I follow and tell me what actually changed since yesterday.\n\nSources (replace this list before saving):\n- add a site, feed or dashboard here\n- and another\n\nLead with anything that could change a decision I make today, then anything genuinely worth knowing, and drop the rest. Give each item one line of substance rather than a headline, plus a link. If nothing meaningful changed, say so in one line instead of padding the summary."
+    },
+    "projectDigest": {
+      "description": "Summarises what moved this week and flags what is stalled.",
+      "name": "Weekly project digest",
+      "prompt": "Review my project workspace and summarise the week: what shipped, what is in progress, and what has not moved. Call out anything that looks stalled or blocked, and name the single thing most worth attention next week."
+    },
+    "requiresAction": "Add it in Settings -> Tools",
+    "requiresAnalytics": "Needs an analytics MCP server",
+    "requiresEmail": "Needs an email MCP server",
+    "requiresSlack": "Needs a Slack MCP server",
+    "slackCatchUp": {
+      "description": "Digests overnight Slack activity and the asks pointed at you.",
+      "name": "Slack catch-up",
+      "prompt": "Catch me up on Slack since I last looked. Summarise the threads that matter, and list anything directed at me that is still waiting on a response. Separate genuine asks from things I was only copied on."
+    },
+    "subheading": "Pick one to open it prefilled, then choose your assistant and time."
+  },
+  "trigger": {
+    "runScheduledTask": "Запустить запланированную задачу: {{name}}"
   }
 }
