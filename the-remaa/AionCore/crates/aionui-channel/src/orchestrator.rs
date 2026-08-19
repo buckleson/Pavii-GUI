@@ -7,7 +7,9 @@ use crate::action::{ActionExecutor, MessageResult};
 use crate::message_service::ChannelMessageService;
 use crate::session::SessionManager;
 use crate::stream_relay::{ChannelSender, ChannelStreamRelay, RelayConfig, throttle_ms_for_platform};
-use crate::types::{ActionBehavior, OutgoingMessageType, UnifiedIncomingMessage, UnifiedOutgoingMessage};
+use crate::types::{
+    ActionBehavior, ActionResponse, OutgoingMessageType, UnifiedIncomingMessage, UnifiedOutgoingMessage,
+};
 
 /// Orchestrates the full channel message lifecycle.
 ///
@@ -109,7 +111,23 @@ impl ChannelOrchestrator {
                     info!(chat_id = %chat_id, "message ignored: already processing");
                 }
                 Err(e) => {
-                    error!(error = %e, "failed to handle incoming message");
+                    // Logging alone made every failure invisible: a tapped
+                    // button that errored looked like nothing had happened.
+                    // Tell the chat, so a failure is diagnosable from the
+                    // phone instead of only from the engine log.
+                    error!(error = %e, chat_id = %chat_id, "failed to handle incoming message");
+                    if let Some(owner_user_id) = message_owner_user_id.as_deref() {
+                        let response = ActionResponse {
+                            text: Some(format!("That didn't work: {e}")),
+                            parse_mode: None,
+                            buttons: None,
+                            keyboard: None,
+                            behavior: ActionBehavior::Send,
+                            toast: None,
+                            edit_message_id: None,
+                        };
+                        send_action_response(&sender, owner_user_id, &plugin_id, &chat_id, &response).await;
+                    }
                 }
             }
         });
