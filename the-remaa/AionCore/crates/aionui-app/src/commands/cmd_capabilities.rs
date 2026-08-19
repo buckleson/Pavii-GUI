@@ -27,8 +27,8 @@ fn data() -> Value {
         "schema_version": 1,
         "contract": "agent-facing-aioncore-cli",
         "stability": "stable",
-        "entrypoint": "aioncore capabilities",
-        "purpose": "Top-level index for agent-facing AionCore CLI domains.",
+        "entrypoint": "paviicore capabilities",
+        "purpose": "Top-level index for agent-facing Pavii Engine CLI domains.",
         "output": {
             "stdout": "JSON envelope",
             "stderr": "single stable ..._FAILED error line when output cannot be written",
@@ -67,7 +67,7 @@ fn data() -> Value {
                 "description": "Manage AionUi configuration: assistants, assistant rules, skills, MCP servers, providers, settings, agents, and scheduled tasks.",
                 "contract": "agent-facing-config-cli",
                 "contract_command": "config capabilities",
-                "invocation": "aioncore config capabilities",
+                "invocation": "paviicore config capabilities",
                 "runtime_required": ["AIONUI_BASE_URL", "AIONUI_CONVERSATION_ID", "AIONUI_USER_ID"],
                 "safety": {
                     "can_write": true,
@@ -81,7 +81,7 @@ fn data() -> Value {
                 "description": "Diagnose a running AionUi installation: backend health, conversations, provider health, MCP, cron, teams, logs, and controlled GET reads.",
                 "contract": "agent-facing-diagnose-cli",
                 "contract_command": "diagnose capabilities",
-                "invocation": "aioncore diagnose capabilities",
+                "invocation": "paviicore diagnose capabilities",
                 "runtime_required": ["AIONUI_BASE_URL", "AIONUI_CONVERSATION_ID", "AIONUI_USER_ID"],
                 "optional_runtime": ["AIONUI_LOG_DIR"],
                 "safety": {
@@ -97,7 +97,7 @@ fn data() -> Value {
                 "description": "Agent-facing Team collaboration CLI fallback for agents without MCP injection.",
                 "contract": "agent-facing-team-cli",
                 "contract_command": "team capabilities",
-                "invocation": "aioncore team capabilities",
+                "invocation": "paviicore team capabilities",
                 "runtime_required": ["AIONUI_BASE_URL", "AIONUI_CONVERSATION_ID", "AIONUI_USER_ID", "AIONUI_RUNTIME_TOKEN"],
                 "runtime_free_commands": ["team capabilities", "team help"],
                 "safety": {

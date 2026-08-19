@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]
-#[command(name = "aioncore", about = "Pavii Engine Backend Server", version)]
+#[command(name = "paviicore", about = "Pavii Engine Backend Server", version)]
 pub(crate) struct Cli {
     /// Host address to listen on.
     #[arg(long, default_value_t = String::from(aionui_common::constants::DEFAULT_HOST))]
@@ -224,7 +224,7 @@ pub(crate) enum DiagnoseCommand {
     Cron(DiagnoseCronArgs),
     /// Inspect team summary.
     Teams(DiagnoseTeamsArgs),
-    /// Read aioncore logs.
+    /// Read engine logs.
     Logs(DiagnoseLogsArgs),
     /// Controlled HTTP read escape hatch.
     Http(DiagnoseHttpArgs),

@@ -63,7 +63,7 @@ function isOpencodeOnPath(): boolean {
 /** Locate npm from the bundled managed Node runtime (falls back to a system npm). */
 export function findBundledNpm(resourcesPath: string | undefined, runtimeKey: string): string | null {
   if (!resourcesPath) return null;
-  const nodeBase = join(resourcesPath, 'bundled-aioncore', runtimeKey, 'managed-resources', 'node');
+  const nodeBase = join(resourcesPath, 'bundled-paviicore', runtimeKey, 'managed-resources', 'node');
   if (!existsSync(nodeBase)) return null;
   const npmName = process.platform === 'win32' ? 'npm.cmd' : 'bin/npm';
   try {

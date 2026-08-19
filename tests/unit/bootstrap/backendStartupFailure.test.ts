@@ -11,8 +11,8 @@ describe('classifyBackendStartupFailure', () => {
     error.details = {
       stage: 'early_exit',
       stderrTail:
-        "/opt/AionUi/resources/bundled-aioncore/linux-x64/aioncore.bin: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.34' not found\n" +
-        "/opt/AionUi/resources/bundled-aioncore/linux-x64/aioncore.bin: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.32' not found",
+        "/opt/AionUi/resources/bundled-paviicore/linux-x64/aioncore.bin: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.34' not found\n" +
+        "/opt/AionUi/resources/bundled-paviicore/linux-x64/aioncore.bin: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.32' not found",
     };
 
     expect(classifyBackendStartupFailure(error)).toEqual({
@@ -74,8 +74,8 @@ describe('classifyBackendStartupFailure', () => {
     };
     error.details = {
       stage: 'spawn_error',
-      binaryPath: 'D:\\apps\\AionUi\\resources\\bundled-aioncore\\win32-x64\\aioncore.exe',
-      causeMessage: 'spawn D:\\apps\\AionUi\\resources\\bundled-aioncore\\win32-x64\\aioncore.exe ENOENT',
+      binaryPath: 'D:\\apps\\AionUi\\resources\\bundled-paviicore\\win32-x64\\aioncore.exe',
+      causeMessage: 'spawn D:\\apps\\AionUi\\resources\\bundled-paviicore\\win32-x64\\aioncore.exe ENOENT',
     };
 
     expect(classifyBackendStartupFailure(error)).toEqual({
@@ -246,7 +246,7 @@ describe('classifyBackendStartupFailure', () => {
       stage: 'resolve_binary',
       isPackaged: true,
       runtimeKey: 'win32-x64',
-      binaryName: 'aioncore.exe',
+      binaryName: 'paviicore.exe',
       bundledDirExists: false,
       runtimeDirExists: false,
       resourcesDirEntries: [
@@ -264,10 +264,10 @@ describe('classifyBackendStartupFailure', () => {
       reason: 'backend_incomplete_installation',
       incompleteInstallationKind: 'missing_directory_resources',
       missingBackendBinary: true,
-      missingBundledAioncoreDir: true,
+      missingBundledPaviicoreDir: true,
       missingHubDir: true,
       missingPwaDir: true,
-      missingResources: ['bundled-aioncore/', 'bundled-aioncore/win32-x64/'],
+      missingResources: ['bundled-paviicore/', 'bundled-paviicore/win32-x64/'],
       missingRuntimeDir: true,
     });
   });
@@ -280,7 +280,7 @@ describe('classifyBackendStartupFailure', () => {
       stage: 'resolve_binary',
       isPackaged: true,
       runtimeKey: 'win32-x64',
-      binaryName: 'aioncore.exe',
+      binaryName: 'paviicore.exe',
       bundledDirExists: true,
       runtimeDirExists: true,
       resourcesDirEntries: [
@@ -288,7 +288,7 @@ describe('classifyBackendStartupFailure', () => {
         'app.asar',
         'app.asar.unpacked/',
         'app.png',
-        'bundled-aioncore/',
+        'bundled-paviicore/',
         'elevate.exe',
         'hub/',
         'manifest.webmanifest',
@@ -302,10 +302,10 @@ describe('classifyBackendStartupFailure', () => {
       reason: 'backend_incomplete_installation',
       incompleteInstallationKind: 'missing_directory_resources',
       missingBackendBinary: true,
-      missingBundledAioncoreDir: false,
+      missingBundledPaviicoreDir: false,
       missingHubDir: false,
       missingPwaDir: false,
-      missingResources: ['bundled-aioncore/win32-x64/managed-resources/', 'bundled-aioncore/win32-x64/aioncore.exe'],
+      missingResources: ['bundled-paviicore/win32-x64/managed-resources/', 'bundled-paviicore/win32-x64/paviicore.exe'],
       missingRuntimeDir: false,
     });
   });

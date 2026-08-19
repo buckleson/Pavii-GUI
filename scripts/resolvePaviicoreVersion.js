@@ -1,5 +1,5 @@
 /**
- * Resolve the aioncore version tag to download for packaging.
+ * Resolve the AionCore release tag to download for packaging.
  *
  * Order:
  *   1. AIONUI_BACKEND_VERSION env (ad-hoc override, e.g. CI dispatch input)
@@ -7,7 +7,7 @@
  *   3. 'latest' (GitHub API releases/latest; non-reproducible fallback)
  *
  * Keep this file tiny and dependency-free — it's required from both
- * scripts/prepareAioncore.js and scripts/pack-web-cli.js before
+ * scripts/preparePaviicore.js and scripts/pack-web-cli.js before
  * any project-level install has necessarily completed.
  */
 
@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const { readJsonFile } = require('../packages/shared-scripts/src/read-json-file.js');
 
-function resolveAioncoreVersion(projectRoot) {
+function resolvePaviicoreVersion(projectRoot) {
   const envOverride = process.env.AIONUI_BACKEND_VERSION;
   if (envOverride && envOverride.trim()) {
     return envOverride.trim();
@@ -34,4 +34,4 @@ function resolveAioncoreVersion(projectRoot) {
   return 'latest';
 }
 
-module.exports = { resolveAioncoreVersion };
+module.exports = { resolvePaviicoreVersion };

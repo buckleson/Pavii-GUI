@@ -1,5 +1,5 @@
 /**
- * CLI wrapper for prepare-aioncore.
+ * CLI wrapper for prepare-paviicore.
  *
  * Reads environment variables and invokes the shared module.
  *
@@ -17,27 +17,27 @@
  */
 
 const path = require('path');
-const { prepareAioncore } = require('../packages/shared-scripts/src/prepare-aioncore.js');
-const { resolveAioncoreVersion } = require('./resolveAioncoreVersion.js');
+const { preparePaviicore } = require('../packages/shared-scripts/src/prepare-paviicore.js');
+const { resolvePaviicoreVersion } = require('./resolvePaviicoreVersion.js');
 
 const projectRoot = path.resolve(__dirname, '..');
 const platform = process.platform;
 // Support cross-compilation: AIONUI_BACKEND_ARCH > npm_config_target_arch > process.arch
 const arch = process.env.AIONUI_BACKEND_ARCH || process.env.npm_config_target_arch || process.arch;
-const version = resolveAioncoreVersion(projectRoot);
+const version = resolvePaviicoreVersion(projectRoot);
 
 try {
-  prepareAioncore({ projectRoot, platform, arch, version });
+  preparePaviicore({ projectRoot, platform, arch, version });
 } catch (error) {
-  console.error('❌ prepareAioncore failed:', error.message);
+  console.error('❌ preparePaviicore failed:', error.message);
   process.exit(1);
 }
 
 module.exports = function () {
   try {
-    return prepareAioncore({ projectRoot, platform, arch, version });
+    return preparePaviicore({ projectRoot, platform, arch, version });
   } catch (error) {
-    console.error('❌ prepareAioncore failed:', error.message);
+    console.error('❌ preparePaviicore failed:', error.message);
     throw error;
   }
 };

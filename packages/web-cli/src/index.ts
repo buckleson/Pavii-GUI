@@ -12,7 +12,7 @@ import { ensureAdminPassword } from './ensureAdminPassword.js';
 //   pavii-web/
 //   ├── pavii-web              ← bun-compiled standalone binary (process.execPath)
 //   ├── package.json             ← for runtime version lookup
-//   ├── bundled-aioncore/<plat-arch>/aioncore[.exe]
+//   ├── bundled-paviicore/<plat-arch>/paviicore[.exe]
 //   └── static/                  ← SPA assets
 //
 // Under `bun build --compile`, import.meta.url resolves to a virtual /$bunfs/
@@ -49,7 +49,14 @@ const isPackaged = (() => {
   return exeName === 'pavii-web' || exeName === 'pavii-web.exe';
 })();
 
-const BACKEND_BINARY = process.platform === 'win32' ? 'aioncore.exe' : 'aioncore';
+/**
+ * Engine filenames, current first.
+ *
+ * A bundle downloaded from the upstream `iOfficeAI/AionCore` release still
+ * contains `aioncore`; one built from the vendored source is `paviicore`. Both
+ * are the same program, so accept either rather than failing on a valid bundle.
+ */
+const BACKEND_BINARIES = process.platform === 'win32' ? ['paviicore.exe', 'aioncore.exe'] : ['paviicore', 'aioncore'];
 const DEFAULT_PORT = 25808;
 const RESET_COMMAND = isPackaged ? 'pavii-web resetpass' : 'bun run resetpass';
 
@@ -79,8 +86,13 @@ function resolveBackendBinary(flags: Map<string, string | true>): string {
   const envOverride = process.env.AIONUI_BACKEND_BIN;
   if (envOverride) return path.resolve(envOverride);
   const platArch = `${process.platform}-${process.arch}`;
-  const bundled = path.join(cliRoot, 'bundled-aioncore', platArch, BACKEND_BINARY);
-  return bundled;
+  const bundledDir = path.join(cliRoot, 'bundled-paviicore', platArch);
+  const found = BACKEND_BINARIES.map((name) => path.join(bundledDir, name)).find((candidate) =>
+    fs.existsSync(candidate)
+  );
+  // Fall back to the current name so the caller reports a path worth reading
+  // when nothing is bundled at all.
+  return found ?? path.join(bundledDir, BACKEND_BINARIES[0]);
 }
 
 function resolveStaticDir(flags: Map<string, string | true>): string {
@@ -170,7 +182,7 @@ async function runStart(flags: Map<string, string | true>): Promise<void> {
     console.warn('⚠️  Backend binary not found — starting in FRONTEND-ONLY mode.');
     console.warn(`   Missing: ${backendBin}`);
     console.warn('   The web UI will load but API calls will fail until a backend is available.');
-    console.warn('   To enable backend: download aioncore and set AIONUI_BACKEND_BIN.');
+    console.warn('   To enable backend: download the engine and set AIONUI_BACKEND_BIN.');
     console.warn('');
 
     const handle = await startStaticServer({

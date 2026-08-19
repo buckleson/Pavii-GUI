@@ -8,7 +8,9 @@ const {
   verifyModuleBinary,
   getModulesToRebuild,
 } = require('./rebuildNativeModules');
-const { verifyBundledAioncoreResources } = require('../packages/shared-scripts/src/verify-bundled-aioncore-resources');
+const {
+  verifyBundledPaviicoreResources,
+} = require('../packages/shared-scripts/src/verify-bundled-paviicore-resources');
 
 /**
  * afterPack hook for electron-builder
@@ -23,7 +25,7 @@ function resolveResourcesDir(electronPlatformName, appOutDir, packager) {
 }
 
 function verifyBundledResources(resourcesDir, electronPlatformName, targetArch) {
-  const result = verifyBundledAioncoreResources({
+  const result = verifyBundledPaviicoreResources({
     resourcesDir,
     electronPlatformName,
     targetArch,

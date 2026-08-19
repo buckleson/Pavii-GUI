@@ -1,5 +1,5 @@
 /**
- * Prepare aioncore binary for packaging.
+ * Prepare the engine binary for packaging.
  *
  * Resolution order:
  *  1. GitHub Actions artifact download when AIONUI_BACKEND_RUN_ID is set
@@ -7,19 +7,19 @@
  *  3. Complete local bundle from AIONUI_BACKEND_LOCAL_BUNDLE_DIR
  *  4. Local binary fallback from AIONUI_BACKEND_LOCAL_BINARY
  *
- * Output: {projectRoot}/resources/bundled-aioncore/{platform}-{arch}/
- *   - aioncore[.exe]
+ * Output: {projectRoot}/resources/bundled-paviicore/{platform}-{arch}/
+ *   - paviicore[.exe]
  *   - manifest.json
  *   - managed-resources/...
  *
- * @module prepare-aioncore
+ * @module prepare-paviicore
  */
 
 const { execSync, execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { verifyBundledAioncoreResources } = require('./verify-bundled-aioncore-resources');
+const { verifyBundledPaviicoreResources } = require('./verify-bundled-paviicore-resources');
 const { readJsonFile } = require('./read-json-file.js');
 
 const GITHUB_OWNER = 'iOfficeAI';
@@ -88,7 +88,19 @@ function writeJson(filePath, payload) {
 }
 
 function getBinaryName(platform) {
-  return platform === 'win32' ? 'aioncore.exe' : 'aioncore';
+  return platform === 'win32' ? 'paviicore.exe' : 'paviicore';
+}
+
+/**
+ * Engine filenames to look for inside a downloaded archive, current name first.
+ *
+ * Archives published by `iOfficeAI/AionCore` contain `aioncore`; anything built
+ * from the vendored source is `paviicore`. They are the same program, and the
+ * caller copies whatever it finds to `getBinaryName()`, so a downloaded engine
+ * still lands in the bundle under the current name.
+ */
+function getArchiveBinaryNames(platform) {
+  return platform === 'win32' ? ['paviicore.exe', 'aioncore.exe'] : ['paviicore', 'aioncore'];
 }
 
 function getActionsTarget(platform, arch) {
@@ -137,15 +149,15 @@ function prepareManagedResources(binaryPath, targetDir) {
   return bundleOut;
 }
 
-function verifyPreparedAioncoreBundle(projectRoot, platform, arch) {
-  const result = verifyBundledAioncoreResources({
+function verifyPreparedPaviicoreBundle(projectRoot, platform, arch) {
+  const result = verifyBundledPaviicoreResources({
     resourcesDir: path.join(projectRoot, 'resources'),
     electronPlatformName: platform,
     targetArch: arch,
   });
   if (result.missing.length > 0 || result.failures.length > 0) {
     const summary = result.missing.length > 0 ? result.missing.join(', ') : JSON.stringify(result.failures);
-    throw new Error(`Prepared aioncore bundle is missing required bundled resource(s): ${summary}`);
+    throw new Error(`Prepared engine bundle is missing required bundled resource(s): ${summary}`);
   }
   return result;
 }
@@ -212,7 +224,7 @@ function getDownloadUrl(assetName, tag) {
 }
 
 function downloadFile(url, outputPath) {
-  console.log(`  Downloading aioncore from ${url}`);
+  console.log(`  Downloading the engine from ${url}`);
   if (process.platform === 'win32') {
     const ps = `$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '${url}' -OutFile '${outputPath.replace(/'/g, "''")}'`;
     execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps], {
@@ -241,13 +253,13 @@ function extractArchive(archivePath, outputDir, platform) {
   }
 }
 
-function findBinaryInDir(dir, binaryName) {
+function findBinaryInDir(dir, binaryNames) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
-    if (entry.isFile() && entry.name === binaryName) return fullPath;
+    if (entry.isFile() && binaryNames.includes(entry.name)) return fullPath;
     if (entry.isDirectory()) {
-      const found = findBinaryInDir(fullPath, binaryName);
+      const found = findBinaryInDir(fullPath, binaryNames);
       if (found) return found;
     }
   }
@@ -364,7 +376,7 @@ function downloadAndExtractActionsArtifact(platform, arch, runId) {
     );
   }
 
-  const tempDir = path.join(os.tmpdir(), 'aioncore-prepare-actions', runId, `${platform}-${arch}`);
+  const tempDir = path.join(os.tmpdir(), 'paviicore-prepare-actions', runId, `${platform}-${arch}`);
   const artifactZipPath = path.join(tempDir, `${expectedArtifactName}.zip`);
   const artifactExtractDir = path.join(tempDir, 'artifact');
   const binaryExtractDir = path.join(tempDir, 'binary');
@@ -375,21 +387,23 @@ function downloadAndExtractActionsArtifact(platform, arch, runId) {
   const downloadUrl =
     artifact.archive_download_url ||
     `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/artifacts/${artifact.id}/zip`;
-  console.log(`  Downloading aioncore from AionCore run ${runId} artifact ${expectedArtifactName}`);
+  console.log(`  Downloading the engine from AionCore run ${runId} artifact ${expectedArtifactName}`);
   downloadFileWithAuth(downloadUrl, artifactZipPath);
   extractArchive(artifactZipPath, artifactExtractDir, platform);
 
   const archivePath = findAioncoreArchiveInDir(artifactExtractDir);
   if (!archivePath) {
-    throw new Error(`AionCore artifact ${expectedArtifactName} from run ${runId} does not contain an aioncore archive`);
+    throw new Error(`AionCore artifact ${expectedArtifactName} from run ${runId} does not contain an engine archive`);
   }
 
   extractArchive(archivePath, binaryExtractDir, platform);
 
-  const binaryName = getBinaryName(platform);
-  const binaryPath = findBinaryInDir(binaryExtractDir, binaryName);
+  const binaryNames = getArchiveBinaryNames(platform);
+  const binaryPath = findBinaryInDir(binaryExtractDir, binaryNames);
   if (!binaryPath) {
-    throw new Error(`Binary ${binaryName} not found in AionCore artifact ${expectedArtifactName} from run ${runId}`);
+    throw new Error(
+      `No engine binary (${binaryNames.join(' or ')}) in AionCore artifact ${expectedArtifactName} from run ${runId}`
+    );
   }
 
   return {
@@ -404,11 +418,11 @@ function downloadAndExtractActionsArtifact(platform, arch, runId) {
 function downloadAndExtract(platform, arch, tag) {
   const assetName = getAssetName(platform, arch, tag);
   if (!assetName) {
-    throw new Error(`Unsupported aioncore target: ${platform}-${arch}`);
+    throw new Error(`Unsupported engine target: ${platform}-${arch}`);
   }
 
   const url = getDownloadUrl(assetName, tag);
-  const tempDir = path.join(os.tmpdir(), 'aioncore-prepare', tag, `${platform}-${arch}`);
+  const tempDir = path.join(os.tmpdir(), 'paviicore-prepare', tag, `${platform}-${arch}`);
   const archivePath = path.join(tempDir, assetName);
   const extractDir = path.join(tempDir, 'extracted');
 
@@ -418,10 +432,10 @@ function downloadAndExtract(platform, arch, tag) {
   downloadFile(url, archivePath);
   extractArchive(archivePath, extractDir, platform);
 
-  const binaryName = getBinaryName(platform);
-  const binaryPath = findBinaryInDir(extractDir, binaryName);
+  const binaryNames = getArchiveBinaryNames(platform);
+  const binaryPath = findBinaryInDir(extractDir, binaryNames);
   if (!binaryPath) {
-    throw new Error(`Binary ${binaryName} not found in downloaded archive`);
+    throw new Error(`No engine binary (${binaryNames.join(' or ')}) in downloaded archive`);
   }
 
   return { binaryPath, tempDir, url };
@@ -432,7 +446,7 @@ function downloadAndExtract(platform, arch, tag) {
 // ---------------------------------------------------------------------------
 
 /**
- * Prepare aioncore binary for packaging.
+ * Prepare the engine binary for packaging.
  *
  * @param {object} options - Configuration options
  * @param {string} options.projectRoot - Project root directory
@@ -441,7 +455,7 @@ function downloadAndExtract(platform, arch, tag) {
  * @param {string} options.version - Backend version (default: 'latest')
  * @returns {{ prepared: true; dir: string; sourceType: string }}
  */
-function prepareAioncore(options) {
+function preparePaviicore(options) {
   const { projectRoot, platform, arch, version = 'latest' } = options;
   const runtimeKey = `${platform}-${arch}`;
   const actionsRunId = (process.env.AIONUI_BACKEND_RUN_ID || '').trim();
@@ -450,7 +464,7 @@ function prepareAioncore(options) {
   // in place with a `local-source-build` manifest. Never overwrite them with
   // an upstream download — that would silently strip the Pavii rebrand.
   {
-    const existingDir = path.join(projectRoot, 'resources', 'bundled-aioncore', runtimeKey);
+    const existingDir = path.join(projectRoot, 'resources', 'bundled-paviicore', runtimeKey);
     const existingManifestPath = path.join(existingDir, 'manifest.json');
     const existingBinaryPath = path.join(existingDir, getBinaryName(platform));
     if (fs.existsSync(existingManifestPath) && fs.existsSync(existingBinaryPath)) {
@@ -462,13 +476,13 @@ function prepareAioncore(options) {
         pinnedToLocalBuild = readJsonFile(existingManifestPath).sourceType === 'local-source-build';
       } catch (error) {
         // Never fail silently here: a swallowed parse error costs the rebrand.
-        console.warn(`  Could not read aioncore manifest: ${error.message}`);
+        console.warn(`  Could not read the engine manifest: ${error.message}`);
       }
       if (pinnedToLocalBuild) {
-        console.log(`  Keeping local-source-build aioncore for ${runtimeKey} (manifest pins it; skipping download)`);
+        console.log(`  Keeping the local-source-build engine for ${runtimeKey} (manifest pins it; skipping download)`);
         // A broken pinned bundle must FAIL the build, not silently fall back to
         // the upstream download (that would strip the Pavii rebrand).
-        verifyPreparedAioncoreBundle(projectRoot, platform, arch);
+        verifyPreparedPaviicoreBundle(projectRoot, platform, arch);
         return { prepared: true, dir: existingDir, sourceType: 'local-source-build' };
       }
     }
@@ -480,21 +494,21 @@ function prepareAioncore(options) {
     if (version === 'latest') {
       const resolved = resolveLatestTag();
       if (!resolved) {
-        throw new Error('Failed to resolve latest aioncore release tag from GitHub API');
+        throw new Error('Failed to resolve the latest AionCore release tag from GitHub API');
       }
       tag = resolved;
-      console.log(`Resolved aioncore "latest" → ${tag}`);
+      console.log(`Resolved AionCore "latest" → ${tag}`);
     } else {
       tag = version.startsWith('v') ? version : `v${version}`;
     }
   }
 
-  const targetDir = path.join(projectRoot, 'resources', 'bundled-aioncore', runtimeKey);
+  const targetDir = path.join(projectRoot, 'resources', 'bundled-paviicore', runtimeKey);
   const binaryName = getBinaryName(platform);
   const targetBinaryPath = path.join(targetDir, binaryName);
 
   console.log(
-    `Preparing aioncore for ${runtimeKey} (${actionsRunId ? `actions run: ${actionsRunId}` : `version: ${tag}`})`
+    `Preparing the engine for ${runtimeKey} (${actionsRunId ? `actions run: ${actionsRunId}` : `version: ${tag}`})`
   );
 
   removeDirectorySafe(targetDir);
@@ -523,11 +537,11 @@ function prepareAioncore(options) {
         files: [binaryName, 'managed-resources/'],
       };
       writeJson(path.join(targetDir, 'manifest.json'), manifest);
-      verifyPreparedAioncoreBundle(projectRoot, platform, arch);
-      console.log(`  Using local aioncore bundle: ${resolvedLocalBundleDir}`);
+      verifyPreparedPaviicoreBundle(projectRoot, platform, arch);
+      console.log(`  Using local engine bundle: ${resolvedLocalBundleDir}`);
       return { prepared: true, dir: targetDir, sourceType: 'local-bundle' };
     }
-    console.warn(`  Local aioncore bundle is incomplete or missing: ${resolvedLocalBundleDir}`);
+    console.warn(`  Local engine bundle is incomplete or missing: ${resolvedLocalBundleDir}`);
   }
 
   let sourcePath = null;
@@ -572,9 +586,9 @@ function prepareAioncore(options) {
         sourcePath = resolvedLocalBinary;
         sourceType = 'local-binary';
         sourceDetail = { path: resolvedLocalBinary };
-        console.log(`  Using local aioncore binary: ${resolvedLocalBinary}`);
+        console.log(`  Using local engine binary: ${resolvedLocalBinary}`);
       } else {
-        console.warn(`  Local aioncore binary not found: ${resolvedLocalBinary}`);
+        console.warn(`  Local engine binary not found: ${resolvedLocalBinary}`);
       }
     }
   }
@@ -585,7 +599,7 @@ function prepareAioncore(options) {
     ensureExecutableMode(targetBinaryPath);
     const bundledManagedResourcesDir = prepareManagedResources(targetBinaryPath, targetDir);
 
-    // The release tag is the authoritative version — the aioncore
+    // The release tag is the authoritative version — the engine
     // binary does not expose a --version flag (it has --app-version which
     // takes a value, not a self-report).
     const manifest = {
@@ -599,9 +613,9 @@ function prepareAioncore(options) {
     };
 
     writeJson(path.join(targetDir, 'manifest.json'), manifest);
-    verifyPreparedAioncoreBundle(projectRoot, platform, arch);
+    verifyPreparedPaviicoreBundle(projectRoot, platform, arch);
     console.log(
-      `  Bundled aioncore prepared: resources/bundled-aioncore/${runtimeKey}/${binaryName} [source=${sourceType}]`
+      `  Bundled engine prepared: resources/bundled-paviicore/${runtimeKey}/${binaryName} [source=${sourceType}]`
     );
     console.log(`  Bundled managed resources prepared: ${bundledManagedResourcesDir}`);
 
@@ -609,12 +623,12 @@ function prepareAioncore(options) {
     return { prepared: true, dir: targetDir, sourceType };
   }
 
-  throw new Error(`aioncore binary not found for ${runtimeKey} (tag: ${tag})`);
+  throw new Error(`Engine binary not found for ${runtimeKey} (tag: ${tag})`);
 }
 
 module.exports = {
   getActionsArtifactMissingMessage,
   getActionsArtifactName,
-  prepareAioncore,
-  verifyPreparedAioncoreBundle,
+  preparePaviicore,
+  verifyPreparedPaviicoreBundle,
 };

@@ -5,7 +5,7 @@ const { readJsonFile } = require('./read-json-file.js');
 const REQUIRED_CLI_NAMES = ['claude', 'codex'];
 
 function backendBinaryName(platform) {
-  return platform === 'win32' ? 'aioncore.exe' : 'aioncore';
+  return platform === 'win32' ? 'paviicore.exe' : 'paviicore';
 }
 
 function normalize(relativePath) {
@@ -13,7 +13,7 @@ function normalize(relativePath) {
 }
 
 function bundledPath(runtimeKey, ...parts) {
-  return normalize(path.join('bundled-aioncore', runtimeKey, ...parts));
+  return normalize(path.join('bundled-paviicore', runtimeKey, ...parts));
 }
 
 function isFile(filePath) {
@@ -41,7 +41,7 @@ function requireRelativePath(baseDir, runtimeKey, parts, checked, missing, failu
   checked.push(relativePath);
 
   if (!isFile(path.join(baseDir, ...parts))) {
-    const failure = { component: 'aioncore', reason: 'missing_file', path: relativePath };
+    const failure = { component: 'paviicore', reason: 'missing_file', path: relativePath };
     failures.push(failure);
     missing.push(relativePath);
   }
@@ -336,9 +336,9 @@ function requireContractDirectory(baseDir, runtimeKey, cli, root, relativePath, 
   }
 }
 
-function verifyBundledAioncoreResources({ resourcesDir, electronPlatformName, targetArch }) {
+function verifyBundledPaviicoreResources({ resourcesDir, electronPlatformName, targetArch }) {
   const runtimeKey = `${electronPlatformName}-${targetArch}`;
-  const baseDir = path.join(resourcesDir, 'bundled-aioncore', runtimeKey);
+  const baseDir = path.join(resourcesDir, 'bundled-paviicore', runtimeKey);
   const checked = [];
   const missing = [];
   const failures = [];
@@ -355,5 +355,5 @@ function verifyBundledAioncoreResources({ resourcesDir, electronPlatformName, ta
 }
 
 module.exports = {
-  verifyBundledAioncoreResources,
+  verifyBundledPaviicoreResources,
 };

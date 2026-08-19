@@ -15,8 +15,8 @@ fn main() {
         res.set("ProductName", "Pavii.Ai");
         res.set("CompanyName", "Team Pavii");
         res.set("LegalCopyright", "Copyright \u{00A9} 2026 Team Pavii");
-        res.set("OriginalFilename", "aioncore.exe");
-        res.set("InternalName", "aioncore");
+        res.set("OriginalFilename", "paviicore.exe");
+        res.set("InternalName", "paviicore");
         res.set_icon("assets/app.ico");
         if let Err(error) = res.compile() {
             println!("cargo:warning=failed to embed Windows version info: {error}");

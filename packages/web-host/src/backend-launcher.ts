@@ -1,5 +1,5 @@
 /**
- * Lifecycle manager for the aioncore subprocess (web-host version).
+ * Lifecycle manager for the engine subprocess (web-host version).
  *
  * Migrated from packages/desktop/src/process/backend/lifecycleManager.ts in M4.
  * Electron dependency removed: `app.*` replaced with constructor-injected
@@ -187,7 +187,7 @@ export class BackendStartupError extends Error {
 }
 
 export class BackendStartupCancelledError extends Error {
-  constructor(message = 'aioncore startup cancelled') {
+  constructor(message = 'engine startup cancelled') {
     super(message);
     this.name = 'BackendStartupCancelledError';
   }
@@ -239,14 +239,14 @@ const FETCH_FORBIDDEN_PORTS = new Set([
 
 const FETCH_COMPATIBLE_PORT_MAX_ATTEMPTS = 50;
 const AIONCORE_LISTENING_PREFIX = 'AIONCORE_LISTENING ';
-// Bare, payload-less readiness marker emitted by aioncore once `axum::serve`
+// Bare, payload-less readiness marker emitted by the engine once `axum::serve`
 // actually begins serving (see AionCore cmd_server.rs). Authoritative "ready"
 // signal — matched by exact whole-line equality. The port is already known from
 // the earlier AIONCORE_LISTENING line, so this marker carries no payload.
 const AIONCORE_READY_MARKER = 'AIONCORE_READY';
 const BACKEND_PORT_REPORT_TIMEOUT_MS = 60_000;
 
-// Benign boundary code emitted by an aioncore instance that yielded the
+// Benign boundary code emitted by an engine instance that yielded the
 // data-dir instance guard to a peer that already owns it (Sentry 135525166).
 // This is a transient, self-recoverable condition — the owning peer is expected
 // to finish (or a crash-orphan is expected to self-exit and release the guard),
@@ -274,7 +274,7 @@ export function findAvailablePort(
 
   const firstRequestedPort = preferredPort && !isFetchForbiddenPort(preferredPort) ? preferredPort : 0;
   if (preferredPort && firstRequestedPort === 0) {
-    console.info(`[aioncore] skipped fetch-blocked backend port ${preferredPort}`);
+    console.info(`[paviicore] skipped fetch-blocked backend port ${preferredPort}`);
   }
 
   const tryPort = (requestedPort: number, remainingAttempts: number, attempt: number): Promise<number> =>
@@ -301,12 +301,12 @@ export function findAvailablePort(
         server.close(() => {
           cleanup();
           if (resolvedPort > 0 && !isFetchForbiddenPort(resolvedPort)) {
-            console.info(`[aioncore] selected backend port ${resolvedPort} after ${attempt} attempts`);
+            console.info(`[paviicore] selected backend port ${resolvedPort} after ${attempt} attempts`);
             resolve(resolvedPort);
             return;
           }
           if (resolvedPort > 0 && remainingAttempts > 1) {
-            console.info(`[aioncore] skipped fetch-blocked backend port ${resolvedPort}`);
+            console.info(`[paviicore] skipped fetch-blocked backend port ${resolvedPort}`);
             tryPort(0, remainingAttempts - 1, attempt + 1).then(resolve, reject);
             return;
           }
@@ -545,7 +545,7 @@ export class BackendLifecycleManager {
     preferredPort?: number,
     launchFlags: BackendLaunchFlags = {}
   ): Promise<number> {
-    // Bounded retry loop for the transient "a peer aioncore already owns this
+    // Bounded retry loop for the transient "a peer engine already owns this
     // data directory" case (Sentry 135525166). The owning peer either finishes
     // startup and keeps running, or a crash-orphan self-exits and releases the
     // data-dir instance guard. Non-peer errors are thrown immediately with no
@@ -562,14 +562,14 @@ export class BackendLifecycleManager {
         lastPeerError = error;
         const backoff = PEER_RETRY_BACKOFF_MS[Math.min(attempt, PEER_RETRY_BACKOFF_MS.length - 1)];
         console.warn(
-          `[aioncore] a peer already owns the data directory; retrying startup in ${backoff}ms (attempt ${attempt + 1}/${PEER_RETRY_MAX_ATTEMPTS})`
+          `[paviicore] a peer already owns the data directory; retrying startup in ${backoff}ms (attempt ${attempt + 1}/${PEER_RETRY_MAX_ATTEMPTS})`
         );
         await delayMs(backoff);
       }
     }
     // Unreachable in practice: the loop either returns on success or throws on
     // the final attempt. Kept as an explicit safety net for the peer path.
-    throw lastPeerError ?? new Error('aioncore startup failed after peer retries');
+    throw lastPeerError ?? new Error('engine startup failed after peer retries');
   }
 
   private async attemptStart(
@@ -587,7 +587,7 @@ export class BackendLifecycleManager {
     } catch (error) {
       const diagnostics = getResolveDiagnostics(error);
       throw new BackendStartupError(
-        'aioncore startup failed while resolving backend binary',
+        'engine startup failed while resolving backend binary',
         {
           stage: 'resolve_binary',
           appVersion,
@@ -666,7 +666,7 @@ export class BackendLifecycleManager {
       isPackaged: this.appMeta.isPackaged,
       recoverCorruptedDatabase: launchFlags.recoverCorruptedDatabase === true,
     });
-    console.log(`[aioncore] starting: ${binaryPath} ${args.join(' ')}`);
+    console.log(`[paviicore] starting: ${binaryPath} ${args.join(' ')}`);
 
     try {
       ensureBackendStartupDirectory(dbPath);
@@ -676,7 +676,7 @@ export class BackendLifecycleManager {
       ensureBackendStartupDirectory(dirs?.logDir);
     } catch (error) {
       this._status = 'error';
-      throw makeStartupError('spawn', 'aioncore startup directory preparation failed', error);
+      throw makeStartupError('spawn', 'engine startup directory preparation failed', error);
     }
 
     try {
@@ -688,7 +688,7 @@ export class BackendLifecycleManager {
       });
     } catch (error) {
       this._status = 'error';
-      throw makeStartupError('spawn', 'aioncore process spawn threw before startup', error);
+      throw makeStartupError('spawn', 'engine process spawn threw before startup', error);
     }
 
     this.childProcess.stdin?.end();
@@ -719,7 +719,7 @@ export class BackendLifecycleManager {
       this.childProcess?.once('error', (error) => {
         if (startupSettled) return;
         this._status = 'error';
-        rejectOnce(makeStartupError('spawn_error', 'aioncore process emitted an error before startup', error));
+        rejectOnce(makeStartupError('spawn_error', 'engine process emitted an error before startup', error));
       });
 
       this.childProcess?.once('exit', (code, signal) => {
@@ -743,11 +743,11 @@ export class BackendLifecycleManager {
         const exitSignal = pendingStartupExit.signal ?? signal;
         if (!pendingStartupExit.startupSettledAtExit) {
           if (pendingStartupExit.statusAtExit === 'stopped') {
-            rejectOnce(new BackendStartupCancelledError('aioncore startup cancelled before health check passed'));
+            rejectOnce(new BackendStartupCancelledError('engine startup cancelled before health check passed'));
             return;
           }
           rejectOnce(
-            makeStartupError('early_exit', 'aioncore exited before health check passed', undefined, {
+            makeStartupError('early_exit', 'engine exited before health check passed', undefined, {
               exitCode: exitCode ?? undefined,
               signal: exitSignal ?? undefined,
             })
@@ -757,13 +757,13 @@ export class BackendLifecycleManager {
         if (pendingStartupExit.statusAtExit === 'starting') {
           void Promise.resolve(
             options?.onPendingExit?.(
-              makeStartupError('early_exit', 'aioncore exited after startup health timeout', undefined, {
+              makeStartupError('early_exit', 'engine exited after startup health timeout', undefined, {
                 exitCode: exitCode ?? undefined,
                 signal: exitSignal ?? undefined,
               })
             )
           ).catch((error) => {
-            console.error('[aioncore] pending exit handler failed:', error);
+            console.error('[paviicore] pending exit handler failed:', error);
           });
         }
       });
@@ -787,7 +787,7 @@ export class BackendLifecycleManager {
       };
       reportedPortTimer = setTimeout(() => {
         rejectReportedPort(
-          makeStartupError('listen_timeout', 'aioncore did not report its listening port before timeout', undefined, {
+          makeStartupError('listen_timeout', 'engine did not report its listening port before timeout', undefined, {
             healthCheckTimeoutMs: BACKEND_PORT_REPORT_TIMEOUT_MS,
             healthCheckElapsedMs: Date.now() - startupStartedAt,
           })
@@ -820,14 +820,14 @@ export class BackendLifecycleManager {
           serverListeningObservedAfterMs = Date.now() - startupStartedAt;
           serverListeningLine = trimmed;
         }
-        if (trimmed) console.log(`[aioncore] ${line}`);
+        if (trimmed) console.log(`[paviicore] ${line}`);
       }
     });
 
     this.childProcess.stderr?.on('data', (data: Buffer) => {
       stderrTail = appendOutputTail(stderrTail, data);
       for (const line of data.toString().split('\n')) {
-        if (line.trim()) console.error(`[aioncore] ${line}`);
+        if (line.trim()) console.error(`[paviicore] ${line}`);
       }
     });
 
@@ -856,7 +856,7 @@ export class BackendLifecycleManager {
       const keptAlive = !!(options?.allowPendingOnHealthTimeout && this.childProcess);
       const healthTimeoutError = makeStartupError(
         'health_timeout',
-        'aioncore failed to start within timeout',
+        'engine failed to start within timeout',
         undefined,
         {
           ...healthOrReady.health.diagnostics,
@@ -865,9 +865,9 @@ export class BackendLifecycleManager {
       );
       if (keptAlive && this.childProcess) {
         startupSettled = true;
-        console.warn(`[aioncore] health check timed out; keeping process alive on port ${this._port}`);
+        console.warn(`[paviicore] health check timed out; keeping process alive on port ${this._port}`);
         void Promise.resolve(options?.onHealthTimeout?.(healthTimeoutError)).catch((error) => {
-          console.error('[aioncore] health timeout handler failed:', error);
+          console.error('[paviicore] health timeout handler failed:', error);
         });
         this.continueWaitingForHealth(this._port, this.childProcess, startupStartedAt, readySignal, options?.onReady);
         return this._port;
@@ -884,11 +884,11 @@ export class BackendLifecycleManager {
     this.restartCount = 0;
     if (healthOrReady.kind === 'ready') {
       console.info(
-        `[aioncore] ready signal received on port ${this._port}, elapsed_ms=${Date.now() - startupStartedAt}, data-dir: ${dbPath}`
+        `[paviicore] ready signal received on port ${this._port}, elapsed_ms=${Date.now() - startupStartedAt}, data-dir: ${dbPath}`
       );
     } else {
       console.info(
-        `[aioncore] health ready on port ${this._port} after ${healthOrReady.health.diagnostics.healthCheckAttempts} attempts, elapsed_ms=${healthOrReady.health.diagnostics.healthCheckElapsedMs}, data-dir: ${dbPath}`
+        `[paviicore] health ready on port ${this._port} after ${healthOrReady.health.diagnostics.healthCheckAttempts} attempts, elapsed_ms=${healthOrReady.health.diagnostics.healthCheckElapsedMs}, data-dir: ${dbPath}`
       );
     }
     return this._port;
@@ -1004,11 +1004,11 @@ export class BackendLifecycleManager {
           ? (outcome.health.diagnostics.healthCheckElapsedMs ?? Date.now() - startupStartedAt)
           : Date.now() - startupStartedAt;
       console.info(
-        `[aioncore] late ${outcome.kind === 'ready' ? 'ready signal' : 'health ready'} on port ${port}, elapsed_ms=${elapsedMs}, data-dir: ${this._lastDbPath}`
+        `[paviicore] late ${outcome.kind === 'ready' ? 'ready signal' : 'health ready'} on port ${port}, elapsed_ms=${elapsedMs}, data-dir: ${this._lastDbPath}`
       );
       await onReady?.(port);
     })().catch((error) => {
-      console.error('[aioncore] background health wait failed:', error);
+      console.error('[paviicore] background health wait failed:', error);
     });
   }
 
@@ -1030,12 +1030,12 @@ export class BackendLifecycleManager {
 
     if (this.restartCount > this.maxRestarts) {
       this._status = 'error';
-      console.error('[aioncore] child exited unexpectedly; restart limit exceeded', crashContext);
+      console.error('[paviicore] child exited unexpectedly; restart limit exceeded', crashContext);
       return;
     }
 
     const delay = Math.pow(2, this.restartCount - 1) * 1000;
-    console.warn('[aioncore] child exited unexpectedly; scheduling restart', {
+    console.warn('[paviicore] child exited unexpectedly; scheduling restart', {
       ...crashContext,
       delayMs: delay,
     });
@@ -1051,7 +1051,7 @@ export class BackendLifecycleManager {
         })
         .catch((error) => {
           this._status = 'error';
-          console.error('[aioncore] restart after crash failed', {
+          console.error('[paviicore] restart after crash failed', {
             port: this._port,
             restartCount: this.restartCount,
             maxRestarts: this.maxRestarts,

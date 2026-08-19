@@ -1,16 +1,26 @@
 /**
- * Resolve the aioncore binary path.
+ * Resolve the engine binary path.
  *
  * Search order:
  *  1. Bundled with app (production)
  *  2. System PATH
+ *
+ * Two names are accepted. Engines built from the vendored source are named
+ * `paviicore`; a bundle downloaded from the upstream `iOfficeAI/AionCore`
+ * release (which happens for a platform nobody built locally) still contains
+ * `aioncore`. Both are the same program, so the legacy name is a fallback
+ * rather than an error -- do not remove it without also renaming on extract.
  */
 
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 
-const BINARY_NAME = 'aioncore';
+const BINARY_NAME = 'paviicore';
+/** Name used by engines downloaded from the upstream release. */
+const LEGACY_BINARY_NAME = 'aioncore';
+/** Resources subdirectory the engine ships in; must match electron-builder.yml. */
+const BUNDLED_DIR_NAME = 'bundled-paviicore';
 const MAX_DIR_ENTRIES = 20;
 const MAX_LOOKUP_TEXT_LENGTH = 1000;
 
@@ -38,8 +48,21 @@ class BackendBinaryResolveError extends Error {
   }
 }
 
+function withExecutableExtension(name: string): string {
+  return process.platform === 'win32' ? `${name}.exe` : name;
+}
+
 function getBinaryName(): string {
-  return process.platform === 'win32' ? `${BINARY_NAME}.exe` : BINARY_NAME;
+  return withExecutableExtension(BINARY_NAME);
+}
+
+/** Candidate filenames, current name first. */
+function getBinaryNames(): string[] {
+  return [withExecutableExtension(BINARY_NAME), withExecutableExtension(LEGACY_BINARY_NAME)];
+}
+
+function pathLookupCommand(name: string): string {
+  return process.platform === 'win32' ? `where ${name}` : `which ${name}`;
 }
 
 function getRuntimeKey(): string {
@@ -61,7 +84,7 @@ function trimLookupText(text: string): string {
 }
 
 /**
- * Resolve the aioncore binary path.
+ * Resolve the engine binary path.
  * Returns the absolute path to the binary, or throws if not found.
  */
 export function resolveBinaryPath(): string {
@@ -70,16 +93,20 @@ export function resolveBinaryPath(): string {
   const diagnostics: BackendBinaryResolveDiagnostics = {
     runtimeKey,
     binaryName,
-    pathLookupCommand: process.platform === 'win32' ? `where ${BINARY_NAME}` : `which ${BINARY_NAME}`,
+    pathLookupCommand: pathLookupCommand(BINARY_NAME),
   };
 
-  const bundled = bundledPath(runtimeKey, binaryName, diagnostics);
-  if (bundled) return bundled;
+  for (const candidateName of getBinaryNames()) {
+    const bundled = bundledPath(runtimeKey, candidateName, diagnostics);
+    if (bundled) return bundled;
+  }
 
   // Dev fallback: unpackaged runs launch from the repo root, where
-  // `node scripts/prepareAioncore.js` places the engine (same layout webui uses).
-  const repoBundled = join(process.cwd(), 'resources', 'bundled-aioncore', runtimeKey, binaryName);
-  if (existsSync(repoBundled)) return repoBundled;
+  // `node scripts/preparePaviicore.js` places the engine (same layout webui uses).
+  for (const candidateName of getBinaryNames()) {
+    const repoBundled = join(process.cwd(), 'resources', BUNDLED_DIR_NAME, runtimeKey, candidateName);
+    if (existsSync(repoBundled)) return repoBundled;
+  }
 
   const fromPath = resolveFromSystemPATH(diagnostics);
   if (fromPath) return fromPath;
@@ -92,7 +119,7 @@ export function resolveBinaryPath(): string {
 
 /**
  * Check bundled binary in resources directory.
- * Layout: bundled-aioncore/{platform}-{arch}/aioncore[.exe]
+ * Layout: bundled-paviicore/{platform}-{arch}/paviicore[.exe]
  */
 function bundledPath(
   runtimeKey: string,
@@ -103,10 +130,12 @@ function bundledPath(
   if (!resourcesPath) return null;
   diagnostics.resourcesPath = resourcesPath;
 
-  const bundledDir = join(resourcesPath, 'bundled-aioncore');
+  const bundledDir = join(resourcesPath, BUNDLED_DIR_NAME);
   const runtimeDir = join(bundledDir, runtimeKey);
   const candidate = join(runtimeDir, binaryName);
-  diagnostics.checkedBundledPath = candidate;
+  // First candidate only: this is called once per accepted name, and a failure
+  // report should point at the canonical path rather than the legacy fallback.
+  diagnostics.checkedBundledPath ??= candidate;
   diagnostics.bundledDirExists = existsSync(bundledDir);
   diagnostics.runtimeDirExists = existsSync(runtimeDir);
   diagnostics.resourcesDirEntries = listDirEntries(resourcesPath);
@@ -117,18 +146,29 @@ function bundledPath(
 }
 
 /**
- * Try to find the binary on the system PATH.
+ * Try to find the binary on the system PATH, current name first.
+ *
+ * Each name gets its own lookup rather than one `where a b` / `which a b` call:
+ * both tools exit non-zero when *any* argument is missing, so a combined call
+ * would throw away a match found for the other name.
  */
 function resolveFromSystemPATH(diagnostics: BackendBinaryResolveDiagnostics): string | null {
-  try {
-    const result = execSync(diagnostics.pathLookupCommand, { encoding: 'utf-8', timeout: 5000 }).trim();
-    diagnostics.pathLookupResult = trimLookupText(result);
-    const firstMatch = result.split(/\r?\n/).find((line) => line.trim());
-    if (firstMatch && existsSync(firstMatch.trim())) return firstMatch.trim();
-  } catch (error) {
-    diagnostics.pathLookupError = error instanceof Error ? trimLookupText(error.message) : String(error);
-    return null;
+  const errors: string[] = [];
+  // Base names, no extension: `where` resolves the executable suffix itself
+  // through PATHEXT, and `which` never wants one.
+  for (const candidateName of [BINARY_NAME, LEGACY_BINARY_NAME]) {
+    const command = pathLookupCommand(candidateName);
+    diagnostics.pathLookupCommand = command;
+    try {
+      const result = execSync(command, { encoding: 'utf-8', timeout: 5000 }).trim();
+      diagnostics.pathLookupResult = trimLookupText(result);
+      const firstMatch = result.split(/\r?\n/).find((line) => line.trim());
+      if (firstMatch && existsSync(firstMatch.trim())) return firstMatch.trim();
+    } catch (error) {
+      errors.push(`${command}: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
+  if (errors.length > 0) diagnostics.pathLookupError = trimLookupText(errors.join('\n'));
   return null;
 }
 

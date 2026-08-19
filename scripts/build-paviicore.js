@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Build the Pavii Engine (aioncore) from the vendored source and deploy it
- * into resources/bundled-aioncore/<platform>-<arch>/.
+ * Build the Pavii Engine (paviicore) from the vendored source and deploy it
+ * into resources/bundled-paviicore/<platform>-<arch>/.
  *
  * This replaces the hand-typed build steps that produced two shipped
  * regressions:
@@ -16,8 +16,8 @@
  *    through Node and proves it parses back.
  *
  * Usage:
- *   node scripts/build-aioncore.js              # host platform/arch
- *   node scripts/build-aioncore.js --arch=arm64
+ *   node scripts/build-paviicore.js              # host platform/arch
+ *   node scripts/build-paviicore.js --arch=arm64
  */
 
 'use strict';
@@ -50,7 +50,7 @@ function main(argv) {
   const arch = archArg ? archArg.slice('--arch='.length) : process.arch;
   const platform = process.platform;
   const runtimeKey = `${platform}-${arch}`;
-  const binaryName = platform === 'win32' ? 'aioncore.exe' : 'aioncore';
+  const binaryName = platform === 'win32' ? 'paviicore.exe' : 'paviicore';
 
   if (!fs.existsSync(engineDir)) {
     throw new Error(`Engine source not found at ${engineDir}`);
@@ -62,7 +62,7 @@ function main(argv) {
   run('cargo', ['test', '-p', 'aionui-assistant', 'builtin'], engineDir);
 
   // 2. Build.
-  run('cargo', ['build', '--release', '--bin', 'aioncore'], engineDir);
+  run('cargo', ['build', '--release', '--bin', 'paviicore'], engineDir);
 
   const builtBinary = path.join(engineDir, 'target', 'release', binaryName);
   if (!fs.existsSync(builtBinary)) {
@@ -71,10 +71,29 @@ function main(argv) {
 
   // 3. Deploy. managed-resources is materialized separately by running the
   //    engine; preserve whatever is already there.
-  const targetDir = path.join(projectRoot, 'resources', 'bundled-aioncore', runtimeKey);
+  const targetDir = path.join(projectRoot, 'resources', 'bundled-paviicore', runtimeKey);
   fs.mkdirSync(targetDir, { recursive: true });
   fs.copyFileSync(builtBinary, path.join(targetDir, binaryName));
   console.log(`\nDeployed ${binaryName} (${fs.statSync(builtBinary).size} bytes) to ${runtimeKey}`);
+
+  // Trees that predate the rename still carry resources/bundled-aioncore/.
+  // Nothing reads it, but leaving both makes it unclear which engine is live.
+  //
+  // managed-resources is carried over rather than deleted: it holds the
+  // materialized Node runtime and agent CLIs (hundreds of MB, fetched over the
+  // network), its manifest addresses everything by relative path, so it
+  // relocates cleanly -- and dropping it would silently cost a re-download.
+  const staleDir = path.join(projectRoot, 'resources', 'bundled-aioncore');
+  if (fs.existsSync(staleDir)) {
+    const staleManaged = path.join(staleDir, runtimeKey, 'managed-resources');
+    const targetManaged = path.join(targetDir, 'managed-resources');
+    if (fs.existsSync(staleManaged) && !fs.existsSync(targetManaged)) {
+      fs.renameSync(staleManaged, targetManaged);
+      console.log(`Moved ${runtimeKey}/managed-resources over from the pre-rename bundle`);
+    }
+    fs.rmSync(staleDir, { recursive: true, force: true });
+    console.log('Removed the stale resources/bundled-aioncore/ from before the rename');
+  }
 
   // 4. Manifest, written through Node so it can never carry a BOM.
   const manifestPath = path.join(targetDir, 'manifest.json');
@@ -84,11 +103,11 @@ function main(argv) {
     version: `v${engineVersion()}-pavii`,
     generatedAt: new Date().toISOString(),
     sourceType: 'local-source-build',
-    source: { path: 'the-remaa/AionCore (node scripts/build-aioncore.js)' },
+    source: { path: 'the-remaa/AionCore (node scripts/build-paviicore.js)' },
     files: [binaryName, 'managed-resources/'],
   });
 
-  // 5. Prove the manifest reads back. The pin guard in prepare-aioncore.js
+  // 5. Prove the manifest reads back. The pin guard in prepare-paviicore.js
   //    depends on this parsing; when it did not, the build silently replaced
   //    this engine with the upstream download.
   const bytes = fs.readFileSync(manifestPath);
@@ -115,7 +134,7 @@ if (require.main === module) {
   try {
     process.exitCode = main(process.argv.slice(2));
   } catch (error) {
-    console.error(`\nbuild-aioncore: ${error.message}`);
+    console.error(`\nbuild-paviicore: ${error.message}`);
     process.exitCode = 1;
   }
 }

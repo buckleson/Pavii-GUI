@@ -101,14 +101,14 @@ jobs:
 
       # The engine is built from the vendored source so every platform gets the
       # Pavii-branded binary (identity, prompts, embedded version info).
-      - name: Build Pavii Engine (aioncore)
+      - name: Build Pavii Engine (paviicore)
         working-directory: the-remaa/AionCore
-        run: cargo build --release --bin aioncore
+        run: cargo build --release --bin paviicore
 
       - name: Locate engine binary
         shell: bash
         run: |
-          BIN="the-remaa/AionCore/target/release/aioncore"
+          BIN="the-remaa/AionCore/target/release/paviicore"
           [ "${{ runner.os }}" = "Windows" ] && BIN="$BIN.exe"
           test -f "$BIN" || { echo "engine binary missing at $BIN"; exit 1; }
           echo "AIONUI_BACKEND_LOCAL_BINARY=$(pwd)/$BIN" >> "$GITHUB_ENV"

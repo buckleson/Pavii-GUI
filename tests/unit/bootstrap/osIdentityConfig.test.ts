@@ -33,24 +33,24 @@ describe('OS-level identity packaging config', () => {
   });
 });
 
-describe('prepare-aioncore local-source-build guard', () => {
+describe('prepare-paviicore local-source-build guard', () => {
   it('never replaces a pinned local build: verification failure throws instead of re-downloading', async () => {
-    const { prepareAioncore } = await import(resolve(repoRoot, 'packages/shared-scripts/src/prepare-aioncore.js'));
+    const { preparePaviicore } = await import(resolve(repoRoot, 'packages/shared-scripts/src/prepare-paviicore.js'));
     const projectRoot = mkdtempSync(join(tmpdir(), 'prep-aioncore-'));
     try {
-      const dir = join(projectRoot, 'resources', 'bundled-aioncore', 'win32-x64');
+      const dir = join(projectRoot, 'resources', 'bundled-paviicore', 'win32-x64');
       // Deliberately incomplete bundle (fails the managed-resources contract):
       // the guard must FAIL LOUD rather than fall through to the upstream
       // download, which would strip the Pavii rebrand from the engine.
       mkdirSync(join(dir, 'managed-resources'), { recursive: true });
-      writeFileSync(join(dir, 'aioncore.exe'), 'stub-binary');
+      writeFileSync(join(dir, 'paviicore.exe'), 'stub-binary');
       writeFileSync(
         join(dir, 'manifest.json'),
         JSON.stringify({ platform: 'win32', arch: 'x64', sourceType: 'local-source-build', version: 'v0.1.69-pavii' })
       );
-      expect(() => prepareAioncore({ projectRoot, platform: 'win32', arch: 'x64', version: '0.1.62' })).toThrow();
+      expect(() => preparePaviicore({ projectRoot, platform: 'win32', arch: 'x64', version: '0.1.62' })).toThrow();
       // The pinned binary must survive untouched — no download replaced it.
-      expect(readFileSync(join(dir, 'aioncore.exe'), 'utf-8')).toBe('stub-binary');
+      expect(readFileSync(join(dir, 'paviicore.exe'), 'utf-8')).toBe('stub-binary');
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });
     }

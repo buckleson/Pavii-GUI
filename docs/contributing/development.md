@@ -12,77 +12,48 @@ On Windows, install the Rust MSVC toolchain. If Rust compilation fails because n
 
 ## Repository Layout
 
-Pavii.Ai development uses two repositories:
+The Pavii Engine source is vendored in this repository under `the-remaa/AionCore/`, so there is only one repository to clone. Building it produces the backend binary: `paviicore` on macOS/Linux and `paviicore.exe` on Windows.
 
-- **Pavii Engine** (`https://github.com/iOfficeAI/AionCore.git`) builds the local backend binary: `aioncore` on macOS/Linux and `aioncore.exe` on Windows.
-- **Pavii.Ai** (`https://www.pavii.tech/products/Super-Assistant/`) starts the Electron desktop app and launches the backend binary automatically.
+The desktop app launches that binary itself. It looks for the engine in this order:
 
-Keep the repositories side by side when possible:
+1. `resources/bundled-paviicore/<platform>-<arch>/` — where the build script below puts it, and where a packaged app ships it
+2. the `PATH` inherited by `bun run start`
 
-```text
-workspace/
-|-- Pavii Engine/
-`-- Pavii.Ai/
-```
-
-The desktop development server resolves the backend from the `PATH` inherited by `bun run start`. Install Pavii Engine first, verify the binary is discoverable in the same terminal, then start Pavii.Ai.
+Both locations accept the previous `aioncore` name as a fallback, so an engine left over from before the rename still starts.
 
 ## Quick Start
 
-### 1. Clone Both Repositories
+### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/iOfficeAI/AionCore.git
 git clone https://www.pavii.tech/products/Super-Assistant/
 ```
 
-Use the `main` branch for both repositories unless a maintainer asks you to test another branch.
+Use the `main` branch unless a maintainer asks you to test another branch.
 
-### 2. Build and Install Pavii Engine
+### 2. Build the Pavii Engine
 
-Run these commands from the `Pavii Engine` repository.
-
-#### macOS / Linux
+Run this from the repository root. It builds the vendored source and deploys the binary where the app looks for it:
 
 ```bash
-cd Pavii Engine
-cargo clean
-cargo install --path crates/aionui-app --locked
-
-# Make Cargo-installed binaries visible to this shell if needed.
-export PATH="$HOME/.cargo/bin:$PATH"
-
-# Verify that Pavii.Ai will be able to find the backend.
-which aioncore
-aioncore --help
+node scripts/build-paviicore.js
 ```
 
-If `which aioncore` prints nothing, add `export PATH="$HOME/.cargo/bin:$PATH"` to your shell profile (`~/.zshrc`, `~/.bashrc`, or your shell's equivalent), open a new terminal, and verify again.
+The script verifies the embedded assistant manifest, builds in release mode, writes `resources/bundled-paviicore/<platform>-<arch>/manifest.json`, and reports the deployed path. A release build takes several minutes the first time.
 
-#### Windows PowerShell
+Quit the desktop app before running it — Windows locks a running executable, and the copy step fails.
 
-```powershell
-cd Pavii Engine
-cargo clean
-cargo install --path crates/aionui-app --locked
+Verify the result:
 
-# Make Cargo-installed binaries visible to this PowerShell session if needed.
-$env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
-
-# Verify that Pavii.Ai will be able to find the backend.
-where.exe aioncore
-aioncore --help
+```bash
+./resources/bundled-paviicore/win32-x64/paviicore.exe --help
 ```
 
-If `where.exe aioncore` prints nothing, make sure `%USERPROFILE%\.cargo\bin` is in your user `Path`, open a new PowerShell window, and verify again.
+Use your own `<platform>-<arch>` directory, and drop the `.exe` off Windows.
 
 ### 3. Start Pavii.Ai
 
-Run these commands from the `Pavii.Ai` repository in a terminal where `aioncore` is discoverable.
-
 ```bash
-cd Pavii.Ai
-
 # Install dependencies
 bun install
 
@@ -90,51 +61,52 @@ bun install
 bun run start
 ```
 
-During startup, Pavii.Ai launches `aioncore` automatically and passes the backend port to the renderer. You do not need to start Pavii Engine in a separate terminal.
+During startup, Pavii.Ai launches `paviicore` automatically and passes the backend port to the renderer. You do not need to start the engine in a separate terminal.
 
 ## Updating the Local Backend
 
-When you pull or change Pavii Engine, reinstall the backend binary and restart Pavii.Ai:
+After changing anything under `the-remaa/AionCore/`, quit the app, rebuild, and start again:
 
 ```bash
-cd ../Pavii Engine
-cargo install --path crates/aionui-app --locked --force
-
-cd ../Pavii.Ai
+node scripts/build-paviicore.js
 bun run start
 ```
 
-Use `--force` when rebuilding local changes with the same Pavii Engine package version; otherwise Cargo may keep the already installed binary.
+The Electron app owns the backend subprocess, so a running instance keeps using the binary it started with.
 
 ## Backend Startup Troubleshooting
 
-### `Cannot find "aioncore" binary`
+### `Cannot find "paviicore" binary`
 
-Pavii.Ai cannot find the backend from the `PATH` inherited by `bun run start`.
+Neither `resources/bundled-paviicore/` nor the `PATH` inherited by `bun run start` holds the engine.
 
-Check from the same terminal where you start Pavii.Ai:
+Check that the build actually deployed it:
+
+```bash
+ls resources/bundled-paviicore/win32-x64
+```
+
+If the directory is missing or empty, run `node scripts/build-paviicore.js`. If you rely on a `PATH` install instead, verify it from the same terminal you start the app in:
 
 ```bash
 # macOS / Linux
-which aioncore
+which paviicore
 
 # Windows PowerShell
-where.exe aioncore
+where.exe paviicore
 ```
 
-If the command fails, add Cargo's binary directory to `PATH` and start Pavii.Ai from a new terminal.
+### The Engine Works in a Terminal but Pavii.Ai Still Cannot Find It
 
-### `aioncore` Works in a Terminal but Pavii.Ai Still Cannot Find It
-
-Make sure you start `bun run start` from the same terminal environment that can run `aioncore --help`. IDE terminals and GUI-launched shells can inherit a different `PATH`; restart the IDE or launch it from a terminal after updating `PATH`.
+Make sure you start `bun run start` from the same terminal environment that can run `paviicore --help`. IDE terminals and GUI-launched shells can inherit a different `PATH`; restart the IDE or launch it from a terminal after updating `PATH`.
 
 ### Backend Changes Do Not Show Up
 
-Quit Pavii.Ai, reinstall Pavii Engine with `cargo install --path crates/aionui-app --locked --force`, then start Pavii.Ai again. The Electron app owns the backend subprocess during development, so a running Pavii.Ai instance will not pick up a newly installed binary until it restarts.
+Quit Pavii.Ai, run `node scripts/build-paviicore.js`, then start Pavii.Ai again. The Electron app owns the backend subprocess during development, so a running instance will not pick up a newly built binary until it restarts.
 
 ### Windows Rust Build Errors
 
-Use the Rust MSVC toolchain and install Microsoft C++ Build Tools. After installing or changing toolchains, open a new PowerShell window and rerun the Pavii Engine install command.
+Use the Rust MSVC toolchain and install Microsoft C++ Build Tools. After installing or changing toolchains, open a new PowerShell window and rerun the engine build.
 
 ## Scripts Reference
 

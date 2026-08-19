@@ -80,7 +80,7 @@ pub(crate) fn data() -> Value {
             domain("logs", &[
                 command(CommandDescriptor {
                     path: &["logs", "tail"],
-                    description: "Tail aioncore logs from AIONUI_LOG_DIR or stdin log_dir.",
+                    description: "Tail engine logs from AIONUI_LOG_DIR or stdin log_dir.",
                     input: "stdin_json",
                     stdin_fields: &["log_dir", "lines", "errors_only", "conversation_id"],
                     selectors: &["conversation_id"],

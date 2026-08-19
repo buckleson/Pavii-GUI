@@ -764,16 +764,16 @@ try {
     return;
   }
 
-  // 5. Prepare aioncore binary (for packaged runtime usage)
-  const { prepareAioncore } = require('../packages/shared-scripts/src/prepare-aioncore.js');
-  const { resolveAioncoreVersion } = require('./resolveAioncoreVersion.js');
+  // 5. Prepare the engine binary (for packaged runtime usage)
+  const { preparePaviicore } = require('../packages/shared-scripts/src/prepare-paviicore.js');
+  const { resolvePaviicoreVersion } = require('./resolvePaviicoreVersion.js');
   const projectRoot = path.resolve(__dirname, '..');
   writeGeneratedSentryDsnInclude(projectRoot);
-  prepareAioncore({
+  preparePaviicore({
     projectRoot,
     platform: process.platform,
     arch: targetArch,
-    version: resolveAioncoreVersion(projectRoot),
+    version: resolvePaviicoreVersion(projectRoot),
   });
 
   // 6. Prepare hub resources (index.json + extension zips for offline fallback)

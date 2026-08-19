@@ -5,7 +5,10 @@ edition.workspace = true
 exclude = ["data/**"]
 
 [[bin]]
-name = "aioncore"
+# The emitted binary is branded; the crate and package stay `aionui-app` so the
+# vendored source needs no changes. Agents print the executable path in their
+# command traces, so this name is user-visible.
+name = "paviicore"
 path = "src/main.rs"
 
 [build-dependencies]

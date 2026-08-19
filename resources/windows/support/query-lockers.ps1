@@ -82,7 +82,7 @@ try {
       'Uninstall Pavii.Ai.exe',
       'resources\app.asar',
       'resources\app-update.yml',
-      'resources\bundled-aioncore\win32-x64\aioncore.exe'
+      'resources\bundled-paviicore\win32-x64\paviicore.exe'
     )
     $known = @(
       $knownRelative |
