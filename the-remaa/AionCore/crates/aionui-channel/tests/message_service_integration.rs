@@ -485,8 +485,11 @@ async fn send_to_agent_without_saved_binding_defaults_to_bare_aionrs_assistant()
 
     assert_eq!(snapshot.assistant_id, "bare-aionrs");
     assert_eq!(snapshot.agent_id, "632f31d2");
+    // The pairing that matters: the STORED type keeps the wire contract while
+    // the user-facing name carries the brand.
     assert_eq!(conversation.r#type, AgentType::Aionrs.serde_name());
-    assert_eq!(conversation.name, "tg-aionrs-70880480");
+    assert_eq!(conversation.r#type, "aionrs");
+    assert_eq!(conversation.name, "tg-paviirs-70880480");
 }
 
 #[tokio::test]

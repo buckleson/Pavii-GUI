@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::types::{MessageContentType, PluginType, UnifiedIncomingMessage, UnifiedMessageContent, UnifiedUser};
+use crate::types::{
+    ActionContext, MessageContentType, PluginType, UnifiedAction, UnifiedIncomingMessage, UnifiedMessageContent,
+    UnifiedUser,
+};
 
 // ---------------------------------------------------------------------------
 // Gateway intents (verified: docs.discord.com/developers/topics/gateway#gateway-intents)
@@ -59,6 +62,9 @@ pub(super) struct SendMessageRequest {
     pub allowed_mentions: AllowedMentions,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message_reference: Option<MessageReference>,
+    /// Action rows of buttons, present only when the message carries any.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub components: Option<Vec<serde_json::Value>>,
 }
 
 /// `allowed_mentions` with an empty `parse` list disables all mentions.
@@ -281,3 +287,102 @@ pub(super) fn message_to_unified(msg: &MessageCreate, bot_user_id: &str) -> Opti
 #[cfg(test)]
 #[path = "types_test.rs"]
 mod types_test;
+
+/// A component interaction: someone pressed one of our buttons.
+///
+/// Only the fields needed to route and acknowledge it; Discord sends far more.
+#[derive(Debug, Clone, Deserialize)]
+pub(super) struct InteractionCreate {
+    pub id: String,
+    pub token: String,
+    /// 3 = MESSAGE_COMPONENT. Other types (slash commands, modals) are not
+    /// handled here and must not be mistaken for a button press.
+    #[serde(rename = "type")]
+    pub interaction_type: u8,
+    #[serde(default)]
+    pub channel_id: Option<String>,
+    #[serde(default)]
+    pub data: Option<InteractionData>,
+    /// Present for guild interactions.
+    #[serde(default)]
+    pub member: Option<InteractionMember>,
+    /// Present for DM interactions.
+    #[serde(default)]
+    pub user: Option<Author>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(super) struct InteractionData {
+    /// Carries our encoded callback; see `crate::callback`.
+    #[serde(default)]
+    pub custom_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(super) struct InteractionMember {
+    #[serde(default)]
+    pub user: Option<Author>,
+}
+
+impl InteractionCreate {
+    /// The user behind the press, from whichever place Discord put it.
+    pub fn actor(&self) -> Option<&Author> {
+        self.user
+            .as_ref()
+            .or_else(|| self.member.as_ref().and_then(|m| m.user.as_ref()))
+    }
+}
+
+/// Build the action message a button press becomes.
+///
+/// Same shape as Telegram and Slack produce -- that is what `ActionExecutor`
+/// consumes. `None` when this is not one of our button presses.
+pub(super) fn interaction_to_unified(interaction: &InteractionCreate) -> Option<UnifiedIncomingMessage> {
+    // 3 = MESSAGE_COMPONENT.
+    if interaction.interaction_type != 3 {
+        return None;
+    }
+    let data = interaction.data.as_ref()?.custom_id.as_deref()?;
+    let parsed = crate::callback::decode(data)?;
+    let chat_id = interaction.channel_id.clone()?;
+    let actor = interaction.actor()?;
+
+    let user = UnifiedUser {
+        id: actor.id.clone(),
+        username: actor.username.clone(),
+        display_name: actor
+            .global_name
+            .clone()
+            .or_else(|| actor.username.clone())
+            .unwrap_or_else(|| actor.id.clone()),
+        avatar_url: None,
+    };
+
+    Some(UnifiedIncomingMessage {
+        owner_user_id: None,
+        id: interaction.id.clone(),
+        platform: PluginType::Discord,
+        chat_id: chat_id.clone(),
+        user,
+        content: UnifiedMessageContent {
+            content_type: MessageContentType::Action,
+            text: data.to_owned(),
+            attachments: None,
+        },
+        timestamp: aionui_common::now_ms(),
+        reply_to_message_id: None,
+        action: Some(UnifiedAction {
+            action: parsed.action,
+            category: parsed.category,
+            params: parsed.params,
+            context: ActionContext {
+                platform: PluginType::Discord,
+                user_id: actor.id.clone(),
+                chat_id,
+                message_id: None,
+                session_id: None,
+            },
+        }),
+        raw: None,
+    })
+}

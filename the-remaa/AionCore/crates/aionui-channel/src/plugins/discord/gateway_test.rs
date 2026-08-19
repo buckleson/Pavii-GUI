@@ -1,6 +1,12 @@
 use super::*;
 use serde_json::json;
 
+/// A client for the dispatch tests. Never used for a request: these exercise
+/// MESSAGE_CREATE, which does not touch the API.
+fn test_api() -> Arc<DiscordApi> {
+    Arc::new(DiscordApi::new(reqwest::Client::new(), "test-token"))
+}
+
 // -- gateway_ws_url ----------------------------------------------------------
 
 #[test]
@@ -71,7 +77,7 @@ async fn dispatch_ready_sets_session() {
         "d": { "session_id": "sess1", "resume_gateway_url": "wss://resume.example", "user": { "id": "BOT1" } }
     }))
     .unwrap();
-    handle_dispatch(&frame, "BOT1", &mut session, &tx, &c).await;
+    handle_dispatch(&frame, "BOT1", &mut session, &tx, &c, &test_api()).await;
     assert_eq!(session.id.as_deref(), Some("sess1"));
     // READY stores the RAW resume URL (the connect site adds the query once).
     assert_eq!(session.resume_url.as_deref(), Some("wss://resume.example"));
@@ -91,7 +97,7 @@ async fn resume_connect_url_has_single_query() {
         "d": { "session_id": "sess1", "resume_gateway_url": "wss://resume.example", "user": { "id": "BOT1" } }
     }))
     .unwrap();
-    handle_dispatch(&frame, "BOT1", &mut session, &tx, &c).await;
+    handle_dispatch(&frame, "BOT1", &mut session, &tx, &c, &test_api()).await;
 
     // Reproduce the reconnect composition: connect site wraps the stored URL.
     let connect_url = gateway_ws_url(session.resume_url.as_deref().unwrap());
@@ -110,13 +116,13 @@ async fn dispatch_message_create_dm_forwards_once() {
     }))
     .unwrap();
 
-    handle_dispatch(&frame, "BOT1", &mut session, &tx, &c).await;
+    handle_dispatch(&frame, "BOT1", &mut session, &tx, &c, &test_api()).await;
     let msg = rx.try_recv().expect("forwarded");
     assert_eq!(msg.chat_id, "D1");
     assert_eq!(msg.content.text, "hi");
 
     // Same message id again → deduped.
-    handle_dispatch(&frame, "BOT1", &mut session, &tx, &c).await;
+    handle_dispatch(&frame, "BOT1", &mut session, &tx, &c, &test_api()).await;
     assert!(rx.try_recv().is_err());
 }
 
@@ -130,6 +136,6 @@ async fn dispatch_guild_without_mention_dropped() {
         "d": { "id": "175928847299117064", "channel_id": "C1", "guild_id": "G1", "author": { "id": "U1" }, "content": "hello", "mentions": [] }
     }))
     .unwrap();
-    handle_dispatch(&frame, "BOT1", &mut session, &tx, &c).await;
+    handle_dispatch(&frame, "BOT1", &mut session, &tx, &c, &test_api()).await;
     assert!(rx.try_recv().is_err());
 }

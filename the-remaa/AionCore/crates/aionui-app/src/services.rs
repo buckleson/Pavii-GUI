@@ -37,6 +37,9 @@ pub struct AppServices {
     /// Project-bind service (project-bind side branch). Shared by conversation
     /// and team wiring to bind/backfill project/folder rows. Cheap to clone.
     pub project_service: ProjectService,
+    /// Kept alongside `project_service` because the channel layer reads
+    /// projects directly (`/projects`) rather than through the service.
+    pub project_store: Arc<dyn IProjectStore>,
     /// Same instance as `worker_task_manager`, exposed through the
     /// `OnConversationDelete` trait so `ConversationService::with_delete_hook`
     /// can wire it up. Optional because tests construct `AppServices` with a
@@ -203,7 +206,7 @@ impl AppServices {
         // `resolve_existing` classifies auto workspaces as temp and
         // user-picked directories as standard.
         let project_store: Arc<dyn IProjectStore> = Arc::new(SqliteProjectStore::new(database.pool().clone()));
-        let project_service = ProjectService::new(project_store, work_dir.join("conversations"));
+        let project_service = ProjectService::new(Arc::clone(&project_store), work_dir.join("conversations"));
 
         // Skill paths need app resource dir (for builtin rules) + data dir
         // (for user skills + materialized views). AcpSkillManager uses these
@@ -310,6 +313,7 @@ impl AppServices {
             conversation_runtime_state,
             conversation_service,
             project_service,
+            project_store,
             task_manager_delete_hook: Some(task_manager_delete_hook),
             agent_registry,
             conversation_repo,

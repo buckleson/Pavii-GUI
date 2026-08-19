@@ -6,10 +6,13 @@ use async_trait::async_trait;
 use tokio::sync::broadcast;
 use tracing::{debug, error, info, warn};
 
+use crate::approval_service::ApprovalService;
+use crate::approvals::{PendingApproval, pending};
 use crate::error::ChannelError;
 use crate::formatter::format_text_for_platform;
 use crate::message_service::{ChannelMessageService, StreamAction};
-use crate::types::{OutgoingMessageType, PluginType, UnifiedOutgoingMessage};
+use crate::permission_events::ApprovalRequest;
+use crate::types::{ActionButton, OutgoingMessageType, PluginType, UnifiedOutgoingMessage};
 
 /// Configuration for a stream relay session.
 #[derive(Debug, Clone)]
@@ -19,6 +22,12 @@ pub struct RelayConfig {
     pub plugin_id: String,
     pub chat_id: String,
     pub throttle_ms: u64,
+    /// The conversation being relayed. An approval answer has to name it, and
+    /// the relay is the only place that knows which one this stream belongs to.
+    pub conversation_id: String,
+    /// The chat session that dispatched the work, so its outstanding approvals
+    /// can be dropped when it ends.
+    pub session_id: String,
 }
 
 /// Per-platform minimum interval between streaming `edit_message` calls.
@@ -57,6 +66,52 @@ pub trait ChannelSender: Send + Sync {
     ) -> Result<(), ChannelError>;
 }
 
+/// Callback keys for an approval button. One character each: the budget is 64
+/// bytes for the whole `category:action:k=v,k=v` string.
+pub const APPROVAL_TICKET_KEY: &str = "t";
+pub const APPROVAL_CHOICE_KEY: &str = "v";
+
+/// Build the message that asks the user to decide.
+///
+/// The deny option is rendered last so a thumb reaching for the bottom of the
+/// keyboard does not authorize something by muscle memory.
+pub fn approval_message(approval: &PendingApproval) -> UnifiedOutgoingMessage {
+    let mut order: Vec<usize> = (0..approval.choices.len()).collect();
+    order.sort_by_key(|&index| approval.choices[index].denies);
+
+    let buttons: Vec<Vec<ActionButton>> = order
+        .into_iter()
+        .map(|index| {
+            vec![ActionButton {
+                label: approval.choices[index].label.clone(),
+                action: "system.confirm".into(),
+                params: Some(
+                    [
+                        (APPROVAL_TICKET_KEY.to_owned(), approval.ticket.clone()),
+                        (APPROVAL_CHOICE_KEY.to_owned(), index.to_string()),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            }]
+        })
+        .collect();
+
+    UnifiedOutgoingMessage {
+        message_type: OutgoingMessageType::Text,
+        text: Some(format!("\u{2753} {}", approval.summary)),
+        parse_mode: None,
+        buttons: Some(buttons),
+        keyboard: None,
+        image_url: None,
+        file_url: None,
+        file_name: None,
+        media_actions: None,
+        reply_to_message_id: None,
+        silent: None,
+    }
+}
+
 /// Relays agent stream events to an IM platform.
 ///
 /// Responsibilities:
@@ -67,11 +122,86 @@ pub trait ChannelSender: Send + Sync {
 pub struct ChannelStreamRelay {
     config: RelayConfig,
     sender: Arc<dyn ChannelSender>,
+    /// Optional so the relay keeps working for callers that never approve
+    /// anything; when absent, a permission event is reported rather than
+    /// silently dropped.
+    approvals: Option<Arc<ApprovalService>>,
 }
 
 impl ChannelStreamRelay {
     pub fn new(config: RelayConfig, sender: Arc<dyn ChannelSender>) -> Self {
-        Self { config, sender }
+        Self {
+            config,
+            sender,
+            approvals: None,
+        }
+    }
+
+    /// Attach the service that parks approvals and delivers their answers.
+    pub fn with_approvals(mut self, approvals: Arc<ApprovalService>) -> Self {
+        self.approvals = Some(approvals);
+        self
+    }
+
+    /// Park an approval and ask the chat to decide.
+    ///
+    /// With no service attached the agent is waiting on an answer that can
+    /// never arrive, so the chat is told plainly instead of the event being
+    /// dropped.
+    async fn ask_for_approval(&self, request: &ApprovalRequest) {
+        let Some(service) = self.approvals.as_ref() else {
+            warn!(
+                conversation_id = %self.config.conversation_id,
+                "permission requested but no approval service is configured"
+            );
+            let msg = ChannelMessageService::build_streaming_message(
+                "The agent needs permission, but approvals are not configured for this chat. \
+                 Answer it in the desktop app.",
+            );
+            let _ = self
+                .sender
+                .send_message(
+                    &self.config.owner_user_id,
+                    &self.config.plugin_id,
+                    &self.config.chat_id,
+                    msg,
+                )
+                .await;
+            return;
+        };
+
+        let parked = service.register(pending(
+            &request.agent_request_id,
+            &self.config.conversation_id,
+            &self.config.session_id,
+            &self.config.chat_id,
+            &self.config.plugin_id,
+            request.kind,
+            &request.question,
+            &request.summary,
+            request.choices.clone(),
+        ));
+
+        if let Err(error) = self
+            .sender
+            .send_message(
+                &self.config.owner_user_id,
+                &self.config.plugin_id,
+                &self.config.chat_id,
+                approval_message(&parked),
+            )
+            .await
+        {
+            // The buttons never reached the chat, so nothing can answer them.
+            // Dropping the entry keeps the registry honest about what is
+            // actually pending.
+            error!(
+                ticket = %parked.ticket,
+                error = %error,
+                "failed to send approval request; dropping it"
+            );
+            service.drop_session(&parked.session_id);
+        }
     }
 
     /// Run the relay loop until the agent stream ends.
@@ -94,6 +224,9 @@ impl ChannelStreamRelay {
                     Some(StreamAction::AppendText(chunk)) => {
                         text_buffer.push_str(&chunk);
                         has_content = true;
+                    }
+                    Some(StreamAction::Approval(request)) => {
+                        self.ask_for_approval(&request).await;
                     }
                     Some(StreamAction::Thinking(_)) => {}
                     Some(StreamAction::ToolCall { .. }) if has_content && !text_buffer.trim().is_empty() => {
@@ -237,6 +370,9 @@ impl ChannelStreamRelay {
                                 .await;
                             last_edit = Instant::now();
                         }
+                    }
+                    Some(StreamAction::Approval(request)) => {
+                        self.ask_for_approval(&request).await;
                     }
                     Some(StreamAction::Thinking(_)) => {}
                     Some(StreamAction::ToolCall { name, .. }) => {

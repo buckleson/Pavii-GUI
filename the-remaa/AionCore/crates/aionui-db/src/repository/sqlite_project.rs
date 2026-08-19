@@ -68,6 +68,19 @@ impl IProjectStore for SqliteProjectStore {
         Ok(row)
     }
 
+    async fn list_projects(&self, user_id: &str) -> Result<Vec<ProjectRow>, DbError> {
+        // `project_id` breaks ties so equal `updated_at` cannot reorder between
+        // two calls -- paging over an unstable order would skip or repeat rows.
+        let rows = sqlx::query_as::<_, ProjectRow>(&format!(
+            "SELECT {PROJECT_COLS} FROM projects WHERE user_id = ? \
+             ORDER BY updated_at DESC, project_id DESC"
+        ))
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
+    }
+
     async fn select_workspace_entry_by_folder(
         &self,
         user_id: &str,

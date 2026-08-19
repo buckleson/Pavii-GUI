@@ -11,7 +11,8 @@ use crate::types::UnifiedIncomingMessage;
 
 use super::api::DiscordApi;
 use super::types::{
-    GatewayFrame, Hello, MessageCreate, Ready, build_heartbeat, build_identify, build_resume, message_to_unified, op,
+    GatewayFrame, Hello, InteractionCreate, MessageCreate, Ready, build_heartbeat, build_identify, build_resume,
+    interaction_to_unified, message_to_unified, op,
 };
 
 /// Maximum reconnect attempts before giving up.
@@ -91,6 +92,7 @@ pub(super) async fn gateway_loop(
             &message_tx,
             &dedup_cache,
             &mut shutdown_rx,
+            &api,
         )
         .await
         {
@@ -125,6 +127,7 @@ async fn connect_and_run(
     message_tx: &mpsc::Sender<UnifiedIncomingMessage>,
     dedup_cache: &DedupCache,
     shutdown_rx: &mut watch::Receiver<bool>,
+    api: &Arc<DiscordApi>,
 ) -> Result<ConnResult, ChannelError> {
     use futures_util::{SinkExt, StreamExt};
     use tokio_tungstenite::connect_async_tls_with_config;
@@ -209,7 +212,7 @@ async fn connect_and_run(
                                 return Ok(ConnResult::Reconnect);
                             }
                             op::DISPATCH => {
-                                handle_dispatch(&frame, bot_user_id, session, message_tx, dedup_cache).await;
+                                handle_dispatch(&frame, bot_user_id, session, message_tx, dedup_cache, api).await;
                             }
                             other => debug!(op = other, "Discord unhandled opcode"),
                         }
@@ -248,6 +251,7 @@ async fn handle_dispatch(
     session: &mut Session,
     message_tx: &mpsc::Sender<UnifiedIncomingMessage>,
     dedup_cache: &DedupCache,
+    api: &Arc<DiscordApi>,
 ) {
     match frame.t.as_deref() {
         Some("READY") => {
@@ -277,6 +281,32 @@ async fn handle_dispatch(
             }
             if let Some(unified) = message_to_unified(&msg, bot_user_id) {
                 let _ = message_tx.send(unified).await;
+            }
+        }
+        // A button press. Interactions are delivered regardless of the
+        // intents in IDENTIFY, so no intent change is needed for this.
+        Some("INTERACTION_CREATE") => {
+            let Some(d) = frame.d.clone() else { return };
+            let interaction: InteractionCreate = match serde_json::from_value(d) {
+                Ok(i) => i,
+                Err(e) => {
+                    warn!(error = %e, "Discord INTERACTION_CREATE parse failed");
+                    return;
+                }
+            };
+
+            // Ack first: Discord shows the user an error if an interaction goes
+            // unanswered for three seconds, and routing the action is slower
+            // than that in the worst case.
+            if let Err(e) = api.ack_interaction(&interaction.id, &interaction.token).await {
+                warn!(error = %e, "Discord interaction ack failed");
+            }
+
+            match interaction_to_unified(&interaction) {
+                Some(unified) => {
+                    let _ = message_tx.send(unified).await;
+                }
+                None => debug!("Discord interaction carried no action of ours"),
             }
         }
         _ => {}

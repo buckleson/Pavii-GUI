@@ -294,7 +294,21 @@ fn configure_platform_spawn(cmd: &mut Command) {
 }
 
 #[cfg(not(unix))]
-fn configure_platform_spawn(_cmd: &mut Command) {}
+fn configure_platform_spawn(cmd: &mut Command) {
+    // Windows consoles default to the legacy ANSI codepage (cp1252 here), and
+    // Python resolves its stdout encoding from that. A CLI that prints any
+    // non-Latin-1 character -- an emoji in a version banner is enough -- then
+    // dies with `UnicodeEncodeError: 'charmap' codec can't encode ...` and a
+    // non-zero exit.
+    //
+    // Observed: `nanobot --version` crashed on U+1F408, so the registry probe
+    // reported `version_probe_failed` and the agent showed as offline despite
+    // being installed and working. Forcing UTF-8 makes it print and exit 0.
+    //
+    // Set before any caller-supplied environment, so an explicit override still
+    // wins (`from_resolved` applies `resolved.env` after this).
+    cmd.env("PYTHONIOENCODING", "utf-8").env("PYTHONUTF8", "1");
+}
 
 #[cfg(unix)]
 fn force_kill_process_tree(pid: u32, process_group_id: Option<u32>) -> io::Result<()> {
@@ -367,6 +381,35 @@ mod tests {
     use super::*;
     use crate::ResolvedCommand;
     use std::time::{Duration, Instant};
+
+    /// A Python CLI that prints a non-Latin-1 character must not die on the
+    /// legacy Windows codepage. Runs the interpreter directly rather than
+    /// asserting on the env var, so it fails if the fix stops working for any
+    /// reason -- including Python changing how it resolves stdout encoding.
+    #[cfg(not(unix))]
+    #[tokio::test]
+    async fn windows_child_processes_can_print_non_latin1_output() {
+        let python = match resolve_command_path("python").or_else(|| resolve_command_path("python3")) {
+            Some(path) => path,
+            // No interpreter on this machine; nothing to prove.
+            None => return,
+        };
+
+        let mut command = Builder::clean_cli(&python);
+        // U+1F408, the character that actually broke the nanobot probe.
+        command.arg("-c").arg("print(chr(0x1F408))");
+        let output = command.output().await.expect("python should run");
+
+        assert!(
+            output.status.success(),
+            "printing a non-Latin-1 character failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            !String::from_utf8_lossy(&output.stderr).contains("UnicodeEncodeError"),
+            "the legacy codepage is still in force"
+        );
+    }
 
     #[tokio::test]
     async fn clean_cli_captures_stdout_and_strips_env_pollution() {

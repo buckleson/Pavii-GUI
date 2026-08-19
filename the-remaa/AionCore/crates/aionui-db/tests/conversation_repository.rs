@@ -1463,3 +1463,190 @@ async fn resolve_backend_turn_anchor_is_user_scoped() {
         .unwrap();
     assert_eq!(anchor, None, "foreign conversations must resolve to nothing");
 }
+// ── project_id filter ────────────────────────────────────────────────
+//
+// The filter must live in SQL, not after paging: filtering a page after the
+// LIMIT would hand back short pages and silently skip rows.
+
+#[tokio::test]
+async fn filter_by_project_id_returns_only_that_project() {
+    let (repo, _db) = setup().await;
+
+    let mut mine = make_conversation("in-project");
+    mine.project_id = Some("proj_a".to_string());
+    repo.create(&mine).await.unwrap();
+
+    let mut other = make_conversation("other-project");
+    other.project_id = Some("proj_b".to_string());
+    repo.create(&other).await.unwrap();
+
+    let mut loose = make_conversation("unassigned");
+    loose.project_id = None;
+    repo.create(&loose).await.unwrap();
+
+    let result = repo
+        .list_paginated(
+            USER_ID,
+            &ConversationFilters {
+                project_id: Some("proj_a".to_string()),
+                limit: 20,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(
+        result.items.len(),
+        1,
+        "another project and an unassigned conversation must not leak in"
+    );
+    assert_eq!(result.items[0].id, mine.id);
+}
+
+#[tokio::test]
+async fn filter_by_project_id_reports_a_total_for_that_project_only() {
+    // `total` comes from a separate count query; if the filter were applied
+    // only to the page query the count would describe a different set.
+    let (repo, _db) = setup().await;
+
+    for i in 0..3 {
+        let mut c = make_conversation(&format!("a{i}"));
+        c.project_id = Some("proj_a".to_string());
+        repo.create(&c).await.unwrap();
+    }
+    let mut elsewhere = make_conversation("b0");
+    elsewhere.project_id = Some("proj_b".to_string());
+    repo.create(&elsewhere).await.unwrap();
+
+    let result = repo
+        .list_paginated(
+            USER_ID,
+            &ConversationFilters {
+                project_id: Some("proj_a".to_string()),
+                limit: 20,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(result.total, 3);
+    assert!(!result.has_more);
+}
+
+#[tokio::test]
+async fn paging_within_a_project_does_not_repeat_or_skip() {
+    let (repo, _db) = setup().await;
+
+    let mut created = Vec::new();
+    for i in 0..5 {
+        let mut c = make_conversation(&format!("p{i}"));
+        c.project_id = Some("proj_a".to_string());
+        // Distinct updated_at so the ordering is deterministic.
+        c.updated_at = 1_000 + i as i64;
+        repo.create(&c).await.unwrap();
+        created.push(c.id.clone());
+    }
+    // A different project must never appear on either page.
+    let mut noise = make_conversation("noise");
+    noise.project_id = Some("proj_b".to_string());
+    noise.updated_at = 9_999;
+    repo.create(&noise).await.unwrap();
+
+    let first = repo
+        .list_paginated(
+            USER_ID,
+            &ConversationFilters {
+                project_id: Some("proj_a".to_string()),
+                limit: 2,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(first.items.len(), 2);
+    assert!(first.has_more);
+
+    let second = repo
+        .list_paginated(
+            USER_ID,
+            &ConversationFilters {
+                project_id: Some("proj_a".to_string()),
+                cursor: Some(first.items.last().unwrap().id.clone()),
+                limit: 2,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(second.items.len(), 2);
+
+    let seen: Vec<&str> = first
+        .items
+        .iter()
+        .chain(second.items.iter())
+        .map(|row| row.id.as_str())
+        .collect();
+    let mut deduped = seen.clone();
+    deduped.sort_unstable();
+    deduped.dedup();
+    assert_eq!(deduped.len(), seen.len(), "a conversation appeared on both pages");
+    assert!(
+        seen.iter().all(|id| created.iter().any(|c| c == id)),
+        "another project leaked into a page"
+    );
+}
+
+#[tokio::test]
+async fn filter_by_project_id_is_still_scoped_to_the_owner() {
+    let (repo, db) = setup().await;
+    create_user_2(&db).await;
+
+    let mut mine = make_conversation("mine");
+    mine.project_id = Some("shared_proj".to_string());
+    repo.create(&mine).await.unwrap();
+
+    let mut theirs = make_conversation("theirs");
+    theirs.user_id = "user_2".to_string();
+    theirs.project_id = Some("shared_proj".to_string());
+    repo.create(&theirs).await.unwrap();
+
+    let result = repo
+        .list_paginated(
+            USER_ID,
+            &ConversationFilters {
+                project_id: Some("shared_proj".to_string()),
+                limit: 20,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(result.items.len(), 1, "the project filter must not widen owner scope");
+    assert_eq!(result.items[0].id, mine.id);
+}
+
+#[tokio::test]
+async fn an_unknown_project_id_returns_an_empty_page_not_everything() {
+    let (repo, _db) = setup().await;
+    let mut c = make_conversation("somewhere");
+    c.project_id = Some("proj_a".to_string());
+    repo.create(&c).await.unwrap();
+
+    let result = repo
+        .list_paginated(
+            USER_ID,
+            &ConversationFilters {
+                project_id: Some("proj_missing".to_string()),
+                limit: 20,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+    assert!(result.items.is_empty());
+    assert_eq!(result.total, 0);
+}

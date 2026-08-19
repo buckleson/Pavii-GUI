@@ -10,9 +10,8 @@ use crate::constants::{TELEGRAM_MAX_RECONNECT_ATTEMPTS, TELEGRAM_MAX_RECONNECT_D
 use crate::error::ChannelError;
 use crate::plugin::{ChannelPlugin, PluginCallbacks};
 use crate::types::{
-    ActionButton, ActionCategory, ActionContext, BotInfo, MessageContentType, ParseMode, PluginConfig, PluginStatus,
-    PluginType, UnifiedAction, UnifiedAttachment, UnifiedIncomingMessage, UnifiedMessageContent,
-    UnifiedOutgoingMessage, UnifiedUser,
+    ActionContext, BotInfo, MessageContentType, ParseMode, PluginConfig, PluginStatus, PluginType, UnifiedAction,
+    UnifiedAttachment, UnifiedIncomingMessage, UnifiedMessageContent, UnifiedOutgoingMessage, UnifiedUser,
 };
 
 use super::api::TelegramApi;
@@ -340,22 +339,13 @@ async fn handle_callback_query(
     api: &TelegramApi,
     cb: &TgCallbackQuery,
     message_tx: &mpsc::Sender<UnifiedIncomingMessage>,
-    confirm_tx: &mpsc::Sender<(String, String)>,
+    // Approval buttons answer through the action path (`system.confirm` in
+    // `ActionExecutor`), not this channel. Kept because the caller owns it and
+    // platform-native confirm callbacks may still arrive on other plugins.
+    _confirm_tx: &mpsc::Sender<(String, String)>,
 ) {
     let data = cb.data.as_deref().unwrap_or("");
-    let parsed = parse_callback_data(data);
-
-    // Check if this is a tool confirmation callback (system.confirm:callId=X,value=Y)
-    if let Some(action) = &parsed
-        && action.action == "system.confirm"
-        && let Some(params) = &action.params
-    {
-        let call_id = params.get("callId").cloned().unwrap_or_default();
-        let value = params.get("value").cloned().unwrap_or_default();
-        if !call_id.is_empty() {
-            let _ = confirm_tx.send((call_id, value)).await;
-        }
-    }
+    let parsed = crate::callback::decode(data);
 
     let chat_id = cb.message.as_ref().map(|m| m.chat.id).unwrap_or(cb.from.id);
 
@@ -548,51 +538,6 @@ fn extract_content(msg: &TgMessage) -> (MessageContentType, String, Option<Vec<U
 // ---------------------------------------------------------------------------
 
 /// Parsed callback data from an inline keyboard button.
-struct ParsedCallback {
-    category: ActionCategory,
-    action: String,
-    params: Option<std::collections::HashMap<String, String>>,
-}
-
-/// Parse callback_data string `"category:action"` or `"category:action:k=v,k=v"`.
-fn parse_callback_data(data: &str) -> Option<ParsedCallback> {
-    let parts: Vec<&str> = data.splitn(3, ':').collect();
-    if parts.len() < 2 {
-        return None;
-    }
-
-    let category = match parts[0] {
-        "platform" => ActionCategory::Platform,
-        "system" => ActionCategory::System,
-        "chat" => ActionCategory::Chat,
-        _ => return None,
-    };
-
-    let action = parts[1].to_string();
-
-    let params = if parts.len() == 3 && !parts[2].is_empty() {
-        let mut map = std::collections::HashMap::new();
-        for pair in parts[2].split(',') {
-            if let Some((k, v)) = pair.split_once('=') {
-                map.insert(k.to_string(), v.to_string());
-            }
-        }
-        if map.is_empty() { None } else { Some(map) }
-    } else {
-        None
-    };
-
-    Some(ParsedCallback {
-        category,
-        action,
-        params,
-    })
-}
-
-// ---------------------------------------------------------------------------
-// Reply markup builders
-// ---------------------------------------------------------------------------
-
 /// Build combined reply markup from an outgoing message.
 /// Inline buttons take priority over keyboard buttons.
 fn build_reply_markup(msg: &UnifiedOutgoingMessage) -> Option<ReplyMarkup> {
@@ -611,7 +556,7 @@ fn build_inline_markup(msg: &UnifiedOutgoingMessage) -> Option<ReplyMarkup> {
             row.iter()
                 .map(|btn| InlineKeyboardButton {
                     text: btn.label.clone(),
-                    callback_data: Some(format_callback_data(btn)),
+                    callback_data: Some(crate::callback::encode(btn)),
                     url: None,
                 })
                 .collect()
@@ -650,42 +595,6 @@ fn build_keyboard_markup(msg: &UnifiedOutgoingMessage) -> Option<ReplyMarkup> {
         resize_keyboard: Some(true),
         one_time_keyboard: None,
     }))
-}
-
-/// Derive the category prefix from an action name.
-///
-/// The mapping follows the `ActionCategory` routing in `ActionExecutor`:
-///   - `system.confirm` → `"chat"` (routed to `handle_chat_action`)
-///   - `pairing.*` → `"platform"`
-///   - `chat.*` / `action.*` → `"chat"`
-///   - everything else (`session.*`, `help.*`, `settings.*`, `agent.*`, `system.*`) → `"system"`
-fn action_category_prefix(action: &str) -> &'static str {
-    // Full-name overrides first: `system.confirm` is handled by
-    // `handle_chat_action` in ActionExecutor despite the "system." prefix.
-    if action == "system.confirm" {
-        return "chat";
-    }
-    let prefix = action.split('.').next().unwrap_or("");
-    match prefix {
-        "pairing" => "platform",
-        "chat" | "action" => "chat",
-        _ => "system",
-    }
-}
-
-/// Encode an ActionButton into callback_data format:
-/// `"category:action"` or `"category:action:k=v,k=v"`.
-///
-/// This is the inverse of [`parse_callback_data`].
-fn format_callback_data(btn: &ActionButton) -> String {
-    let category = action_category_prefix(&btn.action);
-    match &btn.params {
-        Some(params) if !params.is_empty() => {
-            let encoded: Vec<String> = params.iter().map(|(k, v)| format!("{k}={v}")).collect();
-            format!("{category}:{}:{}", btn.action, encoded.join(","))
-        }
-        _ => format!("{category}:{}", btn.action),
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -741,6 +650,9 @@ fn chrono_now() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    // Only the tests build buttons directly; production code goes through
+    // `crate::callback`.
+    use crate::types::{ActionButton, ActionCategory};
     use std::collections::HashMap;
 
     // -- truncate_message ---------------------------------------------------
@@ -804,7 +716,7 @@ mod tests {
 
     #[test]
     fn parse_callback_category_action() {
-        let result = parse_callback_data("system:session.new").unwrap();
+        let result = crate::callback::decode("system:session.new").unwrap();
         assert_eq!(result.category, ActionCategory::System);
         assert_eq!(result.action, "session.new");
         assert!(result.params.is_none());
@@ -812,7 +724,7 @@ mod tests {
 
     #[test]
     fn parse_callback_with_params() {
-        let result = parse_callback_data("system:system.confirm:callId=abc,value=yes").unwrap();
+        let result = crate::callback::decode("system:system.confirm:callId=abc,value=yes").unwrap();
         assert_eq!(result.category, ActionCategory::System);
         assert_eq!(result.action, "system.confirm");
         let params = result.params.unwrap();
@@ -822,20 +734,20 @@ mod tests {
 
     #[test]
     fn parse_callback_invalid() {
-        assert!(parse_callback_data("invalid").is_none());
-        assert!(parse_callback_data("unknown:action").is_none());
+        assert!(crate::callback::decode("invalid").is_none());
+        assert!(crate::callback::decode("unknown:action").is_none());
     }
 
     #[test]
     fn parse_callback_platform_category() {
-        let result = parse_callback_data("platform:pairing.show").unwrap();
+        let result = crate::callback::decode("platform:pairing.show").unwrap();
         assert_eq!(result.category, ActionCategory::Platform);
         assert_eq!(result.action, "pairing.show");
     }
 
     #[test]
     fn parse_callback_chat_category() {
-        let result = parse_callback_data("chat:chat.send").unwrap();
+        let result = crate::callback::decode("chat:chat.send").unwrap();
         assert_eq!(result.category, ActionCategory::Chat);
         assert_eq!(result.action, "chat.send");
     }
@@ -849,7 +761,7 @@ mod tests {
             action: "help.show".into(),
             params: None,
         };
-        assert_eq!(format_callback_data(&btn), "system:help.show");
+        assert_eq!(crate::callback::encode(&btn), "system:help.show");
     }
 
     #[test]
@@ -861,7 +773,7 @@ mod tests {
             action: "agent.select".into(),
             params: Some(params),
         };
-        let result = format_callback_data(&btn);
+        let result = crate::callback::encode(&btn);
         assert!(result.starts_with("system:agent.select:"));
         assert!(result.contains("agentType=gemini"));
     }
@@ -873,7 +785,7 @@ mod tests {
             action: "chat.regenerate".into(),
             params: None,
         };
-        assert_eq!(format_callback_data(&btn), "chat:chat.regenerate");
+        assert_eq!(crate::callback::encode(&btn), "chat:chat.regenerate");
     }
 
     #[test]
@@ -883,23 +795,23 @@ mod tests {
             action: "pairing.show".into(),
             params: None,
         };
-        assert_eq!(format_callback_data(&btn), "platform:pairing.show");
+        assert_eq!(crate::callback::encode(&btn), "platform:pairing.show");
     }
 
     // -- action_category_prefix ------------------------------------------------
 
     #[test]
     fn category_prefix_mapping() {
-        assert_eq!(action_category_prefix("pairing.show"), "platform");
-        assert_eq!(action_category_prefix("pairing.refresh"), "platform");
-        assert_eq!(action_category_prefix("chat.send"), "chat");
-        assert_eq!(action_category_prefix("chat.regenerate"), "chat");
-        assert_eq!(action_category_prefix("action.copy"), "chat");
-        assert_eq!(action_category_prefix("session.new"), "system");
-        assert_eq!(action_category_prefix("help.show"), "system");
-        assert_eq!(action_category_prefix("agent.select"), "system");
-        assert_eq!(action_category_prefix("system.confirm"), "chat");
-        assert_eq!(action_category_prefix("settings.show"), "system");
+        assert_eq!(crate::callback::action_category_prefix("pairing.show"), "platform");
+        assert_eq!(crate::callback::action_category_prefix("pairing.refresh"), "platform");
+        assert_eq!(crate::callback::action_category_prefix("chat.send"), "chat");
+        assert_eq!(crate::callback::action_category_prefix("chat.regenerate"), "chat");
+        assert_eq!(crate::callback::action_category_prefix("action.copy"), "chat");
+        assert_eq!(crate::callback::action_category_prefix("session.new"), "system");
+        assert_eq!(crate::callback::action_category_prefix("help.show"), "system");
+        assert_eq!(crate::callback::action_category_prefix("agent.select"), "system");
+        assert_eq!(crate::callback::action_category_prefix("system.confirm"), "chat");
+        assert_eq!(crate::callback::action_category_prefix("settings.show"), "system");
     }
 
     // -- roundtrip format ↔ parse ----------------------------------------------
@@ -911,8 +823,8 @@ mod tests {
             action: "help.show".into(),
             params: None,
         };
-        let encoded = format_callback_data(&btn);
-        let parsed = parse_callback_data(&encoded).expect("should parse");
+        let encoded = crate::callback::encode(&btn);
+        let parsed = crate::callback::decode(&encoded).expect("should parse");
         assert_eq!(parsed.category, ActionCategory::System);
         assert_eq!(parsed.action, "help.show");
         assert!(parsed.params.is_none());
@@ -928,8 +840,8 @@ mod tests {
                 ("value".into(), "yes".into()),
             ])),
         };
-        let encoded = format_callback_data(&btn);
-        let parsed = parse_callback_data(&encoded).expect("should parse");
+        let encoded = crate::callback::encode(&btn);
+        let parsed = crate::callback::decode(&encoded).expect("should parse");
         // system.confirm is routed to handle_chat_action, so category is Chat
         assert_eq!(parsed.category, ActionCategory::Chat);
         assert_eq!(parsed.action, "system.confirm");
@@ -945,8 +857,8 @@ mod tests {
             action: "chat.regenerate".into(),
             params: None,
         };
-        let encoded = format_callback_data(&btn);
-        let parsed = parse_callback_data(&encoded).expect("should parse");
+        let encoded = crate::callback::encode(&btn);
+        let parsed = crate::callback::decode(&encoded).expect("should parse");
         assert_eq!(parsed.category, ActionCategory::Chat);
         assert_eq!(parsed.action, "chat.regenerate");
     }
@@ -958,8 +870,8 @@ mod tests {
             action: "pairing.refresh".into(),
             params: None,
         };
-        let encoded = format_callback_data(&btn);
-        let parsed = parse_callback_data(&encoded).expect("should parse");
+        let encoded = crate::callback::encode(&btn);
+        let parsed = crate::callback::decode(&encoded).expect("should parse");
         assert_eq!(parsed.category, ActionCategory::Platform);
         assert_eq!(parsed.action, "pairing.refresh");
     }

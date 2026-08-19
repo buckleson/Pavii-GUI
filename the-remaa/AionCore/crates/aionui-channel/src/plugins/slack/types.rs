@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::types::{MessageContentType, PluginType, UnifiedIncomingMessage, UnifiedMessageContent, UnifiedUser};
+use crate::types::{
+    ActionContext, MessageContentType, PluginType, UnifiedAction, UnifiedIncomingMessage, UnifiedMessageContent,
+    UnifiedUser,
+};
 
 // ---------------------------------------------------------------------------
 // Web API responses (https://api.slack.com/methods)
@@ -32,9 +35,50 @@ pub(super) struct OpenConnectionResponse {
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct PostMessageRequest {
     pub channel: String,
+    /// Always populated, even when `blocks` is present: Slack uses it for the
+    /// notification preview and for clients that cannot render blocks.
     pub text: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thread_ts: Option<String>,
+    /// Block Kit payload, present only when the message carries buttons.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub blocks: Option<Vec<serde_json::Value>>,
+}
+
+/// The payload of an `interactive` Socket Mode envelope.
+///
+/// Only `block_actions` (a button press) is modelled; Slack sends several
+/// interactive types and the rest are ignored rather than guessed at.
+#[derive(Debug, Clone, Deserialize)]
+pub(super) struct BlockActionsPayload {
+    #[serde(rename = "type")]
+    pub payload_type: String,
+    pub user: SlackActionUser,
+    #[serde(default)]
+    pub channel: Option<SlackActionChannel>,
+    #[serde(default)]
+    pub actions: Vec<SlackAction>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(super) struct SlackActionUser {
+    pub id: String,
+    #[serde(default)]
+    pub username: Option<String>,
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(super) struct SlackActionChannel {
+    pub id: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(super) struct SlackAction {
+    /// Carries our encoded callback; see `crate::callback`.
+    #[serde(default)]
+    pub value: Option<String>,
 }
 
 /// Response from `chat.postMessage`.
@@ -221,3 +265,61 @@ pub(super) fn event_to_unified(event: &SlackEvent, bot_user_id: &str) -> Option<
 #[cfg(test)]
 #[path = "types_test.rs"]
 mod types_test;
+
+/// Build the action message a button press becomes.
+///
+/// Deliberately the same shape Telegram produces (`MessageContentType::Action`
+/// plus a `UnifiedAction`) -- that shape is what `ActionExecutor` consumes, so
+/// a divergence here would mean taps work on one platform and not the other.
+///
+/// `None` when the payload is not a button press we issued: Slack delivers
+/// several interactive types, and other apps' payloads can arrive too. Decoding
+/// one of those as an action would fire a command nobody asked for.
+pub(super) fn block_actions_to_unified(payload: &BlockActionsPayload) -> Option<UnifiedIncomingMessage> {
+    if payload.payload_type != "block_actions" {
+        return None;
+    }
+    let data = payload.actions.first()?.value.as_deref()?;
+    let parsed = crate::callback::decode(data)?;
+    let chat_id = payload.channel.as_ref()?.id.clone();
+
+    let user = UnifiedUser {
+        id: payload.user.id.clone(),
+        username: payload.user.username.clone().or_else(|| payload.user.name.clone()),
+        display_name: payload
+            .user
+            .name
+            .clone()
+            .or_else(|| payload.user.username.clone())
+            .unwrap_or_else(|| payload.user.id.clone()),
+        avatar_url: None,
+    };
+
+    Some(UnifiedIncomingMessage {
+        owner_user_id: None,
+        id: format!("slack-action-{}", payload.user.id),
+        platform: PluginType::Slack,
+        chat_id: chat_id.clone(),
+        user,
+        content: UnifiedMessageContent {
+            content_type: MessageContentType::Action,
+            text: data.to_owned(),
+            attachments: None,
+        },
+        timestamp: aionui_common::now_ms(),
+        reply_to_message_id: None,
+        action: Some(UnifiedAction {
+            action: parsed.action,
+            category: parsed.category,
+            params: parsed.params,
+            context: ActionContext {
+                platform: PluginType::Slack,
+                user_id: payload.user.id.clone(),
+                chat_id,
+                message_id: None,
+                session_id: None,
+            },
+        }),
+        raw: None,
+    })
+}

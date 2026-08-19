@@ -2153,6 +2153,7 @@ impl ConversationService {
             source: query.source,
             cron_job_id: query.cron_job_id,
             pinned: query.pinned,
+            project_id: None,
         };
 
         let result = self.conversation_repo.list_paginated(user_id, &filters).await?;

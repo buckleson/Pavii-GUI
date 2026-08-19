@@ -195,8 +195,13 @@ impl ChannelPlugin for DiscordPlugin {
             .ok_or_else(|| ChannelError::PlatformApi("Plugin not initialized".into()))?;
 
         let text = truncate_message(message.text.as_deref().unwrap_or(""), DISCORD_MESSAGE_LIMIT);
-        api.create_message(chat_id, &text, message.reply_to_message_id.as_deref())
-            .await
+        api.create_message(
+            chat_id,
+            &text,
+            message.reply_to_message_id.as_deref(),
+            message.buttons.as_deref(),
+        )
+        .await
     }
 
     async fn edit_message(

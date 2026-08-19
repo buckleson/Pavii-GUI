@@ -52,6 +52,7 @@ fn post_message_response_ok() {
 #[test]
 fn post_message_request_omits_none_thread() {
     let req = PostMessageRequest {
+        blocks: None,
         channel: "C1".into(),
         text: "hi".into(),
         thread_ts: None,
@@ -64,6 +65,7 @@ fn post_message_request_omits_none_thread() {
 #[test]
 fn post_message_request_includes_thread() {
     let req = PostMessageRequest {
+        blocks: None,
         channel: "C1".into(),
         text: "hi".into(),
         thread_ts: Some("1700000000.000001".into()),
@@ -326,4 +328,69 @@ fn app_mention_in_public_channel_is_not_gated() {
     let msg = event_to_unified(&evt, "U0BOT").unwrap();
     assert_eq!(msg.chat_id, "C1");
     assert_eq!(msg.content.text, "help");
+}
+
+// -- interactive (button press) ----------------------------------------------
+
+fn block_actions(value: Option<&str>, with_channel: bool) -> BlockActionsPayload {
+    serde_json::from_value(json!({
+        "type": "block_actions",
+        "user": { "id": "U123", "username": "tester", "name": "Tester" },
+        "channel": if with_channel { json!({ "id": "C123" }) } else { json!(null) },
+        "actions": match value {
+            Some(v) => json!([{ "value": v }]),
+            None => json!([]),
+        },
+    }))
+    .expect("payload should parse")
+}
+
+#[test]
+fn a_button_press_becomes_the_same_action_shape_telegram_produces() {
+    // That shape is what ActionExecutor consumes; diverging would make taps
+    // work on one platform and not the other.
+    let payload = block_actions(Some("system:session.attach:id=conv-1"), true);
+
+    let unified = block_actions_to_unified(&payload).expect("our button must route");
+
+    assert_eq!(unified.content.content_type, MessageContentType::Action);
+    assert_eq!(unified.chat_id, "C123");
+    let action = unified.action.expect("a press carries an action");
+    assert_eq!(action.action, "session.attach");
+    assert_eq!(action.params.unwrap().get("id").unwrap(), "conv-1");
+    assert_eq!(action.context.platform, PluginType::Slack);
+}
+
+#[test]
+fn a_press_carrying_someone_elses_value_fires_nothing() {
+    // Slack delivers other apps' interactions too.
+    let payload = block_actions(Some("some_other_app_payload"), true);
+    assert!(block_actions_to_unified(&payload).is_none());
+}
+
+#[test]
+fn an_interaction_with_no_actions_does_not_panic() {
+    let payload = block_actions(None, true);
+    assert!(block_actions_to_unified(&payload).is_none());
+}
+
+#[test]
+fn a_press_with_no_channel_is_ignored_rather_than_guessed() {
+    // Without a channel there is nowhere to reply; inventing one would post
+    // into the wrong conversation.
+    let payload = block_actions(Some("system:session.list"), false);
+    assert!(block_actions_to_unified(&payload).is_none());
+}
+
+#[test]
+fn a_non_block_actions_interactive_payload_is_ignored() {
+    let payload: BlockActionsPayload = serde_json::from_value(json!({
+        "type": "view_submission",
+        "user": { "id": "U1" },
+        "channel": { "id": "C1" },
+        "actions": [{ "value": "system:session.list" }],
+    }))
+    .unwrap();
+
+    assert!(block_actions_to_unified(&payload).is_none());
 }

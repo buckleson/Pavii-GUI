@@ -267,3 +267,131 @@ async fn get_missing_project_and_entry_return_none() {
             .is_none()
     );
 }
+// ── list_projects ────────────────────────────────────────────────────
+//
+// Reads `projects` directly rather than deriving from conversations, so a
+// project with nothing in it yet still appears -- that is exactly where a
+// first conversation gets started.
+
+async fn create_user_2(db: &Database) {
+    sqlx::query(
+        "INSERT INTO users (id, username, password_hash, created_at, updated_at)          VALUES ('user_2', 'other', 'hash', 1000, 1000)",
+    )
+    .execute(db.pool())
+    .await
+    .unwrap();
+}
+
+async fn make_project(store: &Arc<dyn IProjectStore>, canonical: &str, name: &str, user_id: &str) -> String {
+    let folder = store.upsert_folder(canonical, canonical).await.unwrap();
+    let (project, _entry) = store
+        .create_project_with_workspace_entry(user_id, &folder.folder_id, name, ProjectKind::Standard)
+        .await
+        .unwrap();
+    project.project_id
+}
+
+#[tokio::test]
+async fn list_projects_is_empty_before_anything_is_created() {
+    let (store, _db) = store().await;
+    assert!(store.list_projects("system_default_user").await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn list_projects_includes_a_project_with_no_conversations() {
+    // The case a "derive projects from conversations" shortcut would lose.
+    let (store, _db) = store().await;
+    let id = make_project(&store, "file:///empty", "empty", "system_default_user").await;
+
+    let listed = store.list_projects("system_default_user").await.unwrap();
+
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].project_id, id);
+    assert_eq!(listed[0].name, "empty");
+}
+
+#[tokio::test]
+async fn list_projects_orders_most_recently_updated_first() {
+    let (store, db) = store().await;
+    let older = make_project(&store, "file:///older", "older", "system_default_user").await;
+    let newer = make_project(&store, "file:///newer", "newer", "system_default_user").await;
+
+    // Creation timestamps can land in the same millisecond; pin them apart so
+    // the assertion tests ordering rather than luck.
+    sqlx::query("UPDATE projects SET updated_at = ? WHERE project_id = ?")
+        .bind(1_000i64)
+        .bind(&older)
+        .execute(db.pool())
+        .await
+        .unwrap();
+    sqlx::query("UPDATE projects SET updated_at = ? WHERE project_id = ?")
+        .bind(2_000i64)
+        .bind(&newer)
+        .execute(db.pool())
+        .await
+        .unwrap();
+
+    let listed = store.list_projects("system_default_user").await.unwrap();
+
+    assert_eq!(listed.len(), 2);
+    assert_eq!(listed[0].project_id, newer);
+    assert_eq!(listed[1].project_id, older);
+}
+
+#[tokio::test]
+async fn list_projects_ordering_is_stable_when_timestamps_tie() {
+    // Equal `updated_at` must not reorder between calls, or paging over the
+    // list would skip or repeat entries.
+    let (store, db) = store().await;
+    make_project(&store, "file:///t1", "t1", "system_default_user").await;
+    make_project(&store, "file:///t2", "t2", "system_default_user").await;
+    sqlx::query("UPDATE projects SET updated_at = 5000")
+        .execute(db.pool())
+        .await
+        .unwrap();
+
+    let first: Vec<String> = store
+        .list_projects("system_default_user")
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|p| p.project_id)
+        .collect();
+    let second: Vec<String> = store
+        .list_projects("system_default_user")
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|p| p.project_id)
+        .collect();
+
+    assert_eq!(first, second);
+}
+
+#[tokio::test]
+async fn list_projects_does_not_show_another_owners_projects() {
+    let (store, db) = store().await;
+    create_user_2(&db).await;
+
+    let mine = make_project(&store, "file:///mine", "mine", "system_default_user").await;
+    make_project(&store, "file:///theirs", "theirs", "user_2").await;
+
+    let listed = store.list_projects("system_default_user").await.unwrap();
+
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].project_id, mine);
+
+    // And the reverse direction, so this is isolation rather than an accident
+    // of which user was created first.
+    let theirs = store.list_projects("user_2").await.unwrap();
+    assert_eq!(theirs.len(), 1);
+    assert_eq!(theirs[0].name, "theirs");
+}
+
+#[tokio::test]
+async fn list_projects_for_an_unknown_user_is_empty_rather_than_everything() {
+    let (store, _db) = store().await;
+    make_project(&store, "file:///mine", "mine", "system_default_user").await;
+
+    assert!(store.list_projects("nobody").await.unwrap().is_empty());
+}

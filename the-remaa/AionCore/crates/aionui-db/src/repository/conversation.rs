@@ -334,6 +334,9 @@ pub struct ConversationFilters {
     pub cron_job_id: Option<String>,
     /// Filter by pinned status.
     pub pinned: Option<bool>,
+    /// Restrict to one project. `None` means every project and unassigned
+    /// conversations alike.
+    pub project_id: Option<String>,
 }
 
 impl ConversationFilters {

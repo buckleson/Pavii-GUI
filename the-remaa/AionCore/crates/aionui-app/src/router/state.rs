@@ -641,7 +641,17 @@ pub async fn build_channel_state(
     // desktop conversation can be picked up from a phone.
     let session_directory = Arc::new(aionui_channel::session_directory::SessionDirectory::new(
         Arc::clone(&services.conversation_repo),
+        Arc::clone(&services.project_store),
+        Arc::clone(&services.worker_task_manager),
         Arc::clone(&session_manager),
+    ));
+
+    // One instance, shared: the relay parks a request here and the action
+    // executor resolves it when the button comes back. Two instances would
+    // leave every button pressing against an empty registry.
+    let approvals = Arc::new(aionui_channel::approval_service::ApprovalService::new(
+        Arc::new(services.conversation_service.clone()),
+        Arc::clone(&services.worker_task_manager),
     ));
 
     let action_executor = Arc::new(
@@ -651,7 +661,11 @@ pub async fn build_channel_state(
             Arc::clone(&channel_settings),
             startup_owner_user_id.clone(),
         )
-        .with_session_directory(session_directory),
+        .with_approvals(Arc::clone(&approvals))
+        .with_session_directory(session_directory)
+        .with_scheduled_tasks(Arc::new(aionui_channel::scheduled_tasks::ScheduledTaskDirectory::new(
+            Arc::new(aionui_db::SqliteCronRepository::new(services.database.pool().clone())),
+        ))),
     );
 
     let message_service = build_channel_message_service(services, Arc::clone(&channel_settings)).await;
@@ -661,7 +675,22 @@ pub async fn build_channel_state(
         message_service,
         Arc::clone(&session_manager),
         manager.clone() as Arc<dyn aionui_channel::stream_relay::ChannelSender>,
-    );
+    )
+    .with_approvals(Arc::clone(&approvals));
+
+    // Announces finished sessions to paired chats. Subscribes to the event bus
+    // rather than hooking a relay: a relay exists only when a chat dispatched
+    // the work, so a desktop-started session -- the case worth notifying about
+    // -- has none.
+    if let Some(owner_user_id) = startup_owner_user_id.clone() {
+        let notifier = aionui_channel::finish_notifier::FinishNotifier::new(
+            owner_user_id,
+            Arc::clone(&services.conversation_repo),
+            Arc::clone(&repo),
+            manager.clone() as Arc<dyn aionui_channel::stream_relay::ChannelSender>,
+        );
+        tokio::spawn(notifier.run(services.event_bus.subscribe()));
+    }
 
     let state = ChannelRouterState {
         manager: Arc::clone(&manager),

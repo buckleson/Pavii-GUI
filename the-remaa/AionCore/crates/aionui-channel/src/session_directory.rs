@@ -9,12 +9,18 @@
 //! created, so a conversation started on the desktop can be picked up from a
 //! phone. Pairing (`crate::pairing`) is what gates who may do that.
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
+use aionui_ai_agent::IWorkerTaskManager;
+use aionui_common::ConversationStatus;
 use aionui_db::ConversationFilters;
 use aionui_db::IConversationRepository;
+use aionui_db::IProjectStore;
+use aionui_db::ProjectKind;
 use aionui_db::models::ConversationRow;
 
+use crate::branding::brand_display_text;
 use crate::error::ChannelError;
 use crate::session::SessionManager;
 use crate::types::ActionButton;
@@ -26,6 +32,59 @@ pub const SESSIONS_PER_PAGE: u32 = 8;
 /// Longest conversation title kept in a button label. Telegram rejects
 /// over-long callback button text, and long titles wrap badly on mobile.
 const MAX_LABEL_LEN: usize = 40;
+
+/// Conversations listed when a project is opened.
+///
+/// A project listing does not page, unlike `/sessions`. That is a hard limit
+/// rather than a preference: Telegram allows 64 bytes of callback data, and a
+/// "next page inside this project" button would have to carry a project id
+/// *and* a cursor -- two UUIDs, 72 bytes before any prefix. Showing a generous
+/// single page and saying plainly when it truncates costs no extra state and
+/// leaves `/sessions` the fully paged view.
+pub const PROJECT_SESSIONS_LIMIT: u32 = 24;
+
+/// Stored project ids carry this prefix; callback data does not.
+pub const PROJECT_ID_PREFIX: &str = "project_";
+
+/// Shorten a project id for callback data.
+///
+/// `system:project.open:i=project_<uuid>` is 67 bytes, past the Telegram
+/// limit; without the prefix it is 59. The action already names the entity, so
+/// the prefix carries nothing a handler needs.
+pub fn callback_project_ref(project_id: &str) -> String {
+    project_id
+        .strip_prefix(PROJECT_ID_PREFIX)
+        .unwrap_or(project_id)
+        .to_owned()
+}
+
+/// Restore a full project id from callback data.
+///
+/// Tolerates a reference that still carries the prefix, so a button minted by
+/// an older build keeps working after an upgrade.
+pub fn resolve_project_ref(reference: &str) -> String {
+    if reference.starts_with(PROJECT_ID_PREFIX) {
+        reference.to_owned()
+    } else {
+        format!("{PROJECT_ID_PREFIX}{reference}")
+    }
+}
+
+/// One row in the project picker.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProjectEntry {
+    pub project_id: String,
+    pub name: String,
+}
+
+/// The project a session listing is scoped to.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProjectScope {
+    pub project_id: String,
+    pub name: String,
+    /// The project holds more conversations than the listing shows.
+    pub truncated: bool,
+}
 
 /// One row in the session picker.
 #[derive(Debug, Clone, PartialEq)]
@@ -113,22 +172,293 @@ pub fn page_text(page: &SessionPage) -> String {
     }
 }
 
-fn is_running(row: &ConversationRow) -> bool {
-    matches!(row.status.as_deref(), Some("running") | Some("pending"))
+/// Buttons for the running-sessions list. Attaching is how you interject, so
+/// the action is the same one the session picker uses.
+pub fn active_buttons(entries: &[SessionEntry]) -> Vec<Vec<ActionButton>> {
+    entries
+        .iter()
+        .map(|entry| {
+            vec![ActionButton {
+                label: entry_label(entry),
+                action: "session.attach".into(),
+                params: Some([("id".to_owned(), entry.conversation_id.clone())].into_iter().collect()),
+            }]
+        })
+        .collect()
+}
+
+/// Message body for the running-sessions list.
+pub fn active_text(entries: &[SessionEntry]) -> String {
+    match entries.len() {
+        0 => "Nothing is running right now.".to_owned(),
+        1 => "1 session is running. Pick it to follow along or send it a message.".to_owned(),
+        n => format!("{n} sessions are running. Pick one to follow along or send it a message."),
+    }
+}
+
+/// Render the project picker, one project per row.
+pub fn project_buttons(projects: &[ProjectEntry]) -> Vec<Vec<ActionButton>> {
+    projects
+        .iter()
+        .map(|project| {
+            vec![ActionButton {
+                label: truncate_label(&project.name),
+                action: "project.open".into(),
+                params: Some(
+                    [("i".to_owned(), callback_project_ref(&project.project_id))]
+                        .into_iter()
+                        .collect(),
+                ),
+            }]
+        })
+        .collect()
+}
+
+/// Message body for the project picker.
+pub fn project_list_text(projects: &[ProjectEntry]) -> String {
+    if projects.is_empty() {
+        return "No projects yet. Open a folder in the desktop app to create one.".to_owned();
+    }
+    "Pick a project to see its sessions.".to_owned()
+}
+
+/// Buttons for one project: its conversations, then a way to start a fresh one
+/// inside the same project.
+///
+/// Deliberately no "More" button -- see [`PROJECT_SESSIONS_LIMIT`].
+pub fn project_page_buttons(page: &SessionPage, scope: &ProjectScope) -> Vec<Vec<ActionButton>> {
+    let mut rows: Vec<Vec<ActionButton>> = page
+        .entries
+        .iter()
+        .map(|entry| {
+            vec![ActionButton {
+                label: entry_label(entry),
+                action: "session.attach".into(),
+                params: Some([("id".to_owned(), entry.conversation_id.clone())].into_iter().collect()),
+            }]
+        })
+        .collect();
+
+    rows.push(vec![ActionButton {
+        label: "Start a new session here".into(),
+        action: "project.start".into(),
+        params: Some(
+            [("i".to_owned(), callback_project_ref(&scope.project_id))]
+                .into_iter()
+                .collect(),
+        ),
+    }]);
+
+    rows
+}
+
+/// Message body for one project.
+pub fn project_page_text(page: &SessionPage, scope: &ProjectScope) -> String {
+    if page.entries.is_empty() {
+        return format!("\"{}\" has no sessions yet. Start one below.", scope.name);
+    }
+    let mut text = format!("Sessions in \"{}\".", scope.name);
+    if scope.truncated {
+        // Saying so beats quietly showing a subset: this line is the only
+        // signal that anything is missing from the list.
+        text.push_str(&format!(
+            " Showing the {PROJECT_SESSIONS_LIMIT} most recent -- use /sessions for the rest."
+        ));
+    }
+    text
+}
+
+/// Convert a stored `file:` folder URI back into a filesystem path.
+///
+/// Returns `None` for anything that is not a local file URI -- a remote or
+/// malformed folder has no path to run an agent in, and inventing one would
+/// start the session somewhere the user did not ask for.
+fn workspace_uri_to_path(uri: &str) -> Option<String> {
+    url::Url::parse(uri)
+        .ok()
+        .and_then(|parsed| parsed.to_file_path().ok())
+        .map(|path| path.to_string_lossy().into_owned())
+}
+
+/// Conversations the engine is working on right now.
+///
+/// Deliberately not `conversations.status`. That column is written twice --
+/// `"pending"` when the row is created and `"finished"` when a turn completes
+/// -- and never `"running"`, because the runtime keeps status in memory
+/// (`SessionRuntime::set_status`) and does not write it back. Reading the row
+/// was therefore wrong in both directions: a conversation that had never run a
+/// turn looked busy, and one that was genuinely mid-turn looked idle.
+///
+/// A live task is not by itself a running one -- a warm idle agent still holds
+/// a task -- so the status on the task is checked too.
+fn running_conversation_ids(tasks: &Arc<dyn IWorkerTaskManager>) -> HashSet<String> {
+    tasks
+        .active_conversation_ids()
+        .into_iter()
+        .filter(|id| {
+            matches!(
+                tasks.get_task(id).and_then(|task| task.status()),
+                Some(ConversationStatus::Running) | Some(ConversationStatus::Pending)
+            )
+        })
+        .collect()
 }
 
 /// Reads conversations and moves a chat's pointer between them.
 pub struct SessionDirectory {
     conversations: Arc<dyn IConversationRepository>,
+    projects: Arc<dyn IProjectStore>,
+    tasks: Arc<dyn IWorkerTaskManager>,
     sessions: Arc<SessionManager>,
 }
 
 impl SessionDirectory {
-    pub fn new(conversations: Arc<dyn IConversationRepository>, sessions: Arc<SessionManager>) -> Self {
+    pub fn new(
+        conversations: Arc<dyn IConversationRepository>,
+        projects: Arc<dyn IProjectStore>,
+        tasks: Arc<dyn IWorkerTaskManager>,
+        sessions: Arc<SessionManager>,
+    ) -> Self {
         Self {
             conversations,
+            projects,
+            tasks,
             sessions,
         }
+    }
+
+    /// Conversations the engine is executing right now, for this owner.
+    ///
+    /// The task manager is global, so every id is resolved against the owner
+    /// before it is shown: an id that does not belong to this owner reads back
+    /// as `None` and is dropped rather than leaked.
+    pub async fn list_active(
+        &self,
+        owner_user_id: &str,
+        attached_conversation_id: Option<&str>,
+    ) -> Result<Vec<SessionEntry>, ChannelError> {
+        let running = running_conversation_ids(&self.tasks);
+        let mut entries = Vec::new();
+
+        for conversation_id in running {
+            let Some(row) = self.conversations.get(owner_user_id, &conversation_id).await? else {
+                continue;
+            };
+            entries.push(SessionEntry {
+                conversation_id: row.id.clone(),
+                title: brand_display_text(&row.name),
+                agent_type: row.r#type.clone(),
+                running: true,
+                attached: attached_conversation_id == Some(row.id.as_str()),
+            });
+        }
+
+        // The task manager hands back an unordered map; without this the list
+        // would reshuffle between refreshes and buttons would move under the
+        // thumb.
+        entries.sort_by(|a, b| {
+            a.title
+                .cmp(&b.title)
+                .then_with(|| a.conversation_id.cmp(&b.conversation_id))
+        });
+        Ok(entries)
+    }
+
+    /// Every project the owner has, most recently updated first.
+    pub async fn list_projects(&self, owner_user_id: &str) -> Result<Vec<ProjectEntry>, ChannelError> {
+        let rows = self.projects.list_projects(owner_user_id).await?;
+        Ok(rows
+            .into_iter()
+            // Temp projects are the throwaway workspace created per
+            // conversation, one per session. Listing them buries the real
+            // projects under noise, and there is nothing useful to open.
+            // Filtered here rather than in the store: the store method is
+            // general, this is a display decision.
+            .filter(|row| ProjectKind::parse(&row.kind) != Some(ProjectKind::Temp))
+            .map(|row| ProjectEntry {
+                project_id: row.project_id,
+                name: brand_display_text(&row.name),
+            })
+            .collect())
+    }
+
+    /// Filesystem path of a project workspace root, when it has a local one.
+    ///
+    /// This is what makes "start a session in this project" actually land in
+    /// the project: a new conversation is bound to a project by resolving its
+    /// workspace path (`ConversationService::bind_project_best_effort`), not by
+    /// being handed a project id. Folders store a `file:` URI, so it is
+    /// converted back here.
+    ///
+    /// `None` when the project has no workspace entry or its folder is not a
+    /// local path -- callers should then start an ordinary session rather than
+    /// claim a project one.
+    pub async fn project_workspace_path(
+        &self,
+        owner_user_id: &str,
+        project_id: &str,
+    ) -> Result<Option<String>, ChannelError> {
+        let entries = self.projects.list_entries(owner_user_id, project_id).await?;
+        Ok(entries
+            .into_iter()
+            .find(|(entry, _folder)| entry.role == "workspace")
+            .and_then(|(_entry, folder)| workspace_uri_to_path(&folder.resource_canonical)))
+    }
+
+    /// One project and its conversations, newest first.
+    ///
+    /// Errors when the project does not exist or belongs to someone else. An
+    /// empty listing would otherwise be indistinguishable from a project that
+    /// simply has no conversations yet.
+    pub async fn list_project_page(
+        &self,
+        owner_user_id: &str,
+        project_id: &str,
+        attached_conversation_id: Option<&str>,
+    ) -> Result<(SessionPage, ProjectScope), ChannelError> {
+        let project = self
+            .projects
+            .get_project(owner_user_id, project_id)
+            .await?
+            .ok_or_else(|| ChannelError::SessionNotFound(project_id.to_owned()))?;
+
+        let filters = ConversationFilters {
+            cursor: None,
+            limit: PROJECT_SESSIONS_LIMIT,
+            source: None,
+            cron_job_id: None,
+            pinned: None,
+            project_id: Some(project_id.to_owned()),
+        };
+
+        let result = self.conversations.list_paginated(owner_user_id, &filters).await?;
+        let truncated = result.has_more;
+        let running = running_conversation_ids(&self.tasks);
+
+        let entries = result
+            .items
+            .iter()
+            .map(|row| SessionEntry {
+                conversation_id: row.id.clone(),
+                title: brand_display_text(&row.name),
+                agent_type: row.r#type.clone(),
+                running: running.contains(&row.id),
+                attached: attached_conversation_id == Some(row.id.as_str()),
+            })
+            .collect();
+
+        Ok((
+            SessionPage {
+                entries,
+                // Never paged; see PROJECT_SESSIONS_LIMIT.
+                next_cursor: None,
+            },
+            ProjectScope {
+                project_id: project.project_id,
+                name: brand_display_text(&project.name),
+                truncated,
+            },
+        ))
     }
 
     /// One page of the owner's conversations, newest first.
@@ -147,6 +477,8 @@ impl SessionDirectory {
             source: None,
             cron_job_id: None,
             pinned: None,
+            // `/sessions` stays a flat list of everything, project or not.
+            project_id: None,
         };
 
         let result = self.conversations.list_paginated(owner_user_id, &filters).await?;
@@ -155,15 +487,16 @@ impl SessionDirectory {
             .has_more
             .then(|| result.items.last().map(|row| row.id.clone()))
             .flatten();
+        let running = running_conversation_ids(&self.tasks);
 
         let entries = result
             .items
             .iter()
             .map(|row| SessionEntry {
                 conversation_id: row.id.clone(),
-                title: row.name.clone(),
+                title: brand_display_text(&row.name),
                 agent_type: row.r#type.clone(),
-                running: is_running(row),
+                running: running.contains(&row.id),
                 attached: attached_conversation_id == Some(row.id.as_str()),
             })
             .collect();
@@ -328,29 +661,34 @@ mod tests {
     }
 
     #[test]
-    fn pending_conversations_count_as_running() {
-        let mut row = ConversationRow {
-            id: "c1".into(),
-            user_id: "u1".into(),
-            name: "One".into(),
-            r#type: "aionrs".into(),
-            extra: "{}".into(),
-            model: None,
-            status: Some("pending".into()),
-            source: None,
-            channel_chat_id: None,
-            pinned: false,
-            pinned_at: None,
-            created_at: 0,
-            updated_at: 0,
-            project_id: None,
-            folder_id: None,
-            name_source: None,
-        };
-        assert!(is_running(&row), "a queued turn is still work in flight");
-        row.status = Some("finished".into());
-        assert!(!is_running(&row));
-        row.status = None;
-        assert!(!is_running(&row), "legacy rows without status are not running");
+    fn the_running_marker_no_longer_comes_from_the_row() {
+        // Regression guard for the real defect: `conversations.status` is only
+        // ever "pending" (at creation) or "finished" (at turn completion), so
+        // reading it marked never-used conversations as busy and genuinely
+        // busy ones as idle. Running state now comes from the task manager,
+        // and `SessionEntry.running` is set by the caller from that.
+        let idle = entry("c1", "One", false, false);
+        let busy = entry("c2", "Two", true, false);
+
+        assert!(!entry_label(&idle).contains("running"));
+        assert!(entry_label(&busy).contains("running"));
+    }
+
+    #[test]
+    fn the_active_list_says_so_when_nothing_is_running() {
+        // An empty keyboard with no explanation reads as a broken command.
+        assert!(active_buttons(&[]).is_empty());
+        assert_eq!(active_text(&[]), "Nothing is running right now.");
+    }
+
+    #[test]
+    fn the_active_list_counts_what_is_running() {
+        let one = [entry("c1", "One", true, false)];
+        let two = [entry("c1", "One", true, false), entry("c2", "Two", true, false)];
+
+        assert!(active_text(&one).starts_with("1 session is running"));
+        assert!(active_text(&two).starts_with("2 sessions are running"));
+        assert_eq!(active_buttons(&two).len(), 2);
+        assert_eq!(active_buttons(&two)[0][0].action, "session.attach");
     }
 }

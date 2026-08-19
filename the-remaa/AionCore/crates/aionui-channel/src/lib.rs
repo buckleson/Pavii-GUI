@@ -2,19 +2,25 @@
 
 //! External channel integration: plugin system, pairing handshake, and per-session messaging.
 pub mod action;
+pub mod approval_service;
 pub mod approvals;
+pub mod branding;
+pub mod callback;
 pub mod channel_settings;
 pub mod commands;
 pub mod constants;
 pub mod error;
+pub mod finish_notifier;
 pub mod formatter;
 pub mod manager;
 pub mod message_service;
 pub mod orchestrator;
 pub mod pairing;
+pub mod permission_events;
 pub mod plugin;
 pub mod plugins;
 pub mod routes;
+pub mod scheduled_tasks;
 pub mod session;
 pub mod session_directory;
 pub mod stream_relay;

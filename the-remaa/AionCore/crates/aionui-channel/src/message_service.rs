@@ -11,6 +11,7 @@ use tracing::{debug, info, warn};
 use crate::channel_settings::{ChannelSettingsService, resolved_model_to_provider};
 use crate::constants::{STREAM_THROTTLE_INTERVAL, TOOL_CONFIRM_TIMEOUT};
 use crate::error::ChannelError;
+use crate::permission_events::{ApprovalRequest, approval_from_event};
 use crate::types::{ActionButton, OutgoingMessageType, PluginType, UnifiedOutgoingMessage};
 
 const DEPRECATED_AGENT_TYPE_MESSAGE: &str = "This agent type is no longer supported for new conversations.";
@@ -146,11 +147,21 @@ impl ChannelMessageService {
         let model_config = self.settings.get_model_config(owner_user_id, platform).await?;
         let agent_type = parse_agent_type(&agent_config.agent_type)?;
         let model = resolved_model_to_provider(model_config.as_ref());
-        let mut extra = Self::build_channel_extra(if assistant_id.is_some() {
-            None
-        } else {
-            agent_config.backend.as_deref()
-        });
+        let mut extra = Self::build_channel_extra(
+            platform,
+            if assistant_id.is_some() {
+                None
+            } else {
+                agent_config.backend.as_deref()
+            },
+        );
+        // A session started from `/projects` carries the project workspace.
+        // `ConversationService` binds a conversation to a project by resolving
+        // this path, so without it a project-started session would create an
+        // unbound conversation and never appear back under its project.
+        if let Some(workspace) = session.workspace.as_deref().map(str::trim).filter(|w| !w.is_empty()) {
+            extra["workspace"] = serde_json::Value::String(workspace.to_owned());
+        }
         let name = assistant_name.unwrap_or_else(|| {
             channel_conversation_name(
                 platform,
@@ -212,17 +223,20 @@ impl ChannelMessageService {
                 name: data.name.clone(),
                 status: format!("{:?}", data.status),
             }),
+            // The agent stops and waits on these. Dropping them, as this used
+            // to, is only survivable while channel sessions auto-approve.
+            AgentStreamEvent::AcpPermission(_) | AgentStreamEvent::Ask(_) => {
+                approval_from_event(event).map(|request| StreamAction::Approval(Box::new(request)))
+            }
             // Events that don't produce user-facing messages
             AgentStreamEvent::Start(_)
             | AgentStreamEvent::Tips(_)
             | AgentStreamEvent::ToolGroup(_)
             | AgentStreamEvent::AgentStatus(_)
             | AgentStreamEvent::Plan(_)
+            // Never constructed anywhere in the workspace; the live
+            // permission event is `AcpPermission`, handled above.
             | AgentStreamEvent::Permission(_)
-            | AgentStreamEvent::AcpPermission(_)
-            // IM channels have no interactive question card; the ask stays
-            // pending in the app UI (same treatment as Permission).
-            | AgentStreamEvent::Ask(_)
             | AgentStreamEvent::AcpToolCall(_)
             | AgentStreamEvent::AvailableCommands(_)
             | AgentStreamEvent::SkillSuggest(_)
@@ -334,11 +348,21 @@ impl ChannelMessageService {
 
     /// Build the `extra` JSON for channel conversations.
     ///
-    /// Sets `session_mode` to `"yolo"` so the agent auto-approves tool calls —
-    /// channel users have no interactive UI for confirmations.
-    pub fn build_channel_extra(backend: Option<&str>) -> serde_json::Value {
+    /// `session_mode` is `"default"`, the mode catalogue's own default
+    /// (`015_aionrs_mode_catalog.sql`), so the agent asks before it acts.
+    ///
+    /// It used to be `"yolo"` — auto-approve everything — because a chat had no
+    /// way to answer a permission prompt. It does now: a request is parked in
+    /// `ApprovalService`, rendered as buttons, and denied automatically if
+    /// nobody answers within `APPROVAL_TIMEOUT_MS`.
+    ///
+    /// This changes behaviour for anyone already using channels: silent agents
+    /// become agents that stop and wait. Only new conversations are affected —
+    /// `extra` is written once at creation, so existing channel conversations
+    /// keep running unsupervised until they are replaced.
+    pub fn build_channel_extra(platform: PluginType, backend: Option<&str>) -> serde_json::Value {
         let mut extra = serde_json::json!({
-            "session_mode": "yolo",
+            "session_mode": session_mode_for(platform),
         });
         if let Some(b) = backend {
             extra["backend"] = serde_json::Value::String(b.to_owned());
@@ -370,6 +394,38 @@ pub enum StreamAction {
     Thinking(String),
     /// Tool call status update.
     ToolCall { name: String, status: String },
+    /// The agent is blocked asking for permission, or asking a question.
+    ///
+    /// Boxed because it is much larger than the other variants and would
+    /// otherwise set the size of every `StreamAction` moved through the relay.
+    Approval(Box<ApprovalRequest>),
+}
+
+/// Whether a platform can show an approval prompt the user can answer.
+///
+/// Approvals are rendered as buttons. On a platform without them the agent
+/// would stop, ask an unanswerable question, and sit blocked until the
+/// ten-minute expiry denied it -- strictly worse than acting unsupervised. So
+/// those platforms keep auto-approving.
+///
+/// Telegram, Slack, Discord, Lark and DingTalk all render buttons. WeChat does
+/// not: it has no interactive message support, which is also why the stream
+/// relay has a separate no-edit path for it.
+fn supports_buttons(platform: PluginType) -> bool {
+    match platform {
+        PluginType::Telegram | PluginType::Slack | PluginType::Discord | PluginType::Lark | PluginType::Dingtalk => {
+            true
+        }
+        PluginType::Weixin => false,
+    }
+}
+
+/// The session mode a new channel conversation starts in.
+///
+/// `"default"` asks before acting; `"yolo"` does not. Both are real modes in
+/// the catalogue (`015_aionrs_mode_catalog.sql`).
+fn session_mode_for(platform: PluginType) -> &'static str {
+    if supports_buttons(platform) { "default" } else { "yolo" }
 }
 
 /// Maps a PluginType to the corresponding ConversationSource.
@@ -430,7 +486,10 @@ fn channel_conversation_name(
 
     let mut parts = vec![short.to_owned()];
     if !agent_type.is_empty() {
-        parts.push(agent_type.to_owned());
+        // Branded here so new rows stop storing the internal token at all.
+        // Rows written before this are covered by `brand_display_text` when
+        // the channel renders them.
+        parts.push(crate::branding::brand_agent_label(agent_type));
     }
     if agent_type == "acp"
         && let Some(b) = backend
@@ -633,19 +692,93 @@ mod tests {
         );
     }
 
+    // ── permission events reach the relay ─────────────────────────────
+
+    #[test]
+    fn a_permission_event_becomes_an_approval_action() {
+        // The wiring that matters: these used to fall into the "produces no
+        // user-facing message" arm and be dropped, which is only survivable
+        // while channel sessions auto-approve everything.
+        use aionui_ai_agent::protocol::events::AcpPermissionEventData;
+        use aionui_common::{Confirmation, ConfirmationOption};
+
+        let event = AgentStreamEvent::AcpPermission(AcpPermissionEventData::Confirmation(Confirmation {
+            id: "conf-1".into(),
+            call_id: "call-1".into(),
+            title: Some("Run a command".into()),
+            action: None,
+            description: "rm -rf /tmp/build".into(),
+            command_type: None,
+            options: vec![ConfirmationOption {
+                label: "Allow".into(),
+                value: serde_json::json!("allow"),
+                params: None,
+            }],
+            questions: None,
+        }));
+
+        let action = ChannelMessageService::process_stream_event(&event);
+
+        match action {
+            Some(StreamAction::Approval(request)) => {
+                assert_eq!(request.agent_request_id, "call-1");
+                assert_eq!(request.choices.len(), 1);
+            }
+            other => panic!("a permission must reach the relay, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn an_ask_event_becomes_an_approval_action() {
+        let event = AgentStreamEvent::Ask(serde_json::json!({
+            "request_id": "ask-1",
+            "questions": [{ "question": "Which?", "options": [{ "label": "A" }] }],
+        }));
+
+        assert!(matches!(
+            ChannelMessageService::process_stream_event(&event),
+            Some(StreamAction::Approval(_))
+        ));
+    }
+
     // ── build_channel_extra ───────────────────────────────────────────
 
     #[test]
-    fn yolo_extra_contains_session_mode() {
-        let extra = ChannelMessageService::build_channel_extra(None);
+    fn a_platform_without_buttons_keeps_auto_approving() {
+        // Otherwise the agent stops, asks a question the user cannot answer,
+        // and hangs until the ten-minute expiry denies it.
+        let extra = ChannelMessageService::build_channel_extra(PluginType::Weixin, None);
         assert_eq!(extra["session_mode"], "yolo");
+    }
+
+    #[test]
+    fn every_platform_that_can_show_buttons_asks_first() {
+        for platform in [
+            PluginType::Telegram,
+            PluginType::Slack,
+            PluginType::Discord,
+            PluginType::Lark,
+            PluginType::Dingtalk,
+        ] {
+            let extra = ChannelMessageService::build_channel_extra(platform, None);
+            assert_eq!(extra["session_mode"], "default", "{platform:?} should ask first");
+        }
+    }
+
+    #[test]
+    fn channel_extra_asks_before_acting() {
+        // Regression guard: reverting this to "yolo" silently re-disables every
+        // approval prompt, and nothing else in the suite would fail.
+        let extra = ChannelMessageService::build_channel_extra(PluginType::Telegram, None);
+        assert_eq!(extra["session_mode"], "default");
+        assert_ne!(extra["session_mode"], "yolo");
         assert!(extra.get("backend").is_none());
     }
 
     #[test]
-    fn yolo_extra_with_backend() {
-        let extra = ChannelMessageService::build_channel_extra(Some("claude"));
-        assert_eq!(extra["session_mode"], "yolo");
+    fn channel_extra_with_backend() {
+        let extra = ChannelMessageService::build_channel_extra(PluginType::Telegram, Some("claude"));
+        assert_eq!(extra["session_mode"], "default");
         assert_eq!(extra["backend"], "claude");
     }
 
@@ -660,7 +793,7 @@ mod tests {
             model: "claude-sonnet".into(),
             use_model: Some("global.anthropic.claude-sonnet-4-6".into()),
         };
-        let mut extra = ChannelMessageService::build_channel_extra(Some("codex"));
+        let mut extra = ChannelMessageService::build_channel_extra(PluginType::Telegram, Some("codex"));
 
         let top_level_model = if agent_type == AgentType::Aionrs {
             Some(model.clone())
@@ -682,7 +815,7 @@ mod tests {
             model: "gpt-4o".into(),
             use_model: None,
         };
-        let mut extra = ChannelMessageService::build_channel_extra(None);
+        let mut extra = ChannelMessageService::build_channel_extra(PluginType::Telegram, None);
 
         let top_level_model = if agent_type == AgentType::Aionrs {
             Some(model.clone())
@@ -704,9 +837,12 @@ mod tests {
     }
 
     #[test]
-    fn conv_name_telegram_aionrs() {
+    fn conv_name_telegram_brands_the_internal_agent() {
+        // The stored agent type stays "aionrs" (wire contract); the derived
+        // conversation NAME is user-facing, so it carries the brand instead.
         let name = channel_conversation_name(PluginType::Telegram, "aionrs", None, Some("70880480"));
-        assert_eq!(name, "tg-aionrs-70880480");
+        assert_eq!(name, "tg-paviirs-70880480");
+        assert!(!name.contains("aionrs"), "the internal token must not reach a title");
     }
 
     #[test]
@@ -730,6 +866,6 @@ mod tests {
     #[test]
     fn conv_name_non_acp_ignores_backend() {
         let name = channel_conversation_name(PluginType::Telegram, "aionrs", Some("claude"), Some("70880480"));
-        assert_eq!(name, "tg-aionrs-70880480");
+        assert_eq!(name, "tg-paviirs-70880480");
     }
 }

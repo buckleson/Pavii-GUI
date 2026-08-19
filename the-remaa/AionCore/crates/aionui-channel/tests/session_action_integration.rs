@@ -368,7 +368,8 @@ async fn action_session_new() {
             let text = resp.text.unwrap();
             assert!(text.contains("New session"));
             // With no client_preferences, defaults to "aionrs"
-            assert!(text.contains("aionrs"));
+            assert!(text.contains("paviirs"), "unexpected reply: {text}");
+            assert!(!text.contains("aionrs"), "the internal token must not reach the chat");
         }
         _ => panic!("Expected Action result"),
     }

@@ -1,24 +1,29 @@
 //! Pending tool approvals raised to a chat channel.
 //!
-//! Channel sessions run in `yolo` mode today (`message_service.rs`,
-//! `orchestrator.rs`), so the agent acts unsupervised and nothing ever asks.
-//! This registry is what lets a session pause instead: a permission request is
-//! parked here, rendered as Allow/Deny buttons, and resolved when the answer
+//! Channel sessions ran in `yolo` mode, so the agent acted unsupervised and
+//! nothing ever asked. This is what lets a session pause instead: a permission
+//! request is parked here, rendered as buttons, and resolved when the answer
 //! comes back.
 //!
-//! Two properties matter more than the happy path:
+//! Three properties matter more than the happy path:
 //!
 //! - **An unanswered approval must expire.** Nobody watches their phone at
 //!   03:00, and a session blocked forever is worse than one that stopped.
 //!   Expiry resolves as *denied* — the safe direction.
 //! - **An approval resolves exactly once.** A late button press, a double tap,
-//!   or an answer racing the expiry sweep must not send a second decision to
-//!   the agent.
+//!   or an answer racing the expiry sweep must not send the agent two
+//!   decisions.
+//! - **A button must fit the callback budget.** Telegram allows 64 bytes, and
+//!   one over-long button makes it reject the whole message. Requests are
+//!   therefore keyed by a short *ticket* we mint, not by the agent's own
+//!   request id (an ACP tool-call id has no length bound we control), and the
+//!   answer travels as an option *index* rather than an option value (an
+//!   AskUserQuestion option value is a whole answer label).
 
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use aionui_common::{TimestampMs, now_ms};
+use aionui_common::{TimestampMs, generate_short_id, now_ms};
 
 /// How long a request waits before it is treated as denied.
 pub const APPROVAL_TIMEOUT_MS: i64 = 10 * 60 * 1000;
@@ -67,22 +72,73 @@ impl Resolution {
     }
 }
 
+/// How the answer must be delivered back to the agent.
+///
+/// The two travel different channels: a permission goes through
+/// `ConversationService::confirm`, a question through `answer_ask`. Mixing them
+/// silently drops the answer, so the kind is carried with the request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ApprovalKind {
+    /// An ordinary tool approval.
+    Permission,
+    /// An AskUserQuestion card.
+    Ask,
+}
+
+/// One answer the user can pick.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApprovalChoice {
+    /// Button text.
+    pub label: String,
+    /// What the agent is told — an option id, or an answer label for a question.
+    pub value: String,
+    /// True for the option that denies. Used to render the deny button last and
+    /// to pick the right answer when a request expires.
+    pub denies: bool,
+}
+
 /// An approval awaiting an answer.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PendingApproval {
-    pub request_id: String,
+    /// Short key we mint, so callback data stays inside the 64-byte budget.
+    pub ticket: String,
+    /// The id the agent knows this request by.
+    pub agent_request_id: String,
+    pub conversation_id: String,
     pub session_id: String,
     pub chat_id: String,
+    /// Which platform to reach the chat on, needed when the expiry sweep has
+    /// to speak without an incoming message to reply to.
+    pub plugin_id: String,
+    pub kind: ApprovalKind,
+    /// The question text, for an [`ApprovalKind::Ask`]; empty otherwise.
+    pub question: String,
     /// Short description of what the agent wants to do, shown to the user.
     pub summary: String,
+    pub choices: Vec<ApprovalChoice>,
     pub created_at: TimestampMs,
+}
+
+impl PendingApproval {
+    /// The choice at `index`, if it exists.
+    pub fn choice(&self, index: usize) -> Option<&ApprovalChoice> {
+        self.choices.get(index)
+    }
+
+    /// The choice to use when nobody answers.
+    ///
+    /// Prefers an explicit deny option so the agent gets a decision it
+    /// understands; falls back to `None` when the request offered no way to
+    /// refuse, which the caller reports rather than guessing.
+    pub fn denying_choice(&self) -> Option<&ApprovalChoice> {
+        self.choices.iter().find(|choice| choice.denies)
+    }
 }
 
 /// Registry of approvals awaiting an answer.
 ///
-/// Keyed by request id because that is what the agent's confirm channel needs
-/// back; a chat can legitimately have several in flight when parallel sessions
-/// are attached to it.
+/// Keyed by ticket because that is what a button can carry; a chat can
+/// legitimately have several in flight when parallel sessions are attached.
 #[derive(Default)]
 pub struct ApprovalRegistry {
     pending: Mutex<HashMap<String, PendingApproval>>,
@@ -93,13 +149,18 @@ impl ApprovalRegistry {
         Self::default()
     }
 
+    /// Mint a ticket short enough to survive the callback budget.
+    pub fn new_ticket() -> String {
+        generate_short_id()
+    }
+
     /// Park a request. Returns the entry as stored.
     ///
-    /// Re-registering the same id replaces the entry rather than duplicating
-    /// it: agents re-emit a request when a turn is retried.
+    /// Re-registering the same ticket replaces the entry rather than
+    /// duplicating it: agents re-emit a request when a turn is retried.
     pub fn register(&self, approval: PendingApproval) -> PendingApproval {
         let mut pending = self.pending.lock().expect("approval registry poisoned");
-        pending.insert(approval.request_id.clone(), approval.clone());
+        pending.insert(approval.ticket.clone(), approval.clone());
         approval
     }
 
@@ -111,22 +172,22 @@ impl ApprovalRegistry {
         self.len() == 0
     }
 
-    pub fn get(&self, request_id: &str) -> Option<PendingApproval> {
+    pub fn get(&self, ticket: &str) -> Option<PendingApproval> {
         self.pending
             .lock()
             .expect("approval registry poisoned")
-            .get(request_id)
+            .get(ticket)
             .cloned()
     }
 
     /// Resolve a request with the user's answer.
     ///
-    /// Returns `None` when the id is unknown or already resolved — a late tap
-    /// on a stale button must not produce a second decision.
-    pub fn resolve(&self, request_id: &str, decision: Decision) -> Option<(PendingApproval, Resolution)> {
+    /// Returns `None` when the ticket is unknown or already resolved — a late
+    /// tap on a stale button must not produce a second decision.
+    pub fn resolve(&self, ticket: &str, decision: Decision) -> Option<(PendingApproval, Resolution)> {
         let mut pending = self.pending.lock().expect("approval registry poisoned");
         pending
-            .remove(request_id)
+            .remove(ticket)
             .map(|approval| (approval, Resolution::Answered(decision)))
     }
 
@@ -139,7 +200,7 @@ impl ApprovalRegistry {
         let expired_ids: Vec<String> = pending
             .values()
             .filter(|approval| now.saturating_sub(approval.created_at) >= timeout_ms)
-            .map(|approval| approval.request_id.clone())
+            .map(|approval| approval.ticket.clone())
             .collect();
 
         expired_ids
@@ -157,19 +218,36 @@ impl ApprovalRegistry {
         let ids: Vec<String> = pending
             .values()
             .filter(|approval| approval.session_id == session_id)
-            .map(|approval| approval.request_id.clone())
+            .map(|approval| approval.ticket.clone())
             .collect();
         ids.into_iter().filter_map(|id| pending.remove(&id)).collect()
     }
 }
 
 /// Build a pending approval from the pieces the relay has to hand.
-pub fn pending(request_id: &str, session_id: &str, chat_id: &str, summary: &str) -> PendingApproval {
+#[allow(clippy::too_many_arguments)]
+pub fn pending(
+    agent_request_id: &str,
+    conversation_id: &str,
+    session_id: &str,
+    chat_id: &str,
+    plugin_id: &str,
+    kind: ApprovalKind,
+    question: &str,
+    summary: &str,
+    choices: Vec<ApprovalChoice>,
+) -> PendingApproval {
     PendingApproval {
-        request_id: request_id.to_owned(),
+        ticket: ApprovalRegistry::new_ticket(),
+        agent_request_id: agent_request_id.to_owned(),
+        conversation_id: conversation_id.to_owned(),
         session_id: session_id.to_owned(),
         chat_id: chat_id.to_owned(),
+        plugin_id: plugin_id.to_owned(),
+        kind,
+        question: question.trim().to_owned(),
         summary: summary.trim().to_owned(),
+        choices,
         created_at: now_ms(),
     }
 }
@@ -178,12 +256,33 @@ pub fn pending(request_id: &str, session_id: &str, chat_id: &str, summary: &str)
 mod tests {
     use super::*;
 
-    fn approval(id: &str, created_at: TimestampMs) -> PendingApproval {
+    fn choices() -> Vec<ApprovalChoice> {
+        vec![
+            ApprovalChoice {
+                label: "Allow".into(),
+                value: "allow".into(),
+                denies: false,
+            },
+            ApprovalChoice {
+                label: "Reject".into(),
+                value: "reject".into(),
+                denies: true,
+            },
+        ]
+    }
+
+    fn approval(ticket: &str, created_at: TimestampMs) -> PendingApproval {
         PendingApproval {
-            request_id: id.to_owned(),
+            ticket: ticket.to_owned(),
+            agent_request_id: format!("call-{ticket}"),
+            conversation_id: "conv1".to_owned(),
             session_id: "s1".to_owned(),
             chat_id: "c1".to_owned(),
+            plugin_id: "telegram".to_owned(),
+            kind: ApprovalKind::Permission,
+            question: String::new(),
             summary: "run rm -rf /tmp/build".to_owned(),
+            choices: choices(),
             created_at,
         }
     }
@@ -209,7 +308,7 @@ mod tests {
         registry.register(approval("r1", now_ms()));
 
         assert_eq!(registry.len(), 1);
-        assert_eq!(registry.get("r1").unwrap().request_id, "r1");
+        assert_eq!(registry.get("r1").unwrap().ticket, "r1");
     }
 
     #[test]
@@ -219,7 +318,7 @@ mod tests {
 
         let (parked, resolution) = registry.resolve("r1", Decision::Allow).unwrap();
 
-        assert_eq!(parked.request_id, "r1");
+        assert_eq!(parked.ticket, "r1");
         assert_eq!(resolution, Resolution::Answered(Decision::Allow));
         assert!(registry.is_empty(), "a resolved approval must not stay pending");
     }
@@ -277,7 +376,7 @@ mod tests {
         let expired = registry.expire_older_than(now, APPROVAL_TIMEOUT_MS);
 
         assert_eq!(expired.len(), 1);
-        assert_eq!(expired[0].0.request_id, "exactly");
+        assert_eq!(expired[0].0.ticket, "exactly");
     }
 
     #[test]
@@ -295,7 +394,7 @@ mod tests {
     }
 
     #[test]
-    fn re_registering_the_same_id_replaces_rather_than_duplicates() {
+    fn re_registering_the_same_ticket_replaces_rather_than_duplicates() {
         // Agents re-emit a request when a turn is retried.
         let registry = ApprovalRegistry::new();
         registry.register(approval("r1", now_ms()));
@@ -329,7 +428,7 @@ mod tests {
         let dropped = registry.drop_session("s1");
 
         assert_eq!(dropped.len(), 1);
-        assert_eq!(dropped[0].request_id, "r1");
+        assert_eq!(dropped[0].ticket, "r1");
         assert!(registry.get("r2").is_some(), "another session must be untouched");
     }
 
@@ -341,8 +440,97 @@ mod tests {
 
     #[test]
     fn the_summary_is_trimmed_when_parked() {
-        let parked = pending("r1", "s1", "c1", "  delete the build directory  ");
+        let parked = pending(
+            "call-1",
+            "conv1",
+            "s1",
+            "c1",
+            "telegram",
+            ApprovalKind::Permission,
+            "",
+            "  delete the build directory  ",
+            choices(),
+        );
         assert_eq!(parked.summary, "delete the build directory");
+    }
+
+    #[test]
+    fn a_minted_ticket_is_short_enough_for_a_callback() {
+        // The whole reason tickets exist. 64 bytes total, and the rest of the
+        // callback (`chat:system.confirm:t=,v=`) already costs 25.
+        let parked = pending(
+            "an-agent-request-id-of-unbounded-length",
+            "conv1",
+            "s1",
+            "c1",
+            "telegram",
+            ApprovalKind::Permission,
+            "",
+            "do a thing",
+            choices(),
+        );
+        assert!(
+            parked.ticket.len() <= 16,
+            "ticket {} is too long for callback data",
+            parked.ticket
+        );
+        assert_ne!(
+            parked.ticket, parked.agent_request_id,
+            "the ticket must not be the agent id, which has no length bound"
+        );
+    }
+
+    #[test]
+    fn tickets_are_distinct_between_requests() {
+        // Two in flight in one chat must not collide onto one button.
+        let a = pending(
+            "c1",
+            "conv",
+            "s",
+            "chat",
+            "telegram",
+            ApprovalKind::Permission,
+            "",
+            "a",
+            choices(),
+        );
+        let b = pending(
+            "c2",
+            "conv",
+            "s",
+            "chat",
+            "telegram",
+            ApprovalKind::Permission,
+            "",
+            "b",
+            choices(),
+        );
+        assert_ne!(a.ticket, b.ticket);
+    }
+
+    #[test]
+    fn a_choice_is_addressed_by_index() {
+        // Buttons carry the index, not the value: an AskUserQuestion option
+        // value is a whole answer label and would blow the callback budget.
+        let parked = approval("r1", now_ms());
+        assert_eq!(parked.choice(0).unwrap().value, "allow");
+        assert_eq!(parked.choice(1).unwrap().value, "reject");
+        assert!(parked.choice(2).is_none(), "an out-of-range tap must not pick a choice");
+    }
+
+    #[test]
+    fn the_denying_choice_is_found_for_expiry() {
+        let parked = approval("r1", now_ms());
+        assert_eq!(parked.denying_choice().unwrap().value, "reject");
+    }
+
+    #[test]
+    fn a_request_with_no_deny_option_reports_rather_than_guessing() {
+        // An AskUserQuestion has no "reject" among its answers; expiry must not
+        // invent one and pass it off as the user's choice.
+        let mut parked = approval("r1", now_ms());
+        parked.choices.retain(|choice| !choice.denies);
+        assert!(parked.denying_choice().is_none());
     }
 
     #[test]

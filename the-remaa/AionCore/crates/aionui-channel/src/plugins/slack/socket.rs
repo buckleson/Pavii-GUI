@@ -10,7 +10,9 @@ use crate::error::ChannelError;
 use crate::types::UnifiedIncomingMessage;
 
 use super::api::SlackApi;
-use super::types::{EventCallback, SocketEnvelope, build_ack, event_to_unified};
+use super::types::{
+    BlockActionsPayload, EventCallback, SocketEnvelope, block_actions_to_unified, build_ack, event_to_unified,
+};
 
 /// Maximum reconnect attempts before giving up.
 const MAX_RECONNECT_ATTEMPTS: u32 = 10;
@@ -135,6 +137,13 @@ async fn connect_and_listen(
                                     handle_event_callback(payload, bot_user_id, message_tx, dedup_cache).await;
                                 }
                             }
+                            // A button press. The ack above already went out,
+                            // which is what Slack's 3-second window needs.
+                            "interactive" => {
+                                if let Some(payload) = envelope.payload {
+                                    handle_interactive(payload, message_tx).await;
+                                }
+                            }
                             other => debug!(envelope_type = other, "Slack unhandled envelope type"),
                         }
                     }
@@ -159,6 +168,25 @@ async fn connect_and_listen(
                 return Ok(());
             }
         }
+    }
+}
+
+/// Parse an `interactive` payload and forward a button press as an action.
+async fn handle_interactive(payload: serde_json::Value, message_tx: &mpsc::Sender<UnifiedIncomingMessage>) {
+    let parsed: BlockActionsPayload = match serde_json::from_value(payload) {
+        Ok(p) => p,
+        Err(e) => {
+            // Slack sends interactive types we do not model; not an error.
+            debug!(error = %e, "Slack interactive payload is not a block_actions press");
+            return;
+        }
+    };
+
+    match block_actions_to_unified(&parsed) {
+        Some(unified) => {
+            let _ = message_tx.send(unified).await;
+        }
+        None => debug!("Slack interactive payload carried no action of ours"),
     }
 }
 

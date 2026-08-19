@@ -6,7 +6,9 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use tracing::{debug, warn};
 
+use crate::callback;
 use crate::error::ChannelError;
+use crate::types::ActionButton;
 
 use super::types::{
     AuthTestResponse, OpenConnectionResponse, PostMessageRequest, PostMessageResponse, UpdateMessageRequest,
@@ -46,6 +48,44 @@ pub(super) struct SlackApi {
     client: Client,
     bot_token: String,
     app_token: String,
+}
+
+/// Slack allows at most 5 elements in one `actions` block.
+const SLACK_ACTIONS_PER_BLOCK: usize = 5;
+
+/// Render text plus buttons as Block Kit.
+///
+/// One `actions` block per button row, so a picker that puts one button per row
+/// keeps that layout. Rows longer than Slack allows are split rather than
+/// truncated -- dropping a button would silently remove a choice.
+fn build_blocks(text: &str, rows: &[Vec<ActionButton>]) -> Vec<serde_json::Value> {
+    let mut blocks = vec![serde_json::json!({
+        "type": "section",
+        "text": { "type": "mrkdwn", "text": text },
+    })];
+
+    for row in rows {
+        for chunk in row.chunks(SLACK_ACTIONS_PER_BLOCK) {
+            let elements: Vec<serde_json::Value> = chunk
+                .iter()
+                .map(|button| {
+                    serde_json::json!({
+                        "type": "button",
+                        "text": { "type": "plain_text", "text": button.label, "emoji": true },
+                        // Slack echoes both back on a tap; `value` carries the
+                        // encoding every platform shares.
+                        "action_id": button.action,
+                        "value": callback::encode(button),
+                    })
+                })
+                .collect();
+            if !elements.is_empty() {
+                blocks.push(serde_json::json!({ "type": "actions", "elements": elements }));
+            }
+        }
+    }
+
+    blocks
 }
 
 impl SlackApi {
@@ -115,12 +155,14 @@ impl SlackApi {
         channel: &str,
         text: &str,
         thread_ts: Option<&str>,
+        buttons: Option<&[Vec<ActionButton>]>,
     ) -> Result<String, ChannelError> {
         let url = format!("{SLACK_API_BASE}/chat.postMessage");
         let body = PostMessageRequest {
             channel: channel.to_string(),
             text: text.to_string(),
             thread_ts: thread_ts.map(ToOwned::to_owned),
+            blocks: buttons.map(|rows| build_blocks(text, rows)),
         };
 
         debug!(channel, "Slack chat.postMessage");

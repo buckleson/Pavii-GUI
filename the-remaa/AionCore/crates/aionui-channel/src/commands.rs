@@ -56,6 +56,18 @@ pub fn menu() -> Vec<MenuCommand> {
             description: "List your conversations and switch between them",
         },
         MenuCommand {
+            name: "projects",
+            description: "Browse projects and the sessions inside them",
+        },
+        MenuCommand {
+            name: "active_works",
+            description: "Show sessions running right now and step into one",
+        },
+        MenuCommand {
+            name: "tasks",
+            description: "Show your scheduled tasks and when they next run",
+        },
+        MenuCommand {
             name: "status",
             description: "Show which conversation this chat is attached to",
         },
@@ -70,12 +82,41 @@ pub fn menu() -> Vec<MenuCommand> {
     ]
 }
 
+/// The same commands, rendered for a Slack app manifest.
+///
+/// Slack has no `setMyCommands` equivalent: slash commands are **declared in
+/// the app manifest**, which a human pastes into api.slack.com. Generating the
+/// block from [`menu`] is what stops the declared list drifting from the
+/// handled one — a command Slack advertises but nothing resolves reaches the
+/// model as a prompt, which is worse than not offering it.
+///
+/// `request_url` is the app's own endpoint; it is left to the caller because it
+/// varies per deployment.
+pub fn slack_manifest_commands(request_url: &str) -> String {
+    let mut out = String::from("  slash_commands:\n");
+    for entry in menu() {
+        out.push_str(&format!("    - command: /{}\n", entry.name));
+        out.push_str(&format!("      url: {request_url}\n"));
+        out.push_str(&format!("      description: {}\n", entry.description));
+        out.push_str("      should_escape: false\n");
+    }
+    out
+}
+
 /// Resolve a slash command, or `None` when the agent should receive it.
 pub fn resolve_command(text: &str) -> Option<CommandAction> {
     let name = normalize(text)?;
     let (category, action) = match name.as_str() {
         // "/session" singular is what people actually type.
         "sessions" | "session" | "list" => (ActionCategory::System, "session.list"),
+        // Kept separate from "sessions" on purpose: that stays a flat list of
+        // everything, this is the structured route through projects.
+        "projects" | "project" => (ActionCategory::System, "project.list"),
+        // Telegram command names allow only letters, digits and underscore,
+        // so the advertised name is "active_works"; the hyphenated and short
+        // spellings are accepted because they are what people type.
+        "active_works" | "active-works" | "active" | "running" => (ActionCategory::System, "session.active"),
+        "tasks" | "task" | "schedule" => (ActionCategory::System, "task.list"),
         "status" => (ActionCategory::System, "session.status"),
         "new" => (ActionCategory::System, "session.new"),
         "help" => (ActionCategory::System, "help.show"),
@@ -104,6 +145,96 @@ mod tests {
     #[test]
     fn accepts_list_as_an_alias_for_sessions() {
         assert_eq!(resolve_command("/list").unwrap().action, "session.list");
+    }
+
+    // ── Slack manifest ────────────────────────────────────────────────
+
+    #[test]
+    fn the_slack_manifest_declares_every_menu_command() {
+        // Slack cannot be told about commands over an API, so the manifest is
+        // the only place the list exists. It must not drift from `menu()`.
+        let manifest = slack_manifest_commands("https://example.invalid/slack");
+
+        for entry in menu() {
+            assert!(
+                manifest.contains(&format!("- command: /{}", entry.name)),
+                "{} is handled but not declared to Slack",
+                entry.name
+            );
+            assert!(
+                manifest.contains(entry.description),
+                "{} is declared without its description",
+                entry.name
+            );
+        }
+    }
+
+    #[test]
+    fn the_slack_manifest_declares_nothing_that_is_not_handled() {
+        // The reverse drift: a declared command nothing resolves reaches the
+        // model as an ordinary prompt.
+        let manifest = slack_manifest_commands("https://example.invalid/slack");
+
+        for line in manifest.lines() {
+            let Some(command) = line.trim().strip_prefix("- command: /") else {
+                continue;
+            };
+            assert!(
+                resolve_command(&format!("/{command}")).is_some(),
+                "Slack declares /{command} but nothing handles it"
+            );
+        }
+    }
+
+    #[test]
+    fn the_slack_manifest_carries_the_callers_request_url() {
+        let manifest = slack_manifest_commands("https://pavii.example/slack/commands");
+        assert!(manifest.contains("url: https://pavii.example/slack/commands"));
+    }
+
+    #[test]
+    fn the_slack_manifest_has_one_entry_per_command() {
+        let manifest = slack_manifest_commands("https://example.invalid/slack");
+        let declared = manifest.lines().filter(|l| l.trim().starts_with("- command: ")).count();
+        assert_eq!(declared, menu().len());
+    }
+
+    #[test]
+    fn maps_the_scheduled_tasks_command() {
+        assert_eq!(resolve_command("/tasks").unwrap().action, "task.list");
+        assert_eq!(resolve_command("/task").unwrap().action, "task.list");
+        assert_eq!(resolve_command("/schedule").unwrap().action, "task.list");
+    }
+
+    #[test]
+    fn maps_the_running_sessions_command() {
+        assert_eq!(resolve_command("/active_works").unwrap().action, "session.active");
+    }
+
+    #[test]
+    fn accepts_the_spellings_people_actually_type_for_active_works() {
+        // Telegram advertises the underscore form, but a hyphen is the natural
+        // thing to type and would otherwise reach the model as a prompt.
+        for spelling in ["/active-works", "/active", "/running"] {
+            assert_eq!(
+                resolve_command(spelling).unwrap().action,
+                "session.active",
+                "{spelling} should resolve"
+            );
+        }
+    }
+
+    #[test]
+    fn maps_projects_separately_from_sessions() {
+        // Two distinct routes: /sessions is the flat list, /projects is the
+        // structured one. Collapsing them would lose the flat view.
+        assert_eq!(resolve_command("/projects").unwrap().action, "project.list");
+        assert_eq!(resolve_command("/sessions").unwrap().action, "session.list");
+    }
+
+    #[test]
+    fn accepts_the_singular_project() {
+        assert_eq!(resolve_command("/project").unwrap().action, "project.list");
     }
 
     #[test]
@@ -195,7 +326,16 @@ mod tests {
     #[test]
     fn aliases_work_but_are_not_advertised() {
         let names: Vec<&str> = menu().iter().map(|entry| entry.name).collect();
-        for alias in ["session", "list"] {
+        for alias in [
+            "session",
+            "list",
+            "project",
+            "active-works",
+            "active",
+            "running",
+            "task",
+            "schedule",
+        ] {
             assert!(
                 resolve_command(&format!("/{alias}")).is_some(),
                 "{alias} should resolve"

@@ -30,6 +30,8 @@ fn relay_config_fields() {
         plugin_id: "telegram".into(),
         chat_id: "123".into(),
         throttle_ms: 500,
+        conversation_id: "conv-relay-test".to_string(),
+        session_id: "sess-relay-test".to_string(),
     };
     assert_eq!(config.throttle_ms, 500);
     assert_eq!(config.plugin_id, "telegram");
@@ -48,6 +50,8 @@ async fn relay_sends_thinking_then_final_message() {
         plugin_id: "telegram".into(),
         chat_id: "chat_1".into(),
         throttle_ms: 10,
+        conversation_id: "conv-relay-test".to_string(),
+        session_id: "sess-relay-test".to_string(),
     };
     let relay = ChannelStreamRelay::new(config, recorder.clone());
 
@@ -90,6 +94,8 @@ async fn relay_handles_error_event() {
         plugin_id: "telegram".into(),
         chat_id: "chat_1".into(),
         throttle_ms: 10,
+        conversation_id: "conv-relay-test".to_string(),
+        session_id: "sess-relay-test".to_string(),
     };
     let relay = ChannelStreamRelay::new(config, recorder.clone());
     let rx = event_tx.subscribe();
@@ -122,6 +128,8 @@ async fn weixin_flushes_pending_text_before_tool_call() {
         plugin_id: "weixin".into(),
         chat_id: "chat_1".into(),
         throttle_ms: 10_000, // large throttle so the mid-stream edit doesn't fire
+        conversation_id: "conv-relay-test".to_string(),
+        session_id: "sess-relay-test".to_string(),
     };
     let relay = ChannelStreamRelay::new(config, recorder.clone());
     let rx = event_tx.subscribe();
@@ -175,6 +183,8 @@ async fn telegram_does_not_flush_text_before_tool_call() {
         plugin_id: "telegram".into(),
         chat_id: "chat_1".into(),
         throttle_ms: 10_000,
+        conversation_id: "conv-relay-test".to_string(),
+        session_id: "sess-relay-test".to_string(),
     };
     let relay = ChannelStreamRelay::new(config, recorder.clone());
     let rx = event_tx.subscribe();
@@ -218,6 +228,8 @@ async fn weixin_skips_flush_when_buffer_is_empty() {
         plugin_id: "weixin".into(),
         chat_id: "chat_1".into(),
         throttle_ms: 10_000,
+        conversation_id: "conv-relay-test".to_string(),
+        session_id: "sess-relay-test".to_string(),
     };
     let relay = ChannelStreamRelay::new(config, recorder.clone());
     let rx = event_tx.subscribe();
@@ -256,6 +268,8 @@ async fn relay_handles_channel_closed() {
         plugin_id: "telegram".into(),
         chat_id: "chat_1".into(),
         throttle_ms: 10,
+        conversation_id: "conv-relay-test".to_string(),
+        session_id: "sess-relay-test".to_string(),
     };
     let relay = ChannelStreamRelay::new(config, recorder.clone());
     let rx = event_tx.subscribe();

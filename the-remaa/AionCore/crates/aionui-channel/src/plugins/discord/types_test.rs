@@ -215,3 +215,73 @@ fn display_name_falls_back_to_username_then_id() {
     .unwrap();
     assert_eq!(message_to_unified(&m, "BOT1").unwrap().user.display_name, "bob");
 }
+
+// -- component interactions --------------------------------------------------
+
+fn interaction(interaction_type: u8, custom_id: Option<&str>, with_channel: bool) -> InteractionCreate {
+    serde_json::from_value(json!({
+        "id": "I123",
+        "token": "tok",
+        "type": interaction_type,
+        "channel_id": if with_channel { json!("C123") } else { json!(null) },
+        "data": match custom_id {
+            Some(id) => json!({ "custom_id": id }),
+            None => json!({}),
+        },
+        "member": { "user": { "id": "U123", "username": "tester", "global_name": "Tester" } },
+    }))
+    .expect("interaction should parse")
+}
+
+#[test]
+fn a_button_press_becomes_the_same_action_shape_the_other_platforms_produce() {
+    let press = interaction(3, Some("system:session.attach:id=conv-1"), true);
+
+    let unified = interaction_to_unified(&press).expect("our button must route");
+
+    assert_eq!(unified.content.content_type, MessageContentType::Action);
+    assert_eq!(unified.chat_id, "C123");
+    let action = unified.action.expect("a press carries an action");
+    assert_eq!(action.action, "session.attach");
+    assert_eq!(action.params.unwrap().get("id").unwrap(), "conv-1");
+    assert_eq!(action.context.platform, PluginType::Discord);
+}
+
+#[test]
+fn a_dm_press_uses_the_top_level_user() {
+    // Guild interactions carry `member.user`; DMs carry `user`.
+    let press: InteractionCreate = serde_json::from_value(json!({
+        "id": "I1", "token": "t", "type": 3, "channel_id": "C1",
+        "data": { "custom_id": "system:session.list" },
+        "user": { "id": "U9", "username": "dm_user" },
+    }))
+    .unwrap();
+
+    let unified = interaction_to_unified(&press).expect("a DM press must route");
+    assert_eq!(unified.user.id, "U9");
+}
+
+#[test]
+fn a_slash_command_interaction_is_not_mistaken_for_a_button() {
+    // Type 2 = APPLICATION_COMMAND. Only type 3 is a component press.
+    let press = interaction(2, Some("system:session.list"), true);
+    assert!(interaction_to_unified(&press).is_none());
+}
+
+#[test]
+fn a_press_carrying_someone_elses_id_fires_nothing() {
+    let press = interaction(3, Some("some_other_apps_custom_id"), true);
+    assert!(interaction_to_unified(&press).is_none());
+}
+
+#[test]
+fn an_interaction_with_no_custom_id_does_not_panic() {
+    let press = interaction(3, None, true);
+    assert!(interaction_to_unified(&press).is_none());
+}
+
+#[test]
+fn a_press_with_no_channel_is_ignored_rather_than_guessed() {
+    let press = interaction(3, Some("system:session.list"), false);
+    assert!(interaction_to_unified(&press).is_none());
+}

@@ -1445,6 +1445,12 @@ fn append_filter_conditions(filters: &ConversationFilters, where_parts: &mut Vec
         where_parts.push("c.pinned = ?".to_string());
         binds.push(BindValue::Bool(pinned));
     }
+    if let Some(ref project_id) = filters.project_id {
+        // In SQL rather than post-filtering: filtering after the LIMIT would
+        // return short pages and silently skip rows.
+        where_parts.push("c.project_id = ?".to_string());
+        binds.push(BindValue::Str(project_id.clone()));
+    }
 }
 
 /// Builds a count query and bind values for the total (ignoring cursor).

@@ -4,6 +4,12 @@ use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
 use crate::action::{ActionExecutor, MessageResult};
+use crate::approval_service::ApprovalService;
+
+/// How often unanswered approvals are checked. Coarse on purpose: the
+/// timeout is ten minutes, so a minute of slack costs nothing and keeps the
+/// loop idle.
+const APPROVAL_SWEEP_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60);
 use crate::message_service::ChannelMessageService;
 use crate::session::SessionManager;
 use crate::stream_relay::{ChannelSender, ChannelStreamRelay, RelayConfig, throttle_ms_for_platform};
@@ -24,6 +30,9 @@ pub struct ChannelOrchestrator {
     message_service: Arc<ChannelMessageService>,
     session_manager: Arc<SessionManager>,
     sender: Arc<dyn ChannelSender>,
+    /// Handed to every relay it spawns, so a permission raised mid-turn has
+    /// somewhere to be parked.
+    approvals: Option<Arc<ApprovalService>>,
 }
 
 impl ChannelOrchestrator {
@@ -38,7 +47,14 @@ impl ChannelOrchestrator {
             message_service,
             session_manager,
             sender,
+            approvals: None,
         }
+    }
+
+    /// Attach the approval service, which the relays it spawns share.
+    pub fn with_approvals(mut self, approvals: Arc<ApprovalService>) -> Self {
+        self.approvals = Some(approvals);
+        self
     }
 
     /// Start the message loop. Runs until both channels close.
@@ -49,6 +65,12 @@ impl ChannelOrchestrator {
     ) {
         info!("ChannelOrchestrator started");
 
+        // Nobody watches their phone at 03:00. Without this an unanswered
+        // permission blocks its session forever, which is worse than one that
+        // stopped.
+        let mut expiry = tokio::time::interval(APPROVAL_SWEEP_INTERVAL);
+        expiry.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
         loop {
             tokio::select! {
                 Some(msg) = message_rx.recv() => {
@@ -57,11 +79,55 @@ impl ChannelOrchestrator {
                 Some((call_id, value)) = confirm_rx.recv() => {
                     handle_confirm(&call_id, &value);
                 }
+                _ = expiry.tick() => {
+                    self.sweep_expired_approvals().await;
+                }
                 else => break,
             }
         }
 
         info!("ChannelOrchestrator stopped (channels closed)");
+    }
+
+    /// Deny anything that has waited past the timeout, and say so in the chat.
+    ///
+    /// Silence here would be indistinguishable from an agent still thinking,
+    /// which is the confusion the timeout exists to remove.
+    async fn sweep_expired_approvals(&self) {
+        let Some(approvals) = self.approvals.as_ref() else {
+            return;
+        };
+        let Some(owner_user_id) = self.action_executor.owner_user_id().map(ToOwned::to_owned) else {
+            return;
+        };
+
+        for approval in approvals.sweep_now(&owner_user_id).await {
+            info!(
+                ticket = %approval.ticket,
+                conversation_id = %approval.conversation_id,
+                "approval expired unanswered and was denied"
+            );
+            let message = UnifiedOutgoingMessage {
+                message_type: OutgoingMessageType::Text,
+                text: Some(format!(
+                    "\u{23f1} No answer for \"{}\" \u{2014} treated as declined, and the session has moved on.",
+                    approval.summary
+                )),
+                parse_mode: None,
+                buttons: None,
+                keyboard: None,
+                image_url: None,
+                file_url: None,
+                file_name: None,
+                media_actions: None,
+                reply_to_message_id: None,
+                silent: None,
+            };
+            let _ = self
+                .sender
+                .send_message(&owner_user_id, &approval.plugin_id, &approval.chat_id, message)
+                .await;
+        }
     }
 
     async fn handle_message(&self, msg: UnifiedIncomingMessage) {
@@ -78,6 +144,7 @@ impl ChannelOrchestrator {
         let msg_svc = Arc::clone(&self.message_service);
         let session_mgr = Arc::clone(&self.session_manager);
         let sender = Arc::clone(&self.sender);
+        let approvals = self.approvals.clone();
 
         tokio::spawn(async move {
             match executor.handle_incoming_message(&msg).await {
@@ -104,6 +171,7 @@ impl ChannelOrchestrator {
                         platform,
                         &plugin_id,
                         &chat_id,
+                        approvals.as_ref(),
                     )
                     .await;
                 }
@@ -183,6 +251,7 @@ async fn handle_dispatched(
     platform: crate::types::PluginType,
     plugin_id: &str,
     chat_id: &str,
+    approvals: Option<&Arc<ApprovalService>>,
 ) {
     let session = match session_mgr.get_session_by_id(owner_user_id, session_id).await {
         Ok(Some(s)) => s,
@@ -235,8 +304,13 @@ async fn handle_dispatched(
             plugin_id: plugin_id.to_owned(),
             chat_id: chat_id.to_owned(),
             throttle_ms: throttle_ms_for_platform(platform),
+            conversation_id: send_result.conversation_id.clone(),
+            session_id: session_id.to_owned(),
         };
-        let relay = ChannelStreamRelay::new(relay_config, Arc::clone(sender));
+        let mut relay = ChannelStreamRelay::new(relay_config, Arc::clone(sender));
+        if let Some(approvals) = approvals {
+            relay = relay.with_approvals(Arc::clone(approvals));
+        }
         tokio::spawn(relay.run(rx));
     } else {
         warn!(
@@ -248,8 +322,11 @@ async fn handle_dispatched(
 
 /// Forward a tool confirmation callback to the active agent.
 fn handle_confirm(call_id: &str, value: &str) {
-    // Channel conversations use yoloMode which auto-approves everything,
-    // so this path is rarely hit. When needed, we can add a
-    // call_id→conversation_id lookup via IWorkerTaskManager.
-    info!(call_id = %call_id, value = %value, "forwarding tool confirmation");
+    // NOT the path the approval buttons use. Those answer through
+    // `system.confirm` in the action executor, which resolves the ticket and
+    // reaches the agent via `ConversationService::confirm`.
+    //
+    // This channel carries platform-native confirm callbacks (DingTalk), which
+    // nothing maps to a conversation yet — so log it rather than pretend.
+    warn!(call_id = %call_id, value = %value, "unhandled platform confirm callback");
 }

@@ -2,12 +2,19 @@ use std::sync::Arc;
 
 use tracing::{debug, info, warn};
 
+use crate::approval_service::{AnswerOutcome, ApprovalService};
+use crate::branding::brand_agent_label;
 use crate::channel_settings::ChannelSettingsService;
 use crate::commands::resolve_command;
 use crate::error::ChannelError;
 use crate::pairing::PairingService;
+use crate::scheduled_tasks::{ScheduledTaskDirectory, tasks_text};
 use crate::session::SessionManager;
-use crate::session_directory::{SessionDirectory, page_buttons, page_text};
+use crate::session_directory::{
+    SessionDirectory, active_buttons, active_text, page_buttons, page_text, project_buttons, project_list_text,
+    project_page_buttons, project_page_text, resolve_project_ref,
+};
+use crate::stream_relay::{APPROVAL_CHOICE_KEY, APPROVAL_TICKET_KEY};
 use crate::types::{
     ActionBehavior, ActionButton, ActionCategory, ActionContext, ActionResponse, UnifiedAction, UnifiedIncomingMessage,
 };
@@ -49,6 +56,10 @@ pub struct ActionExecutor {
     /// the session actions report plainly when it is absent rather than
     /// pretending there are no conversations.
     directory: Option<Arc<SessionDirectory>>,
+    /// Optional for the same reason as `directory`.
+    scheduled_tasks: Option<Arc<ScheduledTaskDirectory>>,
+    /// Optional for the same reason as `directory`.
+    approvals: Option<Arc<ApprovalService>>,
 }
 
 impl ActionExecutor {
@@ -64,11 +75,25 @@ impl ActionExecutor {
             settings,
             owner_user_id,
             directory: None,
+            scheduled_tasks: None,
+            approvals: None,
         }
     }
 
     /// Attach the session directory that backs `/sessions`, `/status` and
     /// session attachment.
+    /// Attach the approval service that answers permission buttons.
+    pub fn with_approvals(mut self, approvals: Arc<ApprovalService>) -> Self {
+        self.approvals = Some(approvals);
+        self
+    }
+
+    /// Attach the scheduled-task reader that backs `/tasks`.
+    pub fn with_scheduled_tasks(mut self, tasks: Arc<ScheduledTaskDirectory>) -> Self {
+        self.scheduled_tasks = Some(tasks);
+        self
+    }
+
     pub fn with_session_directory(mut self, directory: Arc<SessionDirectory>) -> Self {
         self.directory = Some(directory);
         self
@@ -202,7 +227,7 @@ impl ActionExecutor {
         match action.category {
             ActionCategory::Platform => self.handle_platform_action(owner_user_id, action).await,
             ActionCategory::System => self.handle_system_action(owner_user_id, action, internal_user_id).await,
-            ActionCategory::Chat => self.handle_chat_action(action).await,
+            ActionCategory::Chat => self.handle_chat_action(owner_user_id, action).await,
         }
     }
 
@@ -368,6 +393,152 @@ impl ActionExecutor {
                 })
             }
 
+            "task.list" => {
+                let tasks = self
+                    .scheduled_tasks
+                    .as_ref()
+                    .ok_or_else(|| ChannelError::InvalidConfig("scheduled tasks are not configured".to_owned()))?;
+                let (entries, truncated) = tasks.list(owner_user_id).await?;
+
+                Ok(ActionResponse {
+                    text: Some(tasks_text(&entries, aionui_common::now_ms(), truncated)),
+                    parse_mode: None,
+                    buttons: None,
+                    keyboard: None,
+                    behavior: ActionBehavior::Send,
+                    toast: None,
+                    edit_message_id: None,
+                })
+            }
+
+            "session.active" => {
+                let directory = self.directory()?;
+                let agent_config = self
+                    .settings
+                    .get_agent_config(owner_user_id, action.context.platform)
+                    .await?;
+                let attached = directory
+                    .attached_conversation(
+                        owner_user_id,
+                        internal_user_id,
+                        &action.context.chat_id,
+                        &agent_config.agent_type,
+                    )
+                    .await?;
+
+                let entries = directory
+                    .list_active(owner_user_id, attached.as_ref().map(|row| row.id.as_str()))
+                    .await?;
+                let buttons = active_buttons(&entries);
+
+                Ok(ActionResponse {
+                    text: Some(active_text(&entries)),
+                    parse_mode: None,
+                    buttons: (!buttons.is_empty()).then_some(buttons),
+                    keyboard: None,
+                    behavior: ActionBehavior::Send,
+                    toast: None,
+                    edit_message_id: None,
+                })
+            }
+
+            "project.list" => {
+                let directory = self.directory()?;
+                let projects = directory.list_projects(owner_user_id).await?;
+                let buttons = project_buttons(&projects);
+
+                Ok(ActionResponse {
+                    text: Some(project_list_text(&projects)),
+                    parse_mode: None,
+                    buttons: (!buttons.is_empty()).then_some(buttons),
+                    keyboard: None,
+                    behavior: ActionBehavior::Send,
+                    toast: None,
+                    edit_message_id: None,
+                })
+            }
+
+            "project.open" => {
+                let directory = self.directory()?;
+                let project_id = project_id_param(action, "project.open")?;
+                let agent_config = self
+                    .settings
+                    .get_agent_config(owner_user_id, action.context.platform)
+                    .await?;
+                let attached = directory
+                    .attached_conversation(
+                        owner_user_id,
+                        internal_user_id,
+                        &action.context.chat_id,
+                        &agent_config.agent_type,
+                    )
+                    .await?;
+
+                let (page, scope) = directory
+                    .list_project_page(owner_user_id, &project_id, attached.as_ref().map(|row| row.id.as_str()))
+                    .await?;
+
+                Ok(ActionResponse {
+                    text: Some(project_page_text(&page, &scope)),
+                    parse_mode: None,
+                    buttons: Some(project_page_buttons(&page, &scope)),
+                    keyboard: None,
+                    behavior: ActionBehavior::Send,
+                    toast: None,
+                    edit_message_id: None,
+                })
+            }
+
+            "project.start" => {
+                let directory = self.directory()?;
+                let project_id = project_id_param(action, "project.start")?;
+                let agent_config = self
+                    .settings
+                    .get_agent_config(owner_user_id, action.context.platform)
+                    .await?;
+
+                // Resolving the project first means an unknown or someone
+                // else project fails before the chat session is reset --
+                // otherwise a mis-tap would silently detach the chat.
+                let (_page, scope) = directory.list_project_page(owner_user_id, &project_id, None).await?;
+                let workspace = directory.project_workspace_path(owner_user_id, &project_id).await?;
+
+                self.session_mgr
+                    .reset_session(
+                        owner_user_id,
+                        internal_user_id,
+                        &action.context.chat_id,
+                        &agent_config.agent_type,
+                        workspace.as_deref(),
+                    )
+                    .await?;
+
+                // A conversation is only created once a message is sent, so
+                // say what actually happens rather than claiming one exists.
+                let text = match workspace.as_deref() {
+                    Some(path) => format!(
+                        "Ready to start a session in \"{}\" ({path}).
+Send a message and it will begin there.",
+                        scope.name
+                    ),
+                    None => format!(
+                        "Ready to start a session for \"{}\".
+This project has no local folder, so the session will not be bound to it.",
+                        scope.name
+                    ),
+                };
+
+                Ok(ActionResponse {
+                    text: Some(text),
+                    parse_mode: None,
+                    buttons: None,
+                    keyboard: None,
+                    behavior: ActionBehavior::Send,
+                    toast: Some("Ready".into()),
+                    edit_message_id: None,
+                })
+            }
+
             "session.new" => {
                 let user_id = internal_user_id;
                 let chat_id = &action.context.chat_id;
@@ -383,7 +554,7 @@ impl ActionExecutor {
                 Ok(ActionResponse {
                     text: Some(format!(
                         "New session created.\nAgent: {}\nSession: {}",
-                        session.agent_type,
+                        brand_agent_label(&session.agent_type),
                         &session.id[..8]
                     )),
                     parse_mode: None,
@@ -430,7 +601,7 @@ impl ActionExecutor {
                     text: Some(format!(
                         "Session: {}\nAgent: {}{}\nCreated: {}\nLast active: {}",
                         &session.id[..8],
-                        session.agent_type,
+                        brand_agent_label(&session.agent_type),
                         attached_line,
                         session.created_at,
                         session.last_activity,
@@ -520,7 +691,11 @@ impl ActionExecutor {
 
     // ── Chat actions ────────────────────────────────────────────────
 
-    async fn handle_chat_action(&self, action: &UnifiedAction) -> Result<ActionResponse, ChannelError> {
+    async fn handle_chat_action(
+        &self,
+        owner_user_id: &str,
+        action: &UnifiedAction,
+    ) -> Result<ActionResponse, ChannelError> {
         match action.action.as_str() {
             "chat.send" | "chat.regenerate" | "chat.continue" => {
                 // These are handled by the message flow, not action responses.
@@ -545,28 +720,57 @@ impl ActionExecutor {
                 edit_message_id: None,
             }),
             "system.confirm" => {
-                let call_id = action
-                    .params
+                let approvals = self
+                    .approvals
                     .as_ref()
-                    .and_then(|p| p.get("callId"))
-                    .cloned()
-                    .unwrap_or_default();
-                let value = action
-                    .params
-                    .as_ref()
-                    .and_then(|p| p.get("value"))
-                    .cloned()
-                    .unwrap_or_else(|| "true".into());
+                    .ok_or_else(|| ChannelError::InvalidConfig("approvals are not configured".to_owned()))?;
 
-                debug!(call_id = %call_id, value = %value, "tool confirmation received");
+                let params = action.params.as_ref();
+                let ticket = params
+                    .and_then(|p| p.get(APPROVAL_TICKET_KEY))
+                    .cloned()
+                    .ok_or_else(|| ChannelError::InvalidConfig("system.confirm requires a ticket".to_owned()))?;
+                // A non-numeric index is a malformed button, not a choice.
+                // Treating it as 0 would authorize whatever happens to be first.
+                let choice_index: usize = params
+                    .and_then(|p| p.get(APPROVAL_CHOICE_KEY))
+                    .and_then(|value| value.parse().ok())
+                    .ok_or_else(|| ChannelError::InvalidConfig("system.confirm requires a choice".to_owned()))?;
+
+                let outcome = approvals.answer(owner_user_id, &ticket, choice_index).await?;
+
+                let (text, toast) = match &outcome {
+                    AnswerOutcome::Delivered { approval, choice } => {
+                        debug!(
+                            ticket = %ticket,
+                            conversation_id = %approval.conversation_id,
+                            denied = choice.denies,
+                            "approval answered from chat"
+                        );
+                        (
+                            Some(format!("{} \u{2014} {}", approval.summary, choice.label)),
+                            Some(choice.label.clone()),
+                        )
+                    }
+                    // A stale button is a normal thing to tap; saying so beats
+                    // a silent no-op that reads as the bot being broken.
+                    AnswerOutcome::AlreadyResolved => (
+                        Some("That request was already answered or has expired.".to_owned()),
+                        Some("Already answered".to_owned()),
+                    ),
+                    AnswerOutcome::UnknownChoice => (
+                        Some("That option is no longer available.".to_owned()),
+                        Some("Unavailable".to_owned()),
+                    ),
+                };
 
                 Ok(ActionResponse {
-                    text: None,
+                    text,
                     parse_mode: None,
                     buttons: None,
                     keyboard: None,
-                    behavior: ActionBehavior::Answer,
-                    toast: Some("Confirmed".into()),
+                    behavior: ActionBehavior::Send,
+                    toast,
                     edit_message_id: None,
                 })
             }
@@ -665,6 +869,19 @@ fn build_unknown_action_response(action: &str) -> ActionResponse {
         toast: None,
         edit_message_id: None,
     }
+}
+
+/// Read the project reference a project button carries.
+///
+/// Buttons send the id without its `project_` prefix to stay inside the
+/// 64-byte callback budget, so it is expanded back here.
+fn project_id_param(action: &UnifiedAction, what: &str) -> Result<String, ChannelError> {
+    action
+        .params
+        .as_ref()
+        .and_then(|params| params.get("i"))
+        .map(|reference| resolve_project_ref(reference))
+        .ok_or_else(|| ChannelError::InvalidConfig(format!("{what} requires a project reference")))
 }
 
 #[cfg(test)]
@@ -1159,8 +1376,10 @@ mod tests {
             MessageResult::Action(resp) => {
                 let text = resp.text.unwrap();
                 assert!(text.contains("New session"));
-                // With no client_preferences configured, defaults to "aionrs"
-                assert!(text.contains("aionrs"));
+                // With no client_preferences configured the agent defaults to
+                // the internal one, which is shown under its brand.
+                assert!(text.contains("paviirs"), "unexpected reply: {text}");
+                assert!(!text.contains("aionrs"), "the internal token must not reach the chat");
             }
             _ => panic!("Expected Action result"),
         }
@@ -1320,12 +1539,11 @@ mod tests {
 
     // ── Chat action tests ──────────────────────────────────────────────
 
-    #[tokio::test]
-    async fn system_confirm_returns_answer() {
+    /// Send a `system.confirm` with whatever params, and return the error.
+    async fn confirm_error(params: HashMap<String, String>) -> ChannelError {
         let (executor, repo) = setup();
         repo.add_authorized_user("tg_42", "telegram");
 
-        let params = HashMap::from([("callId".into(), "call_123".into()), ("value".into(), "true".into())]);
         let msg = make_action_message(
             "tg_42",
             "chat_1",
@@ -1334,14 +1552,45 @@ mod tests {
             PluginType::Telegram,
             Some(params),
         );
-        let result = executor.handle_incoming_message(&msg).await.unwrap();
-        match result {
-            MessageResult::Action(resp) => {
-                assert_eq!(resp.behavior, ActionBehavior::Answer);
-                assert_eq!(resp.toast.as_deref(), Some("Confirmed"));
-            }
-            _ => panic!("Expected Action result"),
-        }
+        executor
+            .handle_incoming_message(&msg)
+            .await
+            .expect_err("a confirm with nothing behind it must not report success")
+    }
+
+    #[tokio::test]
+    async fn system_confirm_without_an_approval_service_says_so() {
+        // Reporting success here would tell the user their answer landed while
+        // the agent stayed blocked.
+        let error = confirm_error(HashMap::from([("t".into(), "abc123".into()), ("v".into(), "0".into())])).await;
+
+        assert!(
+            matches!(&error, ChannelError::InvalidConfig(msg) if msg.contains("approvals")),
+            "expected an approvals-not-configured error, got {error:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn system_confirm_rejects_a_button_with_no_ticket() {
+        let error = confirm_error(HashMap::from([("v".into(), "0".into())])).await;
+        assert!(
+            matches!(&error, ChannelError::InvalidConfig(msg) if msg.contains("ticket") || msg.contains("approvals")),
+            "expected a specific error, got {error:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn system_confirm_rejects_a_non_numeric_choice() {
+        // Falling back to index 0 would authorize whatever happens to be first.
+        let error = confirm_error(HashMap::from([
+            ("t".into(), "abc123".into()),
+            ("v".into(), "not-a-number".into()),
+        ]))
+        .await;
+        assert!(
+            matches!(&error, ChannelError::InvalidConfig(msg) if msg.contains("choice") || msg.contains("approvals")),
+            "expected a specific error, got {error:?}"
+        );
     }
 
     #[tokio::test]
