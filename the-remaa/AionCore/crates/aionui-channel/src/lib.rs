@@ -3,6 +3,7 @@
 //! External channel integration: plugin system, pairing handshake, and per-session messaging.
 pub mod action;
 pub mod channel_settings;
+pub mod commands;
 pub mod constants;
 pub mod error;
 pub mod formatter;
@@ -14,6 +15,7 @@ pub mod plugin;
 pub mod plugins;
 pub mod routes;
 pub mod session;
+pub mod session_directory;
 pub mod stream_relay;
 pub mod types;
 
