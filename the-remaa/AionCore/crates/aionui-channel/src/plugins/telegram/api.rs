@@ -50,6 +50,41 @@ impl TelegramApi {
             .ok_or_else(|| ChannelError::PlatformApi("getMe returned no result".into()))
     }
 
+    /// `setMyCommands` — register the commands shown in the "/" picker.
+    ///
+    /// Purely cosmetic: callers should warn and carry on if it fails, because
+    /// refusing to start over a picker would be a worse bug than a missing one.
+    pub async fn set_my_commands(&self, commands: &[(&str, &str)]) -> Result<(), ChannelError> {
+        let url = format!("{}/setMyCommands", self.base_url);
+        let payload = serde_json::json!({
+            "commands": commands
+                .iter()
+                .map(|(command, description)| serde_json::json!({
+                    "command": command,
+                    "description": description,
+                }))
+                .collect::<Vec<_>>(),
+        });
+
+        let resp: TgResponse<serde_json::Value> = self
+            .client
+            .post(&url)
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| ChannelError::PlatformApi(format!("setMyCommands request failed: {e}")))?
+            .json()
+            .await
+            .map_err(|e| ChannelError::PlatformApi(format!("setMyCommands parse failed: {e}")))?;
+
+        if !resp.ok {
+            let desc = resp.description.unwrap_or_default();
+            return Err(ChannelError::PlatformApi(format!("setMyCommands failed: {desc}")));
+        }
+
+        Ok(())
+    }
+
     /// `getUpdates` — long-poll for new updates.
     ///
     /// - `offset`: return updates with `update_id >= offset`

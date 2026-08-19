@@ -103,6 +103,16 @@ impl ChannelPlugin for TelegramPlugin {
             "Telegram bot initialized"
         );
 
+        // Register the "/" picker. Cosmetic, so a failure must not stop the bot
+        // from starting - a missing picker is far less bad than a bot that
+        // refuses to run.
+        let menu = crate::commands::menu();
+        let entries: Vec<(&str, &str)> = menu.iter().map(|c| (c.name, c.description)).collect();
+        match api.set_my_commands(&entries).await {
+            Ok(()) => info!(count = entries.len(), "Telegram command menu registered"),
+            Err(e) => warn!(error = %e, "failed to register the Telegram command menu"),
+        }
+
         self.api = Some(api);
         self.callbacks = Some(callbacks);
         self.status = PluginStatus::Ready;
