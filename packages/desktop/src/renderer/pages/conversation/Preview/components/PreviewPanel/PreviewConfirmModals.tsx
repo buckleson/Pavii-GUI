@@ -48,7 +48,7 @@ export interface CloseTabConfirmState {
 }
 
 /**
- * 刷新确认状态 / Refresh confirmation state
+ * Refresh confirmation state
  *
  * Reloading a tab replaces its content with what is on disk, so an unsaved edit has
  * to be dealt with first — dropped deliberately, or saved. Skipping this prompt would

@@ -270,8 +270,8 @@ function inferLegacyAssistantInfo(
  * 获取预设助手信息的 Hook
  * Hook to get preset assistant info from conversation
  *
- * @param conversation - 会话对象 / Conversation object
- * @returns 预设助手信息或 null / Preset assistant info or null
+ * @param conversation Conversation object
+ * @returns Preset assistant info or null
  */
 export function usePresetAssistantInfo(conversation: TChatConversation | undefined): {
   info: PresetAssistantInfo | null;

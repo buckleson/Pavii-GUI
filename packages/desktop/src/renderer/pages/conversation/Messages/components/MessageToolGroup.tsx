@@ -456,7 +456,7 @@ const ToolResultDisplay: React.FC<{
 const MessageToolGroup: React.FC<IMessageToolGroupProps> = ({ message }) => {
   const { t } = useTranslation();
 
-  // 收集所有 WriteFile 结果用于汇总显示 / Collect all WriteFile results for summary display
+  // Collect all WriteFile results for summary display
   const writeFileResults = useMemo(() => {
     return message.content
       .filter(
@@ -469,7 +469,7 @@ const MessageToolGroup: React.FC<IMessageToolGroupProps> = ({ message }) => {
       .map((item) => item.result_display as WriteFileResult);
   }, [message.content]);
 
-  // 找到第一个 WriteFile 的索引 / Find the index of first WriteFile
+  // Find the index of first WriteFile
   const firstWriteFileIndex = useMemo(() => {
     return message.content.findIndex(
       (item) =>
@@ -510,10 +510,10 @@ const MessageToolGroup: React.FC<IMessageToolGroupProps> = ({ message }) => {
           );
         }
 
-        // WriteFile 特殊处理：使用 MessageFileChanges 汇总显示 / WriteFile special handling: use MessageFileChanges for summary display
+        // WriteFile special handling: use MessageFileChanges for summary display
         if (name === 'WriteFile' && typeof result_display !== 'string') {
           if (result_display && typeof result_display === 'object' && 'file_diff' in result_display) {
-            // 只在第一个 WriteFile 位置显示汇总组件 / Only show summary component at first WriteFile position
+            // Only show summary component at first WriteFile position
             if (index === firstWriteFileIndex && writeFileResults.length > 0) {
               return (
                 <div className='w-full min-w-0' key={call_id}>
@@ -521,7 +521,7 @@ const MessageToolGroup: React.FC<IMessageToolGroupProps> = ({ message }) => {
                 </div>
               );
             }
-            // 跳过其他 WriteFile / Skip other WriteFile
+            // Skip other WriteFile
             return null;
           }
         }

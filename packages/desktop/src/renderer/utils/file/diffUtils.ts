@@ -56,7 +56,7 @@ export function extractContentFromDiff(diffContent: string): string {
   let inDiffBlock = false;
 
   for (const line of lines) {
-    // 跳过 diff 元数据行 / Skip diff metadata lines
+    // Skip diff metadata lines
     if (
       line.startsWith('Index:') ||
       line.match(/^={3,}/) ||
@@ -70,15 +70,15 @@ export function extractContentFromDiff(diffContent: string): string {
     }
 
     if (inDiffBlock) {
-      // 提取新增行（去掉开头的 + 号）/ Extract added lines (remove leading +)
+      // Extract added lines (remove leading +)
       if (line.startsWith('+')) {
         contentLines.push(line.substring(1));
       }
-      // 跳过删除行和上下文标记 / Skip deleted lines and context markers
+      // Skip deleted lines and context markers
       else if (line.startsWith('-') || line.startsWith('\\')) {
         continue;
       }
-      // 空行也保留 / Keep empty lines too
+      // Keep empty lines too
       else {
         contentLines.push(line);
       }

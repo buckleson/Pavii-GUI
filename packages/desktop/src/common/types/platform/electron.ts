@@ -1,4 +1,4 @@
-// WebUI 状态接口 / WebUI status interface
+// WebUI status interface
 export interface WebUIStatus {
   running: boolean;
   port: number;
@@ -57,7 +57,7 @@ export interface BackendStartupFailureInfo {
   localDataIssueKind?: BackendLocalDataIssueKind;
   startupDirectoryIssueKind?: BackendStartupDirectoryIssueKind;
   missingBackendBinary?: boolean;
-  missingBundledAioncoreDir?: boolean;
+  missingBundledPaviicoreDir?: boolean;
   missingHubDir?: boolean;
   missingPwaDir?: boolean;
   reason: BackendStartupFailureReason;

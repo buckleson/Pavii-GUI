@@ -11,7 +11,7 @@ import { diffColors, iconColors } from '@/renderer/styles/colors';
 import { useTranslation } from 'react-i18next';
 
 /**
- * 文件变更项数据 / File change item data
+ * File change item data
  */
 export interface FileChangeItem {
   /** 文件名 / File name */
@@ -25,7 +25,7 @@ export interface FileChangeItem {
 }
 
 /**
- * 文件变更面板属性 / File changes panel props
+ * File changes panel props
  */
 export interface FileChangesPanelProps {
   /** 面板标题 / Panel title */

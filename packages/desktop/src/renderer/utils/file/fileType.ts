@@ -12,7 +12,7 @@ interface FileTypeInfo {
   language: string;
 }
 
-// 扩展名到类型的直接映射 / Direct extension to type mapping
+// Direct extension to type mapping
 //
 // ⚠️ Must stay in step with `FILE_EXTENSION_MAP` in
 // `pages/conversation/Preview/fileUtils.ts`. They are two implementations of the

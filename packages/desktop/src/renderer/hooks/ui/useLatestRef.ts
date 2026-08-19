@@ -21,8 +21,8 @@ import { useRef, useLayoutEffect, useCallback } from 'react';
  * }, []); // 依赖数组为空，不会因为 setContent 变化而重新注册
  * ```
  *
- * @param value - 需要保持最新引用的值 / The value to keep latest reference
- * @returns 包含最新值的 ref 对象 / A ref object containing the latest value
+ * @param value The value to keep latest reference
+ * @returns A ref object containing the latest value
  */
 export function useLatestRef<T>(value: T) {
   const ref = useRef(value);
@@ -51,8 +51,8 @@ export function useLatestRef<T>(value: T) {
  * }, []); // 依赖数组为空，handleClick 引用始终稳定
  * ```
  *
- * @param fn - 需要保持最新引用的函数 / The function to keep latest reference
- * @returns 稳定的函数包装器 / A stable function wrapper
+ * @param fn The function to keep latest reference
+ * @returns A stable function wrapper
  */
 export function useLatestCallback<T extends (...args: any[]) => any>(fn: T): T {
   const ref = useLatestRef(fn);
@@ -63,6 +63,6 @@ export function useLatestCallback<T extends (...args: any[]) => any>(fn: T): T {
     ((...args: any[]) => {
       return ref.current(...args);
     }) as T,
-    [] // 依赖数组为空，确保函数引用永远稳定 / Empty deps to ensure stable reference
+    [] // Empty deps to ensure stable reference
   );
 }

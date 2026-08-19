@@ -2,6 +2,12 @@ import loginLogo from '@renderer/assets/logos/brand/app.png';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { changeLanguage } from '@/renderer/services/i18n';
+import { SUPPORTED_LANGUAGES } from '@/common/config/i18n';
+
+/** English display names for the languages the app can actually ship. */
+const LANGUAGE_LABELS: Record<string, string> = {
+  'en-US': 'English',
+};
 import { useNavigate } from 'react-router-dom';
 import AppLoader from '@renderer/components/layout/AppLoader';
 import { useAuth } from '../../hooks/context/AuthContext';
@@ -142,20 +148,17 @@ const LoginPage: React.FC = () => {
     [clearMessageLater]
   );
 
+  /**
+   * Derived from `SUPPORTED_LANGUAGES`, never hardcoded.
+   *
+   * This list used to name eleven languages, but the app ships English only, so
+   * `normalizeLanguageCode` collapsed every one of them back to English — the
+   * picker offered ten choices that silently did nothing. Deriving it means the
+   * selector always tells the truth, and grows again by itself if more
+   * languages are ever shipped.
+   */
   const supportedLanguages = useMemo<{ code: string; label: string }[]>(
-    () => [
-      { code: 'zh-CN', label: '简体中文' },
-      { code: 'zh-TW', label: '繁體中文' },
-      { code: 'ja-JP', label: '日本語' },
-      { code: 'ko-KR', label: '한국어' },
-      { code: 'tr-TR', label: 'Türkçe' },
-      { code: 'uk-UA', label: 'Українська' },
-      { code: 'pt-BR', label: 'Português (BR)' },
-      { code: 'de-DE', label: 'Deutsch' },
-      { code: 'es-ES', label: 'Español' },
-      { code: 'fa-IR', label: 'فارسی' },
-      { code: 'en-US', label: 'English' },
-    ],
+    () => SUPPORTED_LANGUAGES.map((code) => ({ code, label: LANGUAGE_LABELS[code] ?? code })),
     []
   );
 

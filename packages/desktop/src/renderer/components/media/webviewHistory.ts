@@ -68,9 +68,9 @@ export class InternalNavTracker {
  * Decide whether a change to the `url` prop should clear the self-managed
  * back/forward history.
  *
- * @param incomingUrl 新的 url prop 值 / the new `url` prop value
- * @param tracker 内部导航记录 / the internal-navigation tracker
- * @returns true 表示这是外部换址、应当重置 / true when this is an external change and a reset is due
+ * @param incomingUrl the new `url` prop value
+ * @param tracker the internal-navigation tracker
+ * @returns true true when this is an external change and a reset is due
  */
 export const shouldResetHistoryForUrlProp = (incomingUrl: string, tracker: InternalNavTracker): boolean => {
   // prop 只是内部导航绕回来的回声 → 保留历史

@@ -8,7 +8,7 @@
  * AionUI应用程序共用常量
  */
 
-// ===== 应用内浏览器 / In-app browser =====
+// In-app browser =====
 
 /**
  * 所有浏览器 tab 共享的持久化 session partition。

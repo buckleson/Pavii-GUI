@@ -32,8 +32,8 @@ export interface TabFadeState {
  * 用于显示左右渐变指示器，提示用户可以滚动查看更多 Tab
  * Used to display left/right gradient indicators to prompt users that more tabs can be scrolled
  *
- * @param deps - 依赖项数组，当这些值变化时会重新检测溢出状态 / Dependencies array, overflow state will be recalculated when these values change
- * @returns 包含容器引用和渐变状态的对象 / Object containing container ref and fade state
+ * @param deps Dependencies array, overflow state will be recalculated when these values change
+ * @returns Object containing container ref and fade state
  */
 export const useTabOverflow = (deps: unknown[] = []) => {
   const tabsContainerRef = useRef<HTMLDivElement>(null);
@@ -54,13 +54,13 @@ export const useTabOverflow = (deps: unknown[] = []) => {
     const hasOverflow = scrollWidth > clientWidth + 1;
 
     const nextState: TabFadeState = {
-      // 左侧渐变：有溢出且已向右滚动 / Left gradient: has overflow and scrolled right
+      // Left gradient: has overflow and scrolled right
       left: hasOverflow && scrollLeft > TAB_OVERFLOW_THRESHOLD,
-      // 右侧渐变：有溢出且未滚动到最右侧 / Right gradient: has overflow and not scrolled to rightmost
+      // Right gradient: has overflow and not scrolled to rightmost
       right: hasOverflow && scrollLeft + clientWidth < scrollWidth - TAB_OVERFLOW_THRESHOLD,
     };
 
-    // 只在状态变化时更新，避免不必要的重渲染 / Only update when state changes to avoid unnecessary re-renders
+    // Only update when state changes to avoid unnecessary re-renders
     setTabFadeState((prev) => {
       if (prev.left === nextState.left && prev.right === nextState.right) return prev;
       return nextState;
@@ -83,7 +83,7 @@ export const useTabOverflow = (deps: unknown[] = []) => {
     container.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', updateTabOverflow);
 
-    // 使用 ResizeObserver 监听容器大小变化 / Use ResizeObserver to monitor container size changes
+    // Use ResizeObserver to monitor container size changes
     let resizeObserver: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(() => updateTabOverflow());

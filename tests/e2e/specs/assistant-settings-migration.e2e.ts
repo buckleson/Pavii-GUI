@@ -72,7 +72,7 @@ function resolveBackendBinary(): string {
   const candidates = [
     process.env.AIONUI_BACKEND_BINARY,
     path.join(projectRoot, '../aionCore/target/debug/aioncore'),
-    path.join(os.homedir(), '.cargo', 'bin', 'aioncore'),
+    path.join(os.homedir(), '.cargo', 'bin', 'paviicore'),
   ].filter((value): value is string => Boolean(value));
 
   for (const candidate of candidates) {

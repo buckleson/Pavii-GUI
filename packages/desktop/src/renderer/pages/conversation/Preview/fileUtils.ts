@@ -24,7 +24,7 @@ export const FILE_EXTENSION_MAP: Record<PreviewContentType, readonly string[]> =
   // rather than failing in a spreadsheet renderer.
   csv: ['csv'],
   image: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'avif'],
-  code: [], // code 作为默认类型，不需要显式映射 / code is the default type, no explicit mapping needed
+  code: [], // code is the default type, no explicit mapping needed
   diff: ['diff', 'patch'],
   /**
    * Identifiable but genuinely unrenderable here — say so, and offer the escape
@@ -39,16 +39,16 @@ export const FILE_EXTENSION_MAP: Record<PreviewContentType, readonly string[]> =
    *   saying it is unsupported.
    */
   unsupported: ['doc', 'xls', 'ppt', 'odt', 'ods', 'odp', 'docm', 'xlsm', 'pptm', 'heic'],
-  url: [], // url 类型用于网页预览，无扩展名映射 / url type for web preview, no extension mapping
-  browser: [], // browser 类型用于应用内浏览器 tab，无扩展名映射 / browser type for in-app browser tabs, no extension mapping
+  url: [], // url type for web preview, no extension mapping
+  browser: [], // browser type for in-app browser tabs, no extension mapping
 };
 
 /**
  * 从文件路径中提取文件扩展名
  * Extract file extension from file path
  *
- * @param file_path - 文件路径 / File path
- * @returns 文件扩展名（小写），如果没有扩展名则返回空字符串 / File extension in lowercase, or empty string if no extension
+ * @param file_path File path
+ * @returns File extension in lowercase, or empty string if no extension
  *
  * @example
  * ```ts
@@ -75,8 +75,8 @@ export const getFileExtension = (file_path: string): string => {
  * 根据文件扩展名确定预览内容类型
  * Determine preview content type based on file extension
  *
- * @param file_path - 文件路径 / File path
- * @returns 预览内容类型 / Preview content type
+ * @param file_path File path
+ * @returns Preview content type
  *
  * @example
  * ```ts
@@ -89,16 +89,16 @@ export const getFileExtension = (file_path: string): string => {
  */
 export const getContentTypeByExtension = (file_path: string): PreviewContentType => {
   const ext = getFileExtension(file_path);
-  if (!ext) return 'code'; // 没有扩展名，默认为 code / No extension, default to code
+  if (!ext) return 'code'; // No extension, default to code
 
-  // 遍历映射表查找匹配的内容类型 / Iterate through mapping to find matching content type
+  // Iterate through mapping to find matching content type
   for (const [contentType, extensions] of Object.entries(FILE_EXTENSION_MAP)) {
     if (extensions.includes(ext)) {
       return contentType as PreviewContentType;
     }
   }
 
-  // 未找到匹配的扩展名，默认为 code / No matching extension found, default to code
+  // No matching extension found, default to code
   return 'code';
 };
 
@@ -106,8 +106,8 @@ export const getContentTypeByExtension = (file_path: string): PreviewContentType
  * 检查文件是否为图片类型
  * Check if file is an image type
  *
- * @param file_path - 文件路径 / File path
- * @returns 是否为图片 / Whether it's an image
+ * @param file_path File path
+ * @returns Whether it's an image
  */
 export const isImageFile = (file_path: string): boolean => {
   return getContentTypeByExtension(file_path) === 'image';
@@ -117,8 +117,8 @@ export const isImageFile = (file_path: string): boolean => {
  * 检查文件是否为文本类型（可编辑）
  * Check if file is a text type (editable)
  *
- * @param file_path - 文件路径 / File path
- * @returns 是否为文本类型 / Whether it's a text type
+ * @param file_path File path
+ * @returns Whether it's a text type
  */
 export const isTextFile = (file_path: string): boolean => {
   const contentType = getContentTypeByExtension(file_path);
@@ -129,8 +129,8 @@ export const isTextFile = (file_path: string): boolean => {
  * 检查文件是否为 Office 文档类型
  * Check if file is an Office document type
  *
- * @param file_path - 文件路径 / File path
- * @returns 是否为 Office 文档 / Whether it's an Office document
+ * @param file_path File path
+ * @returns Whether it's an Office document
  */
 export const isOfficeFile = (file_path: string): boolean => {
   const contentType = getContentTypeByExtension(file_path);

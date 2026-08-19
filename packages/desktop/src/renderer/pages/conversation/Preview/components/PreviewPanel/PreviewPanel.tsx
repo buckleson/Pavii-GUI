@@ -98,7 +98,7 @@ const PreviewPanel: React.FC = () => {
   } = usePreviewContext();
   const layout = useLayoutContext();
 
-  // 视图状态 / View states
+  // View states
   const [viewMode, setViewMode] = useState<'source' | 'preview'>('preview');
   const [isSplitScreenEnabled, setIsSplitScreenEnabled] = useState(false);
   const [inspectMode, setInspectMode] = useState(false);
@@ -114,18 +114,18 @@ const PreviewPanel: React.FC = () => {
     setViewMode('preview');
   }, [activeTabId, activeTab?.metadata?.file_path, activeTab?.content_type]);
 
-  // 确认对话框状态 / Confirmation dialog states
+  // Confirmation dialog states
   const [closeTabConfirm, setCloseTabConfirm] = useState<CloseTabConfirmState>({ show: false, tabId: null });
   const [refreshConfirm, setRefreshConfirm] = useState<RefreshConfirmState>({ show: false, tabId: null });
 
-  // 右键菜单状态 / Context menu state
+  // Context menu state
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ show: false, x: 0, y: 0, tabId: null });
 
-  // 容器引用 / Container refs
+  // Container refs
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
 
-  // 使用自定义 Hooks / Use custom hooks
+  // Use custom hooks
   const currentTheme = useThemeDetection();
   const { tabsContainerRef, tabFadeState } = useTabOverflow([tabs, activeTabId]);
   const { handleEditorScroll, handlePreviewScroll } = useScrollSync({
@@ -250,7 +250,7 @@ const PreviewPanel: React.FC = () => {
     onSave: () => void handleSaveActiveTab(),
   });
 
-  // 新建浏览器 tab（tab 栏加号）/ New browser tab (plus button in the tab bar)
+  // New browser tab (plus button in the tab bar)
   const handleNewBrowserTab = useCallback(() => openBrowserTab(), [openBrowserTab]);
 
   /**
@@ -280,7 +280,7 @@ const PreviewPanel: React.FC = () => {
     setToolbarExtras(extras);
   }, []);
 
-  // 处理 HTML 审核模式元素选中 / Handle HTML inspect mode element selection
+  // Handle HTML inspect mode element selection
   const handleElementSelected = useCallback(
     (element: { html: string; tag: string }) => {
       addDomSnippet(element.tag, element.html);
@@ -304,10 +304,10 @@ const PreviewPanel: React.FC = () => {
     storageKey: 'preview-panel-split-ratio',
   });
 
-  // 使用 useCallback 包装 updateContent，确保引用稳定 / Wrap updateContent with useCallback for stable reference
+  // Wrap updateContent with useCallback for stable reference
   const handleContentChange = useCallback(
     (new_content: string) => {
-      // 严格的类型检查，防止 Event 对象被错误传递 / Strict type checking to prevent Event object from being passed incorrectly
+      // Strict type checking to prevent Event object from being passed incorrectly
       if (typeof new_content !== 'string') {
         return;
       }
@@ -353,15 +353,15 @@ const PreviewPanel: React.FC = () => {
     [closeTab]
   );
 
-  // 处理关闭tab / Handle close tab
+  // Handle close tab
   const handleCloseTab = useCallback(
     (tabId: string) => {
       const tab = tabs.find((t) => t.id === tabId);
-      // 如果tab有未保存的修改，显示确认对话框 / If tab has unsaved changes, show confirmation dialog
+      // If tab has unsaved changes, show confirmation dialog
       if (tab?.isDirty) {
         setCloseTabConfirm({ show: true, tabId });
       } else {
-        // 没有未保存的修改，直接关闭 / No unsaved changes, close directly
+        // No unsaved changes, close directly
         closeTab(tabId);
       }
     },
@@ -380,7 +380,7 @@ const PreviewPanel: React.FC = () => {
     });
   }, [closeTab]);
 
-  // 保存并关闭tab / Save and close tab
+  // Save and close tab
   const handleSaveAndCloseTab = useCallback(async () => {
     const pending = closeTabConfirm;
     const dirtyIds = (pending.batchTabIds?.length ? pending.batchTabIds : pending.tabId ? [pending.tabId] : []).filter(
@@ -421,17 +421,17 @@ const PreviewPanel: React.FC = () => {
     }
   }, [closeTabConfirm, tabs, saveContent, finishPendingClose, messageApi, t]);
 
-  // 不保存直接关闭tab / Close tab without saving
+  // Close tab without saving
   const handleCloseWithoutSave = useCallback(() => {
     finishPendingClose();
   }, [finishPendingClose]);
 
-  // 取消关闭tab / Cancel close tab
+  // Cancel close tab
   const handleCancelCloseTab = useCallback(() => {
     setCloseTabConfirm({ show: false, tabId: null });
   }, []);
 
-  // 处理 tab 右键菜单 / Handle tab context menu
+  // Handle tab context menu
   const handleTabContextMenu = useCallback((e: React.MouseEvent, tabId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -443,7 +443,7 @@ const PreviewPanel: React.FC = () => {
     });
   }, []);
 
-  // 关闭左侧 tabs / Close tabs to the left
+  // Close tabs to the left
   const handleCloseLeft = useCallback(
     (tabId: string) => {
       const currentIndex = tabs.findIndex((t) => t.id === tabId);
@@ -453,7 +453,7 @@ const PreviewPanel: React.FC = () => {
     [tabs, requestCloseBatch]
   );
 
-  // 关闭右侧 tabs / Close tabs to the right
+  // Close tabs to the right
   const handleCloseRight = useCallback(
     (tabId: string) => {
       const currentIndex = tabs.findIndex((t) => t.id === tabId);
@@ -463,7 +463,7 @@ const PreviewPanel: React.FC = () => {
     [tabs, requestCloseBatch]
   );
 
-  // 关闭其他 tabs / Close other tabs
+  // Close other tabs
   const handleCloseOthers = useCallback(
     (tabId: string) => {
       requestCloseBatch(tabs.filter((t) => t.id !== tabId));
@@ -471,7 +471,7 @@ const PreviewPanel: React.FC = () => {
     [tabs, requestCloseBatch]
   );
 
-  // 关闭全部 tabs / Close all tabs
+  // Close all tabs
   const handleCloseAll = useCallback(() => {
     requestCloseBatch(tabs);
   }, [tabs, requestCloseBatch]);
@@ -486,7 +486,7 @@ const PreviewPanel: React.FC = () => {
     requestCloseBatch(tabs, closePreview);
   }, [tabs, requestCloseBatch, closePreview]);
 
-  // 如果预览面板未打开，不渲染 / Don't render if preview panel is not open
+  // Don't render if preview panel is not open
   // Destructure defensively and bail out AFTER the last hook below.
   //
   // React requires the same hooks to run on every render of a component, and
@@ -502,7 +502,7 @@ const PreviewPanel: React.FC = () => {
   };
   const isMarkdown = content_type === 'markdown';
   const isHTML = content_type === 'html';
-  const isEditable = metadata?.editable !== false; // 默认可编辑 / Default editable
+  const isEditable = metadata?.editable !== false; // Default editable
 
   // 「在系统中打开」：有 file_path 或有 fileRef 都能打开。
   // fileRef 分支是超限 / 不支持态的逃生出口 —— Explorer 打开的 tab 刻意不带
@@ -527,7 +527,7 @@ const PreviewPanel: React.FC = () => {
     canOpenInSystem(Boolean(metadata?.file_path), metadata?.fileRef) &&
     shouldOfferOpenInSystem(content_type, Boolean(metadata?.oversized), FILE_TYPES_WITH_BUILTIN_OPEN);
 
-  // 下载文件到本地 / Download file to local system
+  // Download file to local system
   const handleDownload = useCallback(async () => {
     try {
       const rawFileName = metadata?.file_name || `${content_type}-${Date.now()}`;
@@ -622,7 +622,7 @@ const PreviewPanel: React.FC = () => {
     }
   }, [content, content_type, metadata?.file_name, metadata?.file_path, metadata?.language, messageApi, t]);
 
-  // 在系统默认应用中打开文件 / Open file in system default application
+  // Open file in system default application
   const handleOpenInSystem = useCallback(async () => {
     // 只接受真正指向文件的 ref —— project ref 的空 relative_path 表示 pe root
     // 本身（一个目录），送去 shell 打开就不是这个按钮承诺的行为了。
@@ -739,7 +739,7 @@ const PreviewPanel: React.FC = () => {
     </div>
   );
 
-  // 渲染预览内容 / Render preview content
+  // Render preview content
   const renderContent = () => {
     if (metadata?.missingFile) return renderMissingFile();
     if (metadata?.oversized) return renderOversized();
@@ -750,11 +750,11 @@ const PreviewPanel: React.FC = () => {
     // them here would reload the page on every tab switch.
     if (content_type === 'browser') return null;
 
-    // Markdown 模式 / Markdown mode
+    // Markdown mode
     if (isMarkdown) {
-      // 分屏模式：左右分割（编辑器 + 预览）/ Split-screen mode: Editor + Preview
+      // Split-screen mode: Editor + Preview
       if (isSplitScreenEnabled) {
-        // 移动端：全屏显示预览，隐藏编辑器 / Mobile: Full-screen preview, hide editor
+        // Mobile: Full-screen preview, hide editor
         if (layout?.isMobile) {
           return (
             <div className='flex-1 overflow-hidden'>
@@ -763,7 +763,7 @@ const PreviewPanel: React.FC = () => {
           );
         }
 
-        // 桌面端：左右分割布局 / Desktop: Split layout
+        // Desktop: Split layout
         return (
           <div className='flex flex-1 relative overflow-hidden'>
             {/* 左侧：编辑器 / Left: Editor */}
@@ -803,7 +803,7 @@ const PreviewPanel: React.FC = () => {
         );
       }
 
-      // 非分屏模式：单栏（原文或预览）/ Non-split mode: Single panel (source or preview)
+      // Non-split mode: Single panel (source or preview)
       return (
         <MarkdownPreview
           content={content}
@@ -816,11 +816,11 @@ const PreviewPanel: React.FC = () => {
       );
     }
 
-    // HTML 模式 / HTML mode
+    // HTML mode
     if (isHTML) {
-      // 分屏模式：左右分割（编辑器 + 预览）/ Split-screen mode: Editor + Preview
+      // Split-screen mode: Editor + Preview
       if (isSplitScreenEnabled) {
-        // 移动端：全屏显示预览，隐藏编辑器 / Mobile: Full-screen preview, hide editor
+        // Mobile: Full-screen preview, hide editor
         if (layout?.isMobile) {
           return (
             <div className='flex-1 overflow-hidden'>
@@ -837,7 +837,7 @@ const PreviewPanel: React.FC = () => {
           );
         }
 
-        // 桌面端：左右分割布局 / Desktop: Split layout
+        // Desktop: Split layout
         return (
           <div className='flex flex-1 relative overflow-hidden'>
             {/* 左侧：编辑器 / Left: Editor */}
@@ -884,7 +884,7 @@ const PreviewPanel: React.FC = () => {
         );
       }
 
-      // 非分屏模式：单栏（原文或预览）/ Non-split mode: Single panel (source or preview)
+      // Non-split mode: Single panel (source or preview)
       if (viewMode === 'source') {
         return (
           <div className='flex-1 overflow-hidden'>
@@ -897,7 +897,7 @@ const PreviewPanel: React.FC = () => {
           </div>
         );
       } else {
-        // 预览模式 / Preview mode
+        // Preview mode
         return (
           <div className='flex-1 overflow-hidden'>
             <HTMLRenderer
@@ -914,7 +914,7 @@ const PreviewPanel: React.FC = () => {
       }
     }
 
-    // 其他类型：全屏预览 / Other types: Full-screen preview
+    // Other types: Full-screen preview
     if (content_type === 'diff') {
       return (
         <DiffPreview
@@ -926,7 +926,7 @@ const PreviewPanel: React.FC = () => {
         />
       );
     } else if (content_type === 'code' || content_type === 'csv') {
-      // 统一：始终可编辑的 CodeEditor（看=改）/ Unified: always-editable CodeEditor (view = edit)
+      // Unified: always-editable CodeEditor (view = edit)
       // csv 走同一分支：它本来就是纯文本，只是恰好有表格结构。
       // csv shares this branch: it is plain text that happens to be tabular.
       return (
@@ -990,14 +990,14 @@ const PreviewPanel: React.FC = () => {
         />
       );
     } else if (content_type === 'url') {
-      // URL 预览模式 / URL preview mode
+      // URL preview mode
       return <URLViewer url={content} title={metadata?.title} />;
     }
 
     return null;
   };
 
-  // 将 tabs 转换为 PreviewTab 类型 / Convert tabs to PreviewTab type
+  // Convert tabs to PreviewTab type
   const previewTabs: PreviewTab[] = tabs.map((tab) => ({
     id: tab.id,
     title: tab.title,
@@ -1006,7 +1006,7 @@ const PreviewPanel: React.FC = () => {
     agentActive: tab.content_type === 'browser' ? tab.metadata?.agentActive : undefined,
   }));
 
-  // 浏览器 tab 常驻挂载，切 tab 不销毁 webview / Browser tabs stay mounted across switches
+  // Browser tabs stay mounted across switches
   const browserTabs = tabs.filter((tab) => tab.content_type === 'browser');
 
   return (
@@ -1067,7 +1067,7 @@ const PreviewPanel: React.FC = () => {
             hasNoRenderableContent={Boolean(metadata?.oversized) || content_type === 'unsupported'}
             onViewModeChange={(mode) => {
               setViewMode(mode);
-              setIsSplitScreenEnabled(false); // 切换视图模式时关闭分屏 / Disable split when switching view mode
+              setIsSplitScreenEnabled(false); // Disable split when switching view mode
             }}
             onSplitScreenToggle={() => setIsSplitScreenEnabled(!isSplitScreenEnabled)}
             onOpenInSystem={handleOpenInSystem}

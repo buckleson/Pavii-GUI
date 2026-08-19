@@ -49,10 +49,10 @@ function isUnrecoverableRealtimeError(payload: unknown): boolean {
 const win = window as CustomWindow;
 
 /**
- * 适配electron的API到浏览器中,建立renderer和main的通信桥梁, 与preload.ts中的注入对应
+ * Adapts the Electron API for the browser, bridging renderer and main. Mirrors the injection in preload.ts.
  * */
 if (win.electronAPI) {
-  // Electron 环境 - 使用 IPC 通信
+  // Electron: talk over IPC.
   bridge.adapter({
     emit(name, data) {
       return win.electronAPI.emit(name, data);
@@ -70,7 +70,7 @@ if (win.electronAPI) {
     },
   });
 } else {
-  // Web 环境 - 使用 WebSocket 通信，并在登录后自动补上已获取 Cookie 的连接
+  // Web: talk over WebSocket, reconnecting with the session cookie once logged in.
   // Web runtime bridge: ensure the socket reconnects after login so session cookie can be sent.
   // Path must be `/ws` — web-host's static-server only proxies WebSocket upgrades under /ws.
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -87,7 +87,7 @@ if (win.electronAPI) {
 
   const messageQueue: QueuedMessage[] = [];
 
-  // 1.发送队列中积压的消息，确保在重新建立连接后不会丢事件
+  // 1. Flush the queued messages so nothing is lost across a reconnect.
   const flushQueue = () => {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
       return;
@@ -101,7 +101,7 @@ if (win.electronAPI) {
     }
   };
 
-  // 2.简单的指数退避重连，等待服务端在登录成功后接受新连接
+  // 2. Exponential backoff, waiting for the server to accept connections after login.
   const scheduleReconnect = () => {
     if (reconnectTimer !== null || !shouldReconnect) {
       return;
@@ -114,7 +114,7 @@ if (win.electronAPI) {
     }, reconnectDelay);
   };
 
-  // 3.建立 WebSocket 连接（或复用已有的 OPEN/CONNECTING 状态）
+  // 3. Open the WebSocket, reusing an existing OPEN/CONNECTING socket.
   const connect = () => {
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
       return;
@@ -150,7 +150,7 @@ if (win.electronAPI) {
           return;
         }
 
-        // 处理服务端心跳 ping，立即回复 pong 以保持连接
+        // Answer the server heartbeat immediately, or the connection is dropped.
         // Handle server heartbeat ping - respond with pong immediately to keep connection alive
         if (payload.name === 'ping') {
           if (socket && socket.readyState === WebSocket.OPEN) {
@@ -159,30 +159,30 @@ if (win.electronAPI) {
           return;
         }
 
-        // 处理认证过期 - 停止重连并跳转到登录页
+        // Auth expired: stop reconnecting and go to the login page.
         // Handle auth expiration - stop reconnecting and redirect to login
         if (isRealtimeAuthTerminalError(payload)) {
           console.warn('[WebSocket] Authentication expired, stopping reconnection');
           shouldReconnect = false;
 
-          // 清除所有待执行的重连定时器
+          // Cancel every pending reconnect timer.
           // Clear any pending reconnection timer
           if (reconnectTimer !== null) {
             window.clearTimeout(reconnectTimer);
             reconnectTimer = null;
           }
 
-          // 关闭 socket 并跳转到登录页
+          // Close the socket and go to the login page.
           // Close the socket and redirect to login page
           socket?.close();
 
-          // 已在登录页则不再重定向，防止无限刷新循环
+          // Already on the login page: redirecting again would loop forever.
           // Skip redirect if already on login page to prevent infinite reload loop
           if (window.location.pathname === '/login' || window.location.hash.includes('/login')) {
             return;
           }
 
-          // 短暂延迟后跳转到登录页，以便显示 UI 反馈
+          // Brief delay before navigating so the UI feedback is visible.
           // Redirect to login page after a short delay to show any UI feedback
           // Use hash navigation to stay within the SPA (HashRouter), avoiding a full
           // page reload that would land on an empty hash and cause a blank screen.
@@ -202,7 +202,7 @@ if (win.electronAPI) {
 
         emitterRef.emit(payload.name, payload.data);
       } catch (error) {
-        // 忽略格式错误的消息 / Ignore malformed payloads
+        // Ignore malformed payloads
       }
     });
 
@@ -220,7 +220,7 @@ if (win.electronAPI) {
     });
   };
 
-  // 4.确保在发送/订阅前已经发起连接
+  // 4. Make sure the connection is started before any send or subscribe.
   const ensureSocket = () => {
     if (!socket || socket.readyState === WebSocket.CLOSED || socket.readyState === WebSocket.CLOSING) {
       connect();

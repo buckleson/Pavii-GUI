@@ -7,11 +7,11 @@
 import { useEffect } from 'react';
 
 interface UseAutoScrollOptions {
-  containerRef: React.RefObject<HTMLDivElement>; // 容器引用 / Container ref
-  content: string; // 内容（用于监听变化）/ Content (for watching changes)
-  enabled?: boolean; // 是否启用自动滚动 / Whether to enable auto-scroll
-  threshold?: number; // 触发自动滚动的距离底部阈值（px）/ Distance from bottom threshold to trigger auto-scroll (px)
-  behavior?: ScrollBehavior; // 滚动行为 / Scroll behavior
+  containerRef: React.RefObject<HTMLDivElement>; // Container ref
+  content: string; // Content (for watching changes)
+  enabled?: boolean; // Whether to enable auto-scroll
+  threshold?: number; // Distance from bottom threshold to trigger auto-scroll (px)
+  behavior?: ScrollBehavior; // Scroll behavior
 }
 
 /**
@@ -47,7 +47,7 @@ export const useAutoScroll = ({
 
     const { scrollTop, scrollHeight, clientHeight } = container;
 
-    // 计算距离底部的距离 / Calculate distance from bottom
+    // Calculate distance from bottom
     const distanceToBottom = scrollHeight - scrollTop - clientHeight;
 
     // 如果距离底部小于阈值，自动滚动到底部

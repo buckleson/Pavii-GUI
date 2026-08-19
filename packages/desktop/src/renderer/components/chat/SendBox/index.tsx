@@ -276,10 +276,10 @@ const SendBox: React.FC<{
   useAddEventListener('sendbox.reply', (quote) => setReplyQuote(quote), []);
   useAddEventListener('sendbox.reply.clear', () => setReplyQuote(null), []);
 
-  // 集成预览面板的"添加到聊天"功能 / Integrate preview panel's "Add to chat" functionality
+  // Integrate preview panel's "Add to chat" functionality
   const { setSendBoxHandler, domSnippets, removeDomSnippet, clearDomSnippets } = usePreviewContext();
 
-  // 注册处理器以接收来自预览面板的文本 / Register handler to receive text from preview panel
+  // Register handler to receive text from preview panel
   useEffect(() => {
     const handler = (text: string) => {
       const base = latestInputRef.current;
@@ -1271,7 +1271,7 @@ const SendBox: React.FC<{
     historyDraftRef.current = null;
     setHistoryNavigationIndex(null);
 
-    // 构建消息内容 / Build message content
+    // Build message content
     let finalMessage = input;
 
     // Prepend reply quote as blockquote
@@ -1283,7 +1283,7 @@ const SendBox: React.FC<{
       finalMessage = `${quotedLines}\n\n${finalMessage}`;
     }
 
-    // 如果有 DOM 片段，附加完整 HTML / If has DOM snippets, append full HTML
+    // If has DOM snippets, append full HTML
     if (domSnippets.length > 0) {
       const snippetsHtml = domSnippets
         .map((s) => `\n\n---\nDOM Snippet (${s.tag}):\n\`\`\`html\n${s.html}\n\`\`\``)

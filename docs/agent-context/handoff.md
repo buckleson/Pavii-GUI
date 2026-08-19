@@ -1,119 +1,161 @@
 # Handoff — channel session management
 
-Next session's focus: finish Phases 2–4 of managing sessions from Telegram,
-Slack and Discord, then rebuild the engine and test against a real bot.
+All eight planned phases are closed: six implemented, two deliberately not done
+with the reasoning recorded. Next session's focus is a live walkthrough on the
+real bot, then the two follow-ups at the bottom.
 
 Read [`docs/adr/0001-channel-session-management.md`](../adr/0001-channel-session-management.md)
-first — it carries the decisions and the reasoning. This file is only what you
-need to pick the work up.
+first — decisions D1–D17, plus the places the original plan turned out to be
+wrong.
 
 ## Where things stand
 
-Landed and green (`cargo test -p aionui-channel`, clippy clean at `-D warnings`):
+**Run the channel tests with the platform features, always:**
 
-| Module | What it does |
-| --- | --- |
-| `aionui-channel/src/session_directory.rs` | Lists every conversation the owner has, pages it, attaches a chat to one |
-| `aionui-channel/src/commands.rs` | Resolves `/sessions`, `/status`, `/new`, `/help` before the agent sees them |
-| `aionui-channel/src/approvals.rs` | Parks permission requests, expires them as denied, resolves exactly once |
-| `aionui-channel/src/action.rs` | `session.list` / `session.attach` actions; `session.status` extended |
-| `aionui-app/src/router/state.rs` | Wires the directory into production DI |
-
-**48 tests** across the three modules, including cross-owner isolation, paging
-with no duplicates, a failed attach leaving the pointer alone, and approval
-expiry at the exact boundary.
-
-## Next up: `/projects` (plan approved, not started)
-
-Full plan in the session plan file; the essentials:
-
-- `IProjectStore` has **no `list_projects`** — add it plus the Sqlite impl.
-  Do *not* derive projects from conversations' `project_id`: that hides empty
-  projects, which is exactly where you want to start a first conversation.
-- `ConversationFilters` has **no project filter** — add `project_id` and honour
-  it in the query. Filtering after paging would return arbitrary page sizes and
-  skip rows, so it must be in SQL.
-- Then `/projects` -> `project.list` / `project.open` / `project.new_session`,
-  reusing `page_buttons` so it matches `/sessions`.
-
-`/sessions` stays exactly as it is - a flat list of everything.
-
-## What is left, in the order I would do it
-
-### 1. Wire approvals into the relay (largest, highest value)
-
-`approvals.rs` exists but nothing calls it. Needed:
-
-- **Stop forcing `yolo`** in `message_service.rs` (~line 337) and
-  `orchestrator.rs` (~line 233). Until this changes, `Permission` events never
-  fire and the registry stays empty.
-- `AgentStreamEvent::{Permission, AcpPermission, Ask}` reach `stream_relay.rs`
-  but are **not translated into `StreamAction`** — they are dropped. Add
-  variants and render them as inline Allow/Deny buttons. `Ask` carries a
-  `questions[]` array, so render one button per option, not a bare Allow/Deny.
-- Route the button answer into `ChannelManager`'s existing
-  `confirm_tx: mpsc::Sender<(String, String)>` — the return path is already
-  there.
-- Run `expire_older_than` on a timer and tell the chat when something expired.
-
-### 2. Notifications on finish
-
-**The plan was wrong about this — do not just hook `stream_relay`.** A relay
-exists per *(chat, session)* and only when a chat dispatched the work. A session
-started on the desktop has no relay to any chat, which is exactly the case the
-user asked for.
-
-You need a separate subscriber over session completion for the owner, pushing to
-paired chats through `ChannelSender`. Suppress the notification when the chat is
-already attached to that session — it is already streaming the output, so a
-notification would be noise.
-
-### 3. Retire the TypeScript bridges
-
-`packages/desktop/src/process/services/channels/{slackBridge,discordBridge}.ts`,
-their imports in `index.ts` (~line 399) and their accessors in
-`applicationBridge.ts` (~line 151).
-
-**Verify before deleting.** The Rust plugins are compiled in by default, but
-confirm they actually serve live Slack/Discord traffic. If they do not, stop and
-report rather than removing a working path.
-
-### 4. Rebuild and test live
-
-```bash
-node scripts/build-aioncore.js
+```
+cargo test -p aionui-channel --features slack,discord,telegram,lark,dingtalk,weixin
 ```
 
-Takes ~2 minutes and **requires the desktop app closed** — Windows locks the
-binary. The script runs the assistant-manifest test first, which is the only
-thing that catches a corrupt catalogue.
+Without them `aionui-channel` compiles **no plugins at all** (`default = []`) —
+358 tests instead of 694 — and reports green while every plugin test sits dark.
+That hid four real compile errors during this work. `just test` (`--workspace`)
+is fine: it builds `aionui-app`, whose defaults enable the features (verified:
+`cargo test -p aionui-channel -p aionui-app --lib` reports 694).
 
-Then walk it on a real bot: two sessions running, `/sessions` lists both,
-attaching switches between them and neither stops; detach and confirm the finish
-notification arrives; trigger a permission and confirm Allow resumes and Deny
-stops; leave one unanswered and confirm it expires rather than hanging.
+694 unit + integration, all green with features. Clippy clean at `-D warnings`,
+`cargo fmt --check` clean, `bun run check:encoding` clean.
 
-## Traps worth knowing before you start
+| Command                    | What it does                                                    |
+| -------------------------- | --------------------------------------------------------------- |
+| `/sessions`                | Flat list of every conversation, paged, tap to attach           |
+| `/projects`                | Projects (temp workspaces hidden), then that project's sessions |
+| `/active_works`            | Only sessions executing right now; tap to attach and interject  |
+| `/tasks`                   | Scheduled tasks, soonest first, next run relative to now        |
+| `/status`, `/new`, `/help` | Unchanged                                                       |
 
-- **Green tests are not a wired feature.** The directory passed every test while
-  production had no directory configured. Assert the DI, not just the module.
-- **`conversations.status` is NOT NULL** in the schema although the Rust model
-  types it `Option<String>`. Fixtures that pass `None` fail on insert.
-- **`conversations.user_id` is a foreign key into `users`.** Testing cross-owner
-  isolation needs a real second user, not an invented id.
-- **`session.status` already existed** before this work. A new match arm with
-  the same name silently shadows it and only shows up as an unreachable-pattern
-  warning.
-- **Rust files here are CRLF.** Patch scripts that match on `\n` will fail to
-  find anchors that are plainly present.
-- **Never edit engine assets with PowerShell text cmdlets** — it has corrupted
-  `assistants.json` twice. `bun run check:encoding` is the backstop.
+Beyond commands:
+
+- **Approvals.** The agent now stops and asks. A request is parked in
+  `ApprovalService`, rendered as buttons, answered through `system.confirm`, and
+  denied automatically after `APPROVAL_TIMEOUT_MS` (10 min) with the chat told.
+- **Finish notifications.** `FinishNotifier` subscribes to `turn.completed` on
+  the event bus and tells paired chats, including for sessions started on the
+  desktop.
+- **Branding.** `aionrs` never reaches a chat; `branding.rs` rewrites it to
+  `paviirs` on the way out.
+- **Buttons on Slack and Discord.** Both plugins used to drop `message.buttons`
+  and could not receive a tap, so every picker arrived as unusable text. Both
+  now render (Block Kit / message components) and handle the inbound side
+  (`interactive` envelope / `INTERACTION_CREATE` with a deferred ack). One
+  shared encoding in `callback.rs`, sized to Telegram's 64-byte limit so the
+  same format is valid on all three.
+- **WeChat keeps auto-approving.** It cannot render buttons, so an approval
+  there would hang until expiry; `build_channel_extra` is platform-aware.
+
+## What to walk on the real bot
+
+The tests cover the state machines; these are the parts only a live run proves.
+
+1. Trigger a tool the agent needs permission for. Confirm buttons appear, that
+   **Allow resumes** and **Deny stops**, and that the deny button is last.
+2. Leave one unanswered for ten minutes. It should be denied automatically and
+   the chat should say so, rather than the session hanging.
+3. Answer a stale button (one already answered). It should say so, not no-op.
+4. Start a session **on the desktop**, let it finish. A paired chat should be
+   told, with an Open button. The chat attached to that same session should
+   **not** be told.
+5. Two sessions running at once, switch between them; neither should stop.
+6. Repeat the command checks on Slack and Discord.
+
+**Un-`yolo` only affects new conversations** — `extra` is written once at
+creation. An existing channel conversation keeps running unsupervised, so start
+a fresh one to see approvals at all.
+
+## The one thing not proven
+
+**Slack and Discord buttons have never touched a live app.** The payload shapes
+come from general knowledge of those APIs, not from captured traffic or a schema
+in this repo, and neither platform is configured here (`assistant_plugins` holds
+only `telegram`; no `pavii-channels.json`). The tests pin the shapes and prove a
+foreign tap is never treated as an action — they cannot prove Slack accepts the
+Block Kit or Discord the components.
+
+Connect one (Slack is the smaller setup) and check: `/sessions` renders tappable
+buttons, a tap attaches, an approval resolves. Until then the honest status is
+"implemented, shape-tested, unproven on the wire".
+
+## Follow-ups, in the order worth doing
+
+### 1. Migrate Slack/Discord credentials, then retire the TS bridges
+
+Refused for now, and why matters: the bridges read `pavii-channels.json`
+(`channelStore.ts`) while the Rust plugins read the engine DB via
+`IChannelRepository`. Deleting them would strand any credentials the user
+entered through the desktop. The Rust plugins _are_ shipped
+(`default = [... "slack", "discord"]`), so the missing piece is a one-way
+migration from that JSON file into the channel plugin table, then the deletion
+of `slackBridge.ts` / `discordBridge.ts`, their imports in `index.ts` (~399) and
+accessors in `applicationBridge.ts` (~151).
+
+### 2. Discord application-command registration
+
+Telegram registers over `setMyCommands`; Slack is declared in its app manifest,
+generated by `commands::slack_manifest_commands` with tests guarding drift in
+both directions. Discord needs registration over its HTTP API, which
+`plugins/discord/api.rs` has no application-id call for. There is no captured
+Discord traffic or schema in the repo to write it against, and the engine's
+rules forbid asserting an API contract from memory — so capture or cite a source
+first.
+
+### 3. Errored finishes
+
+`FinishNotifier` fires on `turn.completed`, which is emitted for a normal end.
+Whether a failed turn emits it, or emits something else, is **not yet checked**.
+Worth confirming before claiming errors are covered.
+
+## Traps worth knowing
+
+- **Green tests are not a wired feature.** The session directory passed every
+  test while production had no directory configured. `SessionDirectory::new`
+  now takes its dependencies as required parameters so the compiler catches it.
+  `ApprovalService` is the same shape and is easier to get wrong: **the relay
+  and the action executor must share one instance**, or every button presses
+  against an empty registry. `build_channel_state` builds it once.
+- **`IWorkerTaskManager::active_conversation_ids` has a default impl returning
+  an empty vec.** A double that forgets to override it makes every
+  running-state assertion vacuously pass.
+- **A test that asserts "no error" proves nothing about delivery.** The
+  approval tests use a `RecordingAgent` that captures what it was told; a mock
+  that just returns `Ok` would pass even if the answer never left the channel.
+- **The task manager and the event bus are both global.** Every id and event
+  must be checked against the owner before it is shown or acted on.
+- **Callback data is 64 bytes, and one over-long button makes Telegram reject
+  the whole message.** Three tests measure it (`project_callbacks_fit_…`,
+  `approval_buttons_fit_…`, `the_open_button_fits_…`). Add one for any new
+  button.
+- **Foreign keys and CHECK constraints bite in fixtures.**
+  `conversations.user_id` → `users`, `cron_jobs.conversation_id` →
+  `conversations`; `cron_jobs.execution_mode` is `existing|new_conversation`,
+  `last_status` is `ok|error|skipped|missed`, `schedule_kind` is
+  `at|every|cron`.
+- **Rust files here are CRLF.** Patch scripts matching on `\n` will fail to find
+  anchors that are plainly present.
+- **`check-encoding` does not catch control characters.** A mis-escaped patch
+  wrote literal `U+0008` into a TypeScript regex and the gate passed it. A task
+  chip is open to add the rule.
+- **Two pre-existing `aionui-conversation` failures** are unrelated and fail
+  identically on a clean tree (verified by stashing):
+  `create_rejects_unavailable_workspace_with_trailing_whitespace_in_request`
+  and `is_auto_workspace_matches_by_structure_across_user_and_date`. Both are
+  Windows path handling.
 
 ## Standing constraints
 
-- Approvals change behaviour for anyone already using channels: silent agents
-  become agents that stop and wait. Expected, but call it out in release notes.
-- The listing exposes every conversation to anyone paired with the bot. Pairing
-  is the only gate.
-- Engine changes need the six-target CI build, and the release currently has a
-  **stuck macOS Intel runner** — nothing is published yet.
+- The session listing exposes every conversation to anyone paired with the bot.
+  Pairing is the only gate.
+- Approvals change behaviour for anyone already using channels. Call it out in
+  release notes.
+- Engine changes need `node scripts/build-paviicore.js` (desktop app closed) and
+  then the six-target CI build. The release still has a **stuck macOS Intel
+  runner** — nothing is published yet.
+- All of this work is **uncommitted** in the working tree.

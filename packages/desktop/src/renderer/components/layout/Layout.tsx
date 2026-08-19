@@ -251,7 +251,7 @@ const Layout: React.FC<{
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 进入移动端后立即折叠 / Collapse immediately when switching to mobile
+  // Collapse immediately when switching to mobile
   useEffect(() => {
     if (!isMobile || collapsedRef.current) {
       return;

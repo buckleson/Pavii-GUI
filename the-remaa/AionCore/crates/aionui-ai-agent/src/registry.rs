@@ -325,7 +325,18 @@ impl AgentRegistry {
                 Ok(_) => ("online", None, None),
                 Err(failure) => ("offline", Some(failure.error_code()), Some(failure.detail())),
             };
-            info!(id = %id, status, latency_ms, error_code = error_code.unwrap_or("-"), "slow-probe recheck settled");
+            // The name and the failure detail are here because the id alone is
+            // opaque: diagnosing "which agent went offline, and why" previously
+            // meant querying agent_metadata by hand.
+            info!(
+                id = %id,
+                agent = %meta.name,
+                status,
+                latency_ms,
+                error_code = error_code.unwrap_or("-"),
+                error = error_message.as_deref().unwrap_or("-"),
+                "slow-probe recheck settled"
+            );
             let params = aionui_db::UpdateAgentAvailabilitySnapshotParams {
                 last_check_status: Some(status),
                 last_check_kind: Some("startup"),

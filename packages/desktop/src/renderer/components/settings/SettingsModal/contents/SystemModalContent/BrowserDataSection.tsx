@@ -13,7 +13,7 @@ import useSWR, { mutate } from 'swr';
 import PreferenceRow from './PreferenceRow';
 
 /**
- * 应用内浏览器设置 / In-app browser settings.
+ * In-app browser settings.
  *
  * 这一节值得独立存在，而不是塞进开发者设置：
  * - 登录态是全局共享的（所有 tab、所有项目共用），用户需要一个明确的地方知道

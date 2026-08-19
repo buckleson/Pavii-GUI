@@ -363,7 +363,7 @@ const fetchGitHubReleases = async (repo: string, timeoutMs = 30000): Promise<Git
   }
   const url = `https://api.github.com/repos/${repo}/releases`;
 
-  // 添加超时控制，防止网络问题导致无限等待 / Add timeout to prevent infinite wait on network issues
+  // Add timeout to prevent infinite wait on network issues
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 

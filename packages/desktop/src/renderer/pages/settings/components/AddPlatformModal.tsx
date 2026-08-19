@@ -196,8 +196,8 @@ const ProviderLogo: React.FC<{ logo: string | null; name: string; size?: number 
  * 平台下拉选项渲染（第一层）
  * Platform dropdown option renderer (first level)
  *
- * @param platform - 平台配置 / Platform config
- * @param t - 翻译函数 / Translation function
+ * @param platform Platform config
+ * @param t Translation function
  */
 const renderPlatformOption = (platform: PlatformConfig, t?: (key: string) => string) => {
   // 如果有 i18nKey 且提供了翻译函数，使用翻译后的名称；否则使用原始名称
@@ -229,17 +229,17 @@ const AddPlatformModal = ModalHOC<{
   const bedrockAuthMethod = Form.useWatch('bedrockAuthMethod', form);
   const _bedrockRegion = Form.useWatch('bedrockRegion', form);
 
-  // 获取当前选中的平台配置 / Get current selected platform config
+  // Get current selected platform config
   const selectedPlatform = useMemo(() => getPlatformByValue(platformValue), [platformValue]);
 
   const platform = selectedPlatform?.platform ?? 'gemini';
-  // 判断是否为"自定义"选项（没有预设 base_url） / Check if "Custom" option (no preset base_url)
+  // Check if "Custom" option (no preset base_url)
   const isCustom = isCustomOption(platformValue);
   const isBedrock = platform === 'bedrock';
   const isGemini = isGeminiPlatform(platform);
   const isNewApi = isNewApiPlatform(platform);
 
-  // new-api 每模型协议选择状态 / new-api per-model protocol selection state
+  // new-api per-model protocol selection state
   const [modelProtocol, setModelProtocol] = useState<string>('openai');
   const [imageInput, setImageInput] = useState<ModelImageInputChoice>('auto');
   const [openAiApiMode, setOpenAiApiMode] = useState<ModelOpenAiApiModeChoice>('auto');
@@ -266,7 +266,7 @@ const AddPlatformModal = ModalHOC<{
   // We'll build it dynamically in onFocus
   const modelListState = useModeModeList(platform, actualBaseUrl, api_key, true, undefined);
 
-  // 协议检测 Hook / Protocol detection hook
+  // Protocol detection hook
   // 启用检测的条件：
   // 1. 自定义平台 或 用户输入了自定义 base URL（非官方地址，如本地代理）
   // 2. 输入值与上次"采纳建议"时不同（避免切换平台后重复检测）
@@ -308,15 +308,15 @@ const AddPlatformModal = ModalHOC<{
     }
   };
 
-  // 弹窗打开时重置表单 / Reset form when modal opens
+  // Reset form when modal opens
   useEffect(() => {
     if (modalProps.visible) {
       form.resetFields();
       form.setFieldValue('bedrockAuthMethod', 'accessKey');
       form.setFieldValue('bedrockRegion', 'us-east-1');
       protocolDetection.reset();
-      setLastDetectionInput(null); // 重置检测记录 / Reset detection record
-      setModelProtocol('openai'); // 重置协议选择 / Reset protocol selection
+      setLastDetectionInput(null); // Reset detection record
+      setModelProtocol('openai'); // Reset protocol selection
       setImageInput('auto');
       setOpenAiApiMode('auto');
       setIsFullUrl(false);
@@ -339,7 +339,7 @@ const AddPlatformModal = ModalHOC<{
     }
   }, [platform]);
 
-  // 处理自动修复的 base_url / Handle auto-fixed base_url
+  // Handle auto-fixed base_url
   useEffect(() => {
     if (modelListState.data?.fix_base_url) {
       form.setFieldValue('base_url', modelListState.data.fix_base_url);
@@ -386,7 +386,7 @@ const AddPlatformModal = ModalHOC<{
           };
         }
 
-        // new-api 平台：保存每模型协议配置 / new-api platform: save per-model protocol config
+        // new-api platform: save per-model protocol config
         // Multi-select: apply the chosen protocol to every selected model so we
         // never produce a comma-joined ("a,b") dirty key. Per-model fine-tuning
         // still lives on the platform list tag switcher.

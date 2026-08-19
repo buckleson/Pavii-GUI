@@ -165,7 +165,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         // Allow login to proceed anyway - server will set new token
       }
 
-      // P1 安全修复：登录请求需要 CSRF Token / P1 Security fix: Login needs CSRF token
+      // P1 Security fix: Login needs CSRF token
       // Backend route is /login; web-host's static-server explicitly proxies it.
       const response = await fetch('/login', {
         method: 'POST',

@@ -109,7 +109,7 @@ export interface AionModalProps extends Omit<ModalProps, 'title' | 'footer'> {
   showCustomClose?: boolean;
 }
 
-// ==================== 样式常量 / Style Constants ====================
+// Style Constants ====================
 
 const HEADER_BASE_CLASS = 'flex items-center justify-between pb-20px';
 const TITLE_BASE_CLASS = 'text-18px font-500 text-t-primary m-0';
@@ -132,17 +132,17 @@ const STD_CLOSE_BTN_CLASS =
   'shrink-0 w-32px h-32px flex items-center justify-center rd-8px transition-colors duration-200 cursor-pointer border-0 bg-transparent p-0 text-t-secondary hover:bg-fill-2 focus:outline-none';
 
 /**
- * 自定义模态框组件 / Custom modal component
+ * Custom modal component
  *
  * 基于 Arco Design Modal 的封装，提供统一的样式主题、预设尺寸和字体缩放支持
  * Wrapper around Arco Design Modal with unified theme styling, preset sizes, and font scaling support
  *
  * @features
  * - 预设尺寸支持 / Preset size support (small/medium/large/xlarge/full)
- * - 响应字体缩放 / Responsive to font scale changes
+ * Responsive to font scale changes
  * - 灵活的 header/footer 配置 / Flexible header/footer configuration
- * - 向后兼容旧 API / Backward compatible with old API
- * - 自动视口适配 / Auto viewport adaptation
+ * Backward compatible with old API
+ * Auto viewport adaptation
  *
  * @example
  * ```tsx
@@ -235,14 +235,14 @@ const AionModal: React.FC<AionModalProps> = ({
     return value;
   };
 
-  // 处理尺寸缩放 / Handle size scaling
+  // Handle size scaling
   const modalSize = size ? MODAL_SIZES[size] : undefined;
   const baseStyle: CSSProperties = {
     ...modalSize,
     ...style,
   };
 
-  // 缩放尺寸相关属性（避免副作用）/ Scale size-related properties (avoid side effects)
+  // Scale size-related properties (avoid side effects)
   type DimensionStyle = Partial<Pick<CSSProperties, DimensionKey>>;
   const scaledStyle: DimensionStyle = {};
   dimensionKeys.forEach((key) => {
@@ -257,7 +257,7 @@ const AionModal: React.FC<AionModalProps> = ({
     ...scaledStyle,
   };
 
-  // 自动设置最大宽高以适应视口 / Auto set max dimensions to fit viewport
+  // Auto set max dimensions to fit viewport
   if (typeof window !== 'undefined') {
     const viewportGap = 32;
     if (!mergedStyle.maxWidth) {

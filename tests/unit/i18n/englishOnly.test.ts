@@ -46,7 +46,9 @@ describe('English-only app chrome', () => {
   });
 
   it('ships only the English catalogue on desktop', () => {
-    const dirs = fs.readdirSync(DESKTOP_LOCALES).filter((entry) => fs.statSync(path.join(DESKTOP_LOCALES, entry)).isDirectory());
+    const dirs = fs
+      .readdirSync(DESKTOP_LOCALES)
+      .filter((entry) => fs.statSync(path.join(DESKTOP_LOCALES, entry)).isDirectory());
     expect(dirs).toEqual(['en-US']);
   });
 

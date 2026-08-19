@@ -13,7 +13,7 @@ import { registerWebSocketBroadcaster, getBridgeEmitter, setBridgeEmitter, broad
 
 /**
  * Bridge event data structure for IPC communication
- * IPC 通信的桥接事件数据结构
+ * Shape of a bridged IPC event.
  */
 interface BridgeEventData {
   name: string;
@@ -25,7 +25,7 @@ const adapterWindowList: Array<BrowserWindow> = [];
 export { registerWebSocketBroadcaster, getBridgeEmitter };
 
 /**
- * @description 建立与每一个browserWindow的通信桥梁
+ * @description Bridges communication with each BrowserWindow.
  * */
 /** Maximum IPC payload size (50 MB). Messages exceeding this are dropped with an error notification. */
 const MAX_IPC_PAYLOAD_SIZE = 50 * 1024 * 1024;
@@ -72,7 +72,7 @@ bridge.adapter({
     broadcastToAll(name, data);
   },
   on(emitter) {
-    // 保存 emitter 引用供 WebSocket 处理使用 / Save emitter reference for WebSocket handling
+    // Save emitter reference for WebSocket handling
     setBridgeEmitter(emitter);
 
     ipcMain.handle(ADAPTER_BRIDGE_EVENT_KEY, (_event, info) => {

@@ -72,7 +72,7 @@ interface PreviewToolbarProps {
   /**
    * 文件是否在磁盘上（有 file_path）。
    * 刻意与 showOpenInSystemButton 分开传：后者现在也接受纯 fileRef（逃生出口），
-   * 不再等价于「文件在磁盘上」，继续复用它会让 Explorer 打开的 code/md tab
+   * md tab
    * 悄悄丢掉下载按钮。
    *
    * Whether the file exists on disk (has a file_path). Passed separately from

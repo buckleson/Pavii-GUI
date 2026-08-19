@@ -24,21 +24,21 @@ export const useWorkspaceSelector = (conversation_id: string, eventPrefix: Works
 
   return useCallback(async () => {
     try {
-      // 选择新的工作空间目录 / Prompt user to pick a new workspace directory
+      // Prompt user to pick a new workspace directory
       const files = await ipcBridge.dialog.showOpen.invoke({ properties: ['openDirectory', 'createDirectory'] });
       const workspacePath = files?.[0];
       if (!workspacePath) {
         return;
       }
 
-      // 获取最新的会话数据 / Fetch latest conversation data
+      // Fetch latest conversation data
       const conversation = await getConversationOrNull(conversation_id);
       if (!conversation) {
         Message.error(t('common.saveFailed'));
         return;
       }
 
-      // 更新会话 extra 中的 workspace 字段 / Update conversation.extra.workspace
+      // Update conversation.extra.workspace
       const nextExtra = { ...conversation.extra, workspace: workspacePath };
       const success = await ipcBridge.conversation.update.invoke({
         id: conversation_id,

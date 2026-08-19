@@ -14,7 +14,7 @@ export const createSetUploadFile = (
   return useCallback(
     (uploadFile: string[] | ((prev: string[]) => string[])) => {
       mutate((prev) => {
-        // 取出最新的上传文件列表，保证函数式更新正确 / Derive latest upload list to keep functional updates accurate
+        // Derive latest upload list to keep functional updates accurate
         const previousUploadFile = Array.isArray(prev?.uploadFile) ? (prev?.uploadFile as string[]) : [];
         const newUploadFile = typeof uploadFile === 'function' ? uploadFile(previousUploadFile) : uploadFile;
         return { ...prev, uploadFile: newUploadFile };

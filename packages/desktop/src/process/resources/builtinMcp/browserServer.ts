@@ -6,7 +6,7 @@
  */
 
 /**
- * 应用内浏览器 MCP 启动器 / In-app browser MCP launcher.
+ * In-app browser MCP launcher.
  *
  * 为什么需要这个中间层：
  *

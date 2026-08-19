@@ -40,7 +40,7 @@ interface PDFPreviewProps {
   hideToolbar?: boolean;
 }
 
-// Electron webview 元素的类型定义 / Type definition for Electron webview element
+// Type definition for Electron webview element
 interface ElectronWebView extends HTMLElement {
   src: string;
   /**

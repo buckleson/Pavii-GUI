@@ -38,13 +38,13 @@ export interface IConfigStorageRefer {
   'workspace.pasteConfirm'?: boolean;
   // 上传的文件是否保存到工作区目录（true = 保存到工作区，false = 保存到缓存目录）
   'upload.saveToWorkspace'?: boolean;
-  // 关闭窗口时最小化到系统托盘 / Minimize to system tray when closing window
+  // Minimize to system tray when closing window
   'system.closeToTray'?: boolean;
-  // 任务完成时显示系统通知 / Show system notification when task completes
+  // Show system notification when task completes
   'system.notificationEnabled'?: boolean;
-  // 定时任务完成时显示系统通知 / Show system notification when scheduled task completes
+  // Show system notification when scheduled task completes
   'system.cronNotificationEnabled'?: boolean;
-  // 阻止系统休眠以保证定时任务执行 / Prevent system sleep to ensure scheduled tasks run
+  // Prevent system sleep to ensure scheduled tasks run
   'system.keepAwake'?: boolean;
   // Automatically preview newly created Office files in the current workspace
   // Skills Market: whether the external skills market source is enabled
@@ -542,8 +542,8 @@ export interface IProvider {
     {
       status: 'unknown' | 'healthy' | 'unhealthy';
       last_check?: number; // 时间戳 / timestamp
-      latency?: number; // 延迟时间（毫秒）/ latency in milliseconds
-      error?: string; // 错误信息 / error message
+      latency?: number; // latency in milliseconds
+      error?: string; // error message
     }
   >;
   /**
@@ -632,15 +632,15 @@ export interface IMcpTool {
 }
 
 /**
- * CSS 主题配置接口 / CSS Theme configuration interface
- * 用于存储用户自定义的 CSS 皮肤 / Used to store user-defined CSS skins
+ * CSS Theme configuration interface
+ * Used to store user-defined CSS skins
  */
 export interface ICssTheme {
-  id: string; // 唯一标识 / Unique identifier
-  name: string; // 主题名称 / Theme name
-  cover?: string; // 封面图片 base64 或 URL / Cover image base64 or URL
-  css: string; // CSS 样式代码 / CSS style code
-  is_preset?: boolean; // 是否为预设主题 / Whether it's a preset theme
-  created_at: number; // 创建时间 / Creation time
-  updated_at: number; // 更新时间 / Update time
+  id: string; // Unique identifier
+  name: string; // Theme name
+  cover?: string; // Cover image base64 or URL
+  css: string; // CSS style code
+  is_preset?: boolean; // Whether it's a preset theme
+  created_at: number; // Creation time
+  updated_at: number; // Update time
 }

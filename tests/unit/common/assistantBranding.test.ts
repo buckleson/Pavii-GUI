@@ -184,6 +184,26 @@ describe('scrubBrandText', () => {
     expect(scrubBrandText(neutral)).toBe(neutral);
     expect(scrubBrandText('')).toBe('');
   });
+
+  it('rewrites the internal agent identifier wherever it is shown', () => {
+    // `aionrs` stays the stored value (conversations.type, .aionrs/ dirs, the
+    // aionrs.config key) — it is only branded on the way to a display string.
+    // Channel conversations written before the rebrand are named this way.
+    expect(scrubBrandText('aionrs')).toBe('paviirs');
+    expect(scrubBrandText('tg-aionrs-123456')).toBe('tg-paviirs-123456');
+    expect(scrubBrandText('aionrs-temp-conv-1')).toBe('paviirs-temp-conv-1');
+  });
+
+  it('does not rewrite a longer word that merely contains the identifier', () => {
+    // A user-named conversation must survive branding intact.
+    expect(scrubBrandText('xaionrsy')).toBe('xaionrsy');
+    expect(scrubBrandText('aionrsx')).toBe('aionrsx');
+  });
+
+  it('is idempotent for the agent identifier', () => {
+    const once = scrubBrandText('tg-aionrs-1');
+    expect(scrubBrandText(once)).toBe(once);
+  });
 });
 
 describe('applyAgentBranding', () => {

@@ -39,14 +39,14 @@ export interface PreviewMetadata {
   // file_path/workspace, which are retained only for viewers not yet migrated
   // (pdf file://, office, shell.openFile, download).
   fileRef?: ChatFileRef;
-  file_path?: string; // 工作空间文件的绝对路径 / Absolute file path in workspace
-  workspace?: string; // 工作空间根目录 / Workspace root directory
-  editable?: boolean; // 是否可编辑 / Whether editable
+  file_path?: string; // Absolute file path in workspace
+  workspace?: string; // Workspace root directory
+  editable?: boolean; // Whether editable
   // 文件超过大小上限：内容从未被读取，只显示提示 + 逃生按钮
   // File exceeds its size ceiling: content was never read; the tab shows an
   // explanation plus an escape hatch instead of an editor.
   oversized?: boolean;
-  sizeBytes?: number; // 实际文件大小 / Actual file size, for the oversized message
+  sizeBytes?: number; // Actual file size, for the oversized message
   // 打开时生效的上限快照。刻意不在渲染时重算 —— 否则日后阈值改成设置项时，
   // 调小设置会让已打开的 tab 显示新阈值，破坏「只影响新开 tab」的约束。
   // Ceiling captured at open time. Deliberately not recomputed at render time:
@@ -58,11 +58,11 @@ export interface PreviewMetadata {
   // Last-known mtime, the If-Match condition for save-time conflict detection.
   // openPreview copies it into fileMtimeRef, which is this field's only purpose.
   lastModified?: number;
-  targetLine?: number; // 打开文件后定位到的目标行 / Target line to reveal after opening
-  targetColumn?: number; // 打开文件后定位到的目标列 / Target column to reveal after opening
-  missingFile?: boolean; // 文件不存在或无法读取 / Whether the referenced file is missing or unreadable
-  favicon?: string; // 浏览器 tab 的站点图标 URL / Site icon URL for browser tabs
-  agentActive?: boolean; // Agent 正在操作该浏览器 tab / Agent is currently driving this browser tab
+  targetLine?: number; // Target line to reveal after opening
+  targetColumn?: number; // Target column to reveal after opening
+  missingFile?: boolean; // Whether the referenced file is missing or unreadable
+  favicon?: string; // Site icon URL for browser tabs
+  agentActive?: boolean; // Agent is currently driving this browser tab
 }
 
 export interface PreviewTab {
@@ -71,8 +71,8 @@ export interface PreviewTab {
   content_type: PreviewContentType;
   metadata?: PreviewMetadata;
   title: string; // Tab 标题
-  isDirty?: boolean; // 是否有未保存的修改 / Whether there are unsaved changes
-  originalContent?: string; // 原始内容，用于对比 / Original content for comparison
+  isDirty?: boolean; // Whether there are unsaved changes
+  originalContent?: string; // Original content for comparison
 }
 
 export interface OpenPreviewOptions {
@@ -100,15 +100,15 @@ export type PreviewTabPatch = {
 };
 
 export interface PreviewContextValue {
-  // 预览面板状态 / Preview panel state
+  // Preview panel state
   isOpen: boolean;
   tabs: PreviewTab[]; // 所有打开的 tabs
   activeTabId: string | null; // 当前激活的 tab ID
 
-  // 获取当前激活的 tab / Get active tab
+  // Get active tab
   activeTab: PreviewTab | null;
 
-  // 预览面板操作 / Preview panel operations
+  // Preview panel operations
   openPreview: (
     content: string,
     type: PreviewContentType,
@@ -155,7 +155,7 @@ export interface PreviewContextValue {
    * connecting that to a full storage quota.
    */
   persistQuotaExceededAt: number | null;
-  saveContent: (tabId?: string) => Promise<boolean>; // 保存内容 / Save content
+  saveContent: (tabId?: string) => Promise<boolean>; // Save content
   /** Re-read a tab from disk, replacing its content and clearing its dirty mark. */
   reloadTabContent: (tabId: string) => Promise<boolean>;
   /**
@@ -172,11 +172,11 @@ export interface PreviewContextValue {
   closePreviewByIdentity: (type: PreviewContentType, content?: string, metadata?: PreviewMetadata) => void; // 根据内容关闭指定 tab
   closePreviewIfScopeChanged: (scopeKey: PreviewScopeKey) => void; // 切换隔离 scope(project;见 previewScope.ts):持久化旧 scope、恢复新 scope 的 tabs+可见性(per-project)
 
-  // 发送框集成 / Sendbox integration
+  // Sendbox integration
   addToSendBox: (text: string) => void;
   setSendBoxHandler: (handler: ((text: string) => void) | null) => void;
 
-  // DOM 片段管理 / DOM snippet management
+  // DOM snippet management
   domSnippets: DomSnippet[];
   addDomSnippet: (tag: string, html: string) => void;
   removeDomSnippet: (id: string) => void;
@@ -629,7 +629,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     reconcilePreviewWatch(tabs);
   }, [tabs]);
 
-  // 追踪是否正在保存（避免与流式更新冲突）/ Track if currently saving (to avoid conflicts with streaming updates)
+  // Track if currently saving (to avoid conflicts with streaming updates)
   const savingFilesRef = useRef<Set<string>>(new Set());
 
   // 每个文件上次已知的 mtime，保存时作为 If-Match 条件。
@@ -643,15 +643,15 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // overwrite a concurrent external edit.
   const fileMtimeRef = useRef<Map<string, number>>(new Map());
 
-  // 获取当前激活的 tab / Get active tab
+  // Get active tab
   const activeTab = useMemo(() => {
     return tabs.find((tab) => tab.id === activeTabId) || null;
   }, [tabs, activeTabId]);
 
-  // 从可能包含描述的字符串中提取文件名 / Extract filename from string that may contain description
+  // Extract filename from string that may contain description
   const extractFileName = useCallback((str?: string): string | undefined => {
     if (!str) return undefined;
-    // 匹配 "Writing to xxx.md" 或 "Reading xxx.txt" 等模式，提取文件名 / Match patterns like "Writing to xxx.md" and extract filename
+    // Match patterns like "Writing to xxx.md" and extract filename
     const match = str.match(/(?:Writing to|Reading|Creating|Updating)\s+(.+)$/i);
     return match ? match[1] : str;
   }, []);
@@ -752,7 +752,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
         fileMtimeRef.current.set(chatFileRefKey(meta.fileRef), meta.lastModified);
       }
 
-      // 已打开同一内容：聚焦现有 tab，不新建 / Same content already open: focus it
+      // Same content already open: focus it
       const existingTab = findPreviewTabInList(currentTabs, type, new_content, meta);
 
       // 浏览器 tab 上限：满了就复用最旧的一个，并给 UI 一个可提示的信号
@@ -767,12 +767,12 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Tab 标题：优先使用文件名，并从 title 中提取实际文件名
       // Tab title: Prefer file_name and extract actual filename from title
       const fallbackTitle = (() => {
-        // 根据内容类型设置默认标题 / Set default title based on content type
+        // Set default title based on content type
         if (type === 'markdown') return 'Markdown';
         if (type === 'diff') return 'Diff';
         if (type === 'code') return `${meta?.language || 'Code'}`;
-        if (type === 'image') return 'Image'; // 图片预览默认标题 / Default title for image preview
-        if (type === 'browser') return BROWSER_TAB_FALLBACK_TITLE; // 浏览器 tab 标题稍后跟随页面标题 / Browser tab title follows the page title once loaded
+        if (type === 'image') return 'Image'; // Default title for image preview
+        if (type === 'browser') return BROWSER_TAB_FALLBACK_TITLE; // Browser tab title follows the page title once loaded
         return 'Preview';
       })();
 
@@ -789,12 +789,12 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return activeTab && !activeTab.isDirty ? activeTab : null;
       })();
 
-      // 上限触发时被复用的最旧浏览器 tab / Oldest browser tab reused at the cap
+      // Oldest browser tab reused at the cap
       const cappedTarget = atBrowserTabLimit
         ? (currentTabs.find((tab) => tab.content_type === 'browser') ?? null)
         : null;
 
-      // 生成唯一 ID / Generate unique ID
+      // Generate unique ID
       const newTabId = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const targetTabId = existingTab?.id ?? replaceTarget?.id ?? cappedTarget?.id ?? newTabId;
 
@@ -803,7 +803,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return prevTabs.map((tab) => {
             if (tab.id !== existingTab.id) return tab;
 
-            // 如果用户已编辑内容，则保留当前内容，仅更新元数据 / Keep edited content, only merge metadata
+            // Keep edited content, only merge metadata
             if (tab.isDirty) {
               return meta ? { ...tab, metadata: { ...tab.metadata, ...meta } } : tab;
             }
@@ -824,7 +824,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
           metadata: meta,
           title,
           isDirty: false,
-          originalContent: new_content, // 保存原始内容 / Save original content
+          originalContent: new_content, // Save original content
         };
 
         if (replaceTarget) {
@@ -951,13 +951,13 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         const newTabs = prevTabs.filter((tab) => tab.id !== tabId);
 
-        // 如果关闭的是当前激活的 tab / If closing the active tab
+        // If closing the active tab
         if (tabId === activeTabId) {
           if (newTabs.length > 0) {
-            // 切换到最后一个 tab / Switch to the last tab
+            // Switch to the last tab
             setActiveTabId(newTabs[newTabs.length - 1].id);
           } else {
-            // 没有 tab 了，关闭预览面板 / No more tabs, close preview panel
+            // No more tabs, close preview panel
             setIsOpen(false);
             setActiveTabId(null);
           }
@@ -985,7 +985,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return;
       }
 
-      // 严格的类型检查，防止 Event 对象被错误传递 / Strict type checking to prevent Event object from being passed incorrectly
+      // Strict type checking to prevent Event object from being passed incorrectly
       if (typeof new_content !== 'string') {
         return;
       }
@@ -994,7 +994,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setTabs((prevTabs) => {
           const updated = prevTabs.map((tab) => {
             if (tab.id === activeTabId) {
-              // 检查内容是否与原始内容不同 / Check if content differs from original
+              // Check if content differs from original
               const isDirty = new_content !== tab.originalContent;
               return { ...tab, content: new_content, isDirty };
             }
@@ -1081,7 +1081,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const tab = tabs.find((t) => t.id === targetTabId);
       if (!tab) return false;
 
-      // 写回由 ChatFileRef 身份寻址的文件 / Write back to the file addressed by ChatFileRef identity
+      // Write back to the file addressed by ChatFileRef identity
       const fileRef = tab.metadata?.fileRef;
       if (fileRef) {
         const saveKey = chatFileRefKey(fileRef);
@@ -1115,14 +1115,14 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
               });
           }
 
-          // 延迟移除保存标记（给变更检测一点时间忽略本次写入）/ Delay removing save flag (give change detection time to ignore this write)
+          // Delay removing save flag (give change detection time to ignore this write)
           setTimeout(() => {
             savingFilesRef.current.delete(saveKey);
           }, 500);
 
           return success;
         } catch (error) {
-          // 确保移除保存标记 / Ensure save flag is removed
+          // Ensure save flag is removed
           savingFilesRef.current.delete(saveKey);
           throw error;
         }
@@ -1142,8 +1142,8 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     sendBoxHandler.current = handler;
   }, []);
 
-  // DOM 片段管理函数 / DOM snippet management functions
-  // 只保留最新的一个片段 / Only keep the latest snippet
+  // DOM snippet management functions
+  // Only keep the latest snippet
   const addDomSnippet = useCallback((tag: string, html: string) => {
     const id = `snippet-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     setDomSnippets([{ id, tag, html }]);
@@ -1162,13 +1162,13 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // 使用防抖优化：等待 agent 完成写入后再更新预览，避免打字动画被频繁中断
   // Use debounce optimization: Wait for agent to finish writing before updating preview, avoiding frequent animation interruptions
   useEffect(() => {
-    // 防抖定时器映射：每个文件路径对应一个定时器 / Debounce timer map: one timer per file path
+    // Debounce timer map: one timer per file path
     const debounceTimers = new Map<string, NodeJS.Timeout>();
 
     const unsubscribe = ipcBridge.fileStream.contentUpdate.on(({ file_path, content, operation }) => {
-      // 如果是删除操作，立即处理，不需要防抖 / If delete operation, handle immediately without debounce
+      // If delete operation, handle immediately without debounce
       if (operation === 'delete') {
-        // 清除该文件的防抖定时器 / Clear debounce timer for this file
+        // Clear debounce timer for this file
         const existingTimer = debounceTimers.get(file_path);
         if (existingTimer) {
           clearTimeout(existingTimer);
@@ -1193,9 +1193,9 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       const timer = setTimeout(() => {
-        // 使用函数式更新来访问最新的 tabs 状态 / Use functional update to access latest tabs state
+        // Use functional update to access latest tabs state
         setTabs((prevTabs) => {
-          // 查找受影响的 tabs / Find affected tabs
+          // Find affected tabs
           const affectedTabs = prevTabs.filter((tab) => tab.metadata?.file_path === file_path);
 
           if (affectedTabs.length === 0) {
@@ -1205,7 +1205,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return prevTabs.map((tab) => {
             if (tab.metadata?.file_path !== file_path) return tab;
 
-            // 如果正在保存或用户已编辑，不更新 / Don't update if saving or user has edited
+            // Don't update if saving or user has edited
             // (save flag is keyed by ChatFileRef identity)
             const savingKey = tab.metadata?.fileRef ? chatFileRefKey(tab.metadata.fileRef) : undefined;
             if ((savingKey && savingFilesRef.current.has(savingKey)) || tab.isDirty) {
@@ -1221,7 +1221,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
           });
         });
 
-        // 清除定时器 / Clean up timer
+        // Clean up timer
         debounceTimers.delete(file_path);
       }, 500); // 500ms 防抖时间 / 500ms debounce delay
 
@@ -1230,14 +1230,14 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     return () => {
       unsubscribe();
-      // 清理所有防抖定时器 / Clean up all debounce timers
+      // Clean up all debounce timers
       debounceTimers.forEach((timer) => clearTimeout(timer));
       debounceTimers.clear();
     };
-  }, [closeTab]); // 只依赖 closeTab，不依赖 tabs，避免重复订阅 / Only depend on closeTab, not tabs, to avoid re-subscribing
+  }, [closeTab]); // Only depend on closeTab, not tabs, to avoid re-subscribing
 
-  // 监听 preview.open 事件（用于 agent 打开网页预览）/ Listen to preview.open event (for agent to open web preview)
-  // 同时监听 IPC 和 renderer emitter 两种方式 / Listen to both IPC and renderer emitter
+  // Listen to preview.open event (for agent to open web preview)
+  // Listen to both IPC and renderer emitter
   useEffect(() => {
     const handleEmitterPreviewOpen = (data: {
       content: string;
@@ -1259,10 +1259,10 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     };
 
-    // 监听 renderer emitter 事件 / Listen to renderer emitter event
+    // Listen to renderer emitter event
     emitter.on('preview.open', handleEmitterPreviewOpen);
 
-    // 监听 IPC 事件（来自主进程，如 chrome-devtools MCP 导航）/ Listen to IPC event (from main process, e.g., chrome-devtools MCP navigation)
+    // Listen to IPC event (from main process, e.g., chrome-devtools MCP navigation)
     const unsubscribeIpc = ipcBridge.preview.open.on(handleIpcPreviewOpen);
 
     return () => {

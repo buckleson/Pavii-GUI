@@ -40,7 +40,7 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
     const effectiveBaseUrl = watchedBaseUrl ?? data?.base_url;
     const effectiveApiKey = watchedApiKey ?? data?.api_key;
 
-    // 获取供应商 Logo / Get provider logo
+    // Get provider logo
     const providerLogo = useMemo(() => {
       return getProviderLogo({ name: data?.name, base_url: data?.base_url, platform: data?.platform });
     }, [data?.name, data?.base_url, data?.platform]);

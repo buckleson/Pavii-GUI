@@ -9,7 +9,7 @@ import type { CSSProperties } from 'react';
 import React, { useMemo, useState } from 'react';
 
 /**
- * 可折叠面板组件属性 / Collapsible panel component props
+ * Collapsible panel component props
  */
 export interface AionCollapseProps {
   children: React.ReactNode;
@@ -32,7 +32,7 @@ export interface AionCollapseProps {
 }
 
 /**
- * 可折叠面板子项属性 / Collapsible panel item props
+ * Collapsible panel item props
  */
 export interface AionCollapseItemProps {
   /** 唯一标识符 / Unique identifier */
@@ -54,9 +54,9 @@ export interface AionCollapseItemProps {
 }
 
 /**
- * 标准化 keys 参数为数组格式 / Normalize keys parameter to array format
- * @param keys - 单个 key 或 key 数组 / Single key or array of keys
- * @returns 标准化后的 key 数组 / Normalized array of keys
+ * Normalize keys parameter to array format
+ * @param keys Single key or array of keys
+ * @returns Normalized array of keys
  */
 const normalizeKeys = (keys?: string | string[]): string[] => {
   if (!keys) return [];
@@ -80,7 +80,7 @@ const AionCollapseItem: React.FC<AionCollapseItemProps> = ({ children }) => <>{c
 AionCollapseItem.displayName = 'AionCollapseItem';
 
 /**
- * 可折叠面板组件 / Collapsible panel component
+ * Collapsible panel component
  *
  * 支持受控和非受控模式、手风琴模式、自定义图标等
  * Supports controlled/uncontrolled mode, accordion mode, custom icons, etc.
@@ -99,8 +99,8 @@ AionCollapseItem.displayName = 'AionCollapseItem';
  *
  * // 手风琴模式 / Accordion mode
  * <AionCollapse accordion defaultActiveKey="1">
- *   <AionCollapse.Item name="1" header="面板1">内容1</AionCollapse.Item>
- *   <AionCollapse.Item name="2" header="面板2">内容2</AionCollapse.Item>
+ *   AionCollapse.Item>
+ *   AionCollapse.Item>
  * </AionCollapse>
  *
  * // 自定义图标 / Custom icon
@@ -108,7 +108,7 @@ AionCollapseItem.displayName = 'AionCollapseItem';
  *   expandIcon={(active) => <Icon type={active ? 'up' : 'down'} />}
  *   expandIconPosition="right"
  * >
- *   <AionCollapse.Item name="1" header="面板1">内容1</AionCollapse.Item>
+ *   AionCollapse.Item>
  * </AionCollapse>
  * ```
  */
@@ -123,12 +123,12 @@ const AionCollapseComponent: React.FC<AionCollapseProps> & { Item: typeof AionCo
   expandIconPosition = 'left',
   bordered = true,
 }) => {
-  // 判断是否为受控模式 / Determine if in controlled mode
+  // Determine if in controlled mode
   const isControlled = activeKey !== undefined;
   const [internalKeys, setInternalKeys] = useState<string[]>(normalizeKeys(defaultActiveKey));
   const currentKeys = isControlled ? normalizeKeys(activeKey) : internalKeys;
 
-  // 提取并过滤有效的子面板项 / Extract and filter valid child panel items
+  // Extract and filter valid child panel items
   const items = useMemo(() => {
     return React.Children.toArray(children).filter((child): child is React.ReactElement<AionCollapseItemProps> => {
       return React.isValidElement(child) && child.type === AionCollapseItem;
@@ -136,18 +136,18 @@ const AionCollapseComponent: React.FC<AionCollapseProps> & { Item: typeof AionCo
   }, [children]);
 
   /**
-   * 处理面板切换 / Handle panel toggle
-   * @param name - 面板唯一标识 / Panel unique identifier
-   * @param disabled - 是否禁用 / Whether disabled
+   * Handle panel toggle
+   * @param name Panel unique identifier
+   * @param disabled Whether disabled
    */
   const handleToggle = (name: string, disabled?: boolean) => {
     if (disabled) return;
     let nextKeys: string[];
     if (currentKeys.includes(name)) {
-      // 收起面板 / Collapse panel
+      // Collapse panel
       nextKeys = currentKeys.filter((key) => key !== name);
     } else {
-      // 展开面板（手风琴模式只展开一个）/ Expand panel (accordion mode expands only one)
+      // Expand panel (accordion mode expands only one)
       nextKeys = accordion ? [name] : [...currentKeys, name];
     }
     if (!isControlled) {
@@ -156,7 +156,7 @@ const AionCollapseComponent: React.FC<AionCollapseProps> & { Item: typeof AionCo
     onChange?.(nextKeys);
   };
 
-  // 挂载状态，用于控制动画 / Mount state for animation control
+  // Mount state for animation control
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => {
     setMounted(true);

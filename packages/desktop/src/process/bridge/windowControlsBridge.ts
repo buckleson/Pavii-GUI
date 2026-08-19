@@ -34,15 +34,15 @@ function resolveControlWindow(): BrowserWindow | null {
  * 为指定窗口注册最大化状态监听器
  * Register maximize state listeners for a specific window
  *
- * @param window - 要监听的 BrowserWindow 实例 / BrowserWindow instance to listen to
+ * @param window BrowserWindow instance to listen to
  */
 export function registerWindowMaximizeListeners(window: BrowserWindow): void {
-  // 当窗口最大化时通知渲染进程 / Notify renderer when window is maximized
+  // Notify renderer when window is maximized
   window.on('maximize', () => {
     ipcBridge.windowControls.maximizedChanged.emit({ is_maximized: true });
   });
 
-  // 当窗口取消最大化时通知渲染进程 / Notify renderer when window is unmaximized
+  // Notify renderer when window is unmaximized
   window.on('unmaximize', () => {
     ipcBridge.windowControls.maximizedChanged.emit({ is_maximized: false });
   });
@@ -56,7 +56,7 @@ export function registerWindowMaximizeListeners(window: BrowserWindow): void {
  * Register IPC handlers to respond to window control requests from renderer process
  */
 export function initWindowControlsBridge(): void {
-  // 最小化窗口 / Minimize window
+  // Minimize window
   ipcBridge.windowControls.minimize.provider(() => {
     const window = resolveControlWindow();
     if (window) {
@@ -65,7 +65,7 @@ export function initWindowControlsBridge(): void {
     return Promise.resolve();
   });
 
-  // 最大化窗口 / Maximize window
+  // Maximize window
   ipcBridge.windowControls.maximize.provider(() => {
     const window = resolveControlWindow();
     if (window) {
@@ -74,7 +74,7 @@ export function initWindowControlsBridge(): void {
     return Promise.resolve();
   });
 
-  // 取消最大化窗口 / Unmaximize window
+  // Unmaximize window
   ipcBridge.windowControls.unmaximize.provider(() => {
     const window = resolveControlWindow();
     if (window) {
@@ -83,7 +83,7 @@ export function initWindowControlsBridge(): void {
     return Promise.resolve();
   });
 
-  // 关闭窗口 / Close window
+  // Close window
   // Custom title-bar close (Linux frameless, etc.) goes through this IPC path.
   // Honor close-to-tray here so we hide instead of destroying the window —
   // relying only on the BrowserWindow 'close' interceptor is not enough on
@@ -101,13 +101,13 @@ export function initWindowControlsBridge(): void {
     return Promise.resolve();
   });
 
-  // 获取窗口是否最大化状态 / Get window maximized state
+  // Get window maximized state
   ipcBridge.windowControls.isMaximized.provider(() => {
     const window = resolveControlWindow();
     return Promise.resolve(window?.isMaximized() ?? false);
   });
 
-  // 为所有已存在的窗口注册监听器 / Register listeners for all existing windows
+  // Register listeners for all existing windows
   const allWindows = BrowserWindow.getAllWindows();
   allWindows.forEach((window) => {
     registerWindowMaximizeListeners(window);

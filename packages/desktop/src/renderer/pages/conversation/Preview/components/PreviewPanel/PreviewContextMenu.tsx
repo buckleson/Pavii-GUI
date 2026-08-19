@@ -112,11 +112,11 @@ const PreviewContextMenu: React.FC<PreviewContextMenuProps> = ({
   const { t } = useTranslation();
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
-  // 点击外部关闭上下文菜单 / Close context menu when clicking outside
+  // Close context menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (!contextMenu.show) return;
-      // 如果点击的是菜单内部，不关闭 / Don't close if clicking inside menu
+      // Don't close if clicking inside menu
       if (contextMenuRef.current && contextMenuRef.current.contains(e.target as Node)) {
         return;
       }

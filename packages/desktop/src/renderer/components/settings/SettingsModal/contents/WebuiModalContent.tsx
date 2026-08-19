@@ -69,7 +69,7 @@ const WebuiModalContent: React.FC = () => {
   const isPageMode = viewMode === 'page';
   const [activeTab, setActiveTab] = useState<'webui' | 'channels'>('webui');
 
-  // 检测是否在 Electron 桌面环境 / Check if running in Electron desktop environment
+  // Check if running in Electron desktop environment
   const isDesktop = isElectronDesktop();
 
   const [status, setStatus] = useState<IWebUIStatus | null>(null);
@@ -80,9 +80,9 @@ const WebuiModalContent: React.FC = () => {
   const [allowRemotePreference, setAllowRemotePreference] = useState(false);
   const [cachedIP, setCachedIP] = useState<string | null>(null);
   const [cachedPassword, setCachedPassword] = useState<string | null>(null);
-  // 标记密码是否可以明文显示（首次启动且未复制过）/ Flag for plaintext password display (first startup and not copied)
+  // Flag for plaintext password display (first startup and not copied)
   const [canShowPlainPassword, setCanShowPlainPassword] = useState(false);
-  // 设置新密码弹窗 / Set new password modal
+  // Set new password modal
   const [setPasswordModalVisible, setSetPasswordModalVisible] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [setUsernameModalVisible, setSetUsernameModalVisible] = useState(false);
@@ -94,7 +94,7 @@ const WebuiModalContent: React.FC = () => {
   const [tunnelState, setTunnelState] = useState<PaviiTunnelState | null>(null);
   const [tunnelLoading, setTunnelLoading] = useState(false);
 
-  // 二维码登录相关状态 / QR code login related state
+  // QR code login related state
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [qrExpiresAt, setQrExpiresAt] = useState<number | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
@@ -134,7 +134,7 @@ const WebuiModalContent: React.FC = () => {
     [t, loadTunnelStatus]
   );
 
-  // 加载状态 / Load status
+  // Load status
   const loadStatus = useCallback(async () => {
     setLoading(true);
     try {
@@ -168,7 +168,7 @@ const WebuiModalContent: React.FC = () => {
         }
         if (statusData.initialPassword) {
           setCachedPassword(statusData.initialPassword);
-          // 有初始密码说明可以显示明文 / Having initial password means can show plaintext
+          // Having initial password means can show plaintext
           setCanShowPlainPassword(true);
         }
         // 注意：如果 running 但没有密码，会在下面的 useEffect 中自动重置
@@ -200,7 +200,7 @@ const WebuiModalContent: React.FC = () => {
     void loadStatus();
   }, [loadStatus]);
 
-  // 监听状态变更事件 / Listen to status change events
+  // Listen to status change events
   useEffect(() => {
     const unsubscribe = webui.statusChanged.on((data) => {
       // Keep the Switch checkbox in lock-step with the actual server state so
@@ -243,7 +243,7 @@ const WebuiModalContent: React.FC = () => {
     }
   }, [status?.running, status?.initialPassword, cachedPassword, loading]);
 
-  // 获取当前 IP 地址 / Get current IP
+  // Get current IP
   const getLocalIP = useCallback(() => {
     if (status?.lanIP) return status.lanIP;
     if (cachedIP) return cachedIP;
@@ -254,7 +254,7 @@ const WebuiModalContent: React.FC = () => {
     return null;
   }, [status?.lanIP, cachedIP, status?.networkUrl]);
 
-  // 获取显示的 URL / Get display URL.
+  // Get display URL.
   // The public tunnel URL wins whenever it is live; otherwise localhost. The
   // LAN-IP URL is deliberately never shown — it silently fails under router
   // AP isolation (observed live) and confused remote access more than it
@@ -267,13 +267,13 @@ const WebuiModalContent: React.FC = () => {
 
   // 启动/停止 WebUI / Start/Stop WebUI
   const handleToggle = async (enabled: boolean) => {
-    // 使用缓存的 IP，不再阻塞获取 / Use cached IP, no longer block to fetch
+    // Use cached IP, no longer block to fetch
     const currentIP = getLocalIP();
 
-    // 保存原始值用于回滚 / Save original value for rollback
+    // Save original value for rollback
     const previousEnabled = webuiEnabled;
 
-    // 立即显示 loading / Immediately show loading
+    // Immediately show loading
     setStartLoading(true);
     setWebuiEnabled(enabled);
 
@@ -309,14 +309,14 @@ const WebuiModalContent: React.FC = () => {
         await configService.set(DESKTOP_WEBUI_ENABLED_KEY, true);
         Message.success(t('settings.webui.startSuccess'));
       } else {
-        // 立即更新UI，异步停止服务器 / Update UI immediately, stop server async
+        // Update UI immediately, stop server async
         setStatus((prev) => (prev ? { ...prev, running: false } : null));
         await configService.set(DESKTOP_WEBUI_ENABLED_KEY, false);
         Message.success(t('settings.webui.stopSuccess'));
         webui.stop.invoke().catch((err) => console.error('WebUI stop error:', err));
       }
     } catch (error) {
-      // 回滚 UI 状态 / Rollback UI state
+      // Rollback UI state
       setWebuiEnabled(previousEnabled);
       console.error('Toggle WebUI error:', error);
       Message.error(t('settings.webui.operationFailed'));
@@ -325,10 +325,10 @@ const WebuiModalContent: React.FC = () => {
     }
   };
 
-  // 处理允许远程访问切换 / Handle allow remote toggle
-  // 需要重启服务器才能更改绑定地址 / Need to restart server to change binding address
+  // Handle allow remote toggle
+  // Need to restart server to change binding address
   const handleAllowRemoteChange = async (checked: boolean) => {
-    // 保存原始值用于回滚 / Save original value for rollback
+    // Save original value for rollback
     const previousAllowRemote = allowRemotePreference;
     setAllowRemotePreference(checked);
 
@@ -339,7 +339,7 @@ const WebuiModalContent: React.FC = () => {
     if (wasRunning) {
       setStartLoading(true);
       try {
-        // 1. 先停止服务器 / First stop the server
+        // First stop the server
         try {
           await Promise.race([webui.stop.invoke(), new Promise((resolve) => setTimeout(resolve, 1500))]);
         } catch (err) {
@@ -370,7 +370,7 @@ const WebuiModalContent: React.FC = () => {
         await configService.set(DESKTOP_WEBUI_ALLOW_REMOTE_KEY, checked);
         Message.success(t('settings.webui.restartSuccess'));
       } catch (error) {
-        // 回滚 UI 状态 / Rollback UI state
+        // Rollback UI state
         setAllowRemotePreference(previousAllowRemote);
         console.error('[WebuiModal] Restart error:', error);
         Message.error(t('settings.webui.operationFailed'));
@@ -378,11 +378,11 @@ const WebuiModalContent: React.FC = () => {
         setStartLoading(false);
       }
     } else {
-      // 服务器未运行，直接持久化 / Server not running, persist directly
+      // Server not running, persist directly
       try {
         await configService.set(DESKTOP_WEBUI_ALLOW_REMOTE_KEY, checked);
 
-        // 获取 IP 用于显示 / Get IP for display
+        // Get IP for display
         let newIP: string | undefined;
         try {
           const snapshot = await webui.getStatus.invoke();
@@ -406,7 +406,7 @@ const WebuiModalContent: React.FC = () => {
             : null
         );
       } catch (error) {
-        // 回滚 UI 状态 / Rollback UI state
+        // Rollback UI state
         setAllowRemotePreference(previousAllowRemote);
         console.error('[WebuiModal] Failed to persist allowRemote:', error);
         Message.error(t('settings.webui.operationFailed'));
@@ -414,13 +414,13 @@ const WebuiModalContent: React.FC = () => {
     }
   };
 
-  // 复制内容 / Copy content
+  // Copy content
   const handleCopy = (text: string) => {
     void navigator.clipboard.writeText(text);
     Message.success(t('common.copySuccess'));
   };
 
-  // 打开设置新密码弹窗 / Open set new password modal
+  // Open set new password modal
   const handleResetPassword = () => {
     form.resetFields();
     setSetPasswordModalVisible(true);
@@ -433,7 +433,7 @@ const WebuiModalContent: React.FC = () => {
     setSetUsernameModalVisible(true);
   };
 
-  // 提交新密码 / Submit new password
+  // Submit new password
   const handleSetNewPassword = async () => {
     try {
       const values = await form.validate();
@@ -447,7 +447,7 @@ const WebuiModalContent: React.FC = () => {
       Message.success(t('settings.webui.passwordChanged'));
       setSetPasswordModalVisible(false);
       form.resetFields();
-      // 更新缓存的密码为新密码，不再显示明文 / Update cached password, no longer show plaintext
+      // Update cached password, no longer show plaintext
       setCachedPassword(values.newPassword);
       setCanShowPlainPassword(false);
       setStatus((prev) => (prev ? { ...prev, initialPassword: undefined } : null));
@@ -497,7 +497,7 @@ const WebuiModalContent: React.FC = () => {
     }
   };
 
-  // 生成二维码 / Generate QR code
+  // Generate QR code
   const generateQRCode = useCallback(async () => {
     if (!status?.running) return;
 
@@ -564,7 +564,7 @@ const WebuiModalContent: React.FC = () => {
     if (status?.running && tunnelState?.running && tunnelState.url && !qrUrl) {
       void generateQRCode();
     }
-    // 清理定时器 / Cleanup timer
+    // Cleanup timer
     return () => {
       if (qrRefreshTimerRef.current) {
         clearTimeout(qrRefreshTimerRef.current);
@@ -572,7 +572,7 @@ const WebuiModalContent: React.FC = () => {
     };
   }, [status?.running, tunnelState?.running, tunnelState?.url, generateQRCode, qrUrl]);
 
-  // 服务器停止或隧道关闭时清除二维码 / Clear QR code when server or tunnel stops
+  // Clear QR code when server or tunnel stops
   useEffect(() => {
     if (!status?.running || !tunnelState?.running) {
       setQrUrl(null);
@@ -584,27 +584,27 @@ const WebuiModalContent: React.FC = () => {
     }
   }, [tunnelState?.running, status?.running]);
 
-  // 格式化过期时间 / Format expiration time
+  // Format expiration time
   const formatExpiresAt = (timestamp: number) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
   };
 
-  // 获取实际密码 / Get actual password
+  // Get actual password
   const actualPassword = status?.initialPassword || cachedPassword;
-  // 获取显示的密码 / Get display password
-  // 密码默认显示 ***，只在首次启动时显示明文 / Password shows *** by default, only show plaintext on first startup
-  // 重置中显示加载状态 / Show loading state when resetting
+  // Get display password
+  // Password shows *** by default, only show plaintext on first startup
+  // Show loading state when resetting
   const getDisplayPassword = () => {
-    // 可以显示明文且有密码时显示明文 / Show plaintext when allowed and has password
+    // Show plaintext when allowed and has password
     if (canShowPlainPassword && actualPassword) return actualPassword;
-    // 否则显示 ****** / Otherwise show ******
+    // Otherwise show ******
     return t('settings.webui.passwordHidden');
   };
   const displayPassword = getDisplayPassword();
   const displayUsername = status?.adminUsername || 'admin';
 
-  // 浏览器端只显示 Channels 配置，不显示 WebUI 服务配置 / In browser mode, only show Channels config, not WebUI service config
+  // In browser mode, only show Channels config, not WebUI service config
   if (!isDesktop) {
     return (
       <div className='flex flex-col h-full w-full'>

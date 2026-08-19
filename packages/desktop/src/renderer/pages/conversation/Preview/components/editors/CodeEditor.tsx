@@ -17,15 +17,15 @@ import { codeEditorFontTheme, codeEditorSurfaceTheme, getCodeEditorBaseTheme } f
 import { loadLanguageSupport, shouldDisableHighlighting } from '../../theme/languageLoader';
 
 interface CodeEditorProps {
-  value: string; // 编辑器内容 / Editor content
-  onChange: (value: string) => void; // 内容变化回调 / Content change callback
-  language?: string; // 来自 metadata.language / From metadata.language
-  fileName?: string; // 用于扩展名兜底推断语言 / Extension-based fallback
-  readOnly?: boolean; // 是否只读 / Whether read-only
-  containerRef?: React.RefObject<HTMLDivElement>; // 滚动同步容器 / Scroll sync container
-  onScroll?: (scrollTop: number, scrollHeight: number, clientHeight: number) => void; // 滚动回调 / Scroll callback
-  targetLine?: number; // 初次打开时定位到的目标行 / Target line to reveal on initial open
-  targetColumn?: number; // 初次打开时定位到的目标列 / Target column to reveal on initial open
+  value: string; // Editor content
+  onChange: (value: string) => void; // Content change callback
+  language?: string; // From metadata.language
+  fileName?: string; // Extension-based fallback
+  readOnly?: boolean; // Whether read-only
+  containerRef?: React.RefObject<HTMLDivElement>; // Scroll sync container
+  onScroll?: (scrollTop: number, scrollHeight: number, clientHeight: number) => void; // Scroll callback
+  targetLine?: number; // Target line to reveal on initial open
+  targetColumn?: number; // Target column to reveal on initial open
 }
 
 // 流式判定空闲超时：超过此时长无外部增长则视为流结束
@@ -33,7 +33,7 @@ interface CodeEditorProps {
 const STREAMING_IDLE_MS = 1200;
 
 /**
- * 统一代码编辑器（始终可编辑）/ Unified code editor (always editable)
+ * Unified code editor (always editable)
  *
  * 基于 CodeMirror 6：语法高亮、行号、折叠、搜索（Cmd/Ctrl+F）、自动换行。
  * 主题/字体来自 Preview/theme 抽象层；大文件自动降级；流式写入自动滚动 + AI 写入角标。
@@ -58,7 +58,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   // 依赖父组件对 onChange 后的 value 做 1:1 同步回显来区分用户编辑与外部流式写入
   // Relies on the parent echoing value 1:1 synchronously after onChange to tell
   // user edits apart from external (streaming) growth.
-  const userEditRef = useRef(false); // 最近一次 value 变化来自用户编辑 / Last value change came from a user edit
+  const userEditRef = useRef(false); // Last value change came from a user edit
   const prevLenRef = useRef(value.length);
   const viewRef = useRef<EditorView | null>(null);
   const revealedTargetRef = useRef<string | null>(null);
@@ -66,7 +66,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
   const disableHighlight = shouldDisableHighlighting(value.length);
 
-  // 语言切换时动态加载语法（大文件跳过）/ Load language support on change (skip for large files)
+  // Load language support on change (skip for large files)
   useEffect(() => {
     let cancelled = false;
     if (disableHighlight) {
@@ -142,7 +142,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     []
   );
 
-  // 容器滚动监听 / Container scroll listener
+  // Container scroll listener
   useEffect(() => {
     const container = containerRef?.current;
     if (!container || !onScroll) return;
@@ -165,7 +165,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       highlightActiveLineGutter: true,
       highlightActiveLine: true,
       foldGutter: !disableHighlight,
-      searchKeymap: false, // 由下方 extensions 显式提供 / Provided explicitly below
+      searchKeymap: false, // Provided explicitly below
     }),
     [disableHighlight]
   );
@@ -214,5 +214,5 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   );
 };
 
-// 只在 props 真正改变时重渲染 / Re-render only when props actually change
+// Re-render only when props actually change
 export default React.memo(CodeEditor);

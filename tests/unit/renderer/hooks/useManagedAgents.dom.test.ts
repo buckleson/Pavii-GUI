@@ -21,11 +21,7 @@ vi.mock('swr', () => ({
 }));
 
 vi.mock('@/common', () => ({
-  ipcBridge: {
-    acpConversation: {
-      refreshCustomAgents: { invoke: vi.fn().mockResolvedValue(undefined) },
-    },
-  },
+  ipcBridge: { acpConversation: {} },
 }));
 
 vi.mock('@/renderer/utils/model/agentTypes', () => ({
@@ -96,18 +92,17 @@ describe('useManagedAgents', () => {
     expect(mutate).toHaveBeenCalledWith('assistants.list');
   });
 
-  it('refreshCustomAgents triggers a backend rescan then refreshes management and assistant caches', async () => {
+  it('exposes no backend-rescan action, because the engine has no such route', () => {
+    // `POST /api/agents/refresh` is a legacy endpoint the engine deliberately
+    // removed — `acp_e2e.rs::legacy_refresh_agents_endpoint_is_not_found`
+    // asserts it 404s. The hook used to call it, so the action always rejected.
+    // Detection runs at launch instead; `refreshCatalog` is the real action.
     (useSWR as any).mockReturnValue({ data: [], error: null, isLoading: false });
 
     const { result } = renderHook(() => useManagedAgents());
 
-    await act(async () => {
-      await result.current.refreshCustomAgents();
-    });
-
-    expect(ipcBridge.acpConversation.refreshCustomAgents.invoke).toHaveBeenCalled();
-    expect(mutate).toHaveBeenCalledWith('agents.managed');
-    expect(mutate).toHaveBeenCalledWith('assistants.list');
+    expect('refreshCustomAgents' in result.current).toBe(false);
+    expect(typeof result.current.refreshCatalog).toBe('function');
   });
 
   it('getManagedAgents fetches the management catalog without invalidating the detected cache', async () => {

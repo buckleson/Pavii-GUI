@@ -18,7 +18,7 @@ export interface BrowserTabLayerProps {
 }
 
 /**
- * 常驻挂载的浏览器层 / Always-mounted browser layer.
+ * Always-mounted browser layer.
  *
  * 预览面板原本只渲染当前激活的 tab，对文档没问题，但对浏览器是致命的：
  * 切走再切回会重新加载页面，滚动位置、表单内容、未提交的操作全部丢失，
@@ -38,7 +38,7 @@ export interface BrowserTabLayerProps {
 const BrowserTabLayer: React.FC<BrowserTabLayerProps> = ({ browserTabs, activeTabId, updateTab }) => {
   const handleUrlChange = useCallback(
     (tabId: string, url: string) => {
-      // 地址存在 content 里，与其他 tab 类型保持一致 / Address lives in content, like other tab types
+      // Address lives in content, like other tab types
       updateTab(tabId, { content: url });
     },
     [updateTab]

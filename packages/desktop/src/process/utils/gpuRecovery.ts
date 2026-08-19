@@ -8,7 +8,7 @@ import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// 持久化文件：userData/gpu.config.json
+// gpu.config.json
 const GPU_CONFIG_FILE = 'gpu.config.json';
 
 // 连续 GPU 崩溃达到此阈值后，下次启动自动关闭硬件加速。

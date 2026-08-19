@@ -8,7 +8,7 @@ import classNames from 'classnames';
 import React from 'react';
 
 /**
- * 自定义滚动区域组件 / Custom scroll area component
+ * Custom scroll area component
  *
  * 提供统一的滚动条样式，支持垂直、水平或双向滚动
  * Provides unified scrollbar styling, supports vertical, horizontal or both directions
@@ -45,7 +45,7 @@ const AionScrollArea: React.FC<AionScrollAreaProps> = ({
   disableOverflow = false,
   ...rest
 }) => {
-  // 根据方向设置 overflow 类名 / Set overflow class based on direction
+  // Set overflow class based on direction
   const overflowClass = disableOverflow
     ? ''
     : direction === 'both'

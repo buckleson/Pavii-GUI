@@ -6,7 +6,7 @@
 
 /**
  * Shared @ command parser for file references
- * 共享的 @ 命令解析器，用于文件引用
+ * Shared parser for `@` file-reference commands.
  */
 
 export interface AtCommandPart {
@@ -16,7 +16,7 @@ export interface AtCommandPart {
 
 /**
  * Simple unescape function for @ paths
- * 简单的转义处理函数
+ * Minimal unescaping helper.
  */
 function unescapeAtPath(rawPath: string): string {
   // Remove leading @ if present
@@ -29,8 +29,8 @@ function unescapeAtPath(rawPath: string): string {
  * Parses a query string to find all '@<path>' commands and text segments.
  * Handles \ escaped spaces within paths.
  *
- * 解析查询字符串，找出所有 '@<path>' 命令和文本段。
- * 处理路径中的 \ 转义空格。
+ * Parse a query into its '@<path>' commands and the plain text between them.
+ * Handles backslash-escaped spaces inside a path.
  *
  * @example
  * parseAllAtCommands('@file.txt hello @dir/path world')
@@ -106,7 +106,7 @@ export function parseAllAtCommands(query: string): AtCommandPart[] {
 
 /**
  * Extract all @ file paths from a query string
- * 从查询字符串中提取所有 @ 文件路径
+ * Extract every @ file path from a query string.
  */
 export function extractAtPaths(query: string): string[] {
   const parts = parseAllAtCommands(query);
@@ -115,7 +115,7 @@ export function extractAtPaths(query: string): string[] {
 
 /**
  * Check if a query contains any @ file references
- * 检查查询是否包含任何 @ 文件引用
+ * True when the query contains any @ file reference.
  */
 export function hasAtReferences(query: string): boolean {
   return extractAtPaths(query).length > 0;
@@ -123,7 +123,7 @@ export function hasAtReferences(query: string): boolean {
 
 /**
  * Reconstruct query from parts, optionally replacing @ paths
- * 从部分重建查询，可选择替换 @ 路径
+ * Rebuild a query from its parts, optionally replacing the @ paths.
  */
 export function reconstructQuery(parts: AtCommandPart[], pathReplacer?: (path: string) => string): string {
   return parts

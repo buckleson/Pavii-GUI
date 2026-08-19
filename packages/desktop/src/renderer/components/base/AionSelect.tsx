@@ -11,7 +11,7 @@ import classNames from 'classnames';
 import React from 'react';
 
 /**
- * 自定义下拉选择组件属性 / Custom select component props
+ * Custom select component props
  */
 type NativeSelectProps = Omit<SelectProps, 'size'>;
 type NativeSelectSize = NonNullable<SelectProps['size']>;
@@ -61,38 +61,38 @@ const defaultGetPopupContainer = (): HTMLElement => {
 };
 
 /**
- * 自定义下拉选择组件 / Custom select component
+ * Custom select component
  *
  * 基于 Arco Design Select 的封装，提供统一的样式主题和弹出层处理
  * Wrapper around Arco Design Select with unified theme styling and popup handling
  *
  * @features
  * - 自动适配明暗主题 / Auto theme adaptation (light/dark)
- * - 弹出层挂载到 body，避免布局问题 / Popup mounted to body to avoid layout issues
- * - 统一的圆角和边框样式 / Unified border radius and border styles
- * - 完整的 Arco Select API 支持 / Full Arco Select API support
+ * Popup mounted to body to avoid layout issues
+ * Unified border radius and border styles
+ * Full Arco Select API support
  *
  * @example
  * ```tsx
  * // 基本用法 / Basic usage
  * <AionSelect placeholder="请选择" style={{ width: 200 }}>
- *   <AionSelect.Option value="1">选项1</AionSelect.Option>
- *   <AionSelect.Option value="2">选项2</AionSelect.Option>
+ *   AionSelect.Option>
+ *   AionSelect.Option>
  * </AionSelect>
  *
  * // 多选 / Multiple selection
  * <AionSelect mode="multiple" placeholder="请选择多个">
- *   <AionSelect.Option value="1">选项1</AionSelect.Option>
- *   <AionSelect.Option value="2">选项2</AionSelect.Option>
+ *   AionSelect.Option>
+ *   AionSelect.Option>
  * </AionSelect>
  *
  * // 分组 / Grouped options
  * <AionSelect placeholder="请选择">
  *   <AionSelect.OptGroup label="分组1">
- *     <AionSelect.Option value="1">选项1</AionSelect.Option>
+ *     AionSelect.Option>
  *   </AionSelect.OptGroup>
  *   <AionSelect.OptGroup label="分组2">
- *     <AionSelect.Option value="2">选项2</AionSelect.Option>
+ *     AionSelect.Option>
  *   </AionSelect.OptGroup>
  * </AionSelect>
  * ```
@@ -129,7 +129,7 @@ const AionSelect = InternalSelect as AionSelectComponent;
 
 AionSelect.displayName = 'AionSelect';
 
-// 导出子组件 / Export sub-components
+// Export sub-components
 AionSelect.Option = Select.Option;
 AionSelect.OptGroup = Select.OptGroup;
 

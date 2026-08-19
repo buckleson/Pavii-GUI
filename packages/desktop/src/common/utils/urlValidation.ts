@@ -50,9 +50,9 @@ export const GOOGLE_API_HOSTS = Object.values(API_HOST_CONFIG.google);
  * 安全验证 URL 是否为指定提供商的官方主机
  * Safely validate if URL is an official host for specified provider
  *
- * @param urlString - 要验证的 URL 字符串 / URL string to validate
- * @param allowedHosts - 允许的主机名列表 / List of allowed hostnames
- * @returns 如果是有效的官方主机返回 true / Returns true if valid official host
+ * @param urlString URL string to validate
+ * @param allowedHosts List of allowed hostnames
+ * @returns Returns true if valid official host
  */
 export function isOfficialHost(urlString: string, allowedHosts: readonly string[]): boolean {
   try {
@@ -70,8 +70,8 @@ export function isOfficialHost(urlString: string, allowedHosts: readonly string[
  * 使用 URL 解析而非字符串包含检查，防止恶意 URL 绕过
  * Uses URL parsing instead of string includes to prevent malicious URL bypass
  *
- * @param urlString - 要验证的 URL 字符串 / URL string to validate
- * @returns 如果是有效的 Google APIs 主机返回 true / Returns true if valid Google APIs host
+ * @param urlString URL string to validate
+ * @returns Returns true if valid Google APIs host
  *
  * @example
  * isGoogleApisHost('https://generativelanguage.googleapis.com/v1') // true

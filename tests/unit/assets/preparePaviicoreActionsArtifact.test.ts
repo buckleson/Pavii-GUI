@@ -6,8 +6,8 @@ import { delimiter, dirname, join } from 'node:path';
 const {
   getActionsArtifactName,
   getActionsArtifactMissingMessage,
-  prepareAioncore,
-} = require('../../../packages/shared-scripts/src/prepare-aioncore');
+  preparePaviicore,
+} = require('../../../packages/shared-scripts/src/prepare-paviicore');
 
 const posixFakeToolchainIt = process.platform === 'win32' ? it.skip : it;
 
@@ -103,7 +103,7 @@ afterEach(() => {
   rmSync(join(tmpdir(), 'aioncore-prepare-actions', '123'), { recursive: true, force: true });
 });
 
-describe('prepare-aioncore GitHub Actions artifact resolver', () => {
+describe('prepare-paviicore GitHub Actions artifact resolver', () => {
   it.each([
     ['win32', 'x64', 'aioncore-manual-windows-x64'],
     ['win32', 'arm64', 'aioncore-manual-windows-arm64'],
@@ -144,7 +144,7 @@ describe('prepare-aioncore GitHub Actions artifact resolver', () => {
 
     try {
       expect(() =>
-        prepareAioncore({
+        preparePaviicore({
           projectRoot: join(tmp, 'project'),
           platform: 'linux',
           arch: 'x64',
@@ -166,7 +166,7 @@ describe('prepare-aioncore GitHub Actions artifact resolver', () => {
 
     try {
       expect(() =>
-        prepareAioncore({
+        preparePaviicore({
           projectRoot: join(tmp, 'project'),
           platform: 'linux',
           arch: 'x64',
@@ -182,7 +182,7 @@ describe('prepare-aioncore GitHub Actions artifact resolver', () => {
 
   posixFakeToolchainIt('hard fails local binary fallback when prepared managed resources lack contract', () => {
     const tmp = mkdtempSync(join(tmpdir(), 'aionui-local-binary-gate-'));
-    const localBinary = join(tmp, 'aioncore');
+    const localBinary = join(tmp, 'paviicore');
     writeExecutable(localBinary, '#!/usr/bin/env bash\nexit 0\n');
     const fakeBin = createFakeToolchain(tmp, { curlFails: true });
     const previousPath = process.env.PATH;
@@ -191,7 +191,7 @@ describe('prepare-aioncore GitHub Actions artifact resolver', () => {
 
     try {
       expect(() =>
-        prepareAioncore({
+        preparePaviicore({
           projectRoot: join(tmp, 'project'),
           platform: 'linux',
           arch: 'x64',

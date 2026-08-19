@@ -189,7 +189,7 @@ const handleSocketMessage = async (ws: WebSocket, raw: string, announcedSessions
   try {
     req = JSON.parse(raw) as CdpRequest;
   } catch {
-    return; // 非 JSON 直接忽略 / ignore non-JSON frames
+    return; // ignore non-JSON frames
   }
 
   const { id, method, params, sessionId } = req;
@@ -216,7 +216,7 @@ const handleSocketMessage = async (ws: WebSocket, raw: string, announcedSessions
          * 会话对象，把调用方手里的 handle 变成孤儿。
          *
          * puppeteer 的 Connection.onMessage 收到 attachedToTarget 时无条件
-         * `new CdpCDPSession(...)` 再 `#sessions.set(sessionId, session)`（cdp/Connection.js）。
+         * Connection.js）。
          * 它不检查这个 sessionId 是否已经存在，于是第二次宣布会用一个全新对象覆盖旧的，
          * 而新对象带着一份空的 CallbackRegistry。
          *

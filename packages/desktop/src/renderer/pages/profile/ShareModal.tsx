@@ -76,7 +76,12 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose, data, isDark 
   // icon-park ships no LinkedIn or Reddit mark, and those brands are wordmarks
   // anyway, so the social buttons use typographic glyphs for a consistent row.
   const actions: ShareAction[] = [
-    { key: 'x', glyph: <span className='text-18px font-600 leading-none'>X</span>, label: 'X', onClick: () => shareTo('x') },
+    {
+      key: 'x',
+      glyph: <span className='text-18px font-600 leading-none'>X</span>,
+      label: 'X',
+      onClick: () => shareTo('x'),
+    },
     {
       key: 'linkedin',
       glyph: <span className='text-15px font-700 leading-none'>in</span>,

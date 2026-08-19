@@ -59,10 +59,10 @@ describe('readJsonFile', () => {
 
 describe('writeJsonFile', () => {
   it('writes BOM-free UTF-8 that reads back through readJsonFile', () => {
-    writeJsonFile(manifestPath, { version: 'v0.1.69-pavii', files: ['aioncore.exe'] });
+    writeJsonFile(manifestPath, { version: 'v0.1.69-pavii', files: ['paviicore.exe'] });
     const bytes = fs.readFileSync(manifestPath);
     expect(bytes.subarray(0, 3).equals(BOM)).toBe(false);
     expect(bytes.at(-1)).toBe(0x0a);
-    expect(readJsonFile(manifestPath)).toEqual({ version: 'v0.1.69-pavii', files: ['aioncore.exe'] });
+    expect(readJsonFile(manifestPath)).toEqual({ version: 'v0.1.69-pavii', files: ['paviicore.exe'] });
   });
 });

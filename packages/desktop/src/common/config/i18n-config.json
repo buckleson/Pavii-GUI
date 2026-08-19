@@ -1,9 +1,7 @@
 {
   "referenceLanguage": "en-US",
   "fallbackLanguage": "en-US",
-  "supportedLanguages": [
-    "en-US"
-  ],
+  "supportedLanguages": ["en-US"],
   "modules": [
     "common",
     "agentMode",

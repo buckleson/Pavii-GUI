@@ -17,6 +17,9 @@ const WebuiSettings = React.lazy(() => import('@renderer/pages/settings/WebuiSet
 const ExtensionSettingsPage = React.lazy(() => import('@renderer/pages/settings/ExtensionSettingsPage'));
 const LoginPage = React.lazy(() => import('@renderer/pages/login'));
 const ComponentsShowcase = React.lazy(() => import('@renderer/pages/TestShowcase'));
+
+/** Vite injects NODE_ENV as the build mode. */
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const ScheduledTasksPage = React.lazy(() => import('@renderer/pages/cron/ScheduledTasksPage'));
 const TaskDetailPage = React.lazy(() => import('@renderer/pages/cron/ScheduledTasksPage/TaskDetailPage'));
 const TeamIndex = React.lazy(() => import('@renderer/pages/team'));
@@ -98,7 +101,10 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
           <Route path='/settings/about' element={withRouteFallback(SystemSettings)} />
           <Route path='/settings/ext/:tabId' element={withRouteFallback(ExtensionSettingsPage)} />
           <Route path='/settings' element={<Navigate to='/settings/agent' replace />} />
-          <Route path='/test/components' element={withRouteFallback(ComponentsShowcase)} />
+          {/* Development only. It is a component gallery with placeholder copy,
+              not a product surface, and shipping it made that copy a
+              user-reachable part of an English-only app. */}
+          {!IS_PRODUCTION && <Route path='/test/components' element={withRouteFallback(ComponentsShowcase)} />}
           <Route path='/profile' element={withRouteFallback(ProfilePage)} />
           <Route path='/scheduled' element={withRouteFallback(ScheduledTasksPage)} />
           <Route path='/scheduled/:job_id' element={withRouteFallback(TaskDetailPage)} />

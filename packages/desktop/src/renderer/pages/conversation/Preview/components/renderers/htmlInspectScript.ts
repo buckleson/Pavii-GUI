@@ -25,7 +25,7 @@ export function generateInspectScript(inspectMode: boolean, messages: InspectMes
   return `
     (function() {
 
-      // 移除旧的检查模式样式和监听器 / Remove old inspect mode styles and listeners
+      // Remove old inspect mode styles and listeners
       const oldStyle = document.getElementById('inspect-mode-style');
       if (oldStyle) oldStyle.remove();
 
@@ -35,7 +35,7 @@ export function generateInspectScript(inspectMode: boolean, messages: InspectMes
       const oldMenu = document.getElementById('inspect-mode-menu');
       if (oldMenu) oldMenu.remove();
 
-      // 移除旧的事件监听器 / Remove old event listeners
+      // Remove old event listeners
       const oldListeners = window.__inspectModeListeners || {};
       if (oldListeners.mousemove) {
         document.removeEventListener('mousemove', oldListeners.mousemove);
@@ -45,13 +45,13 @@ export function generateInspectScript(inspectMode: boolean, messages: InspectMes
       }
 
       if (!${inspectMode}) {
-        // 如果关闭检查模式，移除所有相关元素 / If inspect mode is off, remove all related elements
+        // If inspect mode is off, remove all related elements
         document.body.style.cursor = '';
         window.__inspectModeListeners = null;
         return;
       }
 
-      // 添加检查模式样式 / Add inspect mode styles
+      // Add inspect mode styles
       const style = document.createElement('style');
       style.id = 'inspect-mode-style';
       style.textContent = \`
@@ -66,7 +66,7 @@ export function generateInspectScript(inspectMode: boolean, messages: InspectMes
       \`;
       document.head.appendChild(style);
 
-      // 创建高亮覆盖层 / Create highlight overlay
+      // Create highlight overlay
       const overlay = document.createElement('div');
       overlay.id = 'inspect-mode-overlay';
       overlay.className = 'inspect-overlay';
@@ -75,7 +75,7 @@ export function generateInspectScript(inspectMode: boolean, messages: InspectMes
 
       let currentElement = null;
 
-      // 显示提示通知 / Show notification
+      // Show notification
       const showNotification = (message) => {
         const notification = document.createElement('div');
         notification.textContent = message;
@@ -95,7 +95,7 @@ export function generateInspectScript(inspectMode: boolean, messages: InspectMes
         setTimeout(() => notification.remove(), 2000);
       };
 
-      // 鼠标移动时高亮元素 / Highlight element on mouse move
+      // Highlight element on mouse move
       const handleMouseMove = (e) => {
         const element = document.elementFromPoint(e.clientX, e.clientY);
         if (element && element !== currentElement && element !== overlay) {
@@ -109,7 +109,7 @@ export function generateInspectScript(inspectMode: boolean, messages: InspectMes
         }
       };
 
-      // 获取元素的简化标签名 / Get simplified tag name for display
+      // Get simplified tag name for display
       const getSimplifiedTag = (element) => {
         const tagName = element.tagName.toLowerCase();
         const id = element.id ? '#' + element.id : '';
@@ -119,7 +119,7 @@ export function generateInspectScript(inspectMode: boolean, messages: InspectMes
         return tagName + id + className;
       };
 
-      // 点击元素发送 HTML 到父窗口 / Click element to send HTML to parent window
+      // Click element to send HTML to parent window
       const handleClick = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -129,25 +129,25 @@ export function generateInspectScript(inspectMode: boolean, messages: InspectMes
           const html = element.outerHTML;
           const tag = getSimplifiedTag(element);
 
-          // 通过 console.log 发送消息（webview 会捕获）/ Send message via console.log (webview will capture)
+          // Send message via console.log (webview will capture)
           console.log('__INSPECT_ELEMENT__' + JSON.stringify({ html: html, tag: tag }));
 
-          // 显示提示 / Show notification
+          // Show notification
           showNotification(${copySuccess});
         }
       };
 
-      // 添加事件监听 / Add event listeners
+      // Add event listeners
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('click', handleClick);
 
-      // 保存监听器引用以便后续移除 / Save listener references for later removal
+      // Save listener references for later removal
       window.__inspectModeListeners = {
         mousemove: handleMouseMove,
         click: handleClick
       };
 
-      // 修改鼠标样式 / Change cursor style
+      // Change cursor style
       document.body.style.cursor = 'crosshair';
     })();
   `;

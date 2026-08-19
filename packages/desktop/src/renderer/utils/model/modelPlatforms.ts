@@ -54,7 +54,7 @@ export interface PlatformConfig {
  * 4+ 预设供应商
  */
 export const MODEL_PLATFORMS: PlatformConfig[] = [
-  // 自定义选项（需要用户输入 base url）/ Custom option (requires user to input base url)
+  // Custom option (requires user to input base url)
   { name: 'Custom', value: 'custom', logo: null, platform: 'custom', i18nKey: 'settings.platformCustom' },
 
   // Moonshot/Kimi 战略合作伙伴，紧随 Custom 置顶 / Strategic partner pinned right after Custom
@@ -73,7 +73,7 @@ export const MODEL_PLATFORMS: PlatformConfig[] = [
     base_url: 'https://api.moonshot.ai/v1',
   },
 
-  // New API 多模型网关 / New API multi-model gateway
+  // New API multi-model gateway
   {
     name: 'New API',
     value: 'new-api',
@@ -291,7 +291,7 @@ export const detectNewApiProtocol = (modelName: string): string => {
  */
 export const DEFAULT_PLATFORM_VALUE = MODEL_PLATFORMS[0].value;
 
-// ============ 工具函数 / Utility Functions ============
+// Utility Functions ============
 
 /**
  * 根据 value 获取平台配置

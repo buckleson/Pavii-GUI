@@ -11,20 +11,25 @@ export { DEEPGRAM_SPEECH_MODEL_PRESETS, OPENAI_SPEECH_MODEL_PRESETS } from '@ren
 export type SpeechSource = 'openai' | 'deepgram' | 'custom';
 
 /** Language autonyms are intentionally not translated. Empty value = auto detect. */
+/**
+ * Languages you can dictate in. The app UI is English-only, so the labels are
+ * English endonyms rather than each language's own script — picking a
+ * transcription language is not the same as switching the interface.
+ */
 export const SPEECH_LANGUAGE_OPTIONS: Array<{ value: string; label?: string }> = [
   { value: '' },
-  { value: 'zh-CN', label: '中文（简体）' },
-  { value: 'zh-TW', label: '中文（繁體）' },
+  { value: 'zh-CN', label: 'Chinese (Simplified)' },
+  { value: 'zh-TW', label: 'Chinese (Traditional)' },
   { value: 'en', label: 'English' },
-  { value: 'ja', label: '日本語' },
-  { value: 'ko', label: '한국어' },
-  { value: 'es', label: 'Español' },
-  { value: 'fr', label: 'Français' },
-  { value: 'de', label: 'Deutsch' },
-  { value: 'pt', label: 'Português' },
-  { value: 'ru', label: 'Русский' },
-  { value: 'tr', label: 'Türkçe' },
-  { value: 'uk', label: 'Українська' },
+  { value: 'ja', label: 'Japanese' },
+  { value: 'ko', label: 'Korean' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'fr', label: 'French' },
+  { value: 'de', label: 'German' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'ru', label: 'Russian' },
+  { value: 'tr', label: 'Turkish' },
+  { value: 'uk', label: 'Ukrainian' },
 ];
 
 /**

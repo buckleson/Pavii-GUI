@@ -43,6 +43,12 @@ const BRAND_SCRUB_RULES: ReadonlyArray<readonly [RegExp, string]> = [
   [/AionCore/g, 'Pavii Engine'],
   [/AionHub/g, 'Pavii Hub'],
   [/AionU[iI]/g, 'Pavii.Ai'],
+  // The internal agent identifier. It stays `aionrs` everywhere it is
+  // stored (conversations.type, .aionrs/ directories, the aionrs.config
+  // settings key) because that is a backend contract; it is only ever
+  // rewritten on the way to a display string, e.g. conversation titles
+  // like `tg-aionrs-<chat>` written before the rebrand.
+  [/\baionrs\b/g, 'paviirs'],
 ];
 
 /** Replace upstream brand names inside a backend-supplied display string. */

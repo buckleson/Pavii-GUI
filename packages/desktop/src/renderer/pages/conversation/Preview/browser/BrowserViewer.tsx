@@ -27,7 +27,7 @@ export interface BrowserViewerProps {
 }
 
 /**
- * 应用内浏览器视图 / In-app browser view.
+ * In-app browser view.
  *
  * 与 URLViewer 的区别在三点，也正是它单独存在的理由：
  * 1. 使用共享的持久化 partition，登录态跨 tab / 跨项目保留；

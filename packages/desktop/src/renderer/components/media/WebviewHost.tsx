@@ -166,7 +166,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
   }, [isStarOffice, zoomFactor, webviewReady]);
 
   /**
-   * 主动导航到新地址 / Navigate to a new address.
+   * Navigate to a new address.
    *
    * 历史由 webview 自己维护，这里只需要发起导航；按钮状态在 did-navigate 里统一同步。
    * The webview owns the history, so this only triggers the navigation — button state

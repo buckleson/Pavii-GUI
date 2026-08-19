@@ -134,8 +134,10 @@ describe('VoiceInputSection', () => {
     speechSettingsMocks.getClientBusinessSetting.mockResolvedValue(configStore.value);
     render(<VoiceInputSection />);
     await waitFor(() => expect(screen.getByText('settings.speechToTextLanguage')).toBeTruthy());
-    // The language select displays the migrated zh-CN option label.
-    await waitFor(() => expect(screen.getByText('中文（简体）')).toBeTruthy());
+    // The select shows the migrated zh-CN option. Its label is the English
+    // endonym: the app UI is English-only, so language names are written in
+    // English even though you can still dictate in that language.
+    await waitFor(() => expect(screen.getByText('Chinese (Simplified)')).toBeTruthy());
   });
 
   it('deepgram mode hides the batch-only/always-on formatting switches', async () => {

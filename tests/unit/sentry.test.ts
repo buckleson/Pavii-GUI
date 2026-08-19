@@ -186,7 +186,7 @@ describe('captureBackendStartupFailure', () => {
         stage: 'resolve_binary',
         isPackaged: true,
         runtimeKey: 'win32-x64',
-        binaryName: 'aioncore.exe',
+        binaryName: 'paviicore.exe',
         resourcesPath: 'C:\\Users\\alice\\AppData\\Local\\Programs\\Pavii.Ai\\resources',
         bundledDirExists: false,
         runtimeDirExists: false,
@@ -218,7 +218,7 @@ describe('captureBackendStartupFailure', () => {
         'aioncore_startup_classification',
         expect.objectContaining({
           incompleteInstallationKind: 'missing_directory_resources',
-          missingBundledAioncoreDir: true,
+          missingBundledPaviicoreDir: true,
           missingRuntimeDir: true,
           missingBackendBinary: true,
         })

@@ -5,9 +5,9 @@
  * 作用：确保所有 MCP 相关消息按顺序显示，避免同时触发导致覆盖
  * Purpose: Ensure all MCP-related messages are displayed sequentially to prevent overlap when triggered simultaneously
  *
- * 使用场景 / Use cases:
- * - 快速切换多个 MCP 工具配置开关时 / When rapidly toggling multiple MCP tool configuration switches
- * - 批量测试 MCP 连接时 / When batch testing MCP connections
+ * Use cases:
+ * When rapidly toggling multiple MCP tool configuration switches
+ * When batch testing MCP connections
  * - 同时进行多个同步/移除操作时 / When performing multiple sync/remove operations simultaneously
  */
 class MessageQueue {
@@ -15,7 +15,7 @@ class MessageQueue {
   private queue: Array<() => void> = [];
   private isProcessing = false;
   private readonly delay = 100; // 每条消息间隔 100ms，确保 Arco Design 有足够时间渲染 / 100ms delay between messages to ensure Arco Design has enough time to render
-  private readonly maxQueueSize = 50; // 最大队列长度，防止内存溢出 / Maximum queue size to prevent memory overflow
+  private readonly maxQueueSize = 50; // Maximum queue size to prevent memory overflow
 
   private constructor() {}
 
@@ -33,7 +33,7 @@ class MessageQueue {
   /**
    * 将消息添加到队列并触发处理
    * Add a message to the queue and trigger processing
-   * @param showMessageFn 显示消息的函数 / Function to display the message
+   * @param showMessageFn Function to display the message
    */
   async add(showMessageFn: () => void): Promise<void> {
     // 检查队列长度，如果超过限制则丢弃新消息而不是旧消息

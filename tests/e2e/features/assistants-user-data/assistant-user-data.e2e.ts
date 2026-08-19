@@ -59,7 +59,7 @@ function querySqliteIds(dataDir: string, sql: string): string[] {
 
 /** Backend binary resolved from PATH / cargo bin. */
 function resolveBackendBinary(): string {
-  const candidates = [process.env.AIONUI_BACKEND_BINARY, path.join(os.homedir(), '.cargo', 'bin', 'aioncore')].filter(
+  const candidates = [process.env.AIONUI_BACKEND_BINARY, path.join(os.homedir(), '.cargo', 'bin', 'paviicore')].filter(
     (x): x is string => typeof x === 'string' && x.length > 0
   );
   for (const c of candidates) {

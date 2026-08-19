@@ -163,7 +163,7 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
                 style={{ maxWidth: `${MAX_TAB_WIDTH_PX}px` }}
                 onClick={() => onSwitchTab(tab.id)}
                 onContextMenu={(e) => onContextMenu(e, tab.id)}
-                // 中键关闭 / Middle-click to close.
+                // Middle-click to close.
                 //
                 // 走 onCloseTab 而不是直接关，所以未保存的 tab 仍会先弹确认——中键
                 // 不能成为绕过该确认的第二条路。
@@ -195,7 +195,7 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
                       src={tab.favicon}
                       alt=''
                       className='w-12px h-12px flex-shrink-0 rd-2px'
-                      // 图标加载失败时静默隐藏，避免出现破图占位 / Hide silently on load failure
+                      // Hide silently on load failure
                       onError={(e) => {
                         (e.currentTarget as HTMLImageElement).style.display = 'none';
                       }}

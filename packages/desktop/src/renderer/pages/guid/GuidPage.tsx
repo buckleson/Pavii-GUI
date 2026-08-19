@@ -36,6 +36,7 @@ import { appendSpeechTranscript } from '@/renderer/hooks/system/useSpeechInput';
 import { useLiveTranscriptInsertion } from '@/renderer/hooks/system/useLiveTranscriptInsertion';
 import { ArrowRightUp } from '@icon-park/react';
 import { Button, ConfigProvider } from '@arco-design/web-react';
+import arcoEnUS from '@arco-design/web-react/es/locale/en-US';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -666,7 +667,12 @@ const GuidPage: React.FC = () => {
   ) : null;
 
   return (
-    <ConfigProvider getPopupContainer={() => guidContainerRef.current || document.body}>
+    // `locale` is required, not optional. Arco's own default locale is Chinese
+    // (`@arco-design/web-react/es/locale/default` re-exports zh-CN), and every
+    // ConfigProvider pushes its locale into a module global that imperative
+    // dialogs (`Modal.confirm`) read. Omitting it here overwrote the English
+    // global set in main.tsx, which is why confirm buttons rendered 取消/确定.
+    <ConfigProvider locale={arcoEnUS} getPopupContainer={() => guidContainerRef.current || document.body}>
       <div ref={guidContainerRef} className={styles.guidContainer}>
         <div className={styles.guidLayout}>
           <div className={styles.heroHeader}>

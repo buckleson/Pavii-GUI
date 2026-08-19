@@ -21,13 +21,13 @@ import { getMarkdownShikiThemes, getMermaidTheme } from '../../theme';
 import { convertLatexDelimiters } from '@/renderer/utils/chat/latexDelimiters';
 
 interface MarkdownPreviewProps {
-  content: string; // Markdown 内容 / Markdown content
-  viewMode?: 'source' | 'preview'; // 外部控制的视图模式 / External view mode
-  onViewModeChange?: (mode: 'source' | 'preview') => void; // 视图模式改变回调（保留以兼容调用方，暂未使用）/ View mode change callback (kept for call-site compatibility, currently unused)
-  onContentChange?: (content: string) => void; // 内容改变回调 / Content change callback
-  containerRef?: React.RefObject<HTMLDivElement>; // 容器引用，用于滚动同步 / Container ref for scroll sync
-  onScroll?: (scrollTop: number, scrollHeight: number, clientHeight: number) => void; // 滚动回调 / Scroll callback
-  file_path?: string; // 当前 Markdown 文件的绝对路径 / Absolute file path of current markdown
+  content: string; // Markdown content
+  viewMode?: 'source' | 'preview'; // External view mode
+  onViewModeChange?: (mode: 'source' | 'preview') => void; // View mode change callback (kept for call-site compatibility, currently unused)
+  onContentChange?: (content: string) => void; // Content change callback
+  containerRef?: React.RefObject<HTMLDivElement>; // Container ref for scroll sync
+  onScroll?: (scrollTop: number, scrollHeight: number, clientHeight: number) => void; // Scroll callback
+  file_path?: string; // Absolute file path of current markdown
   workspace?: string;
 }
 
@@ -227,24 +227,24 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   workspace,
 }) => {
   const internalContainerRef = useRef<HTMLDivElement>(null);
-  const containerRef = externalContainerRef || internalContainerRef; // 使用外部 ref 或内部 ref / Use external ref or internal ref
+  const containerRef = externalContainerRef || internalContainerRef; // Use external ref or internal ref
   const currentTheme = useThemeDetection();
   const handleLocalFileLink = useLocalFilePreview(workspace);
 
-  // 使用滚动同步 Hooks / Use scroll sync hooks
+  // Use scroll sync hooks
   useContainerScroll(containerRef, externalOnScroll);
   useContainerScrollTarget(containerRef);
 
-  // 使用外部传入的 viewMode，默认预览模式 / Use external viewMode if provided, default to preview
+  // Use external viewMode if provided, default to preview
   const viewMode = externalViewMode ?? 'preview';
 
-  // 预览源：转换 LaTeX 分隔符并重写外部媒体 URL / Preview source: convert LaTeX delimiters and rewrite external media URLs
+  // Preview source: convert LaTeX delimiters and rewrite external media URLs
   const previewSource = useMemo(
     () => convertLatexDelimiters(normalizeLocalFileSchemeLinks(rewriteExternalMediaUrls(content))),
     [content]
   );
 
-  // 监听文本选择 / Monitor text selection
+  // Monitor text selection
   const { selectedText, selectionPosition, clearSelection } = useTextSelection(containerRef);
 
   const baseDir = useMemo(() => {
@@ -264,10 +264,10 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
         style={{ minWidth: 0 }}
       >
         {viewMode === 'source' ? (
-          // 原文模式：使用编辑器 / Source mode: Use editor
+          // Source mode: Use editor
           <MarkdownEditor value={content} onChange={(value) => onContentChange?.(value)} />
         ) : (
-          // 预览模式：Streamdown 原生渲染 / Preview mode: native Streamdown
+          // Preview mode: native Streamdown
           <div
             className='aionui-markdown'
             style={{

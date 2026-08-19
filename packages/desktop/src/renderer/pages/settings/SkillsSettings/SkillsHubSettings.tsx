@@ -14,7 +14,7 @@ import TalkToButlerButton from '@/renderer/components/base/TalkToButlerButton';
 import { AionSearchInput } from '@/renderer/components/base';
 import { buildSkillImportNotice, getSkillImportErrorMessage } from './skillImportMessages';
 
-// Skill 信息类型 / Skill info type
+// Skill info type
 interface SkillInfo {
   name: string;
   /** Rebranded name for display; `name` stays the operative backend key. */

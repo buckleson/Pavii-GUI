@@ -93,7 +93,12 @@ const TaskTemplateGrid: React.FC<TaskTemplateGridProps> = ({ isMobile = false, o
         }}
       />
 
-      <div className={classNames('mt-28px grid gap-x-24px gap-y-6px', isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2')}>
+      <div
+        className={classNames(
+          'mt-28px grid gap-x-24px gap-y-6px',
+          isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'
+        )}
+      >
         {TASK_TEMPLATES.map((template) => {
           const Icon = template.icon;
           const tint = ACCENT_TINT[template.accent];
@@ -131,7 +136,9 @@ const TaskTemplateGrid: React.FC<TaskTemplateGridProps> = ({ isMobile = false, o
                     </span>
 
                     {template.requiresKey && (
-                      <Tooltip content={t('cron.templates.requiresAction', { defaultValue: 'Add it in Settings > Tools' })}>
+                      <Tooltip
+                        content={t('cron.templates.requiresAction', { defaultValue: 'Add it in Settings > Tools' })}
+                      >
                         <Tag
                           size='small'
                           bordered

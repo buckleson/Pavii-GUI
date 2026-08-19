@@ -94,7 +94,7 @@ describe('findBundledNpm', () => {
     rmSync(resourcesRoot, { recursive: true, force: true });
   });
 
-  const nodeBaseDir = () => join(resourcesRoot, 'bundled-aioncore', runtimeKey, 'managed-resources', 'node');
+  const nodeBaseDir = () => join(resourcesRoot, 'bundled-paviicore', runtimeKey, 'managed-resources', 'node');
 
   it('returns null when resourcesPath is undefined', () => {
     expect(findBundledNpm(undefined, runtimeKey)).toBeNull();

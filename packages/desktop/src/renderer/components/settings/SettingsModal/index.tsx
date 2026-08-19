@@ -50,20 +50,20 @@ const MODAL_HEIGHT = {
 /** Resize 事件防抖延迟（ms）/ Resize event debounce delay (ms) */
 const RESIZE_DEBOUNCE_DELAY = 150;
 
-// ==================== 类型定义 / Type Definitions ====================
+// Type Definitions ====================
 
 /**
- * 内置设置标签页类型 / Built-in settings tab type
+ * Built-in settings tab type
  */
 export type BuiltinSettingTab = 'model' | 'agent' | 'tools' | 'webui' | 'system' | 'about';
 
 /**
- * 设置标签页类型（内置 + 扩展）/ Settings tab type (built-in + extension)
+ * Settings tab type (built-in + extension)
  */
 export type SettingTab = BuiltinSettingTab | (string & {});
 
 /**
- * 设置弹窗组件属性 / Settings modal component props
+ * Settings modal component props
  */
 interface SettingsModalProps {
   /** 弹窗显示状态 / Modal visibility state */
@@ -75,7 +75,7 @@ interface SettingsModalProps {
 }
 
 /**
- * 二级弹窗组件属性 / Secondary modal component props
+ * Secondary modal component props
  */
 interface SubModalProps {
   /** 弹窗显示状态 / Modal visibility state */
@@ -89,8 +89,8 @@ interface SubModalProps {
 }
 
 /**
- * 二级弹窗组件 / Secondary modal component
- * 用于设置页面中的次级对话框 / Used for secondary dialogs in settings page
+ * Secondary modal component
+ * Used for secondary dialogs in settings page
  *
  * @example
  * ```tsx
@@ -115,15 +115,15 @@ export const SubModal: React.FC<SubModalProps> = ({ visible, onCancel, title, ch
 };
 
 /**
- * 主设置弹窗组件 / Main settings modal component
+ * Main settings modal component
  *
  * 提供应用的全局设置界面，包括 Gemini、模型、工具、系统和关于等多个标签页
  * Provides global settings interface with multiple tabs including Gemini, Model, Tools, System and About
  *
  * @features
- * - 响应式设计，移动端使用下拉菜单，桌面端使用侧边栏 / Responsive design with dropdown on mobile and sidebar on desktop
- * - 防抖优化的窗口尺寸监听 / Debounced window resize listener
- * - 标签页状态管理 / Tab state management
+ * Responsive design with dropdown on mobile and sidebar on desktop
+ * Debounced window resize listener
+ * Tab state management
  *
  * @example
  * ```tsx
@@ -147,12 +147,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onCancel, defaul
     setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
   }, []);
 
-  // 监听窗口尺寸变化（带防抖）/ Listen to window resize (with debounce)
+  // Listen to window resize (with debounce)
   useEffect(() => {
-    // 初始化移动端状态 / Initialize mobile state
+    // Initialize mobile state
     handleResize();
 
-    // 带防抖的 resize 处理器 / Debounced resize handler
+    // Debounced resize handler
     const debouncedResize = () => {
       if (resizeTimerRef.current) {
         window.clearTimeout(resizeTimerRef.current);
@@ -169,7 +169,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onCancel, defaul
     };
   }, [handleResize]);
 
-  // 检测是否在 Electron 桌面环境 / Check if running in Electron desktop environment
+  // Check if running in Electron desktop environment
   const isDesktop = isElectronDesktop();
 
   const { resolveExtTabName } = useExtI18n();
@@ -183,7 +183,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onCancel, defaul
     return map;
   }, [extensionTabs]);
 
-  // 菜单项配置 / Menu items configuration
+  // Menu items configuration
   // Modal 模式下内置 Tab 子集（不含 display、agent）
   const menuItems = useMemo((): Array<{ key: SettingTab; label: string; icon: React.ReactNode }> => {
     type MenuItem = { key: string; label: string; icon: React.ReactNode };
@@ -334,14 +334,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onCancel, defaul
   };
 
   /**
-   * 切换标签页 / Switch tab
-   * @param tab - 目标标签页 / Target tab
+   * Switch tab
+   * @param tab Target tab
    */
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab);
   }, []);
 
-  // 移动端菜单（Tabs切换）/ Mobile menu (Tabs)
+  // Mobile menu (Tabs)
   const mobileMenu = (
     <div className='mt-16px mb-20px overflow-x-auto'>
       <Tabs
@@ -358,7 +358,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onCancel, defaul
     </div>
   );
 
-  // 桌面端菜单（侧边栏）/ Desktop menu (sidebar)
+  // Desktop menu (sidebar)
   const desktopMenu = (
     <AionScrollArea className='flex-shrink-0 b-color-border-2 scrollbar-hide' style={{ width: `${SIDEBAR_WIDTH}px` }}>
       <div className='flex flex-col gap-2px'>

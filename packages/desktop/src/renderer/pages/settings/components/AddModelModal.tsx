@@ -63,7 +63,7 @@ const AddModelModal = ModalHOC<{ data?: IProvider; model?: string; onSubmit: (mo
         ),
       };
 
-      // new-api 平台：为每个选中的模型添加协议配置 / new-api platform: add protocol config for every selected model
+      // new-api platform: add protocol config for every selected model
       if (isNewApi) {
         updatedData.model_protocols = {
           ...data?.model_protocols,
@@ -114,7 +114,7 @@ const AddModelModal = ModalHOC<{ data?: IProvider; model?: string; onSubmit: (mo
                 loading={isLoading}
                 onChange={(value: string[]) => {
                   setModels(value);
-                  // new-api 平台：以最后选中的模型推断协议 / new-api: infer protocol from the last picked model
+                  // new-api: infer protocol from the last picked model
                   if (isNewApi && value.length > 0) setModelProtocol(detectNewApiProtocol(value[value.length - 1]));
                 }}
                 value={models}

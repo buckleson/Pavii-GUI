@@ -13,47 +13,47 @@ import { sanitizeAcpToolCallContent, sanitizeAcpToolUpdate } from './acpToolCall
 export { sanitizeAcpToolCallContent } from './acpToolCallOutput';
 
 /**
- * 安全的路径拼接函数，兼容Windows和Mac
- * @param basePath 基础路径
- * @param relativePath 相对路径
- * @returns 拼接后的绝对路径
+ * Join paths safely on both Windows and macOS.
+ * @param basePath Base path.
+ * @param relativePath Path relative to the base.
+ * @returns The joined absolute path.
  */
 export const joinPath = (basePath: string, relativePath: string): string => {
-  // 标准化路径分隔符为 /
+  // Normalize separators to /.
   const normalizePath = (path: string) => path.replace(/\\/g, '/');
 
   const base = normalizePath(basePath);
   const relative = normalizePath(relativePath);
 
-  // 去掉base路径末尾的斜杠
+  // Drop the trailing slash from the base path.
   const cleanBase = base.replace(/\/+$/, '');
 
-  // 处理相对路径中的 ./ 和 ../
+  // Resolve ./ and ../ segments in the relative path.
   const parts = relative.split('/');
   const resultParts = [];
 
   for (const part of parts) {
     if (part === '.' || part === '') {
-      continue; // 跳过 . 和空字符串
+      continue; // Skip "." and empty segments.
     } else if (part === '..') {
-      // 处理上级目录
+      // Step up a directory.
       if (resultParts.length > 0) {
-        resultParts.pop(); // 移除最后一个部分
+        resultParts.pop(); // Drop the last segment.
       }
     } else {
       resultParts.push(part);
     }
   }
 
-  // 拼接路径
+  // Join the segments.
   const result = cleanBase + '/' + resultParts.join('/');
 
-  // 确保路径格式正确
-  return result.replace(/\/+/g, '/'); // 将多个连续的斜杠替换为单个
+  // Normalize the final shape.
+  return result.replace(/\/+/g, '/'); // Collapse runs of slashes into one.
 };
 
 /**
- * @description 跟对话相关的消息类型申明 及相关处理
+ * @description Conversation message types and the helpers that work on them.
  */
 
 type TMessageType =
@@ -73,34 +73,34 @@ type TMessageType =
 
 interface IMessage<T extends TMessageType, Content extends Record<string, any>> {
   /**
-   * 唯一ID
+   * Unique id.
    */
   id: string;
   /**
-   * 消息来源ID，
+   * Id of the message this one came from.
    */
   msg_id?: string;
 
-  //消息会话ID
+  // Conversation id.
   conversation_id: string;
   /**
-   * 消息类型
+   * Message type.
    */
   type: T;
   /**
-   * 消息内容
+   * Message content.
    */
   content: Content;
   /**
-   * 消息创建时间
+   * Creation time.
    */
   created_at?: number;
   /**
-   * 消息位置
+   * Message position.
    */
   position?: 'left' | 'right' | 'center' | 'pop';
   /**
-   * 消息状态
+   * Message status.
    */
   status?: 'finish' | 'pending' | 'error' | 'work';
   /**

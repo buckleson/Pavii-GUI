@@ -62,8 +62,8 @@ interface UseScrollSyncReturn {
  * requestAnimationFrame to unlock sync state, and falls back to
  * setTimeout + SCROLL_SYNC_DEBOUNCE when unavailable for compatibility and safe degradation.
  *
- * @param options - 滚动同步配置 / Scroll sync configuration
- * @returns 滚动事件处理函数 / Scroll event handlers
+ * @param options Scroll sync configuration
+ * @returns Scroll event handlers
  */
 export const useScrollSync = ({
   enabled,

@@ -5,41 +5,41 @@
  */
 
 export interface ConversionResult<T> {
-  success: boolean; // 是否成功 / Whether successful
-  data?: T; // 转换结果数据 / Conversion result data
-  error?: string; // 错误信息 / Error message
+  success: boolean; // Whether successful
+  data?: T; // Conversion result data
+  error?: string; // Error message
 }
 
-// Excel 中间格式 (JSON) / Excel Intermediate Format (JSON)
+// Excel Intermediate Format (JSON)
 export interface ExcelSheetImage {
-  row: number; // 图片所在行（从 0 开始）/ Image row index (0-based)
-  col: number; // 图片所在列（从 0 开始）/ Image column index (0-based)
-  src: string; // 图片数据（通常为 data URL）/ Image data (typically data URL)
-  width?: number; // 预估宽度（像素）/ Estimated width (px)
-  height?: number; // 预估高度（像素）/ Estimated height (px)
-  alt?: string; // 可选描述 / Optional description
+  row: number; // Image row index (0-based)
+  col: number; // Image column index (0-based)
+  src: string; // Image data (typically data URL)
+  width?: number; // Estimated width (px)
+  height?: number; // Estimated height (px)
+  alt?: string; // Optional description
 }
 
 export interface ExcelSheetData {
-  name: string; // 工作表名称 / Sheet name
+  name: string; // Sheet name
   data: any[][]; // 单元格数据二维数组 / 2D array of cell values
-  merges?: { s: { r: number; c: number }; e: { r: number; c: number } }[]; // 合并单元格范围 / Merge ranges
-  images?: ExcelSheetImage[]; // 单元格图片信息 / Embedded images info
+  merges?: { s: { r: number; c: number }; e: { r: number; c: number } }[]; // Merge ranges
+  images?: ExcelSheetImage[]; // Embedded images info
 }
 
 export interface ExcelWorkbookData {
-  sheets: ExcelSheetData[]; // 工作表列表 / List of sheets
+  sheets: ExcelSheetData[]; // List of sheets
 }
 
-// PowerPoint 中间格式 (PPTX JSON 结构) / PowerPoint Intermediate Format (PPTX JSON structure)
+// PowerPoint Intermediate Format (PPTX JSON structure)
 export interface PPTSlideData {
   slideNumber: number;
-  content: any; // PPTX JSON 结构 / PPTX JSON structure
+  content: any; // PPTX JSON structure
 }
 
 export interface PPTJsonData {
   slides: PPTSlideData[];
-  raw?: any; // 原始 PPTX JSON（可选，通常不需要传递给前端）/ Raw PPTX JSON (optional, usually not needed in frontend)
+  raw?: any; // Raw PPTX JSON (optional, usually not needed in frontend)
 }
 
 export interface ConversionServiceApi {
@@ -59,17 +59,17 @@ export interface ConversionServiceApi {
   htmlToPdf: (html: string, targetPath: string) => Promise<ConversionResult<void>>;
 }
 
-// 文档转换目标格式 / Supported document conversion targets
+// Supported document conversion targets
 export type DocumentConversionTarget = 'markdown' | 'excel-json' | 'ppt-json';
 
-// 统一的文档转换请求参数 / Unified document conversion request payload
+// Unified document conversion request payload
 export interface DocumentConversionRequest {
-  file_path: string; // 待转换文件的绝对路径 / Absolute file path to convert
-  to: DocumentConversionTarget; // 目标格式 / Desired target format
-  workspace?: string; // 工作区根目录（可选）/ Optional workspace root
+  file_path: string; // Absolute file path to convert
+  to: DocumentConversionTarget; // Desired target format
+  workspace?: string; // Optional workspace root
 }
 
-// 根据目标格式返回不同的数据类型 / Result payload differs per target format
+// Result payload differs per target format
 export type DocumentConversionResponse =
   | { to: 'markdown'; result: ConversionResult<string> }
   | { to: 'excel-json'; result: ConversionResult<ExcelWorkbookData> }

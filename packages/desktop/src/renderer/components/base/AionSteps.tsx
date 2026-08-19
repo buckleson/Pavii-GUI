@@ -10,7 +10,7 @@ import classNames from 'classnames';
 import React from 'react';
 
 /**
- * 步骤条组件属性 / Steps component props
+ * Steps component props
  */
 export interface AionStepsProps extends StepsProps {
   /** 额外的类名 / Additional class name */
@@ -18,15 +18,15 @@ export interface AionStepsProps extends StepsProps {
 }
 
 /**
- * 步骤条组件 / Steps component
+ * Steps component
  *
  * 基于 Arco Design Steps 的封装，提供统一的样式主题
  * Wrapper around Arco Design Steps with unified theme styling
  *
  * @features
- * - 自定义品牌色主题 / Custom brand color theme
- * - 完成态的特殊样式处理 / Special styling for finished state
- * - 完整的 Arco Steps API 支持 / Full Arco Steps API support
+ * Custom brand color theme
+ * Special styling for finished state
+ * Full Arco Steps API support
  *
  * @example
  * ```tsx
@@ -66,7 +66,7 @@ const AionSteps: React.FC<AionStepsProps> & { Step: typeof Steps.Step } = ({ cla
 
 AionSteps.displayName = 'AionSteps';
 
-// 导出子组件 / Export sub-component
+// Export sub-component
 AionSteps.Step = Steps.Step;
 
 export default AionSteps;

@@ -7,8 +7,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 interface UseTypingAnimationOptions {
-  content: string; // 原始内容 / Original content
-  enabled?: boolean; // 是否启用动画 / Whether to enable animation
+  content: string; // Original content
+  enabled?: boolean; // Whether to enable animation
   speed?: number; // 打字速度（字符/秒）/ Typing speed (characters per second)
 }
 
@@ -29,13 +29,13 @@ interface UseTypingAnimationOptions {
  * ```
  */
 export const useTypingAnimation = ({ content, enabled = true, speed = 50 }: UseTypingAnimationOptions) => {
-  const [displayedContent, setDisplayedContent] = useState(content); // 当前显示的内容 / Currently displayed content
-  const [isAnimating, setIsAnimating] = useState(false); // 是否正在打字动画 / Whether typing animation is active
-  const animationFrameRef = useRef<number | null>(null); // 动画帧 ID / Animation frame ID
-  const targetContentRef = useRef(content); // 目标内容 / Target content
+  const [displayedContent, setDisplayedContent] = useState(content); // Currently displayed content
+  const [isAnimating, setIsAnimating] = useState(false); // Whether typing animation is active
+  const animationFrameRef = useRef<number | null>(null); // Animation frame ID
+  const targetContentRef = useRef(content); // Target content
 
   useEffect(() => {
-    // 如果禁用动画，直接显示完整内容 / If animation disabled, show full content immediately
+    // If animation disabled, show full content immediately
     if (!enabled) {
       setDisplayedContent(content);
       setIsAnimating(false);
@@ -58,19 +58,19 @@ export const useTypingAnimation = ({ content, enabled = true, speed = 50 }: UseT
       return;
     }
 
-    // 计算内容变化量 / Calculate content change amount
+    // Calculate content change amount
     const contentDiff = content.length - displayedContent.length;
 
     // 如果内容变短了（删除）或一次性增加了很多内容（超过1000字符），说明不是流式更新
-    // 直接显示，不做动画 / If content got shorter or increased by a lot (>1000 chars), show immediately
-    // 只有增量更新（每次少量增加）才触发打字动画 / Only trigger typing animation for incremental updates
+    // If content got shorter or increased by a lot (>1000 chars), show immediately
+    // Only trigger typing animation for incremental updates
     if (contentDiff < 0 || contentDiff > 1000) {
       setDisplayedContent(content);
       setIsAnimating(false);
       return;
     }
 
-    // 开始打字动画 / Start typing animation
+    // Start typing animation
     setIsAnimating(true);
     let currentIndex = displayedContent.length;
     const targetContent = content;

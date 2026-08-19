@@ -85,8 +85,14 @@ describe('TASK_TEMPLATES', () => {
 
   it('keeps the keys present in every locale', () => {
     // scripts/check-i18n.js enforces parity; this fails fast in the unit run.
-    const locales = fs.readdirSync(LOCALES_DIR).filter((entry) => fs.statSync(path.join(LOCALES_DIR, entry)).isDirectory());
-    const required = TASK_TEMPLATES.flatMap((template) => [nameKeyOf(template), descriptionKeyOf(template), promptKeyOf(template)]);
+    const locales = fs
+      .readdirSync(LOCALES_DIR)
+      .filter((entry) => fs.statSync(path.join(LOCALES_DIR, entry)).isDirectory());
+    const required = TASK_TEMPLATES.flatMap((template) => [
+      nameKeyOf(template),
+      descriptionKeyOf(template),
+      promptKeyOf(template),
+    ]);
 
     for (const locale of locales) {
       const strings = readCronLocale(locale);

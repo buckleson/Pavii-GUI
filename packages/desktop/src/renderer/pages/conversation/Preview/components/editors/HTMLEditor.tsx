@@ -21,7 +21,7 @@ interface HTMLEditorProps {
   onChange: (value: string) => void;
   containerRef?: React.RefObject<HTMLDivElement>;
   onScroll?: (scrollTop: number, scrollHeight: number, clientHeight: number) => void;
-  file_path?: string; // 用于生成稳定的 key / Used to generate stable key
+  file_path?: string; // Used to generate stable key
 }
 
 /**
@@ -35,10 +35,10 @@ const HTMLEditor: React.FC<HTMLEditorProps> = ({ value, onChange, containerRef, 
   const { theme } = useThemeContext();
   const editorWrapperRef = useRef<HTMLDivElement>(null);
 
-  // 使用 CodeMirror 滚动 Hook / Use CodeMirror scroll hook
+  // Use CodeMirror scroll hook
   const { setScrollPercent } = useCodeMirrorScroll(editorWrapperRef, onScroll);
 
-  // 监听外部滚动同步请求 / Listen for external scroll sync requests
+  // Listen for external scroll sync requests
   const handleTargetScroll = useCallback(
     (targetPercent: number) => {
       setScrollPercent(targetPercent);
@@ -53,10 +53,10 @@ const HTMLEditor: React.FC<HTMLEditorProps> = ({ value, onChange, containerRef, 
     return file_path || 'html-editor';
   }, [file_path]);
 
-  // 包装 onChange 以添加类型检查 / Wrap onChange to add type checking
+  // Wrap onChange to add type checking
   const handleChange = useCallback(
     (newValue: string) => {
-      // 严格类型检查 / Strict type checking
+      // Strict type checking
       if (typeof newValue !== 'string') {
         console.error('[HTMLEditor] onChange received non-string value:', newValue);
         return;
@@ -82,8 +82,8 @@ const HTMLEditor: React.FC<HTMLEditorProps> = ({ value, onChange, containerRef, 
   const extensions = useMemo<Extension[]>(
     () => [
       ...(disableHighlight ? [] : [html()]),
-      history(), // 显式添加历史记录支持 / Explicitly add history support
-      keymap.of(historyKeymap), // 添加历史记录快捷键 / Add history keymaps
+      history(), // Explicitly add history support
+      keymap.of(historyKeymap), // Add history keymaps
       Prec.highest(codeEditorSurfaceTheme()), // surface bg follows theme tokens
     ],
     [disableHighlight]
@@ -94,9 +94,9 @@ const HTMLEditor: React.FC<HTMLEditorProps> = ({ value, onChange, containerRef, 
       lineNumbers: true,
       highlightActiveLineGutter: true,
       highlightActiveLine: true,
-      // 折叠依赖语法树，降级时一起关 / Folding relies on the syntax tree; off when degraded
+      // Folding relies on the syntax tree; off when degraded
       foldGutter: !disableHighlight,
-      history: false, // 关闭 basicSetup 的 history，使用我们自己的 / Disable basicSetup history, use our own
+      history: false, // Disable basicSetup history, use our own
     }),
     [disableHighlight]
   );

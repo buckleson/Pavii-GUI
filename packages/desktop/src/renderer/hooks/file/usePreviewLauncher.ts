@@ -15,7 +15,7 @@ import { classifyPreviewError, type PreviewErrorKind } from '@/renderer/utils/pr
 import { useCallback, useState } from 'react';
 
 /**
- * 预览启动选项 / Preview launch options
+ * Preview launch options
  */
 interface PreviewLaunchOptions {
   /** 相对工作区路径 / Workspace-relative path */
@@ -42,10 +42,10 @@ interface PreviewLaunchOptions {
  * 统一的预览面板打开逻辑
  * Shared preview launcher logic for components that need edit/preview buttons
  *
- * 处理流程 / Processing flow:
- * 1. 可编辑文件：优先读取实际文件内容 / Editable files: try reading actual file content first
- * 2. 读取失败：使用 fallbackContent 作为回退 / Read failed: use fallbackContent as fallback
- * 3. 不可编辑：显示 diffContent（只读）/ Non-editable: show diffContent (read-only)
+ * Processing flow:
+ * Editable files: try reading actual file content first
+ * Read failed: use fallbackContent as fallback
+ * Non-editable: show diffContent (read-only)
  *
  * @returns {{ launchPreview: Function, loading: boolean }}
  */
@@ -57,7 +57,7 @@ export const usePreviewLauncher = () => {
   const [errorKind, setErrorKind] = useState<PreviewErrorKind | null>(null);
 
   /**
-   * 启动预览面板 / Launch preview panel
+   * Launch preview panel
    */
   const launchPreview = useCallback(
     async ({
@@ -74,8 +74,8 @@ export const usePreviewLauncher = () => {
       setLoading(true);
       setErrorKind(null);
 
-      // 路径解析 / Path resolution
-      // 优先使用工作区 + 相对路径拼接绝对路径 / Prefer workspace + relative path to build absolute path
+      // Path resolution
+      // Prefer workspace + relative path to build absolute path
       const absolutePath = workspace && relativePath ? joinPath(workspace, relativePath) : undefined;
       const resolvedPath = absolutePath || originalPath || relativePath || undefined;
       // Backend-host absolute path (agent workspace file, no pe identity) → a Local
@@ -87,12 +87,12 @@ export const usePreviewLauncher = () => {
       // receive change signals too.
       const fileRef = readPath ? await upgradeFileRef(localFileRef(readPath), getCurrentProject()) : undefined;
 
-      // 文件名和标题计算 / Compute file name and title
+      // Compute file name and title
       const computedFileName =
         file_name || (relativePath ? relativePath.split(/[\\/]/).pop() || relativePath : undefined);
       const previewTitle = title || computedFileName || relativePath || contentType.toUpperCase();
 
-      // 预览元数据 / Preview metadata
+      // Preview metadata
       const metadata = {
         title: previewTitle,
         file_name: computedFileName || previewTitle,
@@ -102,7 +102,7 @@ export const usePreviewLauncher = () => {
         language,
       };
 
-      // 1. 乐观预览：如果有回退内容（如 Diff 中提取的内容），立即显示 / Optimistic preview: Show fallback content immediately if available
+      // Optimistic preview: Show fallback content immediately if available
       let hasOpened = false;
       if (typeof fallbackContent === 'string') {
         openPreview(fallbackContent, contentType, {
@@ -113,7 +113,7 @@ export const usePreviewLauncher = () => {
       }
 
       try {
-        // 2. 尝试读取实际文件内容（覆盖乐观预览） / Try to read actual file content (override optimistic preview)
+        // Try to read actual file content (override optimistic preview)
         if (fileRef) {
           try {
             // 单一判定点：取一次 metadata 拿到 size（判上限）与 lastModified（保存时的
@@ -144,9 +144,9 @@ export const usePreviewLauncher = () => {
           }
         }
 
-        // 3. 如果尚未打开且没有成功读取文件，处理回退情况 / If not opened and file read failed, handle fallback cases
+        // If not opened and file read failed, handle fallback cases
         if (!hasOpened) {
-          // 显示 diff 内容（只读）/ Show diff content (read-only)
+          // Show diff content (read-only)
           if (diffContent) {
             openPreview(diffContent, 'diff', {
               ...metadata,

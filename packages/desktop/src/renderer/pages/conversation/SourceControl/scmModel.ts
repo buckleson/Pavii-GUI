@@ -289,7 +289,7 @@ export type ScmActionFailure = {
 /**
  * Which staging side an action operates on.
  *
- * Fixed by the contract (protocol.md v11 §源代码控制): `scm/stage` acts on the
+ * stage` acts on the
  * unstaged side, `scm/unstage` on the staged side, `scm/discard` on the unstaged
  * side. A request cannot express "operate on this particular resource" — it names
  * one method, and the method determines the side.

@@ -212,7 +212,9 @@ const ScheduledTasksPage: React.FC = () => {
                       <Menu onClickMenuItem={(key) => setSortBy(key as SortKey)}>
                         <Menu.Item key='nextRun'>{t('cron.page.sortNextRun', { defaultValue: 'Next run' })}</Menu.Item>
                         <Menu.Item key='name'>{t('cron.page.sortName', { defaultValue: 'Name' })}</Menu.Item>
-                        <Menu.Item key='recent'>{t('cron.page.sortRecent', { defaultValue: 'Recently added' })}</Menu.Item>
+                        <Menu.Item key='recent'>
+                          {t('cron.page.sortRecent', { defaultValue: 'Recently added' })}
+                        </Menu.Item>
                       </Menu>
                     }
                   >

@@ -302,8 +302,15 @@ const Config: React.FC<PropsWithChildren> = ({ children }) => {
   const {
     i18n: { language },
   } = useTranslation();
+  // Falls back to English, never to Arco's own default — that default is zh-CN
+  // (`@arco-design/web-react/es/locale/default` re-exports it), so an unknown
+  // language would otherwise render Chinese buttons in an English app.
   const arcoLocale = arcoLocales[language] ?? enUS;
 
+  // Every ConfigProvider also writes its locale into a module global that
+  // imperative dialogs (`Modal.confirm`, `Message`, `Notification`) read, since
+  // those render outside the React tree. Any other ConfigProvider in the app
+  // must therefore pass `locale` too, or it silently overwrites this one.
   return React.createElement(ConfigProvider, { theme: { primaryColor: '#4E5969' }, locale: arcoLocale }, children);
 };
 

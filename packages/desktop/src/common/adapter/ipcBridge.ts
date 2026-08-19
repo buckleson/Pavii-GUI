@@ -647,8 +647,8 @@ export const application = {
   getCdpStatus: bridge.buildProvider<IBridgeResponse<ICdpStatus>, void>('app.get-cdp-status'),
   updateCdpConfig: bridge.buildProvider<IBridgeResponse<ICdpConfig>, Partial<ICdpConfig>>('app.update-cdp-config'),
   /**
-   * 清空应用内浏览器的登录态与缓存（cookie / localStorage / 缓存）。
-   * 登录态是全局共享的，所以这是唯一的"退出所有网站登录"入口。
+   * Clear the in-app browser session and caches (cookies, localStorage, cache).
+   * That session is shared globally, so this is the only "sign out everywhere" entry point.
    *
    * Clear the in-app browser's sign-in state and cache (cookies / localStorage /
    * caches). Sign-in state is globally shared, so this is the only way to sign out
@@ -656,12 +656,12 @@ export const application = {
    */
   clearBrowserData: bridge.buildProvider<IBridgeResponse<void>, void>('app.clear-browser-data'),
   /**
-   * 渲染进程把侧边浏览器 webview 的 webContents id 报给主进程，用于把单目标 CDP 通道
-   * 附加到它。
+   * The renderer reports the side-browser webview id to the main process so the
+   * single-target CDP channel can attach to it.
    *
-   * 为什么必须由渲染进程报：webview 的句柄只存在于渲染进程（webviewRef），主进程无法
-   * 凭空知道哪个 webContents 是「侧边浏览器」。主进程会校验 getType() === 'webview'，
-   * 所以即使这个通道被误用也无法拿主窗口去附加。
+   * It has to come from the renderer: the webview handle only exists there
+   * (webviewRef), so the main process cannot know which webContents is the side
+   * browser. Main validates getType() === 'webview', so a misused channel still cannot attach the main window.
    *
    * The renderer reports the in-app browser webview's webContents id so the single-target
    * CDP bridge can attach to it. It must come from the renderer because the webview handle
@@ -1076,7 +1076,6 @@ export const acpConversation = {
     ),
     applyAgentBranding
   ),
-  refreshCustomAgents: httpPost<void, void>('/api/agents/refresh'),
   testCustomAgent: httpPost<
     { step: 'success' } | { step: 'fail_cli'; error: string } | { step: 'fail_acp'; error: string },
     { command: string; acp_args?: string[]; env?: Record<string, string>; runtime_scope_id?: string }
