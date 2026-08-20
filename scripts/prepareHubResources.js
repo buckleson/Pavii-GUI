@@ -14,6 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const crypto = require('crypto');
 const { readJsonFile } = require('../packages/shared-scripts/src/read-json-file.js');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -94,6 +95,79 @@ function downloadUrl(url, destPath) {
 // Main
 // ---------------------------------------------------------------------------
 
+/**
+ * Trust-on-first-use pin for the hub bundle.
+ *
+ * Everything under resources/hub/ ships inside the installer as
+ * `extraResources`, fetched at build time from a repository we do not control,
+ * behind a mutable tag. Whatever sits there when a release builds is what users
+ * install.
+ *
+ * The catalog's own `dist.integrity` field cannot be used for this: it is typed
+ * as a SHA-512 SRI hash, carries `sha256-<hex>` values, matches none of the
+ * seven zips it describes, and nothing in the app reads it. So we pin against
+ * hashes we compute ourselves and commit.
+ *
+ * First run writes resources/hub/hub-lock.json. Every later build compares
+ * against it and fails on drift, which turns a silent upstream content change
+ * into a build error someone has to look at. Refresh deliberately with
+ * AIONUI_HUB_RELOCK=1 and review the diff.
+ */
+const HUB_LOCK = path.join(PROJECT_ROOT, 'resources', 'hub-lock.json');
+
+function sha256File(file) {
+  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+function readHubLock() {
+  if (process.env.AIONUI_HUB_RELOCK === '1' || !fs.existsSync(HUB_LOCK)) return null;
+  try {
+    return readJsonFile(HUB_LOCK);
+  } catch {
+    return null;
+  }
+}
+
+function assertMatchesLock(lock, entries, indexSha256) {
+  if (!lock) return;
+
+  const problems = [];
+  if (lock.indexSha256 && lock.indexSha256 !== indexSha256) {
+    problems.push(`index.json changed
+    locked ${lock.indexSha256}
+    actual ${indexSha256}`);
+  }
+
+  const locked = lock.extensions || {};
+  for (const entry of entries) {
+    const want = locked[entry.name];
+    if (!want) {
+      problems.push(`${entry.name} is not in the lock file (new extension appeared upstream)`);
+    } else if (want !== entry.sha256) {
+      problems.push(`${entry.name} changed
+    locked ${want}
+    actual ${entry.sha256}`);
+    }
+  }
+  for (const name of Object.keys(locked)) {
+    if (!entries.some((e) => e.name === name)) {
+      problems.push(`${name} is in the lock file but was not published (extension removed upstream)`);
+    }
+  }
+
+  if (problems.length > 0) {
+    throw new Error(
+      [
+        'Hub bundle drifted from resources/hub-lock.json:',
+        ...problems.map((p) => `  - ${p}`),
+        '',
+        'This code ships inside the installer. Review the change, then re-pin with',
+        '  AIONUI_HUB_RELOCK=1 node scripts/prepareHubResources.js',
+      ].join('\n')
+    );
+  }
+}
+
 async function prepareHubResources() {
   if (process.env.AIONUI_HUB_SKIP === '1') {
     console.log('[hub] Skipping hub resource preparation (AIONUI_HUB_SKIP=1)');
@@ -132,25 +206,39 @@ async function prepareHubResources() {
     }
 
     const zipPath = path.join(HUB_DIR, path.basename(tarball));
-    try {
-      const url = await downloadFile(tarball, zipPath);
-      const size = fs.statSync(zipPath).size;
-      console.log(`[hub] ${name} -> ${path.basename(tarball)} (${(size / 1024).toFixed(1)} KB)`);
-      results.push({ name, file: path.basename(tarball), size, url });
-    } catch (error) {
-      console.error(`[hub] Failed to download ${name}: ${error.message}`);
-      // Non-fatal: continue with other extensions
-    }
+    const url = await downloadFile(tarball, zipPath);
+    const sha256 = sha256File(zipPath);
+    const size = fs.statSync(zipPath).size;
+    console.log(`[hub] ${name} -> ${path.basename(tarball)} (${(size / 1024).toFixed(1)} KB)`);
+    results.push({ name, file: path.basename(tarball), size, url, sha256 });
   }
 
   // Step 3: Write manifest for debugging/verification
+  // The index hash makes a moved tag auditable after the fact: two builds of
+  // the same tag that produced different catalogs will differ here.
+  const indexSha256 = crypto.createHash('sha256').update(fs.readFileSync(indexPath)).digest('hex');
   const manifest = {
     tag,
     generatedAt: new Date().toISOString(),
     indexUrl,
+    indexSha256,
     extensions: results,
   };
   fs.writeFileSync(path.join(HUB_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+
+  const lock = readHubLock();
+  assertMatchesLock(lock, results, indexSha256);
+  if (!lock) {
+    const pinned = {
+      tag,
+      indexSha256,
+      extensions: Object.fromEntries(results.map((r) => [r.name, r.sha256])),
+    };
+    fs.writeFileSync(HUB_LOCK, `${JSON.stringify(pinned, null, 2)}\n`);
+    console.log(`[hub] Wrote resources/hub-lock.json pinning ${results.length} extensions -- commit this file`);
+  } else {
+    console.log('[hub] Bundle matches resources/hub-lock.json');
+  }
 
   console.log(`[hub] Done: ${results.length}/${names.length} extensions bundled in resources/hub/`);
   return { skipped: false, count: results.length, total: names.length };

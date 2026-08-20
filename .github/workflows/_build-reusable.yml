@@ -10,6 +10,14 @@ on:
         description: Upload build output as workflow artifacts
         type: boolean
         default: true
+      ref:
+        description: >-
+          Git ref to build. Required for workflow_dispatch: without it every
+          checkout uses the ref the workflow was dispatched on, so asking for
+          tag v2.1.53 from main builds main's version and the publish step then
+          rejects its own artifacts.
+        type: string
+        default: ''
 
 concurrency:
   group: build-${{ github.ref }}
@@ -39,11 +47,16 @@ jobs:
             artifact: macos-build-arm64
             build: build-mac:arm64
             rust-target: aarch64-apple-darwin
-          - name: macos-x64
-            runner: macos-13
-            artifact: macos-build-x64
-            build: build-mac:x64
-            rust-target: x86_64-apple-darwin
+          # No macos-x64 leg. It was pinned to `macos-13`, a retired Intel
+          # runner label, so the job queued for a runner that never arrived --
+          # `timeout-minutes` above does not save it, because queue time is not
+          # execution time. The v2.1.52 release sat 13h10m on that one job while
+          # the other five finished in under 45 minutes, and `publish` needs
+          # them all, so no release has ever been produced.
+          #
+          # Re-adding Intel means picking a currently-supported Intel label and
+          # proving it with a `workflow_dispatch` run BEFORE tagging; a wrong
+          # label reproduces the same silent hang rather than failing.
           - name: linux-x64
             runner: ubuntu-latest
             artifact: linux-build-x64
@@ -65,6 +78,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Install Linux packaging deps
         if: startsWith(matrix.name, 'linux')

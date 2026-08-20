@@ -19,6 +19,8 @@ permissions:
 jobs:
   build:
     uses: ./.github/workflows/_build-reusable.yml
+    with:
+      ref: ${{ inputs.tag || github.ref }}
 
   publish:
     needs: build
@@ -26,6 +28,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
@@ -53,8 +57,9 @@ jobs:
           copy_channel() { [ -f "$1" ] && cp "$1" "release/$2" || echo "note: missing $1"; }
           copy_channel artifacts/windows-build-x64/latest.yml        latest.yml
           copy_channel artifacts/windows-build-arm64/latest.yml      latest-win-arm64.yml
-          copy_channel artifacts/macos-build-x64/latest-mac.yml      latest-mac.yml
-          copy_channel artifacts/macos-build-arm64/latest-mac.yml    latest-arm64-mac.yml
+          # macOS ships arm64 only; latest-mac.yml is the channel file
+          # electron-updater looks for by default, so arm64 supplies it.
+          copy_channel artifacts/macos-build-arm64/latest-mac.yml    latest-mac.yml
           copy_channel artifacts/linux-build-x64/latest-linux.yml    latest-linux.yml
           copy_channel artifacts/linux-build-arm64/latest-linux-arm64.yml latest-linux-arm64.yml
 
@@ -65,7 +70,6 @@ jobs:
           alias_of "Pavii.Ai-$V-win-x64.exe"       "Pavii.Ai-Windows-x64-Setup.exe"
           alias_of "Pavii.Ai-$V-win-arm64.exe"     "Pavii.Ai-Windows-arm64-Setup.exe"
           alias_of "Pavii.Ai-$V-mac-arm64.dmg"     "Pavii.Ai-macOS-arm64.dmg"
-          alias_of "Pavii.Ai-$V-mac-x64.dmg"       "Pavii.Ai-macOS-x64.dmg"
           alias_of "Pavii.Ai-$V-linux-x64.AppImage"   "Pavii.Ai-Linux-x64.AppImage"
           alias_of "Pavii.Ai-$V-linux-arm64.AppImage" "Pavii.Ai-Linux-arm64.AppImage"
           alias_of "Pavii.Ai-$V-linux-x64.deb"     "Pavii.Ai-Linux-x64.deb"
@@ -82,7 +86,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          for f in Pavii.Ai-Windows-x64-Setup.exe Pavii.Ai-Windows-arm64-Setup.exe                    Pavii.Ai-macOS-arm64.dmg Pavii.Ai-macOS-x64.dmg                    Pavii.Ai-Linux-x64.AppImage Pavii.Ai-Linux-arm64.AppImage                    Pavii.Ai-Linux-x64.deb Pavii.Ai-Linux-arm64.deb; do
+          for f in Pavii.Ai-Windows-x64-Setup.exe Pavii.Ai-Windows-arm64-Setup.exe                    Pavii.Ai-macOS-arm64.dmg                    Pavii.Ai-Linux-x64.AppImage Pavii.Ai-Linux-arm64.AppImage                    Pavii.Ai-Linux-x64.deb Pavii.Ai-Linux-arm64.deb; do
             if [ -f "release/$f" ]; then echo "ok      $f"; else echo "MISSING $f"; missing=1; fi
           done
           [ "$missing" -eq 0 ] || { echo "Refusing to publish: a download button would 404."; exit 1; }
