@@ -481,14 +481,6 @@ fn is_port_in_use_message(message: &str) -> bool {
         || message.contains("os error 10048")
 }
 
-fn normalize_officecli_version(raw: &str) -> String {
-    raw.split_whitespace()
-        .last()
-        .unwrap_or_default()
-        .trim_start_matches('v')
-        .to_owned()
-}
-
 async fn officecli_supports_watch(officecli: &Path) -> bool {
     let mut version = CmdBuilder::clean_cli(officecli);
     version.arg("--version");

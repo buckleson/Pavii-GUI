@@ -108,13 +108,14 @@ test.describe('Assistant Settings Edge Cases (P2)', () => {
 
   test('P2-3: skill delete button visible on hover', async ({ page }) => {
     // Create temporary external skill source with a skill
-    const { mkdirSync, writeFileSync } = await import('fs');
-    const tempSkillPath = '/tmp/e2e-test-skills-p2-3';
+    const { mkdtempSync, writeFileSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
 
-    // Create temp skill directory with SKILL.md in test process (Node.js)
-    mkdirSync(tempSkillPath, { recursive: true });
+    // Was a hardcoded `/tmp/...`, which is not a path on Windows.
+    const tempSkillPath = mkdtempSync(join(tmpdir(), 'aionui-e2e-skills-p2-3-'));
     writeFileSync(
-      `${tempSkillPath}/SKILL.md`,
+      join(tempSkillPath, 'SKILL.md'),
       `---\nname: test-skill-p2-3\ndescription: Test skill for P2-3\n---\n\nTest skill content.`
     );
 

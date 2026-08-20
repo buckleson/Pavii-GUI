@@ -73,7 +73,7 @@ test.describe('Team Rename & Pin', () => {
     }
   });
 
-  test('重命名 team', async ({ page }) => {
+  test('rename team', async ({ page }) => {
     // 1. 通过 UI 创建 team
     await createTeam(page, RENAME_ORIG);
 
@@ -102,7 +102,7 @@ test.describe('Team Rename & Pin', () => {
     await expect(oldName).toHaveCount(0, { timeout: 5_000 });
   });
 
-  test('pin/unpin team 改变排序', async ({ page }) => {
+  test('pin/unpin team changes ordering', async ({ page }) => {
     // 1. 创建两个 team，A 先创建排在前面
     await createTeam(page, PIN_A);
     // 回到首页避免阻塞第二次创建

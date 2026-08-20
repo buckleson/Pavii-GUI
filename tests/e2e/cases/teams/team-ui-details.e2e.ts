@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { test, expect } from '../../fixtures';
 import { cleanupTeamsByName, createTeam } from '../../helpers';
 
@@ -41,10 +44,11 @@ test.describe('Team UI Details', () => {
   test('create team with workspace folder via native dialog', async ({ electronApp, page }) => {
     await cleanupTeamsByName(page, TEAM_WORKSPACE);
 
-    const tmpDir = `/tmp/e2e-workspace-${Date.now()}`;
+    // `/tmp/...` is not a path on Windows, and creating it inside
+    // electronApp.evaluate ran a dynamic import in the main process. Both are
+    // avoided by using the suite's own idiom and making the directory here.
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aionui-e2e-workspace-'));
     await electronApp.evaluate(async ({ dialog }, dir) => {
-      const fs = await import('fs');
-      fs.mkdirSync(dir, { recursive: true });
       dialog.showOpenDialog = () => Promise.resolve({ canceled: false, filePaths: [dir] });
     }, tmpDir);
 
@@ -89,7 +93,9 @@ test.describe('Team UI Details', () => {
 
     await page.waitForTimeout(1_000);
 
-    const workspacePath = modal.locator(`text=${tmpDir.split('/').pop()}`);
+    // path.basename, not split('/'): mkdtempSync returns a backslash-separated
+    // path on Windows, where splitting on '/' yields the whole path.
+    const workspacePath = modal.locator(`text=${path.basename(tmpDir)}`);
     await expect(workspacePath).toBeVisible({ timeout: 5_000 });
 
     const confirmBtn = modal.locator('.arco-btn-primary');
