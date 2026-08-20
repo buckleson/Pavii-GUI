@@ -136,6 +136,9 @@ build/
 out/
 out-fast-builds/
 
+# Transient backups of out/ taken by tests that drive the real build script
+/.tmp-out-backup-*/
+
 # Keep extension example dist (pre-built distributable assets)
 !examples/**/dist/
 .webpack/

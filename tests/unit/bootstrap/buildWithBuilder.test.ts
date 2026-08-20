@@ -48,11 +48,84 @@ function resolveAppBuilderInstallUtil(): string {
   return resolve(appBuilderDir, 'templates/nsis/include/installUtil.nsh');
 }
 
+const OUT_BACKUP_PREFIX = '.tmp-out-backup-';
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'EPERM';
+  }
+}
+
+/**
+ * Recover `out/` backups left behind by a run that was killed before its own
+ * cleanup could restore them. Anything still parked under a dead owner pid is
+ * orphaned build output: regenerable, but large enough to matter — one leak
+ * reached 1.9 GB, and its minified vendor JS flooded the lint gate with errors
+ * that looked like source problems.
+ */
+function recoverLeakedOutBackups(outDir: string): void {
+  for (const entry of readdirSync(repoRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !entry.name.startsWith(OUT_BACKUP_PREFIX)) {
+      continue;
+    }
+
+    const ownerPid = Number.parseInt(entry.name.slice(OUT_BACKUP_PREFIX.length), 10);
+    if (Number.isInteger(ownerPid) && ownerPid !== process.pid && isProcessAlive(ownerPid)) {
+      continue;
+    }
+
+    const backupDir = resolve(repoRoot, entry.name);
+    if (existsSync(outDir)) {
+      rmSync(backupDir, { recursive: true, force: true });
+    } else {
+      renameSync(backupDir, outDir);
+    }
+  }
+}
+
+/**
+ * Take ownership of the repo-root `out/` directory for the current test and
+ * register its restore in the same breath.
+ *
+ * These tests drive the real build script, which resolves `out/` from its own
+ * location, so an existing build tree has to be parked aside while the test
+ * writes its own fixture there. Registering the restore with
+ * `onTestFinished` ties it to the test lifecycle instead of to one `finally`
+ * block, so it still runs when the test body throws or the run is aborted.
+ */
+function claimRepoOutDir(label: string): string {
+  const outDir = resolve(repoRoot, 'out');
+  recoverLeakedOutBackups(outDir);
+
+  const backupDir = resolve(repoRoot, `${OUT_BACKUP_PREFIX}${process.pid}-${label}`);
+  const movedExistingOut = existsSync(outDir);
+  if (movedExistingOut) {
+    renameSync(outDir, backupDir);
+  }
+
+  onTestFinished(() => {
+    // The fixture `out/` has to go before the backup can move back, and that
+    // removal can fail on Windows, so the restore runs from `finally`: the
+    // real build tree returns either way.
+    try {
+      rmSync(outDir, { recursive: true, force: true });
+    } finally {
+      if (movedExistingOut) {
+        renameSync(backupDir, outDir);
+      }
+    }
+  });
+
+  return outDir;
+}
+
 describe('build-with-builder', () => {
   it('rejects skip-vite when renderer output is only a source html shell', () => {
-    const outDir = resolve(repoRoot, 'out');
-    const backupOutDir = resolve(repoRoot, `.tmp-out-backup-${process.pid}-${Date.now()}`);
     const tempDir = mkdtempSync(join(tmpdir(), 'aionui-build-skip-vite-test-'));
+    onTestFinished(() => rmSync(tempDir, { recursive: true, force: true }));
     const hookPath = join(tempDir, 'hook.cjs');
 
     writeFileSync(
@@ -66,43 +139,27 @@ childProcess.execSync = function mockedExecSync(command) {
       'utf8'
     );
 
-    let movedExistingOut = false;
-    try {
-      if (existsSync(outDir)) {
-        renameSync(outDir, backupOutDir);
-        movedExistingOut = true;
-      }
-      mkdirSync(resolve(outDir, 'main'), { recursive: true });
-      mkdirSync(resolve(outDir, 'renderer'), { recursive: true });
-      writeFileSync(resolve(outDir, 'main/index.js'), 'console.log("main placeholder");\n', 'utf8');
-      writeFileSync(
-        resolve(outDir, 'renderer/index.html'),
-        '<!doctype html><html><body><div id="root"></div><script type="module" src="./main.tsx"></script></body></html>\n',
-        'utf8'
-      );
+    const outDir = claimRepoOutDir('skip-vite');
+    mkdirSync(resolve(outDir, 'main'), { recursive: true });
+    mkdirSync(resolve(outDir, 'renderer'), { recursive: true });
+    writeFileSync(resolve(outDir, 'main/index.js'), 'console.log("main placeholder");\n', 'utf8');
+    writeFileSync(
+      resolve(outDir, 'renderer/index.html'),
+      '<!doctype html><html><body><div id="root"></div><script type="module" src="./main.tsx"></script></body></html>\n',
+      'utf8'
+    );
 
-      const result = spawnSync(
-        process.execPath,
-        ['scripts/build-with-builder.js', 'x64', '--skip-vite', '--pack-only'],
-        {
-          cwd: repoRoot,
-          encoding: 'utf8',
-          env: {
-            ...process.env,
-            NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require=${hookPath}`].filter(Boolean).join(' '),
-          },
-        }
-      );
+    const result = spawnSync(process.execPath, ['scripts/build-with-builder.js', 'x64', '--skip-vite', '--pack-only'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require=${hookPath}`].filter(Boolean).join(' '),
+      },
+    });
 
-      expect(result.status).not.toBe(0);
-      expect(result.stderr + result.stdout).toContain('Renderer build output is incomplete');
-    } finally {
-      rmSync(outDir, { recursive: true, force: true });
-      if (movedExistingOut) {
-        renameSync(backupOutDir, outDir);
-      }
-      rmSync(tempDir, { recursive: true, force: true });
-    }
+    expect(result.status).not.toBe(0);
+    expect(result.stderr + result.stdout).toContain('Renderer build output is incomplete');
   });
 
   it('releases the NSIS output directory before any update repair or uninstall work', () => {
@@ -270,10 +327,9 @@ childProcess.execSync = function mockedExecSync(command) {
     },
   ])('prepares bundled Pavii Engine for $expectedArch with args $args', ({ args, expectedArch }) => {
     const tempDir = mkdtempSync(join(tmpdir(), 'aionui-build-test-'));
+    onTestFinished(() => rmSync(tempDir, { recursive: true, force: true }));
     const hookPath = join(tempDir, 'hook.cjs');
     const callsPath = join(tempDir, 'prepare-calls.json');
-    const outDir = resolve(repoRoot, 'out');
-    const backupOutDir = resolve(repoRoot, `.tmp-out-backup-${process.pid}-${Date.now()}-${expectedArch}`);
 
     writeFileSync(
       hookPath,
@@ -338,43 +394,31 @@ childProcess.execSync = function mockedExecSync(command) {
       'utf8'
     );
 
-    let movedExistingOut = false;
-    try {
-      if (existsSync(outDir)) {
-        renameSync(outDir, backupOutDir);
-        movedExistingOut = true;
-      }
+    claimRepoOutDir(`prepare-${expectedArch}`);
 
-      const result = spawnSync(process.execPath, ['scripts/build-with-builder.js', ...args], {
-        cwd: repoRoot,
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          AIONUI_PREPARE_CALLS_FILE: callsPath,
-          NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require=${hookPath}`].filter(Boolean).join(' '),
-        },
-      });
+    const result = spawnSync(process.execPath, ['scripts/build-with-builder.js', ...args], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        AIONUI_PREPARE_CALLS_FILE: callsPath,
+        NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require=${hookPath}`].filter(Boolean).join(' '),
+      },
+    });
 
-      expect(result.status, result.stderr || result.stdout).toBe(0);
-      expect(readFileSync(resolve(repoRoot, 'resources/windows/support/_sentry-dsn.generated.nsh'), 'utf8')).toBe(
-        '!define AIONUI_SENTRY_DSN ""\n'
-      );
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(readFileSync(resolve(repoRoot, 'resources/windows/support/_sentry-dsn.generated.nsh'), 'utf8')).toBe(
+      '!define AIONUI_SENTRY_DSN ""\n'
+    );
 
-      if (args.includes('--win')) {
-        const installUtil = readFileSync(resolveAppBuilderInstallUtil(), 'utf8');
-        expect(installUtil).toContain('Pavii.Ai-bundled-uninstaller override source');
-        expect(installUtil).toContain('$PLUGINSDIR\\Pavii.Ai-fixed-uninstaller.exe');
-        expect(installUtil.match(/Pavii.Ai-bundled-uninstaller override source/g)).toHaveLength(1);
-      }
-
-      const calls = JSON.parse(readFileSync(callsPath, 'utf8')) as Array<{ arch?: string } | null>;
-      expect(calls).toContainEqual(expect.objectContaining({ arch: expectedArch }));
-    } finally {
-      rmSync(outDir, { recursive: true, force: true });
-      if (movedExistingOut) {
-        renameSync(backupOutDir, outDir);
-      }
-      rmSync(tempDir, { recursive: true, force: true });
+    if (args.includes('--win')) {
+      const installUtil = readFileSync(resolveAppBuilderInstallUtil(), 'utf8');
+      expect(installUtil).toContain('Pavii.Ai-bundled-uninstaller override source');
+      expect(installUtil).toContain('$PLUGINSDIR\\Pavii.Ai-fixed-uninstaller.exe');
+      expect(installUtil.match(/Pavii.Ai-bundled-uninstaller override source/g)).toHaveLength(1);
     }
+
+    const calls = JSON.parse(readFileSync(callsPath, 'utf8')) as Array<{ arch?: string } | null>;
+    expect(calls).toContainEqual(expect.objectContaining({ arch: expectedArch }));
   });
 });
