@@ -183,6 +183,16 @@ pub struct TeamSessionService {
     self_ref: Weak<TeamSessionService>,
 }
 
+/// True when an attach failure will repeat identically until the user changes
+/// something.
+///
+/// These come from `sanitize_member_runtime_failure`. `session_stopped` is
+/// deliberately absent: an idle-reclaimed session is recoverable and must keep
+/// reconciling.
+fn is_configuration_failure(classification: &str) -> bool {
+    matches!(classification, "runtime_configuration_failed" | "runtime_start_failed")
+}
+
 impl TeamSessionService {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -1619,6 +1629,28 @@ impl TeamSessionService {
                     session.member_runtimes().reserve_repair(&agent.slot_id)
                 }
                 MemberRuntimeSnapshot::Ready => ReserveAttach::AlreadyReady,
+                // A member that failed for a configuration reason will fail the
+                // same way every time: the conversation's provider/model row is
+                // read verbatim on each attach, so nothing about a re-ensure
+                // changes the outcome. Retrying it here produced the observed
+                // storm — the same slots re-attaching past operation 41, each
+                // logging an identical error — and buried the one useful line.
+                //
+                // Such a member is left Failed until the user acts. They have
+                // the reason now (see `sanitize_member_runtime_failure`) and a
+                // Retry start button, which calls `attach_agent_runtime` and
+                // always retries. Transient failures still reconcile.
+                MemberRuntimeSnapshot::Failed { ref failure, .. }
+                    if is_configuration_failure(failure.classification) =>
+                {
+                    debug!(
+                        team_id = session.team_id(),
+                        slot_id = agent.slot_id,
+                        classification = failure.classification,
+                        "skipping automatic re-attach of a member that failed for a configuration reason"
+                    );
+                    continue;
+                }
                 _ => session.member_runtimes().reserve_attach(&agent.slot_id, true),
             };
 
@@ -4205,6 +4237,23 @@ mod tests {
         )
         .unwrap();
         assert_eq!(notice.runtime_status, TeamContextResetRuntimeStatus::Failed);
+    }
+
+    #[test]
+    fn only_configuration_failures_stop_automatic_reattach() {
+        // These repeat identically on every attach because the conversation's
+        // provider/model row is re-read verbatim, so reconcile retrying them is
+        // pure noise -- it is what produced the observed storm.
+        assert!(super::is_configuration_failure("runtime_configuration_failed"));
+        assert!(super::is_configuration_failure("runtime_start_failed"));
+
+        // An idle-reclaimed session is recoverable; reconcile must keep waking
+        // it, or a member would be stranded by a fault that had already passed.
+        assert!(!super::is_configuration_failure("session_stopped"));
+
+        // Unknown classifications keep retrying: better a redundant attach than
+        // a member silently abandoned by a rule that never heard of its failure.
+        assert!(!super::is_configuration_failure("something_new"));
     }
 
     #[tokio::test]
