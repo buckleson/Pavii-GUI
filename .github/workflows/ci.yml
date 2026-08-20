@@ -1,0 +1,128 @@
+name: CI
+
+# Until now nothing ran on push: the only workflows were the tag-triggered
+# release build and download tracking. Every gate lived on a developer's
+# machine, which is how a stale binary name, a permanently-red E2E suite and a
+# lint-breaking 1.9 GB directory all reached main unnoticed.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Static checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+
+      # --quiet reports errors only. This repo carries many long-standing
+      # warnings; failing on those would block every push for no defect.
+      - name: Lint
+        run: bun run lint -- --quiet
+
+      - name: Format
+        run: bun run format:check
+
+      - name: Typecheck
+        run: bunx tsc --noEmit
+
+      # A UTF-8 BOM or cp1252 mojibake in a shipped asset silently empties the
+      # catalog that parses it, so this runs before anything is built.
+      - name: Encoding
+        run: node scripts/check-encoding.js
+
+      # The app ships English only. Arco's own default locale is zh-CN, so a
+      # ConfigProvider that forgets `locale` fails *toward* Chinese; this is
+      # what catches that.
+      - name: Language
+        run: node scripts/check-language.js
+
+      - name: i18n keys
+        run: |
+          bun run i18n:types
+          node scripts/check-i18n.js
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Test
+        run: bun run test
+
+  engine:
+    name: Engine tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: the-remaa/AionCore -> target
+          key: engine-tests
+
+      - name: Workspace tests
+        working-directory: the-remaa/AionCore
+        run: cargo test --workspace
+
+      # `aionui-channel` declares `default = []` and gates every platform behind
+      # a feature, so a bare `-p aionui-channel` compiles no plugin code at all
+      # and reports a hollow pass. This run is what actually covers them.
+      - name: Channel plugins
+        working-directory: the-remaa/AionCore
+        run: cargo test -p aionui-channel --features slack,discord,telegram,lark,dingtalk,weixin
+
+  e2e-smoke:
+    name: E2E smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
+      - name: Build renderer and main
+        run: bun run package
+
+      # A curated subset, not all 435 specs: the full suite runs on one worker
+      # (the tests share a single Electron instance) and would take hours per
+      # push. This covers the class of regression that went unnoticed for
+      # months — the app booting at all.
+      #
+      # No engine is built here. These three assertions are window/renderer only
+      # (`window.title`, body visible, no uncaught pageerror — and the collector
+      # already ignores `net::ERR_`), so they pass with `__backendPort === 0`.
+      # Any spec that talks to the backend must NOT be added to this list
+      # without adding a paviicore build step, or it will fail on a missing
+      # engine and read as a product bug.
+      - name: Smoke specs
+        env:
+          E2E_DEV: '1'
+        run: xvfb-run -a bunx playwright test --config playwright.config.ts tests/e2e/specs/app-launch.e2e.ts --reporter=list
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-smoke-artifacts
+          path: |
+            tests/e2e/results/
+            tests/e2e/report/
+          retention-days: 7

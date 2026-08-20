@@ -326,19 +326,25 @@ i18n-check:
 encoding-check:
     node scripts/check-encoding.js
 
+# Verify the shipped source carries no CJK. The app ships English only, and
+# Arco's own default locale is zh-CN — a ConfigProvider that forgets `locale`
+# fails *toward* Chinese, so nothing else catches the regression.
+language-check:
+    node scripts/check-language.js
+
 # Build the Pavii Engine from the-remaa/AionCore and deploy it into
-# resources/bundled-aioncore/. Runs the asset test first (a corrupt builtin
+# resources/bundled-paviicore/. Runs the asset test first (a corrupt builtin
 # manifest loads as an empty catalog instead of failing) and writes the bundle
 # manifest through Node so it can never carry a BOM.
 engine-build *ARGS:
-    node scripts/build-aioncore.js {{ ARGS }}
+    node scripts/build-paviicore.js {{ ARGS }}
 
-# Run all checks (lint + format + typecheck + encoding + i18n) — mirrors CI code-quality job
-check: lint fmt-check typecheck encoding-check i18n-check
+# Run all checks (lint + format + typecheck + encoding + language + i18n) — mirrors CI code-quality job
+check: lint fmt-check typecheck encoding-check language-check i18n-check
 
-# Pre-push gate: lint + format check + typecheck + encoding + i18n + test, then push
+# Pre-push gate: lint + format check + typecheck + encoding + language + i18n + test, then push
 # Uses --quiet to suppress warnings (exit code is still non-zero on errors)
-push *ARGS: lint-strict fmt-check typecheck encoding-check i18n-check test
+push *ARGS: lint-strict fmt-check typecheck encoding-check language-check i18n-check test
     git push {{ ARGS }}
 
 # Lint with only errors reported (for CI/push gates)

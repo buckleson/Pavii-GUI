@@ -94,7 +94,7 @@ function Remove-LongPathTree([string]$Path) {
   }
 }
 
-function New-BuildCommandFile([string]$WorktreePath, [string]$Version, [string]$Dsn, [string]$LocalAioncoreBinary, [string]$LocalAioncoreBundleDir) {
+function New-BuildCommandFile([string]$WorktreePath, [string]$Version, [string]$Dsn, [string]$LocalPaviicoreBinary, [string]$LocalPaviicoreBundleDir) {
   $scriptPath = Join-Path $WorktreePath "build-$Version.ps1"
   $dsnBase64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Dsn))
   $lines = @(
@@ -106,8 +106,8 @@ function New-BuildCommandFile([string]$WorktreePath, [string]$Version, [string]$
     '$env:SENTRY_DSN = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(''' + $dsnBase64 + '''))',
     '$env:AIONUI_DEBUG_AUTO_UPDATE_CURRENT_VERSION = ''' + $Version + '''',
     '$env:ELECTRON_BUILDER_COMPRESSION_LEVEL = ''1''',
-    '$env:AIONUI_BACKEND_LOCAL_BINARY = ''' + ($LocalAioncoreBinary -replace "'", "''") + '''',
-    '$env:AIONUI_BACKEND_LOCAL_BUNDLE_DIR = ''' + ($LocalAioncoreBundleDir -replace "'", "''") + '''',
+    '$env:AIONUI_BACKEND_LOCAL_BINARY = ''' + ($LocalPaviicoreBinary -replace "'", "''") + '''',
+    '$env:AIONUI_BACKEND_LOCAL_BUNDLE_DIR = ''' + ($LocalPaviicoreBundleDir -replace "'", "''") + '''',
     '$env:ELECTRON_CACHE = Join-Path $env:LOCALAPPDATA ''electron\Cache''',
     '& bun run build-win:x64:fast',
     'exit $LASTEXITCODE'
@@ -116,8 +116,8 @@ function New-BuildCommandFile([string]$WorktreePath, [string]$Version, [string]$
   return $scriptPath
 }
 
-function Start-BuildProcess([string]$WorktreePath, [string]$Version, [string]$Dsn, [string]$LogDir, [string]$LocalAioncoreBinary, [string]$LocalAioncoreBundleDir) {
-  $scriptPath = New-BuildCommandFile $WorktreePath $Version $Dsn $LocalAioncoreBinary $LocalAioncoreBundleDir
+function Start-BuildProcess([string]$WorktreePath, [string]$Version, [string]$Dsn, [string]$LogDir, [string]$LocalPaviicoreBinary, [string]$LocalPaviicoreBundleDir) {
+  $scriptPath = New-BuildCommandFile $WorktreePath $Version $Dsn $LocalPaviicoreBinary $LocalPaviicoreBundleDir
   $stdoutPath = Join-Path $LogDir "build-$Version.out.log"
   $stderrPath = Join-Path $LogDir "build-$Version.err.log"
   $process = Start-Process -FilePath 'powershell.exe' `
@@ -240,24 +240,24 @@ Invoke-Git $repoRoot @('diff', '--binary', 'HEAD', "--output=$patchPath") | Out-
 $hasPatch = (Get-Item -LiteralPath $patchPath).Length -gt 0
 $baseRef = (Invoke-Git $repoRoot @('rev-parse', 'HEAD')).Trim()
 $nodeModules = Join-Path $repoRoot 'node_modules'
-$localAioncoreBinary = Join-Path $repoRoot 'resources\bundled-aioncore\win32-x64\aioncore.exe'
-$localAioncoreBundleDir = Join-Path $repoRoot 'out\win-unpacked\resources\bundled-aioncore\win32-x64'
-if (-not (Test-Path -LiteralPath (Join-Path $localAioncoreBundleDir 'managed-resources') -PathType Container)) {
-  $localAioncoreBundleDir = Join-Path $env:LOCALAPPDATA 'Programs\Pavii.Ai\resources\bundled-aioncore\win32-x64'
+$localPaviicoreBinary = Join-Path $repoRoot 'resources\bundled-paviicore\win32-x64\paviicore.exe'
+$localPaviicoreBundleDir = Join-Path $repoRoot 'out\win-unpacked\resources\bundled-paviicore\win32-x64'
+if (-not (Test-Path -LiteralPath (Join-Path $localPaviicoreBundleDir 'managed-resources') -PathType Container)) {
+  $localPaviicoreBundleDir = Join-Path $env:LOCALAPPDATA 'Programs\Pavii.Ai\resources\bundled-paviicore\win32-x64'
 }
-if (Test-Path -LiteralPath (Join-Path $localAioncoreBundleDir 'managed-resources') -PathType Container) {
-  $localAioncoreBundleDir = (Resolve-Path -LiteralPath $localAioncoreBundleDir).Path
-  Write-Host "=== using local aioncore bundle fallback: $localAioncoreBundleDir ==="
+if (Test-Path -LiteralPath (Join-Path $localPaviicoreBundleDir 'managed-resources') -PathType Container) {
+  $localPaviicoreBundleDir = (Resolve-Path -LiteralPath $localPaviicoreBundleDir).Path
+  Write-Host "=== using local paviicore bundle fallback: $localPaviicoreBundleDir ==="
 } else {
-  $localAioncoreBundleDir = ''
-  Write-Warning 'Local aioncore bundle fallback was not found; builds may need to prepare managed resources.'
+  $localPaviicoreBundleDir = ''
+  Write-Warning 'Local paviicore bundle fallback was not found; builds may need to prepare managed resources.'
 }
-if (Test-Path -LiteralPath $localAioncoreBinary -PathType Leaf) {
-  $localAioncoreBinary = (Resolve-Path -LiteralPath $localAioncoreBinary).Path
-  Write-Host "=== using local aioncore fallback: $localAioncoreBinary ==="
+if (Test-Path -LiteralPath $localPaviicoreBinary -PathType Leaf) {
+  $localPaviicoreBinary = (Resolve-Path -LiteralPath $localPaviicoreBinary).Path
+  Write-Host "=== using local paviicore fallback: $localPaviicoreBinary ==="
 } else {
-  $localAioncoreBinary = ''
-  Write-Warning 'Local aioncore fallback was not found; builds may need to download aioncore.'
+  $localPaviicoreBinary = ''
+  Write-Warning 'Local paviicore fallback was not found; builds may need to download paviicore.'
 }
 $worktrees = @()
 $builds = @()
@@ -284,7 +284,7 @@ try {
   foreach ($version in $buildVersions) {
     $worktreePath = Join-Path $runRoot "Pavii.Ai-$version"
     Write-Host "=== build $version start: $(Get-Date -Format o) ==="
-    $build = Start-BuildProcess $worktreePath $version $dsn $runRoot $localAioncoreBinary $localAioncoreBundleDir
+    $build = Start-BuildProcess $worktreePath $version $dsn $runRoot $localPaviicoreBinary $localPaviicoreBundleDir
     if ($Sequential) {
       $result = Wait-BuildProcess $build $TimeoutSeconds
       $results += $result
