@@ -14,15 +14,15 @@ import {
 } from './constants';
 
 export interface BrowserViewerProps {
-  /** 该 tab 当前地址 / Current address of this tab */
+  /** Current address of this tab */
   url: string;
-  /** 所属 preview tab 的 id / Id of the owning preview tab */
+  /** Id of the owning preview tab */
   tabId: string;
   /** 地址变化时回写 tab（用于持久化）/ Persist the new address back onto the tab */
   onUrlChange: (tabId: string, url: string) => void;
-  /** 页面标题变化时回写 tab / Persist the page title back onto the tab */
+  /** Persist the page title back onto the tab */
   onTitleChange: (tabId: string, title: string) => void;
-  /** 站点图标变化时回写 tab / Persist the site favicon back onto the tab */
+  /** Persist the site favicon back onto the tab */
   onFaviconChange: (tabId: string, favicon: string) => void;
 }
 

@@ -18,23 +18,23 @@ import { useCallback, useState } from 'react';
  * Preview launch options
  */
 interface PreviewLaunchOptions {
-  /** 相对工作区路径 / Workspace-relative path */
+  /** Workspace-relative path */
   relativePath?: string;
   /** 备用路径（如绝对路径）/ Fallback path (absolute or provided path) */
   originalPath?: string;
-  /** 文件名 / File name */
+  /** File name */
   file_name?: string;
-  /** 预览标题 / Preview title */
+  /** Preview title */
   title?: string;
   /** 代码语言（用于语法高亮）/ Code language (for syntax highlighting) */
   language?: string;
-  /** 内容类型 / Content type */
+  /** Content type */
   contentType: PreviewContentType;
-  /** 是否可编辑 / Whether editable */
+  /** Whether editable */
   editable: boolean;
   /** 若无法读取文件，使用此内容打开（可编辑）/ Use this content if file read fails (editable) */
   fallbackContent?: string;
-  /** 只读 diff 内容回退 / Read-only diff fallback */
+  /** Read-only diff fallback */
   diffContent?: string;
 }
 

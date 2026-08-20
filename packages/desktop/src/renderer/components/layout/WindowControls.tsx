@@ -58,7 +58,7 @@ const WindowControls: React.FC = () => {
     return null;
   }
 
-  // 以下处理三种窗口按钮点击事件 / Handle minimize, maximize/restore, and close button events
+  // Handle minimize, maximize/restore, and close button events
   const handleMinimize = () => {
     void ipcBridge.windowControls.minimize.invoke();
   };

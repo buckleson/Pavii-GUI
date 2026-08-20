@@ -25,25 +25,25 @@ export type ProtocolType = 'openai' | 'gemini' | 'anthropic' | 'unknown';
  * Protocol detection result
  */
 export interface ProtocolDetectionResult {
-  /** 检测到的协议类型 / Detected protocol type */
+  /** Detected protocol type */
   protocol: ProtocolType;
-  /** 是否检测成功 / Whether detection succeeded */
+  /** Whether detection succeeded */
   success: boolean;
-  /** 置信度 (0-100) / Confidence level (0-100) */
+  /** Confidence level (0-100) */
   confidence: number;
-  /** 响应时间 (ms) / Response time in milliseconds */
+  /** Response time in milliseconds */
   latency?: number;
-  /** 错误信息 / Error message */
+  /** Error message */
   error?: string;
-  /** 修正后的 base URL / Fixed base URL if needed */
+  /** Fixed base URL if needed */
   fixedBaseUrl?: string;
-  /** 额外信息 / Additional info */
+  /** Additional info */
   metadata?: {
     /** 模型列表（如果获取成功）/ Model list if available */
     models?: string[];
-    /** API 版本 / API version */
+    /** API version */
     apiVersion?: string;
-    /** 服务商名称 / Provider name */
+    /** Provider name */
     providerName?: string;
   };
 }
@@ -53,23 +53,23 @@ export interface ProtocolDetectionResult {
  * Multi-key test result
  */
 export interface MultiKeyTestResult {
-  /** 总 Key 数量 / Total key count */
+  /** Total key count */
   total: number;
-  /** 有效 Key 数量 / Valid key count */
+  /** Valid key count */
   valid: number;
-  /** 无效 Key 数量 / Invalid key count */
+  /** Invalid key count */
   invalid: number;
-  /** 每个 Key 的详细结果 / Detailed result for each key */
+  /** Detailed result for each key */
   details: Array<{
-    /** Key 索引 / Key index */
+    /** Key index */
     index: number;
     /** Key 掩码（只显示前后几位）/ Masked key */
     maskedKey: string;
-    /** 是否有效 / Whether valid */
+    /** Whether valid */
     valid: boolean;
-    /** 错误信息 / Error message */
+    /** Error message */
     error?: string;
-    /** 响应时间 / Latency */
+    /** Latency */
     latency?: number;
   }>;
 }
@@ -96,32 +96,32 @@ export interface ProtocolDetectionRequest {
  * Protocol detection response
  */
 export interface ProtocolDetectionResponse {
-  /** 是否成功 / Whether successful */
+  /** Whether successful */
   success: boolean;
-  /** 检测到的协议 / Detected protocol */
+  /** Detected protocol */
   protocol: ProtocolType;
-  /** 置信度 / Confidence */
+  /** Confidence */
   confidence: number;
-  /** 错误信息 / Error message */
+  /** Error message */
   error?: string;
-  /** 修正后的 base URL / Fixed base URL */
+  /** Fixed base URL */
   fixedBaseUrl?: string;
-  /** 建议操作 / Suggested action */
+  /** Suggested action */
   suggestion?: {
-    /** 建议类型 / Suggestion type */
+    /** Suggestion type */
     type: 'switch_platform' | 'fix_url' | 'check_key' | 'none';
-    /** 建议消息 / Suggestion message */
+    /** Suggestion message */
     message: string;
-    /** 建议的平台 / Suggested platform */
+    /** Suggested platform */
     suggestedPlatform?: string;
     /** i18n key（前端使用）/ i18n key for frontend */
     i18nKey?: string;
-    /** i18n 参数 / i18n parameters */
+    /** i18n parameters */
     i18nParams?: Record<string, string>;
   };
   /** 多 Key 测试结果（如果启用）/ Multi-key test result if enabled */
   multiKeyResult?: MultiKeyTestResult;
-  /** 模型列表 / Model list */
+  /** Model list */
   models?: string[];
 }
 
@@ -130,22 +130,22 @@ export interface ProtocolDetectionResponse {
  * Protocol signature definitions
  */
 interface ProtocolSignature {
-  /** 协议类型 / Protocol type */
+  /** Protocol type */
   protocol: ProtocolType;
-  /** 测试端点模板 / Test endpoint templates */
+  /** Test endpoint templates */
   endpoints: Array<{
     path: string;
     method: 'GET' | 'POST';
-    /** 请求头 / Headers */
+    /** Headers */
     headers?: (api_key: string) => Record<string, string>;
     /** 请求体（POST 请求）/ Request body for POST */
     body?: object;
-    /** 响应验证器 / Response validator */
+    /** Response validator */
     validator: (response: any, status: number) => boolean;
   }>;
-  /** API Key 格式验证 / API Key format validation */
+  /** API Key format validation */
   keyPattern?: RegExp;
-  /** URL 特征 / URL characteristics */
+  /** URL characteristics */
   urlPatterns?: RegExp[];
 }
 

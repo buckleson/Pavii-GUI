@@ -18,7 +18,7 @@ type NativeSelectSize = NonNullable<SelectProps['size']>;
 type AionSelectSize = NativeSelectSize | 'middle';
 
 export interface AionSelectProps extends NativeSelectProps {
-  /** 额外的类名 / Additional class name */
+  /** Additional class name */
   className?: string;
   /** 统一尺寸，新增 middle（32px）/ Unified size with additional "middle" (32px) */
   size?: AionSelectSize;
@@ -67,26 +67,26 @@ const defaultGetPopupContainer = (): HTMLElement => {
  * Wrapper around Arco Design Select with unified theme styling and popup handling
  *
  * @features
- * - 自动适配明暗主题 / Auto theme adaptation (light/dark)
+ * Auto theme adaptation (light/dark)
  * Popup mounted to body to avoid layout issues
  * Unified border radius and border styles
  * Full Arco Select API support
  *
  * @example
  * ```tsx
- * // 基本用法 / Basic usage
+ * Basic usage
  * <AionSelect placeholder="请选择" style={{ width: 200 }}>
  *   AionSelect.Option>
  *   AionSelect.Option>
  * </AionSelect>
  *
- * // 多选 / Multiple selection
+ * Multiple selection
  * <AionSelect mode="multiple" placeholder="请选择多个">
  *   AionSelect.Option>
  *   AionSelect.Option>
  * </AionSelect>
  *
- * // 分组 / Grouped options
+ * Grouped options
  * <AionSelect placeholder="请选择">
  *   <AionSelect.OptGroup label="分组1">
  *     AionSelect.Option>

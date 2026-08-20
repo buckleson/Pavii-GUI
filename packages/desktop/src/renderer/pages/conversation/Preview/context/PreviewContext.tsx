@@ -18,13 +18,13 @@ import { peKey } from '@/renderer/pages/conversation/explorer/explorerModel';
 import { reflessTabKey } from './reflessTabKey';
 import { onPreviewWatchChange, reconcilePreviewWatch, resetPreviewWatch } from './previewWatchStore';
 
-/** DOM 片段数据结构 / DOM snippet data structure */
+/** DOM snippet data structure */
 export interface DomSnippet {
-  /** 唯一 ID / Unique ID */
+  /** Unique ID */
   id: string;
   /** 简化标签名（用于显示）/ Simplified tag name (for display) */
   tag: string;
-  /** 完整 HTML / Full HTML */
+  /** Full HTML */
   html: string;
 }
 

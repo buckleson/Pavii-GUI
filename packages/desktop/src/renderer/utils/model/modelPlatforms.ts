@@ -29,17 +29,17 @@ export type PlatformType = 'gemini' | 'gemini-vertex-ai' | 'anthropic' | 'custom
  * Model Platform Configuration Interface
  */
 export interface PlatformConfig {
-  /** 平台名称 / Platform name */
+  /** Platform name */
   name: string;
-  /** 平台值（用于表单） / Platform value (for form) */
+  /** Platform value (for form) */
   value: string;
-  /** Logo 路径 / Logo path */
+  /** Logo path */
   logo: string | null;
-  /** 平台标识 / Platform identifier */
+  /** Platform identifier */
   platform: PlatformType;
-  /** Base URL（预设供应商使用） / Base URL (for preset providers) */
+  /** Base URL (for preset providers) */
   base_url?: string;
-  /** 国际化 key（可选，用于需要翻译的平台名称） / i18n key (optional, for platform names that need translation) */
+  /** i18n key (optional, for platform names that need translation) */
   i18nKey?: string;
 }
 
@@ -57,7 +57,7 @@ export const MODEL_PLATFORMS: PlatformConfig[] = [
   // Custom option (requires user to input base url)
   { name: 'Custom', value: 'custom', logo: null, platform: 'custom', i18nKey: 'settings.platformCustom' },
 
-  // Moonshot/Kimi 战略合作伙伴，紧随 Custom 置顶 / Strategic partner pinned right after Custom
+  // Strategic partner pinned right after Custom
   {
     name: 'Moonshot (China)',
     value: 'Moonshot',

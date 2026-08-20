@@ -66,7 +66,7 @@ const HTMLEditor: React.FC<HTMLEditorProps> = ({ value, onChange, containerRef, 
     [onChange]
   );
 
-  // 大文件降级：只摘掉 HTML 语法解析，保留 history / historyKeymap。
+  // historyKeymap。
   // 🔴 不能照抄 CodeEditor 的写法把整个 extensions 清空 —— 下面 basicSetup 显式
   // `history: false`，撤销/重做完全依赖这里的 history()。清空会让大文件失去撤销。
   //

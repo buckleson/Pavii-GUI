@@ -11,13 +11,13 @@ import SettingsModal, { type SettingTab } from './index';
  * Settings modal hook return type
  */
 interface UseSettingsModalReturn {
-  /** 打开设置弹窗 / Open settings modal */
+  /** Open settings modal */
   openSettings: (tab?: SettingTab) => void;
-  /** 关闭设置弹窗 / Close settings modal */
+  /** Close settings modal */
   closeSettings: () => void;
-  /** 设置弹窗组件 / Settings modal component */
+  /** Settings modal component */
   settingsModal: React.ReactNode;
-  /** 弹窗可见状态 / Modal visibility state */
+  /** Modal visibility state */
   visible: boolean;
 }
 

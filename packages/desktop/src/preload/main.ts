@@ -39,7 +39,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.off(ADAPTER_BRIDGE_EVENT_KEY, handler);
     };
   },
-  // 获取拖拽文件/目录的绝对路径 / Get absolute path for dragged file/directory
+  // Get absolute path for dragged file/directory
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   // Feedback: collect and compress recent log files
   collectFeedbackLogs: () => ipcRenderer.invoke('feedback:collect-logs'),

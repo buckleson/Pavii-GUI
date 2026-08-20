@@ -26,7 +26,7 @@ import WebuiModalContent from './contents/WebuiModalContent';
 import { SettingsTabNavigateProvider, SettingsViewModeProvider } from './settingsViewContext';
 import { LEGACY_ANCHOR_REMAP } from '@/renderer/pages/settings/components/SettingsSider';
 
-// ==================== 常量定义 / Constants ====================
+// Constants ====================
 
 /** 移动端断点（px）/ Mobile breakpoint (px) */
 const MOBILE_BREAKPOINT = 768;
@@ -34,13 +34,13 @@ const MOBILE_BREAKPOINT = 768;
 /** 侧边栏宽度（px）/ Sidebar width (px) */
 const SIDEBAR_WIDTH = 200;
 
-/** Modal 宽度配置 / Modal width configuration */
+/** Modal width configuration */
 const MODAL_WIDTH = {
   mobile: 560,
   desktop: 880,
 } as const;
 
-/** Modal 高度配置 / Modal height configuration */
+/** Modal height configuration */
 const MODAL_HEIGHT = {
   mobile: '90vh',
   mobileContent: 'calc(90vh - 80px)',
@@ -66,11 +66,11 @@ export type SettingTab = BuiltinSettingTab | (string & {});
  * Settings modal component props
  */
 interface SettingsModalProps {
-  /** 弹窗显示状态 / Modal visibility state */
+  /** Modal visibility state */
   visible: boolean;
-  /** 关闭回调 / Close callback */
+  /** Close callback */
   onCancel: () => void;
-  /** 默认选中的标签页 / Default selected tab */
+  /** Default selected tab */
   defaultTab?: SettingTab;
 }
 
@@ -78,13 +78,13 @@ interface SettingsModalProps {
  * Secondary modal component props
  */
 interface SubModalProps {
-  /** 弹窗显示状态 / Modal visibility state */
+  /** Modal visibility state */
   visible: boolean;
-  /** 关闭回调 / Close callback */
+  /** Close callback */
   onCancel: () => void;
-  /** 弹窗标题 / Modal title */
+  /** Modal title */
   title?: string;
-  /** 子元素 / Children elements */
+  /** Children elements */
   children: React.ReactNode;
 }
 
@@ -128,7 +128,7 @@ export const SubModal: React.FC<SubModalProps> = ({ visible, onCancel, title, ch
  * @example
  * ```tsx
  * const { openSettings, settingsModal } = useSettingsModal();
- * // 打开设置弹窗并跳转到系统设置 / Open settings modal and navigate to system tab
+ * Open settings modal and navigate to system tab
  * openSettings('system');
  * ```
  */

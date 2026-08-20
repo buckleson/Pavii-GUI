@@ -22,7 +22,7 @@ import TeamMemberDraftList, { type TeamMemberDraft } from './memberPicker/TeamMe
 // 必须同步更新 tests/e2e/cases/teams/team-create.e2e.ts、team-whitelist.e2e.ts、
 // team-name-validation.e2e.ts 中的 selector，并立即向上汇报改动情况。
 // 注意：迁移到 AionModal variant='standard' 后，关闭按钮为 button[aria-label="Close"]，
-// 不再是 .arco-btn-text / .arco-modal-close-icon。
+// .arco-modal-close-icon。
 // 窄屏（layout.isMobile，<768px）改为单栏：布局根为 team-create-layout-mobile，
 // 助手选择器是锚在 team-create-add-member-btn 上的下拉（选中即关，助手随即出现在下方列表）；
 // 桌面双栏为 team-create-layout。

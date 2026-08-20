@@ -10,11 +10,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useScrollSyncTarget } from '../../hooks/useScrollSyncHelpers';
 import { generateInspectScript } from './htmlInspectScript';
 
-/** 选中元素的数据结构 / Selected element data structure */
+/** Selected element data structure */
 export interface InspectedElement {
-  /** 完整 HTML / Full HTML */
+  /** Full HTML */
   html: string;
-  /** 简化标签名 / Simplified tag name */
+  /** Simplified tag name */
   tag: string;
 }
 
@@ -27,7 +27,7 @@ interface HTMLRendererProps {
   onScroll?: (scrollTop: number, scrollHeight: number, clientHeight: number) => void;
   inspectMode?: boolean; // Whether inspect mode is enabled
   copySuccessMessage?: string;
-  /** 元素选中回调 / Element selected callback */
+  /** Element selected callback */
   onElementSelected?: (element: InspectedElement) => void;
 }
 
@@ -89,7 +89,7 @@ function resolveRelativePath(basePath: string, relativePath: string): string {
     return relativePath;
   }
 
-  // 处理 ./ 和 ../ / Handle ./ and ../
+  // Handle ./ and ../
   const parts = baseDir.replace(/\\/g, '/').split('/').filter(Boolean);
   const relParts = relativePath.replace(/\\/g, '/').split('/');
 

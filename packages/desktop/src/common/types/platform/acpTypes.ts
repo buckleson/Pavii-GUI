@@ -106,7 +106,7 @@ export interface BaseSessionUpdate {
   session_id: string;
 }
 
-/** Tool call 内容项类型 / Tool call content item type */
+/** Tool call content item type */
 export interface ToolCallContentItem {
   type: 'content' | 'diff';
   content?: {
@@ -118,7 +118,7 @@ export interface ToolCallContentItem {
   new_text?: string;
 }
 
-/** Tool call 位置项类型 / Tool call location item type */
+/** Tool call location item type */
 export interface ToolCallLocationItem {
   path: string;
 }

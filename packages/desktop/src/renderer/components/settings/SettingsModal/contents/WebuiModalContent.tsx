@@ -265,7 +265,7 @@ const WebuiModalContent: React.FC = () => {
     return `http://localhost:${currentPort}`;
   }, [status?.port, port, tunnelState?.running, tunnelState?.url]);
 
-  // 启动/停止 WebUI / Start/Stop WebUI
+  // Start/Stop WebUI
   const handleToggle = async (enabled: boolean) => {
     // Use cached IP, no longer block to fetch
     const currentIP = getLocalIP();

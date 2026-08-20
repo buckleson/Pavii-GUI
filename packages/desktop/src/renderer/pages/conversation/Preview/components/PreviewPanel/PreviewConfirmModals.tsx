@@ -77,10 +77,10 @@ interface PreviewConfirmModalsProps {
    */
   refreshConfirm?: RefreshConfirmState;
 
-  /** 放弃修改并刷新 / Discard the edit and reload */
+  /** Discard the edit and reload */
   onRefreshWithoutSave?: () => void;
 
-  /** 取消刷新 / Cancel the reload */
+  /** Cancel the reload */
   onCancelRefresh?: () => void;
 
   /**

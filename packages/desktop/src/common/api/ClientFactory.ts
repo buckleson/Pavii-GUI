@@ -47,7 +47,7 @@ export function normalizeNewApiBaseUrl(base_url: string, authType: AuthType): st
   //    Add the correct path suffix for the target protocol
   switch (authType) {
     case AuthType.USE_OPENAI:
-      // OpenAI SDK 需要带 /v1 的路径 / OpenAI SDK expects URL with /v1 path
+      // OpenAI SDK expects URL with /v1 path
       return `${rootUrl}/v1`;
     case AuthType.USE_GEMINI:
     case AuthType.USE_ANTHROPIC:

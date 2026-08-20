@@ -49,7 +49,7 @@ export const useWorkspaceSelector = (conversation_id: string, eventPrefix: Works
         return;
       }
 
-      // 手动刷新 SWR 缓存以及广播给工作区和会话列表 / Refresh SWR cache and notify workspace/history
+      // Refresh SWR cache and notify workspace/history
       await mutate(`conversation/${conversation_id}`, { ...conversation, extra: nextExtra }, false);
       emitter.emit(`${eventPrefix}.workspace.refresh`);
       emitter.emit('chat.history.refresh');

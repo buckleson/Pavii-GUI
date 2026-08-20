@@ -24,11 +24,11 @@ export interface IConfigStorageRefer {
   'ui.fontSize.code'?: number;
   /** Last-known main window size and position, restored on next launch */
   'window.bounds'?: { x?: number; y?: number; width: number; height: number };
-  /** 桌面模式下是否自动启用 WebUI / Auto-enable WebUI in desktop mode */
+  /** Auto-enable WebUI in desktop mode */
   'webui.desktop.enabled'?: boolean;
-  /** 桌面模式下是否允许远程访问 / Allow remote access in desktop mode */
+  /** Allow remote access in desktop mode */
   'webui.desktop.allowRemote'?: boolean;
-  /** 桌面模式下 WebUI 端口 / WebUI port in desktop mode */
+  /** WebUI port in desktop mode */
   'webui.desktop.port'?: number;
   /** Active unified theme ID */
   'theme.activeId': string;
@@ -139,7 +139,7 @@ interface IChatConversation<T, Extra> {
   model: TProviderWithModel;
   status?: TChatConversationStatus | undefined;
   runtime?: TConversationRuntimeSummary;
-  /** 会话来源，默认为 aionui / Conversation source, defaults to aionui */
+  /** Conversation source, defaults to aionui */
   source?: ConversationSource;
   /** Channel chat isolation ID (e.g. user:xxx, group:xxx) */
   channel_chat_id?: string;
@@ -229,17 +229,17 @@ export type TChatConversation =
           mcp_statuses?: IConversationMcpStatus[];
           /** Session-only MCP server snapshot persisted at creation time. */
           session_mcp_servers?: ISessionMcpServer[];
-          /** 预设助手 ID，用于在会话面板显示助手名称和头像 / Preset assistant ID for displaying name and avatar in conversation panel */
+          /** Preset assistant ID for displaying name and avatar in conversation panel */
           preset_assistant_id?: string;
-          /** 是否置顶会话 / Whether this conversation is pinned */
+          /** Whether this conversation is pinned */
           pinned?: boolean;
           /** 置顶时间戳（毫秒）/ Pin timestamp in milliseconds */
           pinned_at?: number;
-          /** ACP 后端的 session UUID，用于会话恢复 / ACP backend session UUID for session resume */
+          /** ACP backend session UUID for session resume */
           acp_session_id?: string;
           /** Conversation ID that owns the ACP session / 拥有该 ACP session 的会话 ID */
           acp_session_conversation_id?: string;
-          /** ACP session 最后更新时间 / Last update time of ACP session */
+          /** Last update time of ACP session */
           acp_session_updated_at?: number;
           /** Last context usage from usage_update */
           last_token_usage?: TokenUsageData;
@@ -275,9 +275,9 @@ export type TChatConversation =
           /** Skills snapshot for this conversation — authoritative list, written
            * once at creation. Join with `GET /api/skills` for descriptions. */
           skills?: string[];
-          /** 预设助手 ID，用于在会话面板显示助手名称和头像 / Preset assistant ID for displaying name and avatar in conversation panel */
+          /** Preset assistant ID for displaying name and avatar in conversation panel */
           preset_assistant_id?: string;
-          /** 是否置顶会话 / Whether this conversation is pinned */
+          /** Whether this conversation is pinned */
           pinned?: boolean;
           /** 置顶时间戳（毫秒）/ Pin timestamp in milliseconds */
           pinned_at?: number;
@@ -325,9 +325,9 @@ export type TChatConversation =
           /** Skills snapshot for this conversation — authoritative list, written
            * once at creation. Join with `GET /api/skills` for descriptions. */
           skills?: string[];
-          /** 预设助手 ID / Preset assistant ID */
+          /** Preset assistant ID */
           preset_assistant_id?: string;
-          /** 是否置顶会话 / Whether this conversation is pinned */
+          /** Whether this conversation is pinned */
           pinned?: boolean;
           /** 置顶时间戳（毫秒）/ Pin timestamp in milliseconds */
           pinned_at?: number;
@@ -374,9 +374,9 @@ export type TChatConversation =
           /** Skills snapshot for this conversation — authoritative list, written
            * once at creation. Join with `GET /api/skills` for descriptions. */
           skills?: string[];
-          /** 预设助手 ID / Preset assistant ID */
+          /** Preset assistant ID */
           preset_assistant_id?: string;
-          /** 是否置顶会话 / Whether this conversation is pinned */
+          /** Whether this conversation is pinned */
           pinned?: boolean;
           /** 置顶时间戳（毫秒）/ Pin timestamp in milliseconds */
           pinned_at?: number;

@@ -74,7 +74,7 @@ const HTMLPreview: React.FC<HTMLPreviewProps> = ({ content, file_path, hideToolb
     if (file_path) {
       // Get directory of the file
       const fileDir = file_path.substring(0, file_path.lastIndexOf('/') + 1);
-      // 构造 file:// 协议的 base URL / Construct file:// protocol base URL
+      // Construct file:// protocol base URL
       const base_url = `file://${fileDir}`;
 
       // Check if base tag exists

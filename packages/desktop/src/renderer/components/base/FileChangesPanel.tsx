@@ -14,13 +14,13 @@ import { useTranslation } from 'react-i18next';
  * File change item data
  */
 export interface FileChangeItem {
-  /** 文件名 / File name */
+  /** File name */
   file_name: string;
-  /** 完整路径 / Full path */
+  /** Full path */
   fullPath: string;
-  /** 新增行数 / Number of insertions */
+  /** Number of insertions */
   insertions: number;
-  /** 删除行数 / Number of deletions */
+  /** Number of deletions */
   deletions: number;
 }
 
@@ -28,17 +28,17 @@ export interface FileChangeItem {
  * File changes panel props
  */
 export interface FileChangesPanelProps {
-  /** 面板标题 / Panel title */
+  /** Panel title */
   title: string;
-  /** 文件变更列表 / File changes list */
+  /** File changes list */
   files: FileChangeItem[];
-  /** 默认是否展开 / Default expanded state */
+  /** Default expanded state */
   defaultExpanded?: boolean;
-  /** 点击预览按钮的回调 / Callback when preview button is clicked */
+  /** Callback when preview button is clicked */
   onFileClick?: (file: FileChangeItem) => void;
   /** 点击变更统计的回调（+8/-3 数字触发，打开 diff 对比）/ Callback when change stats are clicked (opens diff view) */
   onDiffClick?: (file: FileChangeItem) => void;
-  /** 额外的类名 / Additional class name */
+  /** Additional class name */
   className?: string;
 }
 

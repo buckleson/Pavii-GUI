@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
  */
 type ToolType = 'vscode' | 'terminal' | 'explorer' | 'browser';
 
-/** 拉起外部程序的工具，需要走 shell IPC / Tools that launch external programs via shell IPC */
+/** Tools that launch external programs via shell IPC */
 type ExternalToolType = Exclude<ToolType, 'browser'>;
 
 interface ToolOption {

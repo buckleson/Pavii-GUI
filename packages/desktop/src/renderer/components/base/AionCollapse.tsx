@@ -13,21 +13,21 @@ import React, { useMemo, useState } from 'react';
  */
 export interface AionCollapseProps {
   children: React.ReactNode;
-  /** 额外的类名 / Additional class name */
+  /** Additional class name */
   className?: string;
-  /** 非受控模式下默认展开的面板 key / Default active keys in uncontrolled mode */
+  /** Default active keys in uncontrolled mode */
   defaultActiveKey?: string | string[];
-  /** 受控模式下当前展开的面板 key / Active keys in controlled mode */
+  /** Active keys in controlled mode */
   activeKey?: string | string[];
-  /** 面板状态变化回调 / Callback when panel state changes */
+  /** Callback when panel state changes */
   onChange?: (keys: string[]) => void;
-  /** 手风琴模式，每次只能展开一个面板 / Accordion mode, only one panel can be expanded at a time */
+  /** Accordion mode, only one panel can be expanded at a time */
   accordion?: boolean;
-  /** 自定义展开图标 / Custom expand icon */
+  /** Custom expand icon */
   expandIcon?: (active: boolean) => React.ReactNode;
-  /** 展开图标位置 / Expand icon position */
+  /** Expand icon position */
   expandIconPosition?: 'left' | 'right';
-  /** 是否显示边框 / Whether to show border */
+  /** Whether to show border */
   bordered?: boolean;
 }
 
@@ -35,21 +35,21 @@ export interface AionCollapseProps {
  * Collapsible panel item props
  */
 export interface AionCollapseItemProps {
-  /** 唯一标识符 / Unique identifier */
+  /** Unique identifier */
   name: string;
-  /** 面板标题 / Panel header */
+  /** Panel header */
   header: React.ReactNode;
-  /** 是否禁用 / Whether disabled */
+  /** Whether disabled */
   disabled?: boolean;
-  /** 额外的类名 / Additional class name */
+  /** Additional class name */
   className?: string;
-  /** 标题额外的类名 / Additional header class name */
+  /** Additional header class name */
   headerClassName?: string;
-  /** 内容额外的类名 / Additional content class name */
+  /** Additional content class name */
   contentClassName?: string;
-  /** 内容额外的样式 / Additional content style */
+  /** Additional content style */
   contentStyle?: CSSProperties;
-  /** 子内容 / Children content */
+  /** Children content */
   children?: React.ReactNode;
 }
 
@@ -64,7 +64,7 @@ const normalizeKeys = (keys?: string | string[]): string[] => {
 };
 
 /**
- * 默认展开/收起图标 / Default expand/collapse icon
+ * Default expand/collapse icon
  */
 const DefaultIcon: React.FC<{ active: boolean }> = ({ active }) => (
   <span className={classNames('text-xs text-t-secondary transition-transform duration-200', active && 'rotate-180')}>
@@ -87,7 +87,7 @@ AionCollapseItem.displayName = 'AionCollapseItem';
  *
  * @example
  * ```tsx
- * // 基本用法 / Basic usage
+ * Basic usage
  * <AionCollapse defaultActiveKey={['1']}>
  *   <AionCollapse.Item name="1" header="面板1">
  *     内容1
@@ -97,13 +97,13 @@ AionCollapseItem.displayName = 'AionCollapseItem';
  *   </AionCollapse.Item>
  * </AionCollapse>
  *
- * // 手风琴模式 / Accordion mode
+ * Accordion mode
  * <AionCollapse accordion defaultActiveKey="1">
  *   AionCollapse.Item>
  *   AionCollapse.Item>
  * </AionCollapse>
  *
- * // 自定义图标 / Custom icon
+ * Custom icon
  * <AionCollapse
  *   expandIcon={(active) => <Icon type={active ? 'up' : 'down'} />}
  *   expandIconPosition="right"

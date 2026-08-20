@@ -1077,7 +1077,7 @@ app.on('open-url', (event, url) => {
   showOrCreateMainWindow({ mainWindow, createWindow });
 });
 
-// 监听 GPU 子进程崩溃，连续多次后下次启动自动关闭硬件加速（参见 ELECTRON-9A / ELECTRON-9D）。
+// ELECTRON-9D）。
 installGpuCrashHandler();
 
 // Register the backend startup flow only when this process owns the single

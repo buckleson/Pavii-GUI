@@ -55,7 +55,7 @@ export interface ModalFooterConfig {
   style?: CSSProperties;
   /**
    * 是否由组件统一渲染 footer 的上分隔线与标准内边距（内容↔按钮区）。
-   * 任务型弹窗迁移时显式传 true，并删除自身 footer 里手写的 border-t / padding。
+   * padding。
    * 默认 false —— 保持既有行为不变，便于逐个弹窗平滑迁移。
    */
   divider?: boolean;
@@ -138,25 +138,25 @@ const STD_CLOSE_BTN_CLASS =
  * Wrapper around Arco Design Modal with unified theme styling, preset sizes, and font scaling support
  *
  * @features
- * - 预设尺寸支持 / Preset size support (small/medium/large/xlarge/full)
+ * Preset size support (small/medium/large/xlarge/full)
  * Responsive to font scale changes
- * - 灵活的 header/footer 配置 / Flexible header/footer configuration
+ * Flexible header/footer configuration
  * Backward compatible with old API
  * Auto viewport adaptation
  *
  * @example
  * ```tsx
- * // 基本用法 / Basic usage
+ * Basic usage
  * <AionModal visible={true} onCancel={handleClose} header="标题">
  *   内容
  * </AionModal>
  *
- * // 预设尺寸 / Preset size
+ * Preset size
  * <AionModal visible={true} size="large" header="大型弹窗">
  *   内容
  * </AionModal>
  *
- * // 自定义 header / Custom header
+ * Custom header
  * <AionModal
  *   visible={true}
  *   header={{
@@ -168,7 +168,7 @@ const STD_CLOSE_BTN_CLASS =
  *   内容
  * </AionModal>
  *
- * // 自定义 footer / Custom footer
+ * Custom footer
  * <AionModal
  *   visible={true}
  *   header="标题"

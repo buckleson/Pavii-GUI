@@ -31,10 +31,10 @@
 export class InternalNavTracker {
   private readonly recent: string[] = [];
 
-  /** 同时在途的回声不会太多，够覆盖一条重定向链即可 / plenty for one redirect chain */
+  /** plenty for one redirect chain */
   private static readonly MAX_TRACKED = 10;
 
-  /** 记录一次内部导航 / record a navigation initiated from inside the host */
+  /** record a navigation initiated from inside the host */
   record(url: string): void {
     if (!url) return;
     const existing = this.recent.indexOf(url);

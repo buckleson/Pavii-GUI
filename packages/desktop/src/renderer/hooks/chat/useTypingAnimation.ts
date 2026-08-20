@@ -75,7 +75,7 @@ export const useTypingAnimation = ({ content, enabled = true, speed = 50 }: UseT
     let currentIndex = displayedContent.length;
     const targetContent = content;
 
-    // 字符/秒速度 / Characters per second
+    // Characters per second
     const charsPerSecond = speed;
     const msPerChar = 1000 / charsPerSecond;
 

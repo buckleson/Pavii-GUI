@@ -18,7 +18,7 @@
  */
 export { BROWSER_SESSION_PARTITION } from '@/common/config/constants';
 
-/** 新建浏览器 tab 的初始地址 / Initial address for a freshly opened browser tab. */
+/** Initial address for a freshly opened browser tab. */
 export const BROWSER_BLANK_URL = 'about:blank';
 
 /**
@@ -36,7 +36,7 @@ export const BROWSER_TAB_FALLBACK_TITLE = 'New Tab';
  */
 export const MAX_BROWSER_TABS = 10;
 
-/** 默认搜索引擎，地址栏输入非 URL 时使用 / Default search engine for non-URL input. */
+/** Default search engine for non-URL input. */
 const SEARCH_URL_TEMPLATE = 'https://www.bing.com/search?q={query}';
 
 /**
@@ -45,12 +45,12 @@ const SEARCH_URL_TEMPLATE = 'https://www.bing.com/search?q={query}';
  */
 const PASSTHROUGH_SCHEMES = ['about:', 'data:', 'blob:', 'chrome:', 'devtools:', 'view-source:'];
 
-/** 显式带 scheme 的输入 / Input that explicitly carries a scheme. */
+/** Input that explicitly carries a scheme. */
 const EXPLICIT_SCHEME_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
 
 /**
  * 看起来像主机名的输入：`example.com`、`localhost:3000`、`192.168.1.5/x`。
- * 要求首段之后存在一个 TLD 式后缀，或是带端口的 localhost / IP。
+ * IP。
  *
  * Host-like input: `example.com`, `localhost:3000`, `192.168.1.5/x`. Requires a
  * TLD-ish suffix, or localhost/IP with a port.

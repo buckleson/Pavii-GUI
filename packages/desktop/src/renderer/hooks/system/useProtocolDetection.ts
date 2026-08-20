@@ -15,11 +15,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 interface UseProtocolDetectionOptions {
   /** 防抖延迟（毫秒）/ Debounce delay in milliseconds */
   debounceMs?: number;
-  /** 是否自动检测 / Whether to auto-detect */
+  /** Whether to auto-detect */
   autoDetect?: boolean;
   /** 超时时间（毫秒）/ Timeout in milliseconds */
   timeout?: number;
-  /** 是否测试所有 Key / Whether to test all keys */
+  /** Whether to test all keys */
   testAllKeys?: boolean;
 }
 
@@ -28,15 +28,15 @@ interface UseProtocolDetectionOptions {
  * Protocol detection hook return value
  */
 interface UseProtocolDetectionResult {
-  /** 是否正在检测 / Whether detecting */
+  /** Whether detecting */
   isDetecting: boolean;
-  /** 检测结果 / Detection result */
+  /** Detection result */
   result: ProtocolDetectionResponse | null;
-  /** 错误信息 / Error message */
+  /** Error message */
   error: string | null;
-  /** 手动触发检测 / Manually trigger detection */
+  /** Manually trigger detection */
   detect: (base_url: string, api_key: string) => Promise<void>;
-  /** 重置状态 / Reset state */
+  /** Reset state */
   reset: () => void;
 }
 

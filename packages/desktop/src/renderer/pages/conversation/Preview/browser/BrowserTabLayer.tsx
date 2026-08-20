@@ -9,11 +9,11 @@ import type { PreviewTab, PreviewTabPatch } from '../context/PreviewContext';
 import BrowserViewer from './BrowserViewer';
 
 export interface BrowserTabLayerProps {
-  /** 所有浏览器类型的 tab / Every browser-type tab */
+  /** Every browser-type tab */
   browserTabs: PreviewTab[];
   /** 当前激活的 tab id（可能不是浏览器 tab）/ Active tab id (may not be a browser tab) */
   activeTabId: string | null;
-  /** 回写 tab 字段 / Patch fields back onto a tab */
+  /** Patch fields back onto a tab */
   updateTab: (tabId: string, patch: PreviewTabPatch) => void;
 }
 

@@ -8,7 +8,7 @@
  * Use cases:
  * When rapidly toggling multiple MCP tool configuration switches
  * When batch testing MCP connections
- * - 同时进行多个同步/移除操作时 / When performing multiple sync/remove operations simultaneously
+ * When performing multiple sync/remove operations simultaneously
  */
 class MessageQueue {
   private static instance: MessageQueue;

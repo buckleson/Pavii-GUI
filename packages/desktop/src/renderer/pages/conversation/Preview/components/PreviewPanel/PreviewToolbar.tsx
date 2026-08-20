@@ -88,10 +88,10 @@ interface PreviewToolbarProps {
    */
   refreshState?: string;
 
-  /** 刷新按钮是否可点 / Whether the refresh control accepts a click */
+  /** Whether the refresh control accepts a click */
   refreshActionable?: boolean;
 
-  /** 点击刷新 / Reload the current tab */
+  /** Reload the current tab */
   onRefresh?: () => void;
 
   /**
