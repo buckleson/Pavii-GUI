@@ -40,6 +40,7 @@
     "build": "node scripts/build-with-builder.js auto --mac --arm64 --x64",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
+    "lint:anti-slop": "node node_modules/oxlint/bin/oxlint -c tools/oxlint/anti-slop.config.mjs packages/desktop/src",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "check:encoding": "node scripts/check-encoding.js",
@@ -181,6 +182,7 @@
   "devDependencies": {
     "@electron/fuses": "^1.8.0",
     "@electron/notarize": "^3.1.0",
+    "@oxlint/plugins": "1.56.0",
     "@playwright/test": "^1.58.2",
     "@sentry/vite-plugin": "^5.1.1",
     "@testing-library/jest-dom": "^6.9.1",

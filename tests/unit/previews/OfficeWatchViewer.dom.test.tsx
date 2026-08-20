@@ -29,16 +29,15 @@ import { afterEach, beforeAll, beforeEach, describe, it, expect } from 'vitest';
  */
 const IMPORT_TIMEOUT_MS = 120000;
 
-type OfficeWatchViewerModule = {
-  default: (...args: unknown[]) => unknown;
-  OFFICECLI_INSTALL_URL: string;
-};
+// The module's own type, so the assertions below check the real exports rather
+// than a hand-written shape a cast had to force them together.
+type OfficeWatchViewerModule =
+  typeof import('@/renderer/pages/conversation/Preview/components/viewers/OfficeWatchViewer');
 
 let viewer: OfficeWatchViewerModule;
 
 beforeAll(async () => {
-  viewer =
-    (await import('@/renderer/pages/conversation/Preview/components/viewers/OfficeWatchViewer')) as unknown as OfficeWatchViewerModule;
+  viewer = await import('@/renderer/pages/conversation/Preview/components/viewers/OfficeWatchViewer');
 }, IMPORT_TIMEOUT_MS);
 
 describe('OfficeWatchViewer module shape', () => {
@@ -54,7 +53,7 @@ describe('OfficeWatchViewer module shape', () => {
   it('module exports object has no thrown side effects during import', () => {
     expect(viewer.default).toBeDefined();
     // Component functions in React typically have at most one required argument (props).
-    expect((viewer.default as unknown as { length: number }).length).toBeLessThanOrEqual(2);
+    expect(viewer.default.length).toBeLessThanOrEqual(2);
   });
 
   it('uses official iOfficeAI OfficeCLI releases page', () => {

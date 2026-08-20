@@ -110,6 +110,7 @@
       "devDependencies": {
         "@electron/fuses": "^1.8.0",
         "@electron/notarize": "^3.1.0",
+        "@oxlint/plugins": "1.56.0",
         "@playwright/test": "^1.58.2",
         "@sentry/vite-plugin": "^5.1.1",
         "@testing-library/jest-dom": "^6.9.1",
@@ -941,6 +942,8 @@
     "@oxlint/binding-win32-ia32-msvc": ["@oxlint/binding-win32-ia32-msvc@1.56.0", "", { "os": "win32", "cpu": "ia32" }, "sha512-PTRy6sIEPqy2x8PTP1baBNReN/BNEFmde0L+mYeHmjXE1Vlcc9+I5nsqENsB2yAm5wLkzPoTNCMY/7AnabT4/A=="],
 
     "@oxlint/binding-win32-x64-msvc": ["@oxlint/binding-win32-x64-msvc@1.56.0", "", { "os": "win32", "cpu": "x64" }, "sha512-ZHa0clocjLmIDr+1LwoWtxRcoYniAvERotvwKUYKhH41NVfl0Y4LNbyQkwMZzwDvKklKGvGZ5+DAG58/Ik47tQ=="],
+
+    "@oxlint/plugins": ["@oxlint/plugins@1.56.0", "", {}, "sha512-V3gtudfeu5S5ilC6sqajBzGXcCXtNldBBTGi4M45NS5e1h35923u7Yrzycb26NSAd1z/d5YoG5jg9r6rqmdEuw=="],
 
     "@pavii/desktop": ["@pavii/desktop@workspace:packages/desktop"],
 

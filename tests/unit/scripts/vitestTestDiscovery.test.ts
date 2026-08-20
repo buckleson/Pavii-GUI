@@ -39,6 +39,9 @@ const OTHER_RUNNER_PREFIXES = [
   // their own suites and their own runners. We build the engine from here but do
   // not own or run its tests from this config; `cargo test` covers the Rust side.
   'the-remaa/',
+  // Vendored oxlint plugin (dmmulroy/anti-slop). Its rule tests belong to the
+  // upstream project and run under its own toolchain; we consume the rules only.
+  'tools/oxlint/anti-slop/',
 ];
 
 /** File suffixes whose tests are run by a different runner than the root vitest config. */

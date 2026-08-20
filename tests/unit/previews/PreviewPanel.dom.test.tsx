@@ -44,13 +44,14 @@ afterEach(() => {
  */
 const IMPORT_TIMEOUT_MS = 120000;
 
-type PreviewPanelModule = { default: ((...args: unknown[]) => unknown) & { displayName?: string } };
+// The module's own type, so the assertions below check the real export rather
+// than a hand-written shape a cast had to force them together.
+type PreviewPanelModule = typeof import('@/renderer/pages/conversation/Preview/components/PreviewPanel/PreviewPanel');
 
 let previewPanel: PreviewPanelModule;
 
 beforeAll(async () => {
-  previewPanel =
-    (await import('@/renderer/pages/conversation/Preview/components/PreviewPanel/PreviewPanel')) as unknown as PreviewPanelModule;
+  previewPanel = await import('@/renderer/pages/conversation/Preview/components/PreviewPanel/PreviewPanel');
 }, IMPORT_TIMEOUT_MS);
 
 describe('PreviewPanel', () => {
