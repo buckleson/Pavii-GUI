@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.1.54](https://www.pavii.tech/products/Super-Assistant/) (2026-08-21)
+
+### Desktop
+
+#### Features
+
+- **team:** show what a teammate is doing instead of a raw MCP tool id -- the 14 team tools now read "Updating task", "Reading messages", "Sending message to teammate"
+
+#### Bug Fixes
+
+- **team:** heal members frozen on a backend they cannot start on, in place when the team is opened, instead of requiring the member to be removed and re-added
+- **team:** retry transient attach failures again -- a generic start failure was being treated as permanent, so a member that one more attempt would have recovered stayed dead until retried by hand
+
+#### Notes
+
+- The engine is built from vendored source, so `aioncoreVersion` is unused for this release.
+
+---
+
 ## 2.1.53 (2026-08-21)
 
 ### Bug Fixes
