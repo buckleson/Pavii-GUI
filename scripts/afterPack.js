@@ -26,10 +26,25 @@ const {
  * API and does not depend on the RunAsNode fuse, and nothing reads NODE_OPTIONS
  * at runtime.
  *
- * `EnableEmbeddedAsarIntegrityValidation` is deliberately NOT set here. It needs
- * the asar header hash embedded by the packager; flipping the fuse without that
- * stops the app launching at all. Enabling it is a separate change that has to
- * be verified by actually starting the packaged build.
+ * Two fuses are deliberately left alone, both for reasons established by
+ * testing rather than assumed:
+ *
+ * `EnableNodeCliInspectArguments` stays ENABLED. Disabling it stops Playwright
+ * launching the packaged app entirely -- `_electron.launch()` attaches over the
+ * Node inspector, so every packaged e2e test times out at 60s. Bisected one
+ * fuse at a time against tests/e2e/specs/app-launch.e2e.ts: with this one off
+ * the suite fails, with it on and the other four hardened it passes in ~10s.
+ * The app itself starts fine either way, so this is a testability trade, not a
+ * functional one, and it is worth making: an attacker who can pass `--inspect`
+ * to a local binary can already run code as that user, whereas
+ * ELECTRON_RUN_AS_NODE turns the signed app itself into a script host. Keeping
+ * the suite able to drive the real shipped artifact is its own security
+ * property.
+ *
+ * `EnableEmbeddedAsarIntegrityValidation` stays disabled. It needs the asar
+ * header hash embedded by the packager; flipping the fuse without that stops
+ * the app launching at all. Enabling it is a separate change that has to be
+ * verified by actually starting the packaged build.
  *
  * Must run in afterPack, not afterSign: mutating the binary after signing
  * invalidates the signature.
@@ -78,13 +93,12 @@ async function hardenElectronFuses(context) {
     resetAdHocDarwinSignature: electronPlatformName === 'darwin',
     [FuseV1Options.RunAsNode]: false,
     [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
-    [FuseV1Options.EnableNodeCliInspectArguments]: false,
     [FuseV1Options.EnableCookieEncryption]: true,
     [FuseV1Options.OnlyLoadAppFromAsar]: true,
   });
 
   console.log(
-    `   ✓ Fuses hardened on ${path.basename(electronBinary)} (RunAsNode/inspect/NODE_OPTIONS off, asar-only on)`
+    `   ✓ Fuses hardened on ${path.basename(electronBinary)} (RunAsNode + NODE_OPTIONS off, cookie encryption + asar-only on)`
   );
 }
 
