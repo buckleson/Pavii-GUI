@@ -1,6 +1,6 @@
 /**
  * One-click feedback – verifies the feedback infrastructure introduced for
- * the inline "一键反馈 >>" error-adjacent links.
+ * the inline "Report Issue >>" error-adjacent links.
  *
  * These tests do not try to trigger real runtime errors (which would require
  * bad credentials / unreachable MCP URLs and would be flaky). Instead they
@@ -61,7 +61,7 @@ test.describe('One-click feedback infrastructure', () => {
     // setShowFeedbackModal(true) in AboutModalContent.
     const bugReportRow = page
       .locator('div')
-      .filter({ hasText: /^Report Issue$|^反馈问题$|^問題を報告$|^문제 보고$/ })
+      .filter({ hasText: /^Report Issue$/ })
       .first();
     await expect(bugReportRow).toBeVisible({ timeout: 10_000 });
     await bugReportRow.click();

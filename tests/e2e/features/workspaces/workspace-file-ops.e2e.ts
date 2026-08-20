@@ -130,8 +130,8 @@ test.describe.serial('Workspace — file operations', () => {
     const ctxMenu = page.locator('.fixed.z-100').first();
     await expect(ctxMenu).toBeVisible({ timeout: 3_000 });
 
-    const addToChat = ctxMenu.getByText(/Add to Chat|添加到对话/i).first();
-    const openItem = ctxMenu.getByText(/^Open$|^打开$/i).first();
+    const addToChat = ctxMenu.getByText(/Add to Chat/i).first();
+    const openItem = ctxMenu.getByText(/^Open$/i).first();
     expect(
       (await addToChat.isVisible().catch(() => false)) || (await openItem.isVisible().catch(() => false))
     ).toBeTruthy();

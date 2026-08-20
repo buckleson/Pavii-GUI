@@ -56,7 +56,7 @@ test.describe('Installation integrity failure dialog', () => {
 
       const reportButton = page.getByTestId('installation-integrity-report');
       await expect(reportButton).toBeDisabled();
-      await expect(reportButton).toContainText(/Diagnostics sent|诊断报告已发送/);
+      await expect(reportButton).toContainText(/Diagnostics sent/);
 
       await expect
         .poll(() =>

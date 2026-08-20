@@ -194,8 +194,10 @@ describe('TeamPage cron job manager', () => {
     );
   });
 
-  // 移除成员的 cron 清理顺序（先删 cron job 再删成员）由 removeTeamAssistantWithCronCleanup.test.ts 直接覆盖；
-  // 胶囊上的移除交互由 team-member-ops.e2e.ts 覆盖。移除入口已从抬头移到顶部胶囊。
+  // The cron cleanup order when removing a member (delete the cron job first, then the member)
+  // is covered directly by removeTeamAssistantWithCronCleanup.test.ts; the removal interaction on
+  // the pill is covered by team-member-ops.e2e.ts. The removal entry point moved from the header
+  // to the pills at the top.
 
   it('re-enables membership controls when ensureSession resolves after runtime pending events', async () => {
     let resolveEnsureSession: (() => void) | undefined;

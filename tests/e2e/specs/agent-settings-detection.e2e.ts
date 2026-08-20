@@ -23,17 +23,17 @@ type ManagedAgent = {
 const DEPRECATED_RUNTIME_AGENT_TYPES = new Set(['nanobot', 'openclaw-gateway', 'remote', 'gemini']);
 
 const TEXT = {
-  customAgents: ['Custom Agents', '自定义 Agents'],
-  setupGuide: ['Setup guide', '查看安装指南'],
+  customAgents: ['Custom Agents'],
+  setupGuide: ['Setup guide'],
   // The custom-agent editor is now opened from an "Add" button in the
   // custom-agents section header (was a "Detect Custom Agent" text link).
-  addCustomAgent: ['Add', '添加'],
-  testConnection: ['Test Connection', '测试连接'],
-  commandLabel: ['Command', '命令'],
-  commandPlaceholder: ['e.g. my-agent or /usr/local/bin/my-agent', '例如 my-agent 或 /usr/local/bin/my-agent'],
-  installFromMarket: ['Install from Market', '从市场安装'],
-  discoverMoreAgents: ['Discover More Agents', '发现更多 Agent'],
-  startChat: ['Start Chat', '开始对话'],
+  addCustomAgent: ['Add'],
+  testConnection: ['Test Connection'],
+  commandLabel: ['Command'],
+  commandPlaceholder: ['e.g. my-agent or /usr/local/bin/my-agent'],
+  installFromMarket: ['Install from Market'],
+  discoverMoreAgents: ['Discover More Agents'],
+  startChat: ['Start Chat'],
 } as const;
 
 async function expectAnyText(page: Parameters<typeof test>[0]['page'], candidates: readonly string[]) {

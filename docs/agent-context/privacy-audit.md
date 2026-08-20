@@ -79,15 +79,15 @@ fallback to `static.aionui.com` or iOfficeAI reappears.
 
 ## Kept deliberately
 
-| Destination | Trigger | Why it stays |
-| --- | --- | --- |
-| `api.openai.com`, `api.anthropic.com`, `api.deepseek.com`, and the other provider bases | A request to a provider the user configured | Contacted only with the user's own key. Not reached otherwise. |
-| `slack.com`, `open.feishu.cn`, `oapi.dingtalk.com`, `ilinkai.weixin.qq.com` | A channel the user set up | Feature endpoints; inert until configured. |
-| `nodejs.org/dist` | Managed Node runtime missing | Official distribution, single source, no mirror. |
-| npm registry (`opencode-ai`) | First launch, if `opencode` is not resolvable | A deliberate Pavii feature: OpenCode ships as a default agent. `packages/desktop/src/process/startup/ensureOpencode.ts`. |
-| `pavii.tech/login`, `googleapis.com` certs | User signs in | The project's own Firebase. The Google call fetches **public** signing certs; the token is verified locally, so no user data is sent. |
-| `github.com` issue form | User presses Report Issue | Opens a prefilled form in the user's browser; they see it and submit it. `PAVII_ISSUE_PROXY_URL` can route through `services/issue-proxy/` instead, and is unset by default. |
-| `raw.githubusercontent.com/iOfficeAI/AionHub` | Build time, on the developer machine | `scripts/prepareHubResources.js` bundles the extension catalog. Not a runtime path. |
+| Destination                                                                             | Trigger                                       | Why it stays                                                                                                                                                                 |
+| --------------------------------------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api.openai.com`, `api.anthropic.com`, `api.deepseek.com`, and the other provider bases | A request to a provider the user configured   | Contacted only with the user's own key. Not reached otherwise.                                                                                                               |
+| `slack.com`, `open.feishu.cn`, `oapi.dingtalk.com`, `ilinkai.weixin.qq.com`             | A channel the user set up                     | Feature endpoints; inert until configured.                                                                                                                                   |
+| `nodejs.org/dist`                                                                       | Managed Node runtime missing                  | Official distribution, single source, no mirror.                                                                                                                             |
+| npm registry (`opencode-ai`)                                                            | First launch, if `opencode` is not resolvable | A deliberate Pavii feature: OpenCode ships as a default agent. `packages/desktop/src/process/startup/ensureOpencode.ts`.                                                     |
+| `pavii.tech/login`, `googleapis.com` certs                                              | User signs in                                 | The project's own Firebase. The Google call fetches **public** signing certs; the token is verified locally, so no user data is sent.                                        |
+| `github.com` issue form                                                                 | User presses Report Issue                     | Opens a prefilled form in the user's browser; they see it and submit it. `PAVII_ISSUE_PROXY_URL` can route through `services/issue-proxy/` instead, and is unset by default. |
+| `raw.githubusercontent.com/iOfficeAI/AionHub`                                           | Build time, on the developer machine          | `scripts/prepareHubResources.js` bundles the extension catalog. Not a runtime path.                                                                                          |
 
 ## Known gaps
 

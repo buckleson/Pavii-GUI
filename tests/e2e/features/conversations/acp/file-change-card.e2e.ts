@@ -104,7 +104,7 @@ test('shows one compact row for an ACP file change', async ({ page }) => {
     await expect(previewPanel).toBeVisible({ timeout: 10_000 });
     await expect(previewPanel).toContainText('research-summary.md', { timeout: 10_000 });
 
-    await fileChange.getByText(/^Preview$|^预览$/).click();
+    await fileChange.getByText(/^Preview$/).click();
     await expect(previewPanel).toContainText('research-summary.md', { timeout: 10_000 });
   } finally {
     if (conversationId) {

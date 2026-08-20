@@ -16,7 +16,7 @@ import {
 test.describe('Extension: Channel Plugins', () => {
   test('channels page renders', async ({ page }) => {
     await goToChannelsTab(page);
-    await expectBodyContainsAny(page, ['Telegram', 'Channel', '频道']);
+    await expectBodyContainsAny(page, ['Telegram', 'Channel']);
   });
 
   test('built-in channels still visible alongside extension channels', async ({ page }) => {
@@ -88,7 +88,7 @@ test.describe('Extension: Channel Plugins', () => {
     if (hasComingSoon) {
       const disabledSwitches = page.locator('.arco-switch.arco-switch-disabled, .arco-switch[aria-disabled="true"]');
       const disabledCount = await disabledSwitches.count();
-      const hasComingSoonBadge = body?.includes('Coming Soon') || body?.includes('即将上线');
+      const hasComingSoonBadge = body?.includes('Coming Soon');
 
       expect(disabledCount > 0 || hasComingSoonBadge).toBeTruthy();
     }

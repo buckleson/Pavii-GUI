@@ -24,7 +24,7 @@ const LEADER_BACKEND = [...TEAM_SUPPORTED_BACKENDS][0] ?? 'claude';
 
 test.describe('Team Workspace Migration', () => {
   let targetWorkspace: string;
-  let team_id: string | undefined;
+  let teamId: string | undefined;
 
   test.beforeAll(async () => {
     targetWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), 'aionui-target-'));
@@ -61,7 +61,7 @@ test.describe('Team Workspace Migration', () => {
     };
 
     const autoApproveMcpDialogs = async (durationMs = 60_000) => {
-      const btn = page.locator('button').filter({ hasText: /Yes.*allow always|是.*始终允许/i });
+      const btn = page.locator('button').filter({ hasText: /Yes.*allow always/i });
       const deadline = Date.now() + durationMs;
       while (Date.now() < deadline) {
         const visible = await btn
@@ -79,7 +79,7 @@ test.describe('Team Workspace Migration', () => {
 
     // ── Step 1: Create team via sidebar UI ──────────────────────────────
 
-    const teamSection = page.locator('text=Teams').or(page.locator('text=团队'));
+    const teamSection = page.locator('text=Teams');
     await expect(teamSection.first()).toBeVisible({ timeout: 15_000 });
 
     const createBtn = page.locator('[data-testid="team-create-btn"]').first();
@@ -143,12 +143,12 @@ test.describe('Team Workspace Migration', () => {
 
     await page.screenshot({ path: 'tests/e2e/results/team-migration-02-member-added.png' });
 
-    // ── Step 3: Wait for workspace panel with "临时空间" label ───────────
+    // ── Step 3: Wait for the workspace panel with its "Temporary" label ──
 
-    const workspaceTitle = page.locator('text=工作空间').or(page.locator('text=Workspace'));
+    const workspaceTitle = page.locator('text=Workspace');
     await expect(workspaceTitle.first()).toBeVisible({ timeout: 20_000 });
 
-    const tempLabel = page.locator('.workspace-title-label').filter({ hasText: /临时空间|Temporary/ });
+    const tempLabel = page.locator('.workspace-title-label').filter({ hasText: /Temporary/ });
     await expect(tempLabel.first()).toBeVisible({ timeout: 15_000 });
 
     await page.screenshot({ path: 'tests/e2e/results/team-migration-03-workspace-ready.png' });
@@ -164,12 +164,12 @@ test.describe('Team Workspace Migration', () => {
     await changeBtn.click();
 
     const migrationModal = page.locator('.arco-modal').filter({
-      hasText: /更换工作空间|Change Workspace|移动到新文件夹|Move to new folder/,
+      hasText: /Change Workspace|Move to new folder/,
     });
     await expect(migrationModal.first()).toBeVisible({ timeout: 5_000 });
 
     const folderSelector = migrationModal.locator('.cursor-pointer').filter({
-      hasText: /选择文件夹|Select folder/,
+      hasText: /Select folder/,
     });
     await folderSelector.first().click();
 
@@ -189,11 +189,11 @@ test.describe('Team Workspace Migration', () => {
     // 5a. UI: page not blank — leader textarea still visible
     await expect(page.locator('textarea').first()).toBeVisible({ timeout: 15_000 });
 
-    // 5b. UI: workspace label no longer says "临时空间"
+    // 5b. UI: the workspace label no longer says "Temporary"
     const newLabel = page.locator('.workspace-title-label');
     await expect(newLabel.first()).toBeVisible({ timeout: 10_000 });
     const labelText = await newLabel.first().textContent();
-    expect(labelText).not.toMatch(/临时空间|Temporary/);
+    expect(labelText).not.toMatch(/Temporary/);
 
     // 5c. UI: leader and member tabs still visible
     await expect(tabBar.locator('text=Leader').first()).toBeVisible({ timeout: 10_000 });

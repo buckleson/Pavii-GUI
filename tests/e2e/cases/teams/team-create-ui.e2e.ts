@@ -18,7 +18,7 @@ test.describe('Team Create - Full UI Flow', () => {
     }
 
     // Step 1: Wait for Sider Teams section to appear
-    const teamSection = page.locator('text=Teams').or(page.locator('text=团队'));
+    const teamSection = page.locator('text=Teams');
     await expect(teamSection.first()).toBeVisible({ timeout: 15_000 });
 
     await page.screenshot({ path: 'tests/e2e/results/team-ui-01-sider.png' });

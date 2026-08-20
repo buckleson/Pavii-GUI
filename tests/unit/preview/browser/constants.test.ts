@@ -41,7 +41,6 @@ describe('resolveAddressBarInput', () => {
   });
 
   it('treats input containing whitespace as a search query', () => {
-    // 关键行为：带空格的输入不是主机名，必须走搜索而不是被拼成非法 URL
     // Key behavior: whitespace is never a hostname, so search instead of building
     // an invalid URL.
     expect(resolveAddressBarInput('how to configure nginx')).toBe(

@@ -68,7 +68,7 @@ test.describe('Workspace Changes — UI panel', () => {
       const menu = page.locator('[data-testid="team-create-workspace-menu"]');
       if (await menu.isVisible({ timeout: 3_000 }).catch(() => false)) {
         const chooseDifferent = menu
-          .locator('text=/Choose a different folder|选择其他文件夹/i')
+          .locator('text=/Choose a different folder/i')
           .or(menu.locator('.cursor-pointer').last());
         await chooseDifferent.first().click();
       }
@@ -88,7 +88,7 @@ test.describe('Workspace Changes — UI panel', () => {
     fs.writeFileSync(path.join(workspace, 'created.txt'), 'hello-snapshot');
 
     // ── Switch to Changes tab ────────────────────────────────────────────
-    const changesTab = panel.locator('.arco-tabs-header-title').filter({ hasText: /Changes|更改/ });
+    const changesTab = panel.locator('.arco-tabs-header-title').filter({ hasText: /Changes/ });
     await expect(changesTab.first()).toBeVisible({ timeout: 10_000 });
     await changesTab.first().click();
 
@@ -104,7 +104,7 @@ test.describe('Workspace Changes — UI panel', () => {
     // The FileChangeList renders a Stage-all action + per-file stage buttons.
     const stageButton = panel
       .locator('button, [role="button"]')
-      .filter({ hasText: /Stage All|全部暂存|Stage|暂存/ })
+      .filter({ hasText: /Stage All|Stage/ })
       .first();
     const stageVisible = await stageButton.isVisible({ timeout: 5_000 }).catch(() => false);
     if (stageVisible) {

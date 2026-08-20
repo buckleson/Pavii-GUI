@@ -73,7 +73,7 @@ describe('MessageToolGroupSummary ACP image output', () => {
               type: 'content',
               content: {
                 type: 'text',
-                text: 'Revised prompt: 一张小猫照片',
+                text: 'Revised prompt: a photo of a kitten',
               },
             },
           ],

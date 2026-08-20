@@ -15,7 +15,7 @@ describe('resolveCronAgentConfig', () => {
       presetAssistants: [
         assistant({
           id: 'assistant-1',
-          name: '文件规划助手',
+          name: 'File Planning Assistant',
           agent_id: 'agent-aionrs',
           agent: agent('agent-aionrs', 'aionrs'),
         }),
@@ -32,7 +32,7 @@ describe('resolveCronAgentConfig', () => {
 
     expect(result).toEqual({
       agent_config: {
-        name: '文件规划助手',
+        name: 'File Planning Assistant',
         assistant_id: 'assistant-1',
         mode: 'yolo',
         model_id: 'gemini-3.1-pro-preview',
@@ -53,7 +53,7 @@ describe('resolveCronAgentConfig', () => {
       presetAssistants: [
         assistant({
           id: 'assistant-2',
-          name: 'Codex 助手',
+          name: 'Codex Assistant',
           agent_id: 'agent-codex',
           agent: agent('agent-codex', 'acp', 'codex'),
         }),
@@ -65,7 +65,7 @@ describe('resolveCronAgentConfig', () => {
 
     expect(result).toEqual({
       agent_config: {
-        name: 'Codex 助手',
+        name: 'Codex Assistant',
         assistant_id: 'assistant-2',
         mode: 'full-access',
         config_options: { reasoning_effort: 'high' },
@@ -101,7 +101,7 @@ describe('resolveCronAgentConfig', () => {
       presetAssistants: [
         assistant({
           id: 'assistant-4',
-          name: 'Claude 助手',
+          name: 'Claude Assistant',
           agent_id: 'agent-claude',
           agent: agent('agent-claude', 'acp', 'claude'),
         }),
@@ -112,7 +112,7 @@ describe('resolveCronAgentConfig', () => {
 
     expect(result).toEqual({
       agent_config: {
-        name: 'Claude 助手',
+        name: 'Claude Assistant',
         assistant_id: 'assistant-4',
         mode: 'default',
         model_id: undefined,
@@ -129,7 +129,7 @@ describe('resolveCronAgentConfig', () => {
       presetAssistants: [
         assistant({
           id: 'assistant-3',
-          name: '社媒发布助手',
+          name: 'Social Media Assistant',
           agent_id: 'agent-claude',
           agent: agent('agent-claude', 'acp', 'claude'),
         }),

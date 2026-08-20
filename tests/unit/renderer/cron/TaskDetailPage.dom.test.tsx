@@ -158,11 +158,11 @@ describe('TaskDetailPage', () => {
 
     await waitFor(() => expect(getJobInvokeMock).toHaveBeenCalledWith({ job_id: 'job-1' }));
 
-    expect(await screen.findByText('问好助手')).toBeInTheDocument();
+    expect(await screen.findByText('Greeting Assistant')).toBeInTheDocument();
     expect(screen.getByText('cron.detail.assistant')).toBeInTheDocument();
     expect(screen.queryByText('cron.detail.agent')).not.toBeInTheDocument();
 
-    const assistantAvatar = screen.getByAltText('问好助手');
+    const assistantAvatar = screen.getByAltText('Greeting Assistant');
     expect(assistantAvatar).toHaveAttribute('src', 'data:image/svg+xml;base64,assistant-avatar');
     expect(screen.queryByText('Codex CLI')).not.toBeInTheDocument();
   });
@@ -172,7 +172,7 @@ describe('TaskDetailPage', () => {
     getConversationInvokeMock.mockResolvedValue(
       conversation({
         id: 'conv-run',
-        name: '问好',
+        name: 'Greeting',
         created_at: Date.UTC(2026, 6, 1, 12, 0, 0),
         updated_at: Date.UTC(2026, 6, 1, 12, 0, 0),
         extra: {
@@ -196,7 +196,7 @@ describe('TaskDetailPage', () => {
     await waitFor(() =>
       expect(updateConversationInvokeMock).toHaveBeenCalledWith({
         id: 'conv-run',
-        updates: { name: '问好 01-07-26' },
+        updates: { name: 'Greeting 01-07-26' },
       })
     );
     expect(navigateMock).toHaveBeenCalledWith('/conversation/conv-run');
@@ -253,9 +253,12 @@ describe('TaskDetailPage', () => {
 
     await waitFor(() => expect(getJobInvokeMock).toHaveBeenCalledWith({ job_id: 'job-1' }));
 
-    expect(await screen.findByText('问好助手')).toBeInTheDocument();
+    expect(await screen.findByText('Greeting Assistant')).toBeInTheDocument();
     expect(screen.getByText('cron.detail.assistant')).toBeInTheDocument();
-    expect(screen.getByAltText('问好助手')).toHaveAttribute('src', 'data:image/svg+xml;base64,assistant-avatar');
+    expect(screen.getByAltText('Greeting Assistant')).toHaveAttribute(
+      'src',
+      'data:image/svg+xml;base64,assistant-avatar'
+    );
   });
 
   it('still renders assistant identity for legacy jobs that only stored custom_agent_id', async () => {
@@ -264,7 +267,7 @@ describe('TaskDetailPage', () => {
         metadata: {
           agent_config: {
             backend: 'codex',
-            name: '问好助手',
+            name: 'Greeting Assistant',
             is_preset: true,
             custom_agent_id: 'assistant-1',
             preset_agent_type: 'codex',
@@ -283,9 +286,12 @@ describe('TaskDetailPage', () => {
 
     await waitFor(() => expect(getJobInvokeMock).toHaveBeenCalledWith({ job_id: 'job-1' }));
 
-    expect(await screen.findByText('问好助手')).toBeInTheDocument();
+    expect(await screen.findByText('Greeting Assistant')).toBeInTheDocument();
     expect(screen.getByText('cron.detail.assistant')).toBeInTheDocument();
-    expect(screen.getByAltText('问好助手')).toHaveAttribute('src', 'data:image/svg+xml;base64,assistant-avatar');
+    expect(screen.getByAltText('Greeting Assistant')).toHaveAttribute(
+      'src',
+      'data:image/svg+xml;base64,assistant-avatar'
+    );
   });
 
   it('opens the owning team from execution history when the conversation belongs to a team', async () => {
@@ -394,14 +400,14 @@ function job(overrides?: Partial<ICronJob>): ICronJob {
 
   return {
     id: 'job-1',
-    name: '问好',
-    description: '想我问好',
+    name: 'Greeting',
+    description: 'Say hi to me',
     enabled: false,
     schedule: {
       kind: 'cron',
       expr: '0 10 * * *',
       timezone: 'Asia/Shanghai',
-      description: '每天10点向我问好',
+      description: 'Greet me at 10 every day',
     },
     ...overrides,
     metadata: {
@@ -414,7 +420,7 @@ function job(overrides?: Partial<ICronJob>): ICronJob {
       ...metadataRestOverrides,
       agent_config: {
         backend: 'codex',
-        name: '问好助手',
+        name: 'Greeting Assistant',
         is_preset: true,
         assistant_id: 'assistant-1',
         preset_agent_type: 'codex',
@@ -425,7 +431,7 @@ function job(overrides?: Partial<ICronJob>): ICronJob {
       execution_mode: 'new_conversation',
       ...targetRestOverrides,
       payload: {
-        text: '每天10点向我问好',
+        text: 'Greet me at 10 every day',
         ...payloadOverrides,
       },
     },
@@ -445,7 +451,7 @@ function assistants(): Assistant[] {
     {
       id: 'assistant-1',
       source: 'user',
-      name: '问好助手',
+      name: 'Greeting Assistant',
       name_i18n: {},
       description_i18n: {},
       avatar: 'data:image/svg+xml;base64,assistant-avatar',

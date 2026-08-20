@@ -279,7 +279,7 @@ export async function waitForSessionActive(page: Page, timeoutMs = 120_000): Pro
         // Fallback: status badge
         const hasStatus = await page
           .locator(statusSelector)
-          .filter({ hasText: /Active session|会话活跃/ })
+          .filter({ hasText: /Active session/ })
           .first()
           .isVisible()
           .catch(() => false);

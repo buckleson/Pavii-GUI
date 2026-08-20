@@ -149,13 +149,13 @@ describe('MarkdownView local file links', () => {
 
     render(
       <MarkdownView onLocalFileLink={onLocalFileLink}>
-        {'[user.js 1-260行](/Users/demo/project/user.js#L1-L260)'}
+        {'[user.js lines 1-260](/Users/demo/project/user.js#L1-L260)'}
       </MarkdownView>
     );
 
     expect(screen.queryByRole('link', { name: /user\.js/ })).not.toBeInTheDocument();
 
-    const fileButton = screen.getByRole('button', { name: /user\.js 1-260行\s+L1-L260/ });
+    const fileButton = screen.getByRole('button', { name: /user\.js lines 1-260\s+L1-L260/ });
     fireEvent.click(fileButton);
 
     expect(onLocalFileLink).toHaveBeenCalledWith(

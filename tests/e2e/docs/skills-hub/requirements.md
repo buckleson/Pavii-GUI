@@ -1,288 +1,288 @@
-# SkillsHubSettings 功能需求文档
+# SkillsHubSettings Functional Requirements
 
-## 1. 页面概述与目的
+## 1. Page Overview and Purpose
 
-**页面路径**：`src/renderer/pages/settings/SkillsHubSettings.tsx`
+**Page path**: `src/renderer/pages/settings/SkillsHubSettings.tsx`
 
-**核心定位**：SkillsHub（技能中心）是 AionUi 的统一技能管理平台，提供一站式的技能导入、导出、删除、搜索与分类展示功能。用户通过该页面集中管理 AI agent 所需的所有技能，实现"一次安装，全助手通用"。
+**Core positioning**: SkillsHub is AionUi's unified skill management platform. It offers one-stop skill import, export, deletion, search, and categorized display. Users manage every skill their AI agents need from this single page, achieving "install once, available to every assistant".
 
-**支持模式**：
+**Supported modes**:
 
-- 嵌入模式（`withWrapper=false`）：可嵌入到 Tab 页中，不渲染外层 `SettingsPageWrapper`
-- 独立模式（`withWrapper=true`，默认）：作为完整设置页面展示
+- Embedded mode (`withWrapper=false`): can be embedded in a tab page; the outer `SettingsPageWrapper` is not rendered
+- Standalone mode (`withWrapper=true`, the default): rendered as a complete settings page
 
-**技能来源分类**：
+**Skill source categories**:
 
-1. **Built-in Skills**（内置技能）：位于 `builtin-skills/` 目录
-2. **Custom Skills**（自定义技能）：位于用户目录 `~/.aionui/skills/`
-3. **Extension Skills**（扩展技能）：由 ExtensionRegistry 贡献
-4. **Auto-injected Skills**（自动注入技能）：位于 `_builtin/` 目录，无需用户选择
-
----
-
-## 2. 功能清单
-
-### 2.1 技能列表展示
-
-#### 2.1.1 我的技能（My Skills）
-
-**源码位置**：`SkillsHubSettings.tsx:392-592`
-
-**功能描述**：
-
-- 展示用户已导入的 builtin 和 custom 技能
-- 每项技能卡片包含：
-  - 头像（首字母大写，根据名称 hash 取色）：`SkillsHubSettings.tsx:26-41`
-  - 技能名称（`skill.name`）
-  - 来源标签（builtin / custom）：`SkillsHubSettings.tsx:471-479`
-  - 技能描述（`skill.description`，line-clamp-2）：`SkillsHubSettings.tsx:481-488`
-  - 操作按钮区（hover 显示）：导出、删除
-
-**数据来源**：
-
-- Bridge 调用：`ipcBridge.fs.listAvailableSkills.invoke()` → `fsBridge.ts:1036-1139`
-- 过滤逻辑：排除 `source === 'extension'`（`SkillsHubSettings.tsx:67`）
-
-**搜索功能**：
-
-- 搜索框位置：`SkillsHubSettings.tsx:415-426`
-- 搜索范围：技能名称、描述（不区分大小写）
-- 实现：`filteredSkills` computed（`SkillsHubSettings.tsx:70-77`）
-
-**刷新功能**：
-
-- 刷新按钮：`SkillsHubSettings.tsx:402-411`
-- 触发 `fetchData()`，重新拉取所有技能列表
-
-**自动刷新时机**（所有触发 `fetchData()` 的场景）：
-
-1. **组件挂载**：`useEffect(() => { void fetchData(); }, [fetchData])`（`SkillsHubSettings.tsx:106-108`）
-2. **手动点击刷新按钮**：`SkillsHubSettings.tsx:404-407`
-3. **导入成功后**：`handleImport` 成功后调用 `void fetchData()`（`SkillsHubSettings.tsx:135`）
-4. **删除成功后**：`handleDelete` 成功后调用 `void fetchData()`（`SkillsHubSettings.tsx:171`）
-5. **批量导入成功后**：`handleImportAll` 有成功项时调用 `void fetchData()`（`SkillsHubSettings.tsx:162`）
-6. **添加自定义路径后**：通过 `handleRefreshExternal()` 间接刷新外部技能（`SkillsHubSettings.tsx:223`）
-
-**不刷新的场景**：
-
-- **导出成功后**：不调用 `fetchData()`，因为"我的技能"列表未变化（仅外部 CLI 目录新增 symlink）
-
-**空状态提示**：
-
-- 无技能时显示：`locales/en-US/settings.json:11` "No skills found. Import some to get started."
-
-**搜索空结果行为**：
-
-- 源码逻辑：`SkillsHubSettings.tsx:450-591`
-- 当 `filteredSkills.length === 0` 时进入 else 分支，显示"No skills found"提示（`SkillsHubSettings.tsx:584-590`）
-- **场景区分**：
-  1. 无技能 + 空搜索：显示"No skills found. Import some to get started."
-  2. 有技能 + 搜索无匹配：**同样显示**"No skills found. Import some to get started."（无法区分）
-- **注意**：当前实现无法区分"无技能"和"搜索无匹配"场景，用户体验可能不佳
-
-**testid 可用性**：❌ 缺失
-
-- **测试依赖项（P0 优先级）**：需添加以下 data-testid：
-  - 板块容器：`my-skills-section`
-  - 技能卡片：`my-skill-card-${normalizedName}`（需转义，见 7.2.1）
-  - 删除按钮：`delete-skill-button-${normalizedName}`
-- **测试依赖项（P1 优先级）**：
-  - 搜索框：`my-skills-search-input`
-  - 刷新按钮：`my-skills-refresh-button`
-  - 手动导入按钮：`manual-import-button`
-- **测试依赖项（P2 优先级）**：
-  - 导出按钮：`export-skill-button-${normalizedName}`
-  - 导出下拉菜单：`export-dropdown-${normalizedName}`
+1. **Built-in Skills**: located in the `builtin-skills/` directory
+2. **Custom Skills**: located in the user directory `~/.aionui/skills/`
+3. **Extension Skills**: contributed by the ExtensionRegistry
+4. **Auto-injected Skills**: located in the `_builtin/` directory; the user does not need to select them
 
 ---
 
-#### 2.1.2 发现外部技能（Discovered External Skills）
+## 2. Feature Inventory
 
-**源码位置**：`SkillsHubSettings.tsx:248-389`
+### 2.1 Skill list display
 
-**功能描述**：
+#### 2.1.1 My Skills
 
-- 自动扫描常见 CLI 工具（Claude Code、Gemini CLI、OpenCode 等）的技能目录
-- 多 Tab 切换展示不同来源的技能
-- 支持搜索、批量导入、单项导入
+**Source location**: `SkillsHubSettings.tsx:392-592`
 
-**扫描来源**（`fsBridge.ts:1486-1627`）：
+**Description**:
+
+- Displays the builtin and custom skills the user has imported
+- Each skill card contains:
+  - An avatar (the capitalized first letter, colored by a hash of the name): `SkillsHubSettings.tsx:26-41`
+  - The skill name (`skill.name`)
+  - A source badge (builtin / custom): `SkillsHubSettings.tsx:471-479`
+  - The skill description (`skill.description`, line-clamp-2): `SkillsHubSettings.tsx:481-488`
+  - An action button area (shown on hover): export, delete
+
+**Data source**:
+
+- Bridge call: `ipcBridge.fs.listAvailableSkills.invoke()` → `fsBridge.ts:1036-1139`
+- Filtering logic: excludes `source === 'extension'` (`SkillsHubSettings.tsx:67`)
+
+**Search**:
+
+- Search box location: `SkillsHubSettings.tsx:415-426`
+- Search scope: skill name and description (case-insensitive)
+- Implementation: the `filteredSkills` computed value (`SkillsHubSettings.tsx:70-77`)
+
+**Refresh**:
+
+- Refresh button: `SkillsHubSettings.tsx:402-411`
+- Triggers `fetchData()`, which re-fetches every skill list
+
+**When the list refreshes automatically** (every case that triggers `fetchData()`):
+
+1. **Component mount**: `useEffect(() => { void fetchData(); }, [fetchData])` (`SkillsHubSettings.tsx:106-108`)
+2. **Manually clicking the refresh button**: `SkillsHubSettings.tsx:404-407`
+3. **After a successful import**: `handleImport` calls `void fetchData()` on success (`SkillsHubSettings.tsx:135`)
+4. **After a successful delete**: `handleDelete` calls `void fetchData()` on success (`SkillsHubSettings.tsx:171`)
+5. **After a successful batch import**: `handleImportAll` calls `void fetchData()` when at least one item succeeded (`SkillsHubSettings.tsx:162`)
+6. **After adding a custom path**: the external skills are refreshed indirectly through `handleRefreshExternal()` (`SkillsHubSettings.tsx:223`)
+
+**When the list does not refresh**:
+
+- **After a successful export**: `fetchData()` is not called, because the My Skills list has not changed (only a symlink is added to the external CLI directory)
+
+**Empty state message**:
+
+- Shown when there are no skills: `locales/en-US/settings.json:11` "No skills found. Import some to get started."
+
+**Behaviour when a search returns nothing**:
+
+- Source logic: `SkillsHubSettings.tsx:450-591`
+- When `filteredSkills.length === 0`, the else branch runs and shows the "No skills found" message (`SkillsHubSettings.tsx:584-590`)
+- **Scenario distinction**:
+  1. No skills plus an empty search: shows "No skills found. Import some to get started."
+  2. Skills exist but the search has no match: **shows the same message**, "No skills found. Import some to get started." (the two cases are indistinguishable)
+- **Note**: the current implementation cannot distinguish "no skills" from "search returned no match", which may hurt the user experience
+
+**testid availability**: ❌ missing
+
+- **Test dependencies (P0 priority)**: the following data-testid attributes must be added:
+  - Board container: `my-skills-section`
+  - Skill card: `my-skill-card-${normalizedName}` (must be escaped, see 7.2.1)
+  - Delete button: `delete-skill-button-${normalizedName}`
+- **Test dependencies (P1 priority)**:
+  - Search box: `my-skills-search-input`
+  - Refresh button: `my-skills-refresh-button`
+  - Manual import button: `manual-import-button`
+- **Test dependencies (P2 priority)**:
+  - Export button: `export-skill-button-${normalizedName}`
+  - Export dropdown: `export-dropdown-${normalizedName}`
+
+---
+
+#### 2.1.2 Discovered External Skills
+
+**Source location**: `SkillsHubSettings.tsx:248-389`
+
+**Description**:
+
+- Automatically scans the skill directories of common CLI tools (Claude Code, Gemini CLI, OpenCode, and others)
+- Shows skills from different sources across multiple tabs
+- Supports search, batch import, and single-item import
+
+**Scanned sources** (`fsBridge.ts:1486-1627`):
 
 - `~/.agents/skills` (Global Agents)
 - `~/.gemini/skills` (Gemini CLI)
 - `~/.claude/skills` (Claude Code)
 - `~/.config/opencode/skills` (OpenCode)
 - `~/.opencode/skills` (OpenCode Alt)
-- 自定义路径（通过 `custom_external_skill_paths.json` 持久化）
+- Custom paths (persisted through `custom_external_skill_paths.json`)
 
-**Tab 切换**：
+**Tab switching**:
 
-- Tab 按钮：`SkillsHubSettings.tsx:293-309`
-- 状态：`activeSourceTab` → `setActiveSourceTab`
-- 显示当前源的技能数量标记
+- Tab buttons: `SkillsHubSettings.tsx:293-309`
+- State: `activeSourceTab` → `setActiveSourceTab`
+- Shows a count badge for the skills in the current source
 
-**添加自定义路径**：
+**Adding a custom path**:
 
-- 触发按钮：`SkillsHubSettings.tsx:311-318`（Plus 按钮）
-- Modal 表单：`SkillsHubSettings.tsx:699-759`
-- Bridge 调用：`ipcBridge.fs.addCustomExternalPath.invoke({ name, path })`
-- 实现：`fsBridge.ts:1455-1470`
+- Trigger button: `SkillsHubSettings.tsx:311-318` (the plus button)
+- Modal form: `SkillsHubSettings.tsx:699-759`
+- Bridge call: `ipcBridge.fs.addCustomExternalPath.invoke({ name, path })`
+- Implementation: `fsBridge.ts:1455-1470`
 
-**批量导入**：
+**Batch import**:
 
-- 按钮位置：`SkillsHubSettings.tsx:330-335`
-- 逻辑：`handleImportAll(activeSource.skills)` → `SkillsHubSettings.tsx:145-164`
-- 每个技能逐个调用 `importSkillWithSymlink`，成功后累计计数
+- Button location: `SkillsHubSettings.tsx:330-335`
+- Logic: `handleImportAll(activeSource.skills)` → `SkillsHubSettings.tsx:145-164`
+- Calls `importSkillWithSymlink` for each skill in turn and accumulates the success count
 
-**单项导入**：
+**Single-item import**:
 
-- 点击卡片或 Import 按钮触发
-- 调用：`ipcBridge.fs.importSkillWithSymlink.invoke({ skillPath })`
-- 实现：`fsBridge.ts:1629-1676`（创建 symlink）
+- Triggered by clicking the card or the Import button
+- Call: `ipcBridge.fs.importSkillWithSymlink.invoke({ skillPath })`
+- Implementation: `fsBridge.ts:1629-1676` (creates the symlink)
 
-**刷新外部技能**：
+**Refreshing external skills**:
 
-- 刷新按钮：`SkillsHubSettings.tsx:261-267`
-- 触发 `handleRefreshExternal()` → `SkillsHubSettings.tsx:194-210`
-- 重新调用 `ipcBridge.fs.detectAndCountExternalSkills.invoke()`
+- Refresh button: `SkillsHubSettings.tsx:261-267`
+- Triggers `handleRefreshExternal()` → `SkillsHubSettings.tsx:194-210`
+- Calls `ipcBridge.fs.detectAndCountExternalSkills.invoke()` again
 
-**搜索功能**：
+**Search**:
 
-- 搜索框：`SkillsHubSettings.tsx:277-288`
-- 状态：`searchExternalQuery`
-- 过滤逻辑：`filteredExternalSkills`（`SkillsHubSettings.tsx:235-243`）
+- Search box: `SkillsHubSettings.tsx:277-288`
+- State: `searchExternalQuery`
+- Filtering logic: `filteredExternalSkills` (`SkillsHubSettings.tsx:235-243`)
 
-**技能包支持**（Skill Pack）：
+**Skill pack support**:
 
-- 识别两类结构：
-  1. 直接技能：目录下直接包含 `SKILL.md`
-  2. 嵌套技能包：目录下有 `skills/` 子目录，每个子目录是独立技能
-- 实现：`fsBridge.ts:1551-1600`
+- Two structures are recognized:
+  1. Direct skill: the directory contains `SKILL.md` directly
+  2. Nested skill pack: the directory has a `skills/` subdirectory in which each subdirectory is an independent skill
+- Implementation: `fsBridge.ts:1551-1600`
 
-**testid 可用性**：❌ 缺失
+**testid availability**: ❌ missing
 
-- **测试依赖项（P0 优先级）**：
-  - 板块容器：`external-skills-section`
-  - 外部技能卡片：`external-skill-card-${normalizedName}`（需转义，见 7.2.1）
-  - 单项导入按钮：`import-skill-button-${normalizedName}`
-  - 批量导入按钮：`import-all-skills-button`
-- **测试依赖项（P1 优先级）**：
-  - 搜索框：`external-skills-search-input`
-  - 刷新按钮：`external-skills-refresh-button`
-  - 添加路径按钮：`add-custom-path-button`
-  - 添加路径 Modal：`add-custom-path-modal`
-- **测试依赖项（P2 优先级）**：
-  - Tab 按钮：`external-source-tab-${source.source}`
-
----
-
-#### 2.1.3 扩展技能（Extension Skills）
-
-**源码位置**：`SkillsHubSettings.tsx:594-635`
-
-**功能描述**：
-
-- 展示由 Extension 插件贡献的技能（`source === 'extension'`）
-- 只读展示，不支持删除或导出
-- 卡片样式：紫色 Puzzle 图标 + Extension 标签
-
-**数据来源**：
-
-- 从 `listAvailableSkills` 返回的数据中过滤 `source === 'extension'`
-- Extension 注册逻辑：`fsBridge.ts:1103-1118`（调用 `ExtensionRegistry.getInstance().getSkills()`）
-
-**testid 可用性**：❌ 缺失
-
-- **测试依赖项**：需添加 `extension-skill-card-${skill.name}`
+- **Test dependencies (P0 priority)**:
+  - Board container: `external-skills-section`
+  - External skill card: `external-skill-card-${normalizedName}` (must be escaped, see 7.2.1)
+  - Single import button: `import-skill-button-${normalizedName}`
+  - Batch import button: `import-all-skills-button`
+- **Test dependencies (P1 priority)**:
+  - Search box: `external-skills-search-input`
+  - Refresh button: `external-skills-refresh-button`
+  - Add path button: `add-custom-path-button`
+  - Add path modal: `add-custom-path-modal`
+- **Test dependencies (P2 priority)**:
+  - Tab button: `external-source-tab-${source.source}`
 
 ---
 
-#### 2.1.4 自动注入技能（Auto-injected Skills）
+#### 2.1.3 Extension Skills
 
-**源码位置**：`SkillsHubSettings.tsx:637-678`
+**Source location**: `SkillsHubSettings.tsx:594-635`
 
-**功能描述**：
+**Description**:
 
-- 展示系统自动注入的内置技能（无需用户选择）
-- 来源目录：`_builtin/` 子目录
-- 卡片样式：绿色 Lightning 图标 + Auto 标签
+- Displays the skills contributed by extension plugins (`source === 'extension'`)
+- Read-only display: they cannot be deleted or exported
+- Card styling: a purple puzzle icon plus an Extension badge
 
-**数据来源**：
+**Data source**:
 
-- Bridge 调用：`ipcBridge.fs.listBuiltinAutoSkills.invoke()` → `fsBridge.ts:1142-1181`
-- 扫描 `getAutoSkillsDir()` 目录下的所有技能
+- Filters `source === 'extension'` out of the data returned by `listAvailableSkills`
+- Extension registration logic: `fsBridge.ts:1103-1118` (calls `ExtensionRegistry.getInstance().getSkills()`)
 
-**testid 可用性**：❌ 缺失
+**testid availability**: ❌ missing
 
-- **测试依赖项**：需添加 `auto-skill-card-${skill.name}`
-
----
-
-### 2.2 技能导入
-
-#### 2.2.1 从文件夹导入（Manual Import）
-
-**源码位置**：`SkillsHubSettings.tsx:428-436`
-
-**功能描述**：
-
-- 点击 "Import from Folder" 按钮触发文件选择器
-- 选择包含 `SKILL.md` 的目录
-- 通过 symlink 方式导入到用户目录
-
-**实现流程**：
-
-1. 调用：`ipcBridge.dialog.showOpen.invoke({ properties: ['openDirectory', 'createDirectory'] })`（`SkillsHubSettings.tsx:183-186`）
-2. 获得路径后调用：`handleImport(skillPath)` → `SkillsHubSettings.tsx:128-143`
-3. Bridge 调用：`ipcBridge.fs.importSkillWithSymlink.invoke({ skillPath })`
-4. 实现：`fsBridge.ts:1629-1676`
-   - 校验 `SKILL.md` 存在
-   - 解析 YAML frontmatter 获取技能名称
-   - 创建 symlink：`fs.symlink(skillPath, targetDir, 'junction')`
-   - 目标路径：`~/.aionui/skills/{skillName}`
-
-**边界处理**：
-
-- 目录中无 `SKILL.md`：返回 `{ success: false, msg: 'SKILL.md file not found' }`
-- 技能已存在：返回 `{ success: false, msg: 'Skill already exists' }`
-
-**testid 可用性**：❌ 缺失
-
-- **测试依赖项**：需添加 `manual-import-button`
+- **Test dependency**: `extension-skill-card-${skill.name}` must be added
 
 ---
 
-#### 2.2.2 符号链接导入（Symlink Import）
+#### 2.1.4 Auto-injected Skills
 
-**源码位置**：`fsBridge.ts:1629-1676`
+**Source location**: `SkillsHubSettings.tsx:637-678`
 
-**功能描述**：
+**Description**:
 
-- 采用符号链接（junction on Windows）而非文件复制
-- 优点：节省空间，修改源文件立即生效
-- 适用场景：导入外部 CLI 技能或用户自定义路径
+- Displays the builtin skills the system injects automatically (the user does not select them)
+- Source directory: the `_builtin/` subdirectory
+- Card styling: a green lightning icon plus an Auto badge
 
-**实现细节**：
+**Data source**:
 
-- Windows：`fs.symlink(src, dest, 'junction')`
-- macOS/Linux：`fs.symlink(src, dest, 'dir')`
-- 目标目录不存在时自动创建：`fs.mkdir(userSkillsDir, { recursive: true })`
+- Bridge call: `ipcBridge.fs.listBuiltinAutoSkills.invoke()` → `fsBridge.ts:1142-1181`
+- Scans every skill under the `getAutoSkillsDir()` directory
 
-**testid 可用性**：N/A（后端逻辑）
+**testid availability**: ❌ missing
+
+- **Test dependency**: `auto-skill-card-${skill.name}` must be added
 
 ---
 
-#### 2.2.3 批量导入（Import All）
+### 2.2 Skill import
 
-**源码位置**：`SkillsHubSettings.tsx:145-164`
+#### 2.2.1 Manual import from a folder
 
-**功能描述**：
+**Source location**: `SkillsHubSettings.tsx:428-436`
 
-- 从某个外部源一次性导入所有技能
-- 失败不中断，继续尝试后续技能
-- 显示成功导入数量
+**Description**:
 
-**实现逻辑**：
+- Clicking the "Import from Folder" button opens the file picker
+- The user selects a directory that contains a `SKILL.md`
+- The skill is imported into the user directory as a symlink
+
+**Implementation flow**:
+
+1. Call `ipcBridge.dialog.showOpen.invoke({ properties: ['openDirectory', 'createDirectory'] })` (`SkillsHubSettings.tsx:183-186`)
+2. Once a path is returned, call `handleImport(skillPath)` → `SkillsHubSettings.tsx:128-143`
+3. Bridge call: `ipcBridge.fs.importSkillWithSymlink.invoke({ skillPath })`
+4. Implementation: `fsBridge.ts:1629-1676`
+   - Verifies that `SKILL.md` exists
+   - Parses the YAML frontmatter to get the skill name
+   - Creates the symlink: `fs.symlink(skillPath, targetDir, 'junction')`
+   - Target path: `~/.aionui/skills/{skillName}`
+
+**Boundary handling**:
+
+- The directory has no `SKILL.md`: returns `{ success: false, msg: 'SKILL.md file not found' }`
+- The skill already exists: returns `{ success: false, msg: 'Skill already exists' }`
+
+**testid availability**: ❌ missing
+
+- **Test dependency**: `manual-import-button` must be added
+
+---
+
+#### 2.2.2 Symlink import
+
+**Source location**: `fsBridge.ts:1629-1676`
+
+**Description**:
+
+- Uses a symbolic link (a junction on Windows) instead of copying files
+- Advantages: saves space, and edits to the source files take effect immediately
+- Use case: importing external CLI skills or skills from a user-defined path
+
+**Implementation details**:
+
+- Windows: `fs.symlink(src, dest, 'junction')`
+- macOS/Linux: `fs.symlink(src, dest, 'dir')`
+- The target directory is created automatically when it does not exist: `fs.mkdir(userSkillsDir, { recursive: true })`
+
+**testid availability**: N/A (backend logic)
+
+---
+
+#### 2.2.3 Batch import (Import All)
+
+**Source location**: `SkillsHubSettings.tsx:145-164`
+
+**Description**:
+
+- Imports every skill from one external source at once
+- A failure does not abort the run; the remaining skills are still attempted
+- Displays the number of successfully imported skills
+
+**Implementation logic**:
 
 ```typescript
 for (const skill of skills) {
@@ -295,110 +295,110 @@ for (const skill of skills) {
 }
 ```
 
-**UI 状态说明**：
+**UI state notes**:
 
-- **加载状态**：❌ 无（导入过程中按钮不禁用，无 loading 指示）
-- **进度反馈**：❌ 无（无法查看当前导入进度）
-- **取消机制**：❌ 无（无法中途取消批量导入）
-- **失败处理**：单个技能失败不中断，继续导入后续技能
-- **成功提示**：仅显示总成功数量（`importAllSuccess: "{{count}} skills imported"`）
+- **Loading state**: ❌ none (the button is not disabled during the import and there is no loading indicator)
+- **Progress feedback**: ❌ none (the current import progress cannot be seen)
+- **Cancellation**: ❌ none (a batch import cannot be cancelled part way through)
+- **Failure handling**: a single skill failing does not abort the run; the remaining skills are still imported
+- **Success message**: only the total success count is shown (`importAllSuccess: "{{count}} skills imported"`)
 
-**性能影响**：
+**Performance impact**:
 
-- 导入 10+ 技能时可能阻塞 UI 响应（无 loading 状态）
-- 建议测试：批量导入 20 个技能时的 UI 流畅度
+- Importing 10 or more skills may block UI responsiveness (there is no loading state)
+- Suggested test: UI smoothness while batch importing 20 skills
 
-**testid 可用性**：❌ 缺失
+**testid availability**: ❌ missing
 
-- **测试依赖项**：已在 2.1.2 列出
+- **Test dependencies**: already listed in 2.1.2
 
 ---
 
-### 2.3 技能导出
+### 2.3 Skill export
 
-#### 2.3.1 导出到外部源（Export to External Source）
+#### 2.3.1 Export to an external source
 
-**源码位置**：`SkillsHubSettings.tsx:492-558`
+**Source location**: `SkillsHubSettings.tsx:492-558`
 
-**功能描述**：
+**Description**:
 
-- 将"我的技能"中的技能导出（下发）到外部 CLI 工具的技能目录
-- 仅支持 custom 或 builtin 技能（不支持 extension）
-- 通过 Dropdown 菜单选择目标源
+- Exports (pushes) a skill from My Skills into an external CLI tool's skill directory
+- Only custom and builtin skills are supported (extension skills are not)
+- The target source is chosen from a dropdown menu
 
-**实现流程**：
+**Implementation flow**:
 
-1. 点击技能卡片上的 "Export" 按钮（`SkillsHubSettings.tsx:550-558`）
-2. Dropdown 展示所有已检测到的外部源（`SkillsHubSettings.tsx:493-559`）
-3. 选择目标源后调用：
+1. Click the "Export" button on the skill card (`SkillsHubSettings.tsx:550-558`)
+2. The dropdown lists every detected external source (`SkillsHubSettings.tsx:493-559`)
+3. After picking the target source, it calls:
    ```typescript
    const skillPath = skill.location.replace(/[\\/]SKILL\.md$/, '');
    await ipcBridge.fs.exportSkillWithSymlink.invoke({ skillPath, targetDir: source.path });
    ```
-4. Bridge 实现：`fsBridge.ts:1724-1755`
-   - 检查目标路径是否已存在
-   - 创建 symlink：`fs.symlink(skillPath, targetPath, 'junction')`
+4. Bridge implementation: `fsBridge.ts:1724-1755`
+   - Checks whether the target path already exists
+   - Creates the symlink: `fs.symlink(skillPath, targetPath, 'junction')`
 
-**超时保护**：
+**Timeout protection**:
 
-- 8 秒超时限制（`SkillsHubSettings.tsx:511-519`）
-- 超时后显示错误信息
+- An 8 second timeout limit (`SkillsHubSettings.tsx:511-519`)
+- An error message is shown after the timeout
 
-**边界处理**：
+**Boundary handling**:
 
-- 目标已存在：`{ success: false, msg: 'Target already exists' }`
-- 无可导出源：Dropdown 不显示
+- Target already exists: `{ success: false, msg: 'Target already exists' }`
+- No source available to export to: the dropdown is not shown
 
-**testid 可用性**：❌ 缺失
+**testid availability**: ❌ missing
 
-- **测试依赖项**：需添加 `export-skill-button-${skill.name}`、`export-dropdown-${skill.name}`
-
----
-
-### 2.4 技能删除
-
-#### 2.4.1 删除自定义技能（Delete Custom Skill）
-
-**源码位置**：`SkillsHubSettings.tsx:560-579`
-
-**功能描述**：
-
-- 仅 custom 技能可删除（builtin、extension、auto 不可删除）
-- 删除前弹出确认对话框
-- 支持删除 symlink 或实际目录
-
-**实现流程**：
-
-1. 点击删除按钮（`SkillsHubSettings.tsx:561-578`）
-2. Modal 确认：`Modal.confirm()` → `locales/settings.json:24-25`
-3. Bridge 调用：`ipcBridge.fs.deleteSkill.invoke({ skillName })`
-4. 实现：`fsBridge.ts:1679-1715`
-   - 安全性检查：确保路径在 `userSkillsDir` 范围内
-   - 判断是否 symlink：`fs.lstat(resolvedSkillDir)`
-   - symlink：`fs.unlink()`
-   - 实际目录：`fs.rm({ recursive: true, force: true })`
-
-**安全边界**：
-
-- 路径穿越防护：`resolvedSkillDir.startsWith(resolvedSkillsDir + path.sep)`（`fsBridge.ts:1686-1691`）
-- 技能不存在：返回 `{ success: false, msg: 'Skill not found' }`
-
-**testid 可用性**：❌ 缺失
-
-- **测试依赖项**：已在 2.1.1 列出（P0 优先级）
+- **Test dependencies**: `export-skill-button-${skill.name}` and `export-dropdown-${skill.name}` must be added
 
 ---
 
-#### 2.7.3 删除自定义外部路径
+### 2.4 Skill deletion
 
-**源码位置**：`fsBridge.ts:1472-1483` (Bridge 实现)
+#### 2.4.1 Delete a custom skill
 
-**功能描述**：
+**Source location**: `SkillsHubSettings.tsx:560-579`
 
-- Bridge 层已实现删除自定义外部路径的功能
-- **当前状态**：❌ **UI 层未实现**（前端未调用 `removeCustomExternalPath`）
+**Description**:
 
-**Bridge 实现**：
+- Only custom skills can be deleted (builtin, extension, and auto skills cannot)
+- A confirmation dialog appears before deleting
+- Handles both symlinks and real directories
+
+**Implementation flow**:
+
+1. Click the delete button (`SkillsHubSettings.tsx:561-578`)
+2. Modal confirmation: `Modal.confirm()` → `locales/settings.json:24-25`
+3. Bridge call: `ipcBridge.fs.deleteSkill.invoke({ skillName })`
+4. Implementation: `fsBridge.ts:1679-1715`
+   - Safety check: makes sure the path is inside `userSkillsDir`
+   - Determines whether it is a symlink: `fs.lstat(resolvedSkillDir)`
+   - Symlink: `fs.unlink()`
+   - Real directory: `fs.rm({ recursive: true, force: true })`
+
+**Security boundary**:
+
+- Path traversal protection: `resolvedSkillDir.startsWith(resolvedSkillsDir + path.sep)` (`fsBridge.ts:1686-1691`)
+- Skill does not exist: returns `{ success: false, msg: 'Skill not found' }`
+
+**testid availability**: ❌ missing
+
+- **Test dependencies**: already listed in 2.1.1 (P0 priority)
+
+---
+
+#### 2.7.3 Remove a custom external path
+
+**Source location**: `fsBridge.ts:1472-1483` (bridge implementation)
+
+**Description**:
+
+- The bridge layer already implements removing a custom external path
+- **Current status**: ❌ **not implemented in the UI** (the frontend never calls `removeCustomExternalPath`)
+
+**Bridge implementation**:
 
 ```typescript
 ipcBridge.fs.removeCustomExternalPath.provider(async ({ path: skillPath }) => {
@@ -413,33 +413,33 @@ ipcBridge.fs.removeCustomExternalPath.provider(async ({ path: skillPath }) => {
 });
 ```
 
-**影响**：
+**Impact**:
 
-- 用户添加错误路径后无法通过 UI 删除
-- 必须手动编辑 `~/.aionui/custom_external_skill_paths.json` 文件
+- Once a user adds an incorrect path, they cannot remove it from the UI
+- They must edit `~/.aionui/custom_external_skill_paths.json` by hand
 
-**建议**：
+**Recommendation**:
 
-- 后续版本在 Tab 按钮上添加删除图标或右键菜单
-- E2E 测试范围：**不包含**此功能（UI 未实现）
+- A future version should add a delete icon or a context menu on the tab button
+- E2E test scope: this feature is **excluded** (it is not implemented in the UI)
 
-**testid 可用性**：N/A（功能未实现）
+**testid availability**: N/A (the feature is not implemented)
 
 ---
 
-### 2.5 技能搜索与筛选
+### 2.5 Skill search and filtering
 
-#### 2.5.1 我的技能搜索
+#### 2.5.1 My Skills search
 
-**源码位置**：`SkillsHubSettings.tsx:415-426` / `SkillsHubSettings.tsx:70-77`
+**Source location**: `SkillsHubSettings.tsx:415-426` / `SkillsHubSettings.tsx:70-77`
 
-**功能描述**：
+**Description**:
 
-- 实时搜索技能名称和描述
-- 不区分大小写
-- 空查询时显示全部
+- Searches skill names and descriptions in real time
+- Case-insensitive
+- Shows everything when the query is empty
 
-**实现逻辑**：
+**Implementation logic**:
 
 ```typescript
 const filteredSkills = useMemo(() => {
@@ -452,46 +452,46 @@ const filteredSkills = useMemo(() => {
 }, [mySkills, searchQuery]);
 ```
 
-**空结果提示**：无单独空结果提示（直接不显示卡片）
+**No-results message**: there is no dedicated no-results message (the cards simply are not shown)
 
-**testid 可用性**：❌ 缺失
+**testid availability**: ❌ missing
 
-- **测试依赖项**：已在 2.1.1 列出
-
----
-
-#### 2.5.2 外部技能搜索
-
-**源码位置**：`SkillsHubSettings.tsx:277-288` / `SkillsHubSettings.tsx:235-243`
-
-**功能描述**：
-
-- 仅搜索当前选中 Tab 的技能
-- 搜索逻辑同 2.5.1
-
-**空结果提示**：
-
-- 显示：`locales/settings.json:39` "No matching skills found"
-- UI：`SkillsHubSettings.tsx:380-384`（虚线边框空状态卡）
-
-**testid 可用性**：❌ 缺失
-
-- **测试依赖项**：已在 2.1.2 列出
+- **Test dependencies**: already listed in 2.1.1
 
 ---
 
-### 2.6 技能扫描与检测
+#### 2.5.2 External skills search
 
-#### 2.6.1 常见路径扫描
+**Source location**: `SkillsHubSettings.tsx:277-288` / `SkillsHubSettings.tsx:235-243`
 
-**源码位置**：`fsBridge.ts:1388-1430` (detectCommonSkillPaths)
+**Description**:
 
-**功能描述**：
+- Searches only the skills in the currently selected tab
+- The search logic is the same as in 2.5.1
 
-- 扫描预定义的常见 CLI 技能目录
-- 返回存在的路径列表
+**No-results message**:
 
-**扫描列表**：
+- Shows: `locales/settings.json:39` "No matching skills found"
+- UI: `SkillsHubSettings.tsx:380-384` (an empty state card with a dashed border)
+
+**testid availability**: ❌ missing
+
+- **Test dependencies**: already listed in 2.1.2
+
+---
+
+### 2.6 Skill scanning and detection
+
+#### 2.6.1 Scanning the common paths
+
+**Source location**: `fsBridge.ts:1388-1430` (detectCommonSkillPaths)
+
+**Description**:
+
+- Scans the predefined skill directories of common CLI tools
+- Returns the list of paths that exist
+
+**Scan list**:
 
 ```typescript
 [
@@ -503,82 +503,82 @@ const filteredSkills = useMemo(() => {
 ];
 ```
 
-**testid 可用性**：N/A（后端逻辑）
+**testid availability**: N/A (backend logic)
 
 ---
 
-#### 2.6.2 目录深度扫描
+#### 2.6.2 Deep directory scanning
 
-**源码位置**：`fsBridge.ts:1309-1385` (scanForSkills)
+**Source location**: `fsBridge.ts:1309-1385` (scanForSkills)
 
-**功能描述**：
+**Description**:
 
-- 扫描用户指定目录，查找所有 `SKILL.md` 文件
-- 支持两级扫描：
-  1. 当前目录下的直接子目录
-  2. 当前目录本身是否包含 `SKILL.md`
+- Scans a user-specified directory for every `SKILL.md` file
+- Supports two levels of scanning:
+  1. The immediate subdirectories of the current directory
+  2. Whether the current directory itself contains a `SKILL.md`
 
-**YAML 解析**：
+**YAML parsing**:
 
-- 解析 frontmatter 提取 `name` 和 `description`
-- 正则：`/^---\s*\n([\s\S]*?)\n---/`
+- Parses the frontmatter to extract `name` and `description`
+- Regex: `/^---\s*\n([\s\S]*?)\n---/`
 
-**testid 可用性**：N/A（后端逻辑）
-
----
-
-### 2.7 技能路径管理
-
-#### 2.7.1 添加自定义外部路径
-
-**源码位置**：`SkillsHubSettings.tsx:699-759` (Modal) / `fsBridge.ts:1455-1470`
-
-**功能描述**：
-
-- 用户手动添加不在预定义列表中的技能目录
-- 支持文件选择器或手动输入
-- 持久化到 `custom_external_skill_paths.json`
-
-**表单字段**：
-
-- Name（路径别名）：必填，`locales/settings.json:35`
-- Path（目录路径）：必填，`locales/settings.json:36-37`
-
-**实现流程**：
-
-1. Modal 表单输入
-2. Bridge 调用：`ipcBridge.fs.addCustomExternalPath.invoke({ name, path })`
-3. 读取现有配置：`loadCustomExternalPaths()`（`fsBridge.ts:1436-1443`）
-4. 去重检查：`existing.some(p => p.path === skillPath)`
-5. 追加新路径并保存：`saveCustomExternalPaths()`（`fsBridge.ts:1446-1449`）
-6. 刷新外部技能列表
-
-**文件选择器集成**：
-
-- 点击 FolderOpen 图标触发（`SkillsHubSettings.tsx:739-756`）
-- 自动填充 Path 字段
-
-**testid 可用性**：❌ 缺失
-
-- **测试依赖项**：需添加以下 data-testid：
-  - Modal：`add-custom-path-modal`
-  - Name 输入：`custom-path-name-input`
-  - Path 输入：`custom-path-value-input`
-  - 浏览按钮：`custom-path-browse-button`
-  - 确认按钮：Modal 默认 ok button
+**testid availability**: N/A (backend logic)
 
 ---
 
-#### 2.7.2 获取技能存储路径
+### 2.7 Skill path management
 
-**源码位置**：`fsBridge.ts:1718-1721` (getSkillPaths)
+#### 2.7.1 Adding a custom external path
 
-**功能描述**：
+**Source location**: `SkillsHubSettings.tsx:699-759` (modal) / `fsBridge.ts:1455-1470`
 
-- 获取用户技能目录和内置技能目录路径
-- 用于前端展示目录位置
+**Description**:
 
-**返回值**：
+- Lets the user add a skill directory that is not in the predefined list
+- Supports both the file picker and manual entry
+- Persisted to `custom_external_skill_paths.json`
+
+**Form fields**:
+
+- Name (path alias): required, `locales/settings.json:35`
+- Path (directory path): required, `locales/settings.json:36-37`
+
+**Implementation flow**:
+
+1. The user fills in the modal form
+2. Bridge call: `ipcBridge.fs.addCustomExternalPath.invoke({ name, path })`
+3. Read the existing configuration: `loadCustomExternalPaths()` (`fsBridge.ts:1436-1443`)
+4. Deduplication check: `existing.some(p => p.path === skillPath)`
+5. Append the new path and save: `saveCustomExternalPaths()` (`fsBridge.ts:1446-1449`)
+6. Refresh the external skills list
+
+**File picker integration**:
+
+- Triggered by clicking the FolderOpen icon (`SkillsHubSettings.tsx:739-756`)
+- Fills in the Path field automatically
+
+**testid availability**: ❌ missing
+
+- **Test dependencies**: the following data-testid attributes must be added:
+  - Modal: `add-custom-path-modal`
+  - Name input: `custom-path-name-input`
+  - Path input: `custom-path-value-input`
+  - Browse button: `custom-path-browse-button`
+  - Confirm button: the modal's default ok button
+
+---
+
+#### 2.7.2 Getting the skill storage paths
+
+**Source location**: `fsBridge.ts:1718-1721` (getSkillPaths)
+
+**Description**:
+
+- Returns the user skill directory and the builtin skill directory paths
+- Used by the frontend to display where the directories live
+
+**Return value**:
 
 ```typescript
 {
@@ -587,23 +587,23 @@ const filteredSkills = useMemo(() => {
 }
 ```
 
-**testid 可用性**：N/A（后端逻辑）
+**testid availability**: N/A (backend logic)
 
 ---
 
-### 2.8 技能高亮与滚动定位
+### 2.8 Skill highlight and scroll-to
 
-#### 2.8.1 URL 参数触发高亮
+#### 2.8.1 Highlight triggered by a URL parameter
 
-**源码位置**：`SkillsHubSettings.tsx:110-126`
+**Source location**: `SkillsHubSettings.tsx:110-126`
 
-**功能描述**：
+**Description**:
 
-- 通过 URL 参数 `?highlight=skillName` 跳转并高亮指定技能
-- 自动滚动到目标技能卡片
-- 2 秒后取消高亮
+- The `?highlight=skillName` URL parameter navigates to and highlights the named skill
+- The page scrolls to the target skill card automatically
+- The highlight is removed after 2 seconds
 
-**实现逻辑**：
+**Implementation logic**:
 
 ```typescript
 useEffect(() => {
@@ -621,94 +621,94 @@ useEffect(() => {
 }, [highlightName, loading, availableSkills, setSearchParams]);
 ```
 
-**高亮样式**：
+**Highlight styling**:
 
-- 边框：`border-primary-5`
-- 背景：`bg-primary-1`
-- 应用位置：技能卡片的 className 条件判断
+- Border: `border-primary-5`
+- Background: `bg-primary-1`
+- Applied through a conditional in the skill card's className
 
-**清理 URL**：
+**Clearing the URL**:
 
-- 滚动完成后调用 `setSearchParams({}, { replace: true })` 清除参数
+- Once the scroll finishes, `setSearchParams({}, { replace: true })` removes the parameter
 
-**testid 可用性**：✅ 可通过 URL + ref 定位
-
----
-
-### 2.9 国际化支持
-
-#### 2.9.1 i18n 文本覆盖范围
-
-**源码文件**：`src/renderer/services/i18n/locales/*/settings.json`（key: `skillsHub`）
-
-**完整 i18n key 映射表**：
-
-| key                         | 用途                   | 示例值 (en-US)                                           |
-| --------------------------- | ---------------------- | -------------------------------------------------------- |
-| `title`                     | 页面标题               | "Skills Hub"                                             |
-| `description`               | 页面描述               | "Centrally manage AI agent skills..."                    |
-| `mySkillsTitle`             | 我的技能板块标题       | "My Skills"                                              |
-| `discoveredTitle`           | 外部技能板块标题       | "Discovered External Skills"                             |
-| `discoveryAlert`            | 外部技能提示           | "Detected skills from your CLI tools..."                 |
-| `noSkills`                  | 空状态提示             | "No skills found. Import some to get started."           |
-| `custom`                    | 自定义技能标签         | "Custom"                                                 |
-| `builtin`                   | 内置技能标签           | "Built-in"                                               |
-| `tipTitle`                  | 使用提示标题           | "Usage Tip:"                                             |
-| `tipContent`                | 使用提示内容           | "Skills configured here can be enabled..."               |
-| `manualImport`              | 手动导入按钮           | "Import from Folder"                                     |
-| `importAll`                 | 批量导入按钮           | "Import All"                                             |
-| `importSuccess`             | 导入成功提示           | "Skill imported successfully"                            |
-| `importFailed`              | 导入失败提示           | "Failed to import skill"                                 |
-| `importError`               | 导入异常提示           | "Error importing skill"                                  |
-| `importAllSuccess`          | 批量导入成功（带计数） | "{{count}} skills imported"                              |
-| `exportTo`                  | 导出按钮               | "Export To..."                                           |
-| `exportSuccess`             | 导出成功提示           | "Skill exported successfully"                            |
-| `exportFailed`              | 导出失败提示           | "Failed to export skill"                                 |
-| `exportAlreadyExists`       | 导出目标已存在         | "Skill already exists in the target directory"           |
-| `deleteSuccess`             | 删除成功提示           | "Skill deleted"                                          |
-| `deleteFailed`              | 删除失败提示           | "Failed to delete skill"                                 |
-| `deleteError`               | 删除异常提示           | "Error deleting skill"                                   |
-| `deleteConfirmTitle`        | 删除确认 Modal 标题    | "Delete Skill"                                           |
-| `deleteConfirmContent`      | 删除确认内容（带插值） | "Are you sure you want to delete \"{{name}}\"?"          |
-| `fetchError`                | 获取技能列表失败       | "Failed to fetch skills"                                 |
-| `searchPlaceholder`         | 搜索框占位符           | "Search skills..."                                       |
-| `noSearchResults`           | 搜索无结果提示         | "No matching skills found"                               |
-| `addCustomPath`             | 添加自定义路径按钮     | "Add Custom Skill Path"                                  |
-| `customPathNamePlaceholder` | 自定义路径名称占位符   | "e.g. My Custom Skills"                                  |
-| `customPathLabel`           | 自定义路径输入框标签   | "Skill Directory Path"                                   |
-| `customPathPlaceholder`     | 自定义路径输入框占位符 | "e.g. C:\\Users\\me\\.mytools\\skills"                   |
-| `manageInHub`               | 跳转技能中心链接       | "Manage in Skills Hub"                                   |
-| `recommend`                 | 推荐技能按钮           | "Recommend Skills"                                       |
-| `recommendSuccess`          | 推荐成功提示           | "Recommended successfully: {{count}} skills selected..." |
-| `noRecommendations`         | 无推荐结果             | "No matching skills found, please select manually"       |
-
-**语言支持**：
-
-- 英文（en-US）：`src/renderer/services/i18n/locales/en-US/settings.json:3-40`
-- 中文（zh-CN）：`src/renderer/services/i18n/locales/zh-CN/settings.json:3-40`
-- 其他语言：tr-TR, uk-UA, ru-RU, ko-KR, ja-JP, zh-TW
-
-**E2E 测试使用**：
-
-- 错误提示验证：所有错误场景下的 Message 文本需验证 i18n key 正确性
-- 插值验证：`deleteConfirmContent`、`importAllSuccess`、`recommendSuccess` 需验证动态参数替换
-
-**testid 可用性**：✅ i18n key 稳定
+**testid availability**: ✅ can be located through the URL plus the ref
 
 ---
 
-### 2.10 主题与样式
+### 2.9 Internationalization support
 
-#### 2.10.1 色彩系统
+#### 2.9.1 i18n text coverage
 
-**源码位置**：`SkillsHubSettings.tsx:26-41` (getAvatarColorClass)
+**Source files**: `src/renderer/services/i18n/locales/*/settings.json` (key: `skillsHub`)
 
-**功能描述**：
+**Full i18n key map**:
 
-- 根据技能名称 hash 计算头像背景色
-- 6 种预定义颜色循环使用
+| key                         | Purpose                                 | Example value (en-US)                                    |
+| --------------------------- | --------------------------------------- | -------------------------------------------------------- |
+| `title`                     | Page title                              | "Skills Hub"                                             |
+| `description`               | Page description                        | "Centrally manage AI agent skills..."                    |
+| `mySkillsTitle`             | My Skills board title                   | "My Skills"                                              |
+| `discoveredTitle`           | External skills board title             | "Discovered External Skills"                             |
+| `discoveryAlert`            | External skills notice                  | "Detected skills from your CLI tools..."                 |
+| `noSkills`                  | Empty state message                     | "No skills found. Import some to get started."           |
+| `custom`                    | Custom skill badge                      | "Custom"                                                 |
+| `builtin`                   | Builtin skill badge                     | "Built-in"                                               |
+| `tipTitle`                  | Usage tip title                         | "Usage Tip:"                                             |
+| `tipContent`                | Usage tip body                          | "Skills configured here can be enabled..."               |
+| `manualImport`              | Manual import button                    | "Import from Folder"                                     |
+| `importAll`                 | Batch import button                     | "Import All"                                             |
+| `importSuccess`             | Import success message                  | "Skill imported successfully"                            |
+| `importFailed`              | Import failure message                  | "Failed to import skill"                                 |
+| `importError`               | Import error message                    | "Error importing skill"                                  |
+| `importAllSuccess`          | Batch import success (with a count)     | "{{count}} skills imported"                              |
+| `exportTo`                  | Export button                           | "Export To..."                                           |
+| `exportSuccess`             | Export success message                  | "Skill exported successfully"                            |
+| `exportFailed`              | Export failure message                  | "Failed to export skill"                                 |
+| `exportAlreadyExists`       | Export target already exists            | "Skill already exists in the target directory"           |
+| `deleteSuccess`             | Delete success message                  | "Skill deleted"                                          |
+| `deleteFailed`              | Delete failure message                  | "Failed to delete skill"                                 |
+| `deleteError`               | Delete error message                    | "Error deleting skill"                                   |
+| `deleteConfirmTitle`        | Delete confirmation modal title         | "Delete Skill"                                           |
+| `deleteConfirmContent`      | Delete confirmation body (interpolated) | "Are you sure you want to delete \"{{name}}\"?"          |
+| `fetchError`                | Failed to fetch the skill list          | "Failed to fetch skills"                                 |
+| `searchPlaceholder`         | Search box placeholder                  | "Search skills..."                                       |
+| `noSearchResults`           | Search returned no results              | "No matching skills found"                               |
+| `addCustomPath`             | Add custom path button                  | "Add Custom Skill Path"                                  |
+| `customPathNamePlaceholder` | Custom path name placeholder            | "e.g. My Custom Skills"                                  |
+| `customPathLabel`           | Custom path input label                 | "Skill Directory Path"                                   |
+| `customPathPlaceholder`     | Custom path input placeholder           | "e.g. C:\\Users\\me\\.mytools\\skills"                   |
+| `manageInHub`               | Link to the Skills Hub                  | "Manage in Skills Hub"                                   |
+| `recommend`                 | Recommend skills button                 | "Recommend Skills"                                       |
+| `recommendSuccess`          | Recommendation success message          | "Recommended successfully: {{count}} skills selected..." |
+| `noRecommendations`         | No recommendation results               | "No matching skills found, please select manually"       |
 
-**颜色列表**：
+**Language support**:
+
+- English (en-US): `src/renderer/services/i18n/locales/en-US/settings.json:3-40`
+- Chinese (zh-CN): `src/renderer/services/i18n/locales/zh-CN/settings.json:3-40`
+- Other languages: tr-TR, uk-UA, ru-RU, ko-KR, ja-JP, zh-TW
+
+**Use in E2E tests**:
+
+- Error message verification: the message text in every error scenario must be checked against the correct i18n key
+- Interpolation verification: `deleteConfirmContent`, `importAllSuccess`, and `recommendSuccess` must be checked for correct dynamic parameter substitution
+
+**testid availability**: ✅ the i18n keys are stable
+
+---
+
+### 2.10 Theme and styling
+
+#### 2.10.1 Color system
+
+**Source location**: `SkillsHubSettings.tsx:26-41` (getAvatarColorClass)
+
+**Description**:
+
+- Computes the avatar background color from a hash of the skill name
+- Cycles through 6 predefined colors
+
+**Color list**:
 
 ```typescript
 [
@@ -721,31 +721,31 @@ useEffect(() => {
 ];
 ```
 
-**testid 可用性**：✅ 可通过 class 验证
+**testid availability**: ✅ can be verified through the class
 
 ---
 
-#### 2.10.2 响应式设计
+#### 2.10.2 Responsive design
 
-**断点使用**：
+**Breakpoints used**:
 
-- `md:` 断点：用于 padding、字体大小、布局切换
-- `sm:` 断点：用于 flexbox 方向、按钮显示方式
-- `lg:` 断点：用于工具栏布局
+- The `md:` breakpoint: for padding, font size, and layout switching
+- The `sm:` breakpoint: for flexbox direction and how buttons are shown
+- The `lg:` breakpoint: for the toolbar layout
 
-**典型场景**：
+**Typical cases**:
 
-- 搜索框：`sm:w-[200px] lg:w-[240px]`（`SkillsHubSettings.tsx:415`）
-- 卡片内容：`flex-col sm:flex-row`（移动端竖向，桌面端横向）
-- 按钮 opacity：`opacity-100 sm:opacity-0 group-hover:opacity-100`（移动端始终显示，桌面端 hover 显示）
+- Search box: `sm:w-[200px] lg:w-[240px]` (`SkillsHubSettings.tsx:415`)
+- Card content: `flex-col sm:flex-row` (vertical on mobile, horizontal on desktop)
+- Button opacity: `opacity-100 sm:opacity-0 group-hover:opacity-100` (always visible on mobile, shown on hover on desktop)
 
-**testid 可用性**：✅ 可通过 viewport 变化验证
+**testid availability**: ✅ can be verified by changing the viewport
 
 ---
 
-## 3. 交互流程
+## 3. Interaction Flows
 
-### 3.1 完整导入流程（外部技能 → 我的技能）
+### 3.1 Full import flow (external skill → My Skills)
 
 ```mermaid
 sequenceDiagram
@@ -754,27 +754,27 @@ sequenceDiagram
     participant Bridge as ipcBridge.fs
     participant FS as File System
 
-    User->>UI: 打开技能中心
+    User->>UI: Open the Skills Hub
     UI->>Bridge: listAvailableSkills()
     UI->>Bridge: detectAndCountExternalSkills()
-    Bridge->>FS: 扫描预定义路径 + 自定义路径
-    FS-->>Bridge: 返回外部技能列表
-    Bridge-->>UI: 渲染外部技能卡片
+    Bridge->>FS: Scan the predefined paths and the custom paths
+    FS-->>Bridge: Return the external skill list
+    Bridge-->>UI: Render the external skill cards
 
-    User->>UI: 点击外部技能卡片
+    User->>UI: Click an external skill card
     UI->>Bridge: importSkillWithSymlink({ skillPath })
-    Bridge->>FS: 校验 SKILL.md 存在
-    Bridge->>FS: 解析 YAML frontmatter
-    Bridge->>FS: 创建 symlink 到 ~/.aionui/skills/{name}
+    Bridge->>FS: Verify SKILL.md exists
+    Bridge->>FS: Parse the YAML frontmatter
+    Bridge->>FS: Create the symlink at ~/.aionui/skills/{name}
     FS-->>Bridge: { success: true }
-    Bridge-->>UI: 显示成功 Message
-    UI->>Bridge: 刷新 listAvailableSkills()
-    Bridge-->>UI: 新技能出现在"我的技能"板块
+    Bridge-->>UI: Show the success message
+    UI->>Bridge: Refresh listAvailableSkills()
+    Bridge-->>UI: The new skill appears in the My Skills board
 ```
 
 ---
 
-### 3.2 技能导出流程（我的技能 → 外部 CLI）
+### 3.2 Skill export flow (My Skills → external CLI)
 
 ```mermaid
 sequenceDiagram
@@ -783,41 +783,41 @@ sequenceDiagram
     participant Bridge as ipcBridge.fs
     participant FS as File System
 
-    User->>UI: 点击技能卡片"Export"按钮
-    Note over UI: 检查 externalSources.length > 0
-    alt 无外部源
-        UI->>User: Dropdown 不显示/禁用
-    else 有外部源
-        UI->>UI: 展开 Dropdown（外部源列表）
-        UI->>User: 显示可选目标源（Claude Code、Gemini CLI 等）
-        User->>UI: 选择目标源（如 Claude Code）
-        UI->>UI: 显示 Loading Message "Processing..."
+    User->>UI: Click the "Export" button on a skill card
+    Note over UI: Check externalSources.length > 0
+    alt No external source
+        UI->>User: The dropdown is hidden/disabled
+    else External sources exist
+        UI->>UI: Expand the dropdown (list of external sources)
+        UI->>User: Show the available target sources (Claude Code, Gemini CLI, etc.)
+        User->>UI: Pick a target source (for example Claude Code)
+        UI->>UI: Show the loading message "Processing..."
         UI->>Bridge: exportSkillWithSymlink({ skillPath, targetDir })
-        Bridge->>FS: 检查目标路径是否已存在
-        alt 目标已存在
+        Bridge->>FS: Check whether the target path already exists
+        alt Target already exists
             Bridge-->>UI: { success: false, msg: 'Target already exists' }
-            UI->>UI: 隐藏 Loading
-            UI->>User: 显示错误 Message
-        else 目标不存在
-            Bridge->>FS: 创建 symlink 到 targetDir/{name}
-            FS-->>Bridge: symlink 创建成功
+            UI->>UI: Hide the loading message
+            UI->>User: Show the error message
+        else Target does not exist
+            Bridge->>FS: Create the symlink at targetDir/{name}
+            FS-->>Bridge: The symlink was created
             Bridge-->>UI: { success: true }
-            UI->>UI: 隐藏 Loading
-            UI->>User: 显示成功 Message
-            Note over UI: 导出后不刷新技能列表（"我的技能"未变化）
+            UI->>UI: Hide the loading message
+            UI->>User: Show the success message
+            Note over UI: The skill list is not refreshed after export (My Skills has not changed)
         end
     end
 ```
 
-**关键步骤说明**：
+**Notes on the key steps**:
 
-- **Dropdown 显示条件**：`externalSources.length > 0`（`SkillsHubSettings.tsx:492`）
-- **Loading 状态**：8 秒超时（`SkillsHubSettings.tsx:504-519`）
-- **刷新逻辑**：导出成功后**不刷新**技能列表（因为"我的技能"未变化，仅外部 CLI 目录新增文件）
+- **Condition for showing the dropdown**: `externalSources.length > 0` (`SkillsHubSettings.tsx:492`)
+- **Loading state**: an 8 second timeout (`SkillsHubSettings.tsx:504-519`)
+- **Refresh logic**: the skill list is **not refreshed** after a successful export (My Skills has not changed; only a file is added to the external CLI directory)
 
 ---
 
-### 3.3 添加自定义外部路径流程
+### 3.3 Flow for adding a custom external path
 
 ```mermaid
 sequenceDiagram
@@ -826,97 +826,97 @@ sequenceDiagram
     participant Bridge as ipcBridge.fs
     participant FS as File System
 
-    User->>UI: 点击 Plus 按钮
-    UI->>UI: 显示 Modal（Name + Path 表单）
-    User->>UI: 输入 Name、选择/输入 Path
-    User->>UI: 点击确认
+    User->>UI: Click the plus button
+    UI->>UI: Show the modal (Name + Path form)
+    User->>UI: Enter a name, then pick or type a path
+    User->>UI: Click confirm
     UI->>Bridge: addCustomExternalPath({ name, path })
-    Bridge->>FS: 读取 custom_external_skill_paths.json
-    Bridge->>Bridge: 检查 path 是否重复
-    alt 路径重复
+    Bridge->>FS: Read custom_external_skill_paths.json
+    Bridge->>Bridge: Check whether the path is a duplicate
+    alt Duplicate path
         Bridge-->>UI: { success: false, msg: 'Path already exists' }
-    else 路径不重复
-        Bridge->>FS: 追加到 JSON 文件
-        FS-->>Bridge: 保存成功
+    else Path is new
+        Bridge->>FS: Append it to the JSON file
+        FS-->>Bridge: Saved successfully
         Bridge-->>UI: { success: true }
         UI->>Bridge: handleRefreshExternal()
-        Bridge->>FS: 扫描新路径下的技能
-        FS-->>Bridge: 返回技能列表
-        Bridge-->>UI: 新 Tab 出现在"发现外部技能"
+        Bridge->>FS: Scan the skills under the new path
+        FS-->>Bridge: Return the skill list
+        Bridge-->>UI: The new tab appears in Discovered External Skills
     end
 ```
 
 ---
 
-## 4. 数据模型与持久化
+## 4. Data Model and Persistence
 
-### 4.1 Skill 数据结构
+### 4.1 Skill data structures
 
-#### 4.1.1 前端数据结构（SkillInfo）
+#### 4.1.1 Frontend data structure (SkillInfo)
 
-**源码位置**：`SkillsHubSettings.tsx:10-16`
+**Source location**: `SkillsHubSettings.tsx:10-16`
 
 ```typescript
 interface SkillInfo {
-  name: string; // 技能名称
-  description: string; // 技能描述
-  location: string; // SKILL.md 文件绝对路径
-  isCustom: boolean; // 是否自定义技能
-  source?: 'builtin' | 'custom' | 'extension'; // 技能来源
+  name: string; // Skill name
+  description: string; // Skill description
+  location: string; // Absolute path of the SKILL.md file
+  isCustom: boolean; // Whether this is a custom skill
+  source?: 'builtin' | 'custom' | 'extension'; // Skill source
 }
 ```
 
 ---
 
-#### 4.1.2 外部源数据结构（ExternalSource）
+#### 4.1.2 External source data structure (ExternalSource)
 
-**源码位置**：`SkillsHubSettings.tsx:18-24`
+**Source location**: `SkillsHubSettings.tsx:18-24`
 
 ```typescript
 interface ExternalSource {
-  name: string; // 源名称（如 "Claude Code"）
-  path: string; // 源路径（如 "~/.claude/skills"）
-  source: string; // 源标识（如 "claude"）
+  name: string; // Source name (for example "Claude Code")
+  path: string; // Source path (for example "~/.claude/skills")
+  source: string; // Source identifier (for example "claude")
   skills: Array<{
-    // 该源下的技能列表
+    // The skills in this source
     name: string;
     description: string;
-    path: string; // 技能目录路径
+    path: string; // Skill directory path
   }>;
 }
 ```
 
 ---
 
-### 4.2 持久化机制
+### 4.2 Persistence mechanism
 
-#### 4.2.1 技能目录结构
+#### 4.2.1 Skill directory structure
 
-**位置**：`~/.aionui/`（`src/process/utils/initStorage.ts`）
+**Location**: `~/.aionui/` (`src/process/utils/initStorage.ts`)
 
 ```
 ~/.aionui/
-├── skills/                    # 用户技能目录
-│   ├── my-skill/              # 自定义技能（可能是 symlink）
+├── skills/                    # User skill directory
+│   ├── my-skill/              # A custom skill (may be a symlink)
 │   │   └── SKILL.md
-│   └── imported-skill/        # 导入的外部技能（symlink）
+│   └── imported-skill/        # An imported external skill (symlink)
 │       └── SKILL.md
-├── builtin-skills/            # 内置技能副本
+├── builtin-skills/            # Copies of the builtin skills
 │   ├── skill-a/
 │   │   └── SKILL.md
-│   └── _builtin/              # 自动注入技能（不展示在列表）
+│   └── _builtin/              # Auto-injected skills (not shown in the list)
 │       └── aionui-skills/
 │           └── SKILL.md
-└── custom_external_skill_paths.json # 自定义外部路径配置
+└── custom_external_skill_paths.json # Custom external path configuration
 ```
 
 ---
 
-#### 4.2.2 自定义路径配置文件
+#### 4.2.2 Custom path configuration file
 
-**文件路径**：`~/.aionui/custom_external_skill_paths.json`
+**File path**: `~/.aionui/custom_external_skill_paths.json`
 
-**结构**：
+**Structure**:
 
 ```json
 [
@@ -925,19 +925,19 @@ interface ExternalSource {
 ]
 ```
 
-**读写函数**：
+**Read/write functions**:
 
-- 读取：`loadCustomExternalPaths()` → `fsBridge.ts:1436-1443`
-- 保存：`saveCustomExternalPaths()` → `fsBridge.ts:1446-1449`
-- 获取：`ipcBridge.fs.getCustomExternalPaths.invoke()` → `fsBridge.ts:1451-1453`
+- Read: `loadCustomExternalPaths()` → `fsBridge.ts:1436-1443`
+- Save: `saveCustomExternalPaths()` → `fsBridge.ts:1446-1449`
+- Fetch: `ipcBridge.fs.getCustomExternalPaths.invoke()` → `fsBridge.ts:1451-1453`
 
 ---
 
-#### 4.2.3 SKILL.md 格式规范
+#### 4.2.3 SKILL.md format specification
 
-**源码解析位置**：`fsBridge.ts:1064-1079`
+**Parsing location in the source**: `fsBridge.ts:1064-1079`
 
-**格式**：
+**Format**:
 
 ```markdown
 ---
@@ -950,7 +950,7 @@ description: 'This skill does something amazing'
 ...
 ```
 
-**解析正则**：
+**Parsing regexes**:
 
 ```typescript
 const frontMatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
@@ -961,41 +961,41 @@ const descMatch = yaml.match(/^description:\s*['"]?(.+?)['"]?$/m);
 
 ---
 
-### 4.3 状态管理
+### 4.3 State management
 
-#### 4.3.1 核心状态变量
+#### 4.3.1 Core state variables
 
-**源码位置**：`SkillsHubSettings.tsx:54-65`
+**Source location**: `SkillsHubSettings.tsx:54-65`
 
 ```typescript
-const [loading, setLoading] = useState(false);                    // 加载状态
-const [availableSkills, setAvailableSkills] = useState<SkillInfo[]>([]);   // 所有技能
-const [skillPaths, setSkillPaths] = useState<{ ... } | null>(null);        // 技能路径
-const [externalSources, setExternalSources] = useState<ExternalSource[]>([]);  // 外部源
-const [activeSourceTab, setActiveSourceTab] = useState<string>('');        // 当前选中源
-const [searchQuery, setSearchQuery] = useState('');                        // 我的技能搜索
-const [searchExternalQuery, setSearchExternalQuery] = useState('');        // 外部技能搜索
-const [showAddPathModal, setShowAddPathModal] = useState(false);           // 自定义路径Modal
-const [customPathName, setCustomPathName] = useState('');                  // 自定义路径名称
-const [customPathValue, setCustomPathValue] = useState('');                // 自定义路径值
-const [refreshing, setRefreshing] = useState(false);                       // 刷新状态
-const [builtinAutoSkills, setBuiltinAutoSkills] = useState<Array<...>>([]);  // 自动注入技能
+const [loading, setLoading] = useState(false);                    // Loading state
+const [availableSkills, setAvailableSkills] = useState<SkillInfo[]>([]);   // All skills
+const [skillPaths, setSkillPaths] = useState<{ ... } | null>(null);        // Skill paths
+const [externalSources, setExternalSources] = useState<ExternalSource[]>([]);  // External sources
+const [activeSourceTab, setActiveSourceTab] = useState<string>('');        // Currently selected source
+const [searchQuery, setSearchQuery] = useState('');                        // My Skills search
+const [searchExternalQuery, setSearchExternalQuery] = useState('');        // External skills search
+const [showAddPathModal, setShowAddPathModal] = useState(false);           // Custom path modal
+const [customPathName, setCustomPathName] = useState('');                  // Custom path name
+const [customPathValue, setCustomPathValue] = useState('');                // Custom path value
+const [refreshing, setRefreshing] = useState(false);                       // Refreshing state
+const [builtinAutoSkills, setBuiltinAutoSkills] = useState<Array<...>>([]);  // Auto-injected skills
 ```
 
 ---
 
-#### 4.3.2 计算状态（Computed State）
+#### 4.3.2 Computed state
 
-**源码位置**：`SkillsHubSettings.tsx:67-77`
+**Source location**: `SkillsHubSettings.tsx:67-77`
 
 ```typescript
-// 我的技能（排除扩展技能）
+// My Skills (extension skills excluded)
 const mySkills = useMemo(() => availableSkills.filter((s) => s.source !== 'extension'), [availableSkills]);
 
-// 扩展技能
+// Extension skills
 const extensionSkills = useMemo(() => availableSkills.filter((s) => s.source === 'extension'), [availableSkills]);
 
-// 过滤后的我的技能
+// My Skills after filtering
 const filteredSkills = useMemo(() => {
   if (!searchQuery.trim()) return mySkills;
   const lowerQuery = searchQuery.toLowerCase();
@@ -1008,82 +1008,82 @@ const filteredSkills = useMemo(() => {
 
 ---
 
-## 5. 边界与异常处理
+## 5. Boundaries and Error Handling
 
-### 5.1 文件系统异常
+### 5.1 File system errors
 
-#### 5.1.1 技能目录不存在
+#### 5.1.1 The skill directory does not exist
 
-**处理位置**：`fsBridge.ts:1050`
+**Handled at**: `fsBridge.ts:1050`
 
-**行为**：
+**Behaviour**:
 
-- `fs.access(skillsDir)` 失败时跳过该目录
-- 不抛出错误，返回空数组
-- 前端显示"未发现技能"
-
----
-
-#### 5.1.2 SKILL.md 缺失
-
-**处理位置**：`fsBridge.ts:1236-1244`（importSkill）
-
-**行为**：
-
-- 返回 `{ success: false, msg: 'SKILL.md file not found in the selected directory' }`
-- 前端显示 i18n 错误提示：`settings.json:19-20`
+- The directory is skipped when `fs.access(skillsDir)` fails
+- No error is thrown; an empty array is returned
+- The frontend shows "no skills found"
 
 ---
 
-#### 5.1.3 YAML 解析失败
+#### 5.1.2 SKILL.md is missing
 
-**处理位置**：`fsBridge.ts:1064-1079`
+**Handled at**: `fsBridge.ts:1236-1244` (importSkill)
 
-**行为**：
+**Behaviour**:
 
-- frontmatter 不匹配时跳过该技能
-- 不中断扫描流程
-- 使用目录名作为 fallback name
+- Returns `{ success: false, msg: 'SKILL.md file not found in the selected directory' }`
+- The frontend shows the i18n error message: `settings.json:19-20`
 
 ---
 
-#### 5.1.4 技能名称特殊字符处理
+#### 5.1.3 YAML parsing failure
 
-**处理位置**：`fsBridge.ts:1646-1648` (YAML 解析)
+**Handled at**: `fsBridge.ts:1064-1079`
 
-**当前实现**：
+**Behaviour**:
 
-- YAML 解析后直接 `trim()`，**无特殊字符过滤**
-- 依赖文件系统在 symlink 创建时报错
+- The skill is skipped when the frontmatter does not match
+- The scan is not aborted
+- The directory name is used as the fallback name
 
-**潜在风险**：
+---
 
-- 技能名称包含 `/`, `\`, `:`, `<`, `>`, `"`, `|`, `?`, `*` 等文件系统禁用字符
-- Symlink 创建可能失败：`fs.symlink(src, dest)` 抛出 ENOENT 或 EINVAL
-- 前端 `data-testid` 中的 `${skill.name}` 可能包含特殊字符导致选择器失效
+#### 5.1.4 Handling special characters in skill names
 
-**对比其他场景**：
+**Handled at**: `fsBridge.ts:1646-1648` (YAML parsing)
 
-- 文件上传场景有过滤：`fsBridge.ts:467` 和 `fsBridge.ts:535`
+**Current implementation**:
+
+- The parsed YAML value is simply `trim()`ed, with **no special character filtering**
+- It relies on the file system to raise an error when the symlink is created
+
+**Potential risks**:
+
+- Skill names may contain characters the file system forbids, such as `/`, `\`, `:`, `<`, `>`, `"`, `|`, `?`, and `*`
+- Creating the symlink may fail: `fs.symlink(src, dest)` throws ENOENT or EINVAL
+- `${skill.name}` inside a frontend `data-testid` may contain special characters that break the selector
+
+**Comparison with other scenarios**:
+
+- The file upload path does filter them: `fsBridge.ts:467` and `fsBridge.ts:535`
   ```typescript
   const safeFileName = fileName.replace(/[<>:"/\\|?*]/g, '_');
   ```
-- **技能名称场景无过滤**
+- **The skill name path does not filter them**
 
-**建议**：
+**Recommendation**:
 
-- E2E 测试需覆盖：导入名称为 `my:skill` 或 `my/skill` 的技能时的行为
-- 预期行为：symlink 创建失败，显示错误提示
+- E2E tests should cover importing a skill named `my:skill` or `my/skill`
+- Expected behaviour: symlink creation fails and an error message is shown
 
 ---
 
-### 5.2 权限与安全
+### 5.2 Permissions and security
 
-#### 5.2.1 路径穿越防护
+#### 5.2.1 Path traversal protection
 
-**处理位置**：`fsBridge.ts:1686-1691`（deleteSkill）
+**Handled at**: `fsBridge.ts:1686-1691` (deleteSkill)
 
-**实现**：
+**Implementation**:
 
 ```typescript
 const resolvedSkillDir = path.resolve(skillDir);
@@ -1093,33 +1093,33 @@ if (!resolvedSkillDir.startsWith(resolvedSkillsDir + path.sep)) {
 }
 ```
 
-**防护范围**：
+**Scope of protection**:
 
-- 删除技能
-- 写入文件
-- 所有涉及用户输入路径的操作
-
----
-
-#### 5.2.2 Symlink 环形引用检测
-
-**处理位置**：`fsBridge.ts:1548`（detectAndCountExternalSkills）
-
-**行为**：
-
-- 仅检查 `entry.isDirectory()` 和 `entry.isSymbolicLink()`
-- 不跟踪 symlink 目标，避免无限循环
-- 扫描时遇到 symlink 视为普通目录处理
+- Deleting a skill
+- Writing files
+- Every operation involving a user-supplied path
 
 ---
 
-### 5.3 网络与超时
+#### 5.2.2 Circular symlink detection
 
-#### 5.3.1 导出超时
+**Handled at**: `fsBridge.ts:1548` (detectAndCountExternalSkills)
 
-**处理位置**：`SkillsHubSettings.tsx:511-519`
+**Behaviour**:
 
-**实现**：
+- Only checks `entry.isDirectory()` and `entry.isSymbolicLink()`
+- Does not follow the symlink target, which avoids infinite loops
+- A symlink encountered during a scan is treated as an ordinary directory
+
+---
+
+### 5.3 Network and timeouts
+
+#### 5.3.1 Export timeout
+
+**Handled at**: `SkillsHubSettings.tsx:511-519`
+
+**Implementation**:
 
 ```typescript
 const result = await Promise.race([
@@ -1130,380 +1130,380 @@ const result = await Promise.race([
 ]);
 ```
 
-**超时阈值**：8 秒
-**超时行为**：显示错误 Message
+**Timeout threshold**: 8 seconds
+**Timeout behaviour**: an error message is shown
 
 ---
 
-### 5.4 并发与竞态
+### 5.4 Concurrency and race conditions
 
-#### 5.4.1 连续快速刷新
+#### 5.4.1 Rapid repeated refresh
 
-**处理位置**：`SkillsHubSettings.tsx:194-210`（handleRefreshExternal）
+**Handled at**: `SkillsHubSettings.tsx:194-210` (handleRefreshExternal)
 
-**行为**：
+**Behaviour**:
 
-- `refreshing` 状态阻止重复调用（按钮禁用）
-- 无防抖处理，但按钮动画提供视觉反馈
-
----
-
-#### 5.4.2 批量导入冲突
-
-**处理位置**：`SkillsHubSettings.tsx:145-164`（handleImportAll）
-
-**行为**：
-
-- 顺序导入，非并发
-- 每个技能独立 try-catch
-- 失败不中断后续导入
+- The `refreshing` state blocks repeated calls (the button is disabled)
+- There is no debouncing, but the button animation provides visual feedback
 
 ---
 
-### 5.5 性能与规模限制
+#### 5.4.2 Batch import conflicts
 
-#### 5.5.1 大规模技能列表渲染
+**Handled at**: `SkillsHubSettings.tsx:145-164` (handleImportAll)
 
-**源码位置**：`SkillsHubSettings.tsx:338-386` (外部技能列表)
+**Behaviour**:
 
-**当前实现**：
-
-- 无虚拟滚动
-- 无分页
-- 所有技能卡片一次性渲染
-
-**性能边界**：
-
-- 外部源包含 100+ 技能时可能出现渲染卡顿
-- "我的技能"板块 50+ 技能时滚动可能不流畅
-- 最大高度限制：`max-h-[360px]`（外部技能区域）
-
-**搜索性能**：
-
-- 无防抖：`onChange` 直接更新 `searchQuery` 状态
-- 快速输入可能频繁触发 `useMemo` 重新计算
-
-**建议**：
-
-- 建议单个板块技能数量 ≤ 100 个
-- E2E 测试需验证：
-  1. 50 个技能时的渲染时间 < 1 秒
-  2. 搜索输入响应延迟 < 100ms
-  3. Tab 切换流畅度
+- Imports run sequentially, not concurrently
+- Each skill has its own try-catch
+- A failure does not abort the remaining imports
 
 ---
 
-#### 5.5.2 批量导入阻塞 UI
+### 5.5 Performance and scale limits
 
-**源码位置**：`SkillsHubSettings.tsx:145-164`
+#### 5.5.1 Rendering a large skill list
 
-**问题**：
+**Source location**: `SkillsHubSettings.tsx:338-386` (the external skills list)
 
-- 批量导入 20+ 技能时可能阻塞主线程
-- 无 `async/await` 并发优化
-- 无进度指示
+**Current implementation**:
 
-**影响**：
+- No virtual scrolling
+- No pagination
+- Every skill card is rendered at once
 
-- 用户无法进行其他操作
-- 页面可能出现"假死"现象
+**Performance boundaries**:
 
-**建议**：
+- An external source with 100+ skills may render with noticeable lag
+- Scrolling the My Skills board may not be smooth with 50+ skills
+- Maximum height limit: `max-h-[360px]` (the external skills area)
 
-- E2E 测试需验证：批量导入 10 个技能时 UI 仍可响应
+**Search performance**:
 
----
+- No debouncing: `onChange` updates the `searchQuery` state directly
+- Typing quickly can trigger the `useMemo` recomputation repeatedly
 
-## 6. 国际化/主题相关
+**Recommendations**:
 
-### 6.1 i18n Key 映射表
-
-| 功能场景     | i18n Key                                  | 中文示例                   | 英文示例                                     | 源码位置      |
-| ------------ | ----------------------------------------- | -------------------------- | -------------------------------------------- | ------------- |
-| **页面标题** | `settings.skillsHub.title`                | 技能中心                   | Skills Hub                                   | -             |
-| **板块标题** |
-| 我的技能     | `settings.skillsHub.mySkillsTitle`        | 我的技能                   | My Skills                                    | line 397      |
-| 发现外部技能 | `settings.skillsHub.discoveredTitle`      | 发现外部技能               | Discovered External Skills                   | line 256      |
-| **操作按钮** |
-| 全部导入     | `settings.skillsHub.importAll`            | 全部导入                   | Import All                                   | line 334      |
-| 手动导入     | `settings.skillsHub.manualImport`         | 从文件夹导入               | Import from Folder                           | line 434      |
-| 导出到       | `settings.skillsHub.exportTo`             | 下发到...                  | Export To...                                 | line 555      |
-| **成功提示** |
-| 导入成功     | `settings.skillsHub.importSuccess`        | 技能导入成功               | Skill imported successfully                  | line 133      |
-| 批量导入成功 | `settings.skillsHub.importAllSuccess`     | 成功导入 {{count}} 项技能  | {{count}} skills imported                    | line 157-160  |
-| 删除成功     | `settings.skillsHub.deleteSuccess`        | 技能已删除                 | Skill deleted                                | line 170      |
-| 导出成功     | `settings.skillsHub.exportSuccess`        | 技能下发成功               | Skill exported successfully                  | line 523-526  |
-| **错误提示** |
-| 获取失败     | `settings.skillsHub.fetchError`           | 获取技能失败               | Failed to fetch skills                       | line 100      |
-| 导入失败     | `settings.skillsHub.importFailed`         | 技能导入失败               | Failed to import skill                       | line 137      |
-| 导入异常     | `settings.skillsHub.importError`          | 导入技能出错               | Error importing skill                        | line 141      |
-| 删除失败     | `settings.skillsHub.deleteFailed`         | 删除技能失败               | Failed to delete skill                       | line 173      |
-| 删除异常     | `settings.skillsHub.deleteError`          | 删除技能出错               | Error deleting skill                         | line 177      |
-| 导出失败     | `settings.skillsHub.exportFailed`         | 技能下发失败               | Failed to export skill                       | line 529-532  |
-| **其他**     |
-| 搜索占位符   | `settings.skillsHub.searchPlaceholder`    | 搜索技能...                | Search skills...                             | line 284, 423 |
-| 无搜索结果   | `settings.skillsHub.noSearchResults`      | 未找到相关技能             | No matching skills found                     | line 382      |
-| 无技能提示   | `settings.skillsHub.noSkills`             | 未发现技能                 | No skills found. Import some to get started. | line 587      |
-| 删除确认标题 | `settings.skillsHub.deleteConfirmTitle`   | 删除技能                   | Delete Skill                                 | line 565      |
-| 删除确认内容 | `settings.skillsHub.deleteConfirmContent` | 确定要删除 "{{name}}" 吗？ | Are you sure you want to delete "{{name}}"?  | line 566-568  |
-| 自定义路径   | `settings.skillsHub.addCustomPath`        | 添加自定义技能路径         | Add Custom Skill Path                        | line 700      |
-
-完整列表见 `locales/*/settings.json:3-40`（共 39 个 key）
+- Keep the skill count per board at ≤ 100
+- E2E tests should verify:
+  1. Render time with 50 skills < 1 second
+  2. Search input response latency < 100ms
+  3. Smoothness of tab switching
 
 ---
 
-### 6.2 主题适配
+#### 5.5.2 Batch import blocking the UI
 
-#### 6.2.1 色彩变量使用
+**Source location**: `SkillsHubSettings.tsx:145-164`
 
-**源码位置**：全组件范围
+**Problem**:
 
-**语义化色彩**：
+- Batch importing 20+ skills may block the main thread
+- There is no `async/await` concurrency optimization
+- There is no progress indicator
 
-- `text-t-primary`：主要文本
-- `text-t-secondary`：次要文本
-- `text-t-tertiary`：辅助文本
-- `bg-base`：基础背景
-- `bg-fill-1`, `bg-fill-2`：填充背景
-- `border-border-1`, `border-b-base`：边框
-- `text-primary-6`, `bg-primary-6`：主题色
+**Impact**:
 
-**硬编码色彩**（仅头像）：
+- The user cannot do anything else
+- The page may appear frozen
 
-- `SkillsHubSettings.tsx:28-35`：6 种预定义颜色
-- 原因：固定色彩保证视觉一致性
+**Recommendation**:
+
+- E2E tests should verify that the UI remains responsive while batch importing 10 skills
 
 ---
 
-#### 6.2.2 暗色模式支持
+## 6. Internationalization and Theming
 
-**实现方式**：UnoCSS + CSS 变量
+### 6.1 i18n key map
 
-**适配范围**：
+| Feature scenario           | i18n Key                                  | English example                              | Source location |
+| -------------------------- | ----------------------------------------- | -------------------------------------------- | --------------- |
+| **Page title**             | `settings.skillsHub.title`                | Skills Hub                                   | -               |
+| **Board titles**           |
+| My Skills                  | `settings.skillsHub.mySkillsTitle`        | My Skills                                    | line 397        |
+| Discovered External Skills | `settings.skillsHub.discoveredTitle`      | Discovered External Skills                   | line 256        |
+| **Action buttons**         |
+| Import all                 | `settings.skillsHub.importAll`            | Import All                                   | line 334        |
+| Manual import              | `settings.skillsHub.manualImport`         | Import from Folder                           | line 434        |
+| Export to                  | `settings.skillsHub.exportTo`             | Export To...                                 | line 555        |
+| **Success messages**       |
+| Import succeeded           | `settings.skillsHub.importSuccess`        | Skill imported successfully                  | line 133        |
+| Batch import succeeded     | `settings.skillsHub.importAllSuccess`     | {{count}} skills imported                    | line 157-160    |
+| Delete succeeded           | `settings.skillsHub.deleteSuccess`        | Skill deleted                                | line 170        |
+| Export succeeded           | `settings.skillsHub.exportSuccess`        | Skill exported successfully                  | line 523-526    |
+| **Error messages**         |
+| Fetch failed               | `settings.skillsHub.fetchError`           | Failed to fetch skills                       | line 100        |
+| Import failed              | `settings.skillsHub.importFailed`         | Failed to import skill                       | line 137        |
+| Import error               | `settings.skillsHub.importError`          | Error importing skill                        | line 141        |
+| Delete failed              | `settings.skillsHub.deleteFailed`         | Failed to delete skill                       | line 173        |
+| Delete error               | `settings.skillsHub.deleteError`          | Error deleting skill                         | line 177        |
+| Export failed              | `settings.skillsHub.exportFailed`         | Failed to export skill                       | line 529-532    |
+| **Other**                  |
+| Search placeholder         | `settings.skillsHub.searchPlaceholder`    | Search skills...                             | line 284, 423   |
+| No search results          | `settings.skillsHub.noSearchResults`      | No matching skills found                     | line 382        |
+| No skills message          | `settings.skillsHub.noSkills`             | No skills found. Import some to get started. | line 587        |
+| Delete confirmation title  | `settings.skillsHub.deleteConfirmTitle`   | Delete Skill                                 | line 565        |
+| Delete confirmation body   | `settings.skillsHub.deleteConfirmContent` | Are you sure you want to delete "{{name}}"?  | line 566-568    |
+| Custom path                | `settings.skillsHub.addCustomPath`        | Add Custom Skill Path                        | line 700        |
 
-- 所有背景、文本、边框均使用 CSS 变量
-- 无需额外适配代码
-- Arco Design 组件自动跟随主题
-
----
-
-## 7. data-testid 可用性评估
-
-### 7.1 已有 testid
-
-- **无**（当前代码中未添加任何 data-testid）
-
----
-
-### 7.2 缺失 testid（测试依赖项）
-
-#### 7.2.1 我的技能板块
-
-- `my-skills-section`：板块容器
-- `my-skill-card-${skill.name}`：技能卡片
-- `my-skills-search-input`：搜索输入框
-- `my-skills-refresh-button`：刷新按钮
-- `manual-import-button`：手动导入按钮
-- `export-skill-button-${skill.name}`：导出按钮
-- `export-dropdown-${skill.name}`：导出下拉菜单
-- `delete-skill-button-${skill.name}`：删除按钮
-
----
-
-#### 7.2.2 发现外部技能板块
-
-- `external-skills-section`：板块容器
-- `external-source-tab-${source.source}`：源 Tab 按钮
-- `add-custom-path-button`：添加自定义路径按钮
-- `external-skills-search-input`：搜索输入框
-- `external-skills-refresh-button`：刷新按钮
-- `external-skill-card-${skill.name}`：技能卡片
-- `import-skill-button-${skill.name}`：单项导入按钮
-- `import-all-skills-button`：批量导入按钮
+The full list is in `locales/*/settings.json:3-40` (39 keys in total)
 
 ---
 
-#### 7.2.3 扩展技能板块
+### 6.2 Theme adaptation
 
-- `extension-skills-section`：板块容器
-- `extension-skill-card-${skill.name}`：技能卡片
+#### 6.2.1 Use of color variables
+
+**Source location**: throughout the component
+
+**Semantic colors**:
+
+- `text-t-primary`: primary text
+- `text-t-secondary`: secondary text
+- `text-t-tertiary`: tertiary text
+- `bg-base`: base background
+- `bg-fill-1`, `bg-fill-2`: fill backgrounds
+- `border-border-1`, `border-b-base`: borders
+- `text-primary-6`, `bg-primary-6`: theme color
+
+**Hardcoded colors** (avatars only):
+
+- `SkillsHubSettings.tsx:28-35`: the 6 predefined colors
+- Reason: fixed colors guarantee visual consistency
 
 ---
 
-#### 7.2.4 自动注入技能板块
+#### 6.2.2 Dark mode support
 
-- `auto-skills-section`：板块容器
-- `auto-skill-card-${skill.name}`：技能卡片
+**How it works**: UnoCSS plus CSS variables
 
----
+**Coverage**:
 
-#### 7.2.5 自定义路径 Modal
-
-- `add-custom-path-modal`：Modal 容器
-- `custom-path-name-input`：Name 输入框
-- `custom-path-value-input`：Path 输入框
-- `custom-path-browse-button`：浏览按钮
+- Every background, text, and border color uses a CSS variable
+- No extra adaptation code is needed
+- Arco Design components follow the theme automatically
 
 ---
 
-### 7.3 data-testid 转义规则
+## 7. data-testid Availability Assessment
 
-#### 7.3.1 动态 testid 中的特殊字符问题
+### 7.1 Existing testids
 
-**问题描述**：
+- **None** (no data-testid has been added to the current code)
 
-- `data-testid` 中使用 `${skill.name}` 可能导致选择器失效
-- 技能名称可能包含 `:`, `/`, `\`, `<`, `>`, `"`, `'`, `|`, `?`, `*` 等特殊字符
+---
 
-**风险示例**：
+### 7.2 Missing testids (test dependencies)
+
+#### 7.2.1 My Skills board
+
+- `my-skills-section`: board container
+- `my-skill-card-${skill.name}`: skill card
+- `my-skills-search-input`: search input
+- `my-skills-refresh-button`: refresh button
+- `manual-import-button`: manual import button
+- `export-skill-button-${skill.name}`: export button
+- `export-dropdown-${skill.name}`: export dropdown
+- `delete-skill-button-${skill.name}`: delete button
+
+---
+
+#### 7.2.2 Discovered External Skills board
+
+- `external-skills-section`: board container
+- `external-source-tab-${source.source}`: source tab button
+- `add-custom-path-button`: add custom path button
+- `external-skills-search-input`: search input
+- `external-skills-refresh-button`: refresh button
+- `external-skill-card-${skill.name}`: skill card
+- `import-skill-button-${skill.name}`: single import button
+- `import-all-skills-button`: batch import button
+
+---
+
+#### 7.2.3 Extension Skills board
+
+- `extension-skills-section`: board container
+- `extension-skill-card-${skill.name}`: skill card
+
+---
+
+#### 7.2.4 Auto-injected Skills board
+
+- `auto-skills-section`: board container
+- `auto-skill-card-${skill.name}`: skill card
+
+---
+
+#### 7.2.5 Custom path modal
+
+- `add-custom-path-modal`: modal container
+- `custom-path-name-input`: Name input
+- `custom-path-value-input`: Path input
+- `custom-path-browse-button`: browse button
+
+---
+
+### 7.3 data-testid escaping rules
+
+#### 7.3.1 The special character problem in dynamic testids
+
+**Problem**:
+
+- Using `${skill.name}` inside a `data-testid` can break the selector
+- Skill names may contain special characters such as `:`, `/`, `\`, `<`, `>`, `"`, `'`, `|`, `?`, and `*`
+
+**Risk example**:
 
 ```typescript
-// 技能名称：my:skill
+// Skill name: my:skill
 <div data-testid={`my-skill-card-my:skill`} />
 
-// Playwright 选择器可能失效
-page.locator('[data-testid="my-skill-card-my:skill"]')  // ❌ 冒号可能被误解析
+// The Playwright selector may not work
+page.locator('[data-testid="my-skill-card-my:skill"]')  // ❌ the colon may be misparsed
 ```
 
-**推荐转义规则**：
+**Recommended escaping rule**:
 
 ```typescript
 function normalizeTestId(name: string): string {
   return name.replace(/[:\\/\s<>"'|?*]/g, '-');
 }
 
-// 示例
+// Examples
 normalizeTestId('my:skill'); // → 'my-skill'
 normalizeTestId('my/skill'); // → 'my-skill'
 normalizeTestId('my skill'); // → 'my-skill'
 normalizeTestId('skill<test>'); // → 'skill-test-'
 ```
 
-**实现位置建议**：
+**Suggested implementation location**:
 
-- 在组件中定义辅助函数：`SkillsHubSettings.tsx` 顶部
-- 所有 `data-testid` 统一使用：`data-testid={normalizeTestId(skill.name)}`
+- Define the helper function at the top of `SkillsHubSettings.tsx`
+- Every `data-testid` uses it consistently: `data-testid={normalizeTestId(skill.name)}`
 
-**E2E 测试影响**：
+**Impact on E2E tests**:
 
-- 测试代码中同样需要使用相同的 normalize 函数
-- 示例：`page.locator(\`[data-testid="my-skill-card-${normalizeTestId(skillName)}"]\`)`
-
----
-
-## 8. 技术栈与依赖
-
-### 8.1 核心依赖
-
-- **React**：18.x（函数组件 + Hooks）
-- **React Router**：`useSearchParams`（URL 参数管理）
-- **Arco Design**：Button, Modal, Message, Input, Dropdown, Menu, Typography
-- **Icon Park**：Delete, FolderOpen, Info, Lightning, Puzzle, Search, Plus, Refresh
-- **i18next**：`useTranslation` Hook
+- The test code must use the same normalize function
+- Example: `page.locator(\`[data-testid="my-skill-card-${normalizeTestId(skillName)}"]\`)`
 
 ---
 
-### 8.2 IPC Bridge 调用清单
+## 8. Tech Stack and Dependencies
 
-**源码位置**：`src/common/adapter/ipcBridge.ts`（类型定义）
+### 8.1 Core dependencies
 
-| Bridge 方法                    | 功能                | 返回类型                                 |
-| ------------------------------ | ------------------- | ---------------------------------------- |
-| `listAvailableSkills`          | 列出所有可用技能    | `SkillInfo[]`                            |
-| `listBuiltinAutoSkills`        | 列出自动注入技能    | `Array<{ name, description }>`           |
-| `detectAndCountExternalSkills` | 检测外部技能源      | `{ success, data: ExternalSource[] }`    |
-| `getSkillPaths`                | 获取技能目录路径    | `{ userSkillsDir, builtinSkillsDir }`    |
-| `importSkillWithSymlink`       | 导入技能（symlink） | `{ success, data?: { skillName }, msg }` |
-| `exportSkillWithSymlink`       | 导出技能到外部源    | `{ success, msg }`                       |
-| `deleteSkill`                  | 删除自定义技能      | `{ success, msg }`                       |
-| `addCustomExternalPath`        | 添加自定义外部路径  | `{ success, msg }`                       |
-| `dialog.showOpen`              | 打开文件选择器      | `string[]`                               |
+- **React**: 18.x (function components plus hooks)
+- **React Router**: `useSearchParams` (URL parameter management)
+- **Arco Design**: Button, Modal, Message, Input, Dropdown, Menu, Typography
+- **Icon Park**: Delete, FolderOpen, Info, Lightning, Puzzle, Search, Plus, Refresh
+- **i18next**: the `useTranslation` hook
 
 ---
 
-## 9. 已知限制与未实现功能
+### 8.2 IPC bridge call inventory
 
-### 9.1 UI 层未实现功能
+**Source location**: `src/common/adapter/ipcBridge.ts` (type definitions)
 
-#### 9.1.1 删除自定义外部路径
-
-- **状态**：Bridge 已实现（`fsBridge.ts:1472-1483`），UI 未实现
-- **影响**：用户无法通过界面删除错误添加的自定义路径
-- **解决方案**：手动编辑 `~/.aionui/custom_external_skill_paths.json`
-- **E2E 测试范围**：不包含
-
-#### 9.1.2 Skills Market 集成
-
-- **状态**：Bridge 已实现（`fsBridge.ts:1757-1802`），UI 完全未实现
-- **功能**：`enableSkillsMarket` / `disableSkillsMarket`
-- **说明**：Skills Market 是独立功能模块，不属于 SkillsHubSettings 范围
-- **E2E 测试范围**：不包含
+| Bridge method                  | Purpose                              | Return type                              |
+| ------------------------------ | ------------------------------------ | ---------------------------------------- |
+| `listAvailableSkills`          | List every available skill           | `SkillInfo[]`                            |
+| `listBuiltinAutoSkills`        | List the auto-injected skills        | `Array<{ name, description }>`           |
+| `detectAndCountExternalSkills` | Detect the external skill sources    | `{ success, data: ExternalSource[] }`    |
+| `getSkillPaths`                | Get the skill directory paths        | `{ userSkillsDir, builtinSkillsDir }`    |
+| `importSkillWithSymlink`       | Import a skill (via symlink)         | `{ success, data?: { skillName }, msg }` |
+| `exportSkillWithSymlink`       | Export a skill to an external source | `{ success, msg }`                       |
+| `deleteSkill`                  | Delete a custom skill                | `{ success, msg }`                       |
+| `addCustomExternalPath`        | Add a custom external path           | `{ success, msg }`                       |
+| `dialog.showOpen`              | Open the file picker                 | `string[]`                               |
 
 ---
 
-### 9.2 功能限制
+## 9. Known Limitations and Unimplemented Features
 
-#### 9.2.1 Symlink 指向查看
+### 9.1 Features not implemented in the UI
 
-- **问题**：用户无法通过 UI 查看 symlink 技能的原始路径
-- **当前行为**：`skill.location` 显示 symlink 路径，非目标路径
-- **建议**：后续版本添加"查看原始路径"功能或工具提示
+#### 9.1.1 Removing a custom external path
 
-#### 9.2.2 批量操作进度反馈
+- **Status**: implemented in the bridge (`fsBridge.ts:1472-1483`), not implemented in the UI
+- **Impact**: users cannot remove a wrongly added custom path from the interface
+- **Workaround**: edit `~/.aionui/custom_external_skill_paths.json` by hand
+- **E2E test scope**: excluded
 
-- **问题**：批量导入无进度条、无取消机制
-- **影响**：导入 20+ 技能时用户体验不佳
-- **当前行为**：仅在完成后显示总成功数量
+#### 9.1.2 Skills Market integration
 
-#### 9.2.3 大规模技能性能
-
-- **限制**：单个板块建议不超过 100 个技能
-- **原因**：无虚拟滚动、无分页
-- **建议**：超过 100 个技能时考虑手动分类或归档
+- **Status**: implemented in the bridge (`fsBridge.ts:1757-1802`), not implemented in the UI at all
+- **Features**: `enableSkillsMarket` / `disableSkillsMarket`
+- **Note**: Skills Market is a separate feature module and is outside the scope of SkillsHubSettings
+- **E2E test scope**: excluded
 
 ---
 
-### 9.3 边界场景未处理
+### 9.2 Functional limitations
 
-#### 9.3.1 特殊字符技能名称
+#### 9.2.1 Viewing the symlink target
 
-- **问题**：技能名称包含 `/`, `:`, `*` 等特殊字符时可能导致 symlink 创建失败
-- **当前行为**：依赖文件系统报错
-- **建议**：E2E 测试需覆盖此场景
+- **Problem**: users cannot see the original path of a symlinked skill from the UI
+- **Current behaviour**: `skill.location` shows the symlink path, not the target path
+- **Recommendation**: a future version should add a "view original path" feature or a tooltip
 
-#### 9.3.2 搜索结果歧义
+#### 9.2.2 Progress feedback for bulk operations
 
-- **问题**："我的技能"搜索无匹配时显示"No skills found"，与无技能状态提示相同
-- **影响**：用户无法区分"真的无技能"还是"搜索无匹配"
-- **建议**：后续版本优化空结果提示文案
+- **Problem**: batch import has no progress bar and no way to cancel
+- **Impact**: a poor experience when importing 20+ skills
+- **Current behaviour**: only the total success count is shown once it finishes
 
----
+#### 9.2.3 Performance with a large number of skills
 
-## 10. 附录：源码文件清单
-
-### 9.1 前端源码
-
-- `src/renderer/pages/settings/SkillsHubSettings.tsx`（主组件，765 行）
-
-### 9.2 后端源码
-
-- `src/process/bridge/fsBridge.ts`（Bridge 实现，1629-1822 行为 skills 相关）
-- `src/process/utils/initStorage.ts`（目录路径定义）
-- `src/process/extensions/ExtensionRegistry.ts`（扩展技能注册）
-
-### 9.3 国际化资源
-
-- `src/renderer/services/i18n/locales/en-US/settings.json`（英文）
-- `src/renderer/services/i18n/locales/zh-CN/settings.json`（中文）
-- 其他语言：tr-TR, uk-UA, ru-RU, ko-KR, ja-JP, zh-TW
+- **Limit**: a single board should hold no more than 100 skills
+- **Reason**: no virtual scrolling and no pagination
+- **Recommendation**: with more than 100 skills, consider manual categorization or archiving
 
 ---
 
-**文档版本**：v1.2（第三轮修订）
-**生成日期**：2026-04-21
-**分析师**：skills-analyst-2
-**修订历史**：
+### 9.3 Unhandled boundary scenarios
 
-- v1.0：初稿
-- v1.1：根据 skills-designer-2 的 review 反馈完成修订（16 条 P0-P3 问题）
-- v1.2：根据 skills-engineer-2 的最终 P0 范围补充（完整 i18n key 映射表），确认其他 4 项已包含
+#### 9.3.1 Skill names with special characters
+
+- **Problem**: a skill name containing `/`, `:`, `*`, or similar characters may cause symlink creation to fail
+- **Current behaviour**: relies on the file system to raise the error
+- **Recommendation**: E2E tests should cover this scenario
+
+#### 9.3.2 Ambiguous search results
+
+- **Problem**: when a My Skills search has no match, "No skills found" is shown, which is identical to the empty state message
+- **Impact**: users cannot tell "there really are no skills" from "the search matched nothing"
+- **Recommendation**: a future version should improve the empty-result copy
+
+---
+
+## 10. Appendix: Source File Inventory
+
+### 9.1 Frontend source
+
+- `src/renderer/pages/settings/SkillsHubSettings.tsx` (the main component, 765 lines)
+
+### 9.2 Backend source
+
+- `src/process/bridge/fsBridge.ts` (bridge implementation; lines 1629-1822 are skill related)
+- `src/process/utils/initStorage.ts` (directory path definitions)
+- `src/process/extensions/ExtensionRegistry.ts` (extension skill registration)
+
+### 9.3 Internationalization resources
+
+- `src/renderer/services/i18n/locales/en-US/settings.json` (English)
+- `src/renderer/services/i18n/locales/zh-CN/settings.json` (Chinese)
+- Other languages: tr-TR, uk-UA, ru-RU, ko-KR, ja-JP, zh-TW
+
+---
+
+**Document version**: v1.2 (third revision)
+**Generated**: 2026-04-21
+**Analyst**: skills-analyst-2
+**Revision history**:
+
+- v1.0: first draft
+- v1.1: revised in response to the review feedback from skills-designer-2 (16 P0-P3 issues)
+- v1.2: added the final P0-scope material requested by skills-engineer-2 (the complete i18n key map) and confirmed the other 4 items were already covered

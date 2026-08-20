@@ -19,7 +19,7 @@ import { goToSettings, navigateTo } from '../helpers';
 // mounted but hidden — always scope to the *visible* body.
 const MODAL_BODY = '[data-testid="feedback-report-scroll-body"]';
 const VISIBLE_MODAL_BODY = `${MODAL_BODY}:visible`;
-const TITLEBAR_FEEDBACK_BUTTON = 'button[aria-label="反馈问题"], button[aria-label="Report Issue"]';
+const TITLEBAR_FEEDBACK_BUTTON = 'button[aria-label="Report Issue"]';
 
 // Tests share one Electron instance across spec files; a modal left open by a
 // prior (possibly failed) test intercepts pointer events and poisons every
@@ -60,34 +60,34 @@ async function closeFeedbackModal(page: Page) {
 test('scheduled tasks list preselects the scheduled-task module', async ({ page }) => {
   await navigateTo(page, '#/scheduled');
   await openTitlebarFeedback(page);
-  await expectSelectedModule(page, /定时任务|Scheduled Tasks/);
+  await expectSelectedModule(page, /Scheduled Tasks/);
   await closeFeedbackModal(page);
 });
 
 test('assistants page preselects the assistant-preset module', async ({ page }) => {
   await navigateTo(page, '#/assistants');
   await openTitlebarFeedback(page);
-  await expectSelectedModule(page, /助手与预设|Assistants & Presets/);
+  await expectSelectedModule(page, /Assistants & Presets/);
   await closeFeedbackModal(page);
 });
 
 test('settings → agent preselects the agent-detection module', async ({ page }) => {
   await goToSettings(page, 'agent');
   await openTitlebarFeedback(page);
-  await expectSelectedModule(page, /Agent 检测与连接|Agent Detection & Connection/);
+  await expectSelectedModule(page, /Agent Detection & Connection/);
   await closeFeedbackModal(page);
 });
 
 test('settings → model preselects the model-auth module', async ({ page }) => {
   await goToSettings(page, 'model');
   await openTitlebarFeedback(page);
-  await expectSelectedModule(page, /模型与认证|Models & Authentication/);
+  await expectSelectedModule(page, /Models & Authentication/);
   await closeFeedbackModal(page);
 });
 
 test('settings → system keeps the system-settings module', async ({ page }) => {
   await goToSettings(page, 'system');
   await openTitlebarFeedback(page);
-  await expectSelectedModule(page, /系统设置|System Settings/);
+  await expectSelectedModule(page, /System Settings/);
   await closeFeedbackModal(page);
 });

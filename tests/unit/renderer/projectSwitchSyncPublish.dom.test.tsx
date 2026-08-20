@@ -13,7 +13,7 @@
  *   - known conversation → its project id, immediately (covers cold/never-opened
  *     rows, which are in the snapshot but were never fetched);
  *   - unknown conversation (not in snapshot) → null placeholder, never the
- *     previous project (宁空勿画错).
+ *     previous project (better blank than wrong).
  *
  * Mutation: revert the route to async-only (drop the layout-effect snapshot
  * publish) → with the fetch hanging, currentProject stays null and these assert

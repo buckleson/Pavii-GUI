@@ -71,7 +71,6 @@ describe('isBrowserMcpSettled', () => {
   });
 
   it('returns false when the message carries no browser calls at all', () => {
-    // 关键行为：不能把"没有浏览器调用"当成"浏览器操作结束"，否则无关消息会提前熄灭角标
     // Key behavior: "no browser calls" must not read as "browser finished", or an
     // unrelated message would extinguish the badge early.
     expect(isBrowserMcpSettled('tool_group', [{ name: 'read_file', status: 'Success' }])).toBe(false);

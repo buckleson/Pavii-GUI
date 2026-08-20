@@ -1,322 +1,322 @@
-# Aionrs Chat E2E 实现映射
+# Aionrs Chat E2E Implementation Mapping
 
-本文档记录 `test-cases.zh.md` 中定义的 15 个测试用例与实际 E2E 实现文件的对应关系。
+This document records how the 15 test cases defined in `test-cases.md` map onto the actual E2E implementation files.
 
-**生成时间**：2026-04-22
-**实现目录**：`tests/e2e/features/conversations/aionrs/`
-**文档版本**：test-cases.zh.md v1.0
+**Generated**: 2026-04-22
+**Implementation directory**: `tests/e2e/features/conversations/aionrs/`
+**Document version**: test-cases.md v1.0
 
 ---
 
-## 统计概览
+## Overview
 
-| 类别        | 文档定义 | 实际实现 | 状态                           |
-| ----------- | -------- | -------- | ------------------------------ |
-| P0 核心流程 | 5        | 5        | ✅ 100%                        |
-| P1 功能验证 | 7        | 7        | ✅ 100%                        |
-| P2 边界用例 | 3        | 3        | ⚠️ 100% (需重写)               |
-| **总计**    | **15**   | **15**   | ⚠️ 100% (15/15, 其中 3 个偏差) |
+| Category          | Defined in docs | Actually implemented | Status                        |
+| ----------------- | --------------- | -------------------- | ----------------------------- |
+| P0 core flows     | 5               | 5                    | ✅ 100%                       |
+| P1 feature checks | 7               | 7                    | ✅ 100%                       |
+| P2 edge cases     | 3               | 3                    | ⚠️ 100% (rewrite needed)      |
+| **Total**         | **15**          | **15**               | ⚠️ 100% (15/15, 3 with drift) |
 
-**截图总数**：61 次 `takeScreenshot()` 调用
-**平均截图数/测试**：4.1 张
+**Total screenshots**: 61 `takeScreenshot()` calls
+**Average screenshots per test**: 4.1
 
-**当前测试状态**（v4 运行结果）：
+**Current test status** (v4 run results):
 
 - ✅ Passed: 11/15 (TC-A-01/02/03/05/06/10/11/12/13/14/15)
-- ⏭️ Skipped: 4/15 (TC-A-04/07/08/09, aionrs binary 运行时切换挂起)
+- ⏭️ Skipped: 4/15 (TC-A-04/07/08/09, aionrs binary hangs on runtime switching)
 - ❌ Failed: 0/15
 
 ---
 
-## P0 核心流程（5/5 实现）
+## P0 Core Flows (5/5 implemented)
 
-| 用例 ID | 用例标题       | 实现文件                                                        | 行号 | 测试函数名                                                                      | 截图数 | 状态    |
-| ------- | -------------- | --------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------- | ------ | ------- |
-| TC-A-01 | 最小可行路径   | tests/e2e/features/conversations/aionrs/basic-flow.e2e.ts       | 79   | `test('TC-A-01: should complete minimal conversation with no attachments')`     | 4      | ✅      |
-| TC-A-02 | 关联单个文件夹 | tests/e2e/features/conversations/aionrs/basic-flow.e2e.ts       | 154  | `test('TC-A-02: should associate single folder and reference in message')`      | 3      | ✅      |
-| TC-A-03 | 上传单个文件   | tests/e2e/features/conversations/aionrs/basic-flow.e2e.ts       | 223  | `test('TC-A-03: should upload single file and binary receives file parameter')` | 3      | ✅      |
-| TC-A-04 | 非默认模型     | tests/e2e/features/conversations/aionrs/model-selection.e2e.ts  | 70   | `test.skip('TC-A-04: should use second model selected on guid page')`           | 4      | ⏭️ Skip |
-| TC-A-05 | yolo 权限      | tests/e2e/features/conversations/aionrs/permission-modes.e2e.ts | 69   | `test('TC-A-05: should use yolo permission selected on guid page')`             | 5      | ✅      |
+| Case ID | Case title             | Implementation file                                             | Line | Test function name                                                              | Screenshots | Status  |
+| ------- | ---------------------- | --------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------- | ----------- | ------- |
+| TC-A-01 | Minimal viable path    | tests/e2e/features/conversations/aionrs/basic-flow.e2e.ts       | 79   | `test('TC-A-01: should complete minimal conversation with no attachments')`     | 4           | ✅      |
+| TC-A-02 | Attach a single folder | tests/e2e/features/conversations/aionrs/basic-flow.e2e.ts       | 154  | `test('TC-A-02: should associate single folder and reference in message')`      | 3           | ✅      |
+| TC-A-03 | Upload a single file   | tests/e2e/features/conversations/aionrs/basic-flow.e2e.ts       | 223  | `test('TC-A-03: should upload single file and binary receives file parameter')` | 3           | ✅      |
+| TC-A-04 | Non-default model      | tests/e2e/features/conversations/aionrs/model-selection.e2e.ts  | 70   | `test.skip('TC-A-04: should use second model selected on guid page')`           | 4           | ⏭️ Skip |
+| TC-A-05 | yolo permission        | tests/e2e/features/conversations/aionrs/permission-modes.e2e.ts | 69   | `test('TC-A-05: should use yolo permission selected on guid page')`             | 5           | ✅      |
 
-**小计**：5 个测试，19 张截图
-
----
-
-## P1 功能验证（7/7 实现）
-
-| 用例 ID | 用例标题   | 实现文件                                                               | 行号 | 测试函数名                                                                              | 截图数 | 状态    |
-| ------- | ---------- | ---------------------------------------------------------------------- | ---- | --------------------------------------------------------------------------------------- | ------ | ------- |
-| TC-A-06 | 切换权限   | tests/e2e/features/conversations/aionrs/permission-modes.e2e.ts        | 154  | `test('TC-A-06: should switch permission mid-conversation and persist to DB')`          | 5      | ✅      |
-| TC-A-07 | 切换模型   | tests/e2e/features/conversations/aionrs/model-selection.e2e.ts         | 135  | `test.skip('TC-A-07: should switch model mid-conversation and update DB')`              | 5      | ⏭️ Skip |
-| TC-A-08 | 连续切换   | tests/e2e/features/conversations/aionrs/mid-conversation-switch.e2e.ts | 68   | `test('TC-A-08: should handle continuous switch (model → permission → model)')`         | 6      | ⏭️ Skip |
-| TC-A-09 | 多轮对话   | tests/e2e/features/conversations/aionrs/mid-conversation-switch.e2e.ts | 178  | `test('TC-A-09: should handle 3 rounds of conversation after model/permission switch')` | 6      | ⏭️ Skip |
-| TC-A-10 | 组合场景 1 | tests/e2e/features/conversations/aionrs/combo-scenarios.e2e.ts         | 72   | `test('TC-A-10: should handle folder + second model + yolo mode combo')`                | 3      | ✅      |
-| TC-A-11 | 组合场景 2 | tests/e2e/features/conversations/aionrs/combo-scenarios.e2e.ts         | 151  | `test('TC-A-11: should handle file + non-default model + default mode combo')`          | 3      | ✅      |
-| TC-A-12 | 完整组合   | tests/e2e/features/conversations/aionrs/combo-scenarios.e2e.ts         | 229  | `test('TC-A-12: should handle full combo (folder + file + second model + yolo)')`       | 4      | ✅      |
-
-**小计**：7 个测试，32 张截图
+**Subtotal**: 5 tests, 19 screenshots
 
 ---
 
-## P2 边界用例（3/3 实现，但定义偏差严重）
+## P1 Feature Checks (7/7 implemented)
 
-| 用例 ID | 用例标题      | 实现文件                                                  | 行号 | 测试函数名                                                                          | 截图数 | 状态    |
-| ------- | ------------- | --------------------------------------------------------- | ---- | ----------------------------------------------------------------------------------- | ------ | ------- |
-| TC-A-13 | Binary 不可达 | tests/e2e/features/conversations/aionrs/edge-cases.e2e.ts | 67   | `test('TC-A-13: should handle empty workspace folder without crashing')`            | 3      | ⚠️ 偏差 |
-| TC-A-14 | 超大文件限制  | tests/e2e/features/conversations/aionrs/edge-cases.e2e.ts | 127  | `test('TC-A-14: should handle very long message (2000 characters)')`                | 3      | ⚠️ 偏差 |
-| TC-A-15 | 不存在文件夹  | tests/e2e/features/conversations/aionrs/edge-cases.e2e.ts | 185  | `test('TC-A-15: should handle rapid consecutive messages without race conditions')` | 3      | ⚠️ 偏差 |
+| Case ID | Case title           | Implementation file                                                    | Line | Test function name                                                                      | Screenshots | Status  |
+| ------- | -------------------- | ---------------------------------------------------------------------- | ---- | --------------------------------------------------------------------------------------- | ----------- | ------- |
+| TC-A-06 | Switch permission    | tests/e2e/features/conversations/aionrs/permission-modes.e2e.ts        | 154  | `test('TC-A-06: should switch permission mid-conversation and persist to DB')`          | 5           | ✅      |
+| TC-A-07 | Switch model         | tests/e2e/features/conversations/aionrs/model-selection.e2e.ts         | 135  | `test.skip('TC-A-07: should switch model mid-conversation and update DB')`              | 5           | ⏭️ Skip |
+| TC-A-08 | Consecutive switches | tests/e2e/features/conversations/aionrs/mid-conversation-switch.e2e.ts | 68   | `test('TC-A-08: should handle continuous switch (model → permission → model)')`         | 6           | ⏭️ Skip |
+| TC-A-09 | Multi-turn dialogue  | tests/e2e/features/conversations/aionrs/mid-conversation-switch.e2e.ts | 178  | `test('TC-A-09: should handle 3 rounds of conversation after model/permission switch')` | 6           | ⏭️ Skip |
+| TC-A-10 | Combo scenario 1     | tests/e2e/features/conversations/aionrs/combo-scenarios.e2e.ts         | 72   | `test('TC-A-10: should handle folder + second model + yolo mode combo')`                | 3           | ✅      |
+| TC-A-11 | Combo scenario 2     | tests/e2e/features/conversations/aionrs/combo-scenarios.e2e.ts         | 151  | `test('TC-A-11: should handle file + non-default model + default mode combo')`          | 3           | ✅      |
+| TC-A-12 | Full combination     | tests/e2e/features/conversations/aionrs/combo-scenarios.e2e.ts         | 229  | `test('TC-A-12: should handle full combo (folder + file + second model + yolo)')`       | 4           | ✅      |
 
-**小计**：3 个测试，9 张截图
-
----
-
-## 截图数统计分析
-
-### 按优先级分组
-
-| 优先级   | 测试数 | 总截图数 | 平均截图数 |
-| -------- | ------ | -------- | ---------- |
-| P0       | 5      | 19       | 3.8        |
-| P1       | 7      | 32       | 4.6        |
-| P2       | 3      | 9        | 3.0        |
-| **总计** | **15** | **60**   | **4.0**    |
-
-### 按文件分组
-
-| 文件名                         | 测试数 | 总截图数 |
-| ------------------------------ | ------ | -------- |
-| basic-flow.e2e.ts              | 3      | 10       |
-| model-selection.e2e.ts         | 2      | 9        |
-| permission-modes.e2e.ts        | 2      | 10       |
-| combo-scenarios.e2e.ts         | 3      | 10       |
-| mid-conversation-switch.e2e.ts | 2      | 12       |
-| edge-cases.e2e.ts              | 3      | 9        |
-| **总计**                       | **15** | **60**   |
+**Subtotal**: 7 tests, 32 screenshots
 
 ---
 
-## 定义 vs 实现偏差清单
+## P2 Edge Cases (3/3 implemented, but the definitions drifted badly)
 
-### 合理演化（保留当前实现，更新文档定义）
+| Case ID | Case title           | Implementation file                                       | Line | Test function name                                                                  | Screenshots | Status   |
+| ------- | -------------------- | --------------------------------------------------------- | ---- | ----------------------------------------------------------------------------------- | ----------- | -------- |
+| TC-A-13 | Binary unreachable   | tests/e2e/features/conversations/aionrs/edge-cases.e2e.ts | 67   | `test('TC-A-13: should handle empty workspace folder without crashing')`            | 3           | ⚠️ Drift |
+| TC-A-14 | Oversized file limit | tests/e2e/features/conversations/aionrs/edge-cases.e2e.ts | 127  | `test('TC-A-14: should handle very long message (2000 characters)')`                | 3           | ⚠️ Drift |
+| TC-A-15 | Non-existent folder  | tests/e2e/features/conversations/aionrs/edge-cases.e2e.ts | 185  | `test('TC-A-15: should handle rapid consecutive messages without race conditions')` | 3           | ⚠️ Drift |
 
-| 用例 ID | 文档定义                               | 当前实现                                         | 偏差说明                                        | 判断                                |
-| ------- | -------------------------------------- | ------------------------------------------------ | ----------------------------------------------- | ----------------------------------- |
-| TC-A-10 | 文件夹 + 文件 + 非默认模型 + auto_edit | folder + second model + yolo                     | 权限从 auto_edit 改为 yolo                      | ✅ 合理（测试更高权限级别）         |
-| TC-A-11 | 上传多个文件（3 个）                   | file + non-default model + default mode          | 从"多文件"简化为"单文件 + 模型切换"             | ✅ 合理（减少冗余，focus 组合维度） |
-| TC-A-12 | 关联多个文件夹（2 个）                 | Full combo (folder + file + second model + yolo) | 从"多文件夹"改为"folder+file+model+mode 全组合" | ✅ 合理（覆盖更多维度组合）         |
-
-**结论**：TC-A-10/11/12 当前实现已覆盖核心组合场景，文档定义中的"多文件""多文件夹"对测试覆盖率提升有限（增加数量而非功能维度）。建议保留实现，更新 test-cases.zh.md 定义。
-
-### 严重偏差（需按原定义重写）
-
-| 用例 ID | 文档定义                | 当前实现                                           | 偏差说明                                                             | 判断      |
-| ------- | ----------------------- | -------------------------------------------------- | -------------------------------------------------------------------- | --------- |
-| TC-A-13 | **Binary 不可达时跳过** | empty workspace folder without crashing            | 完全不同的功能点：前者测试环境检测 + skip 逻辑，后者测试空工作区容错 | ❌ 需重写 |
-| TC-A-14 | **超大文件上传限制**    | very long message (2000 characters)                | 完全不同的功能点：前者测试文件大小限制（100MB），后者测试消息长度    | ❌ 需重写 |
-| TC-A-15 | **关联不存在的文件夹**  | rapid consecutive messages without race conditions | 完全不同的功能点：前者测试错误处理（路径不存在），后者测试并发场景   | ❌ 需重写 |
-
-**结论**：TC-A-13/14/15 当前实现偏离原始需求评审结论，不满足 P2 边界用例的验证目标（环境检测、资源限制、错误处理）。需按 test-cases.zh.md 原定义重写。
+**Subtotal**: 3 tests, 9 screenshots
 
 ---
 
-## 重写计划（TC-A-13/14/15）
+## Screenshot Count Analysis
 
-### TC-A-13: Binary 不可达时跳过
+### Grouped by priority
 
-**原定义**：验证 aionrs binary 不可达时测试正确跳过（参考 `resolveAionrsBinary()` 返回 null 场景）
+| Priority  | Tests  | Total screenshots | Average screenshots |
+| --------- | ------ | ----------------- | ------------------- |
+| P0        | 5      | 19                | 3.8                 |
+| P1        | 7      | 32                | 4.6                 |
+| P2        | 3      | 9                 | 3.0                 |
+| **Total** | **15** | **60**            | **4.0**             |
 
-**实现要点**：
+### Grouped by file
 
-1. 在 `beforeAll` 中临时 mock `resolveAionrsBinary()` 返回 null
-2. 验证 `test.skip(true, 'aionrs binary not found')` 被触发
-3. 无截图（跳过测试不执行主体）
-
-### TC-A-14: 超大文件上传限制
-
-**原定义**：验证上传 100MB 文件时出现错误提示（文件大小超限）
-
-**实现要点**：
-
-1. 创建 100MB 临时文件
-2. 尝试通过 `sendAionrsMessage` 上传
-3. 验证错误提示（UI 或 bridge 返回错误）
-4. 截图：上传前、错误提示出现后（2 张）
-
-### TC-A-15: 关联不存在的文件夹
-
-**原定义**：验证关联已删除文件夹路径时出现错误提示
-
-**实现要点**：
-
-1. 创建临时文件夹后立即删除
-2. 尝试通过 bridge 创建 conversation 使用该不存在路径
-3. 验证错误提示（bridge 抛异常或 UI 错误提示）
-4. 截图：尝试关联前、错误提示出现后（2 张）
+| File name                      | Tests  | Total screenshots |
+| ------------------------------ | ------ | ----------------- |
+| basic-flow.e2e.ts              | 3      | 10                |
+| model-selection.e2e.ts         | 2      | 9                 |
+| permission-modes.e2e.ts        | 2      | 10                |
+| combo-scenarios.e2e.ts         | 3      | 10                |
+| mid-conversation-switch.e2e.ts | 2      | 12                |
+| edge-cases.e2e.ts              | 3      | 9                 |
+| **Total**                      | **15** | **60**            |
 
 ---
 
-## 实现文件说明
+## Definition vs. Implementation Drift List
 
-### 核心流程测试 (basic-flow.e2e.ts, 10 screenshots)
+### Reasonable evolution (keep the current implementation, update the documented definition)
 
-包含 P0 主干功能的 3 个测试用例，覆盖：
+| Case ID | Documented definition                         | Current implementation                           | Description of the drift                                                     | Verdict                                                               |
+| ------- | --------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| TC-A-10 | folder + file + non-default model + auto_edit | folder + second model + yolo                     | Permission changed from auto_edit to yolo                                    | ✅ Reasonable (exercises a higher permission level)                   |
+| TC-A-11 | Upload multiple files (3)                     | file + non-default model + default mode          | Simplified from "multiple files" to "single file + model switch"             | ✅ Reasonable (less redundancy, focuses on the combination dimension) |
+| TC-A-12 | Attach multiple folders (2)                   | Full combo (folder + file + second model + yolo) | Changed from "multiple folders" to a full folder+file+model+mode combination | ✅ Reasonable (covers more dimension combinations)                    |
 
-- 最小可行路径（TC-A-01）：验证无附件、bridge 创建、简单对话流程
-- 文件夹关联（TC-A-02）：验证 workspace 参数传递和文件夹访问
-- 文件上传（TC-A-03）：验证 workspace 内文件读取能力
+**Conclusion**: The current TC-A-10/11/12 implementations already cover the core combination scenarios. The "multiple files" and "multiple folders" wording in the documented definitions adds little to test coverage (it increases quantity rather than functional dimensions). Recommendation: keep the implementations and update the definitions in test-cases.md.
 
-### 模型选择测试 (model-selection.e2e.ts, 9 screenshots)
+### Serious drift (must be rewritten to match the original definition)
 
-包含 2 个模型相关测试用例，覆盖：
+| Case ID | Documented definition                   | Current implementation                             | Description of the drift                                                                                                                               | Verdict           |
+| ------- | --------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------- |
+| TC-A-13 | **Skip when the binary is unreachable** | empty workspace folder without crashing            | Entirely different functionality: the definition tests environment detection plus skip logic, the implementation tests tolerance of an empty workspace | ❌ Rewrite needed |
+| TC-A-14 | **Oversized file upload limit**         | very long message (2000 characters)                | Entirely different functionality: the definition tests the file size limit (100MB), the implementation tests message length                            | ❌ Rewrite needed |
+| TC-A-15 | **Attach a non-existent folder**        | rapid consecutive messages without race conditions | Entirely different functionality: the definition tests error handling (path does not exist), the implementation tests a concurrency scenario           | ❌ Rewrite needed |
 
-- 非默认模型（TC-A-04）：验证 modelB 选择（当前环境 skip）
-- 模型切换（TC-A-07）：验证对话中切换 modelA → modelB（当前环境 skip）
-
-### 权限模式测试 (permission-modes.e2e.ts, 10 screenshots)
-
-包含 2 个权限相关测试用例，覆盖：
-
-- yolo 权限（TC-A-05）：验证 guid 页选择 yolo 模式（UI 未实现，失败）
-- 权限切换（TC-A-06）：验证对话中切换 default → yolo（UI 未实现，失败）
-
-### 组合场景测试 (combo-scenarios.e2e.ts, 10 screenshots)
-
-包含 3 个复杂组合测试用例，覆盖：
-
-- folder + model + yolo（TC-A-10）：验证文件夹 + 非默认模型 + yolo 权限
-- file + model + default（TC-A-11）：验证文件 + 非默认模型 + 默认权限
-- 完整组合（TC-A-12）：folder + file + model + yolo 全维度组合
-
-### 对话中切换测试 (mid-conversation-switch.e2e.ts, 12 screenshots)
-
-包含 2 个动态切换测试用例，覆盖：
-
-- 连续切换（TC-A-08）：model → permission → model 三次切换（当前环境 skip）
-- 多轮对话（TC-A-09）：切换后进行 3 轮对话验证持久化（当前环境 skip）
-
-### 边界用例测试 (edge-cases.e2e.ts, 9 screenshots)
-
-包含 3 个边界场景测试用例，覆盖：
-
-- empty workspace（TC-A-13）：验证空文件夹容错（⚠️ 需改为"binary 不可达跳过"）
-- long message（TC-A-14）：验证 2000 字符消息处理（⚠️ 需改为"超大文件限制"）
-- rapid messages（TC-A-15）：验证快速连续消息（⚠️ 需改为"不存在文件夹"）
+**Conclusion**: The current TC-A-13/14/15 implementations depart from the conclusions of the original requirements review and do not meet the verification goals of the P2 edge cases (environment detection, resource limits, error handling). They must be rewritten to match the original definitions in test-cases.md.
 
 ---
 
-## 测试质量指标
+## Rewrite Plan (TC-A-13/14/15)
 
-### 截图覆盖率
+### TC-A-13: Skip when the binary is unreachable
 
-- **所有测试均含截图**：15/15 (100%)
-- **符合"至少 3 张"规则**：15/15 (100%)
-- **平均截图数**：4.0 张/测试（略低于 Gemini 的 4.7 张，合理范围）
+**Original definition**: verify that the test is skipped correctly when the aionrs binary is unreachable (see the scenario where `resolveAionrsBinary()` returns null).
 
-### 测试用例完整性
+**Implementation notes**:
 
-- **P0 核心功能覆盖**：5/5 (100%)
-- **P1 功能验证覆盖**：7/7 (100%)
-- **P2 边界用例覆盖**：3/3 (100%, 但需重写)
+1. Temporarily mock `resolveAionrsBinary()` in `beforeAll` so that it returns null.
+2. Verify that `test.skip(true, 'aionrs binary not found')` is triggered.
+3. No screenshots (a skipped test never runs its body).
 
-### 实现分布均衡性
+### TC-A-14: Oversized file upload limit
 
-- **最大文件（mid-conversation-switch.e2e.ts）**：2 个测试，13.3%
-- **平均每文件测试数**：2.5 个测试
-- **文件数/测试数比**：6 文件 / 15 测试 = 0.4（Gemini 为 5/15 = 0.33，分布更分散）
+**Original definition**: verify that an error message appears when uploading a 100MB file (file size over the limit).
+
+**Implementation notes**:
+
+1. Create a 100MB temporary file.
+2. Attempt to upload it through `sendAionrsMessage`.
+3. Verify the error message (in the UI, or an error returned by the bridge).
+4. Screenshots: before the upload, and after the error appears (2 total).
+
+### TC-A-15: Attach a non-existent folder
+
+**Original definition**: verify that an error message appears when attaching the path of a folder that has been deleted.
+
+**Implementation notes**:
+
+1. Create a temporary folder and delete it immediately.
+2. Attempt to create a conversation through the bridge using that non-existent path.
+3. Verify the error message (the bridge throws, or the UI shows an error).
+4. Screenshots: before the attach attempt, and after the error appears (2 total).
 
 ---
 
-## 数据库验证策略
+## Implementation File Notes
 
-所有测试使用以下 DB 断言：
+### Core flow tests (basic-flow.e2e.ts, 10 screenshots)
 
-### conversations 表
+Contains the 3 test cases for the P0 backbone functionality, covering:
+
+- Minimal viable path (TC-A-01): verifies the no-attachment case, bridge creation, and the simple conversation flow.
+- Folder attachment (TC-A-02): verifies workspace parameter passing and folder access.
+- File upload (TC-A-03): verifies the ability to read files inside the workspace.
+
+### Model selection tests (model-selection.e2e.ts, 9 screenshots)
+
+Contains 2 model-related test cases, covering:
+
+- Non-default model (TC-A-04): verifies selecting modelB (skipped in the current environment).
+- Model switching (TC-A-07): verifies switching modelA → modelB mid-conversation (skipped in the current environment).
+
+### Permission mode tests (permission-modes.e2e.ts, 10 screenshots)
+
+Contains 2 permission-related test cases, covering:
+
+- yolo permission (TC-A-05): verifies selecting yolo mode on the guid page (UI not implemented, fails).
+- Permission switching (TC-A-06): verifies switching default → yolo mid-conversation (UI not implemented, fails).
+
+### Combination scenario tests (combo-scenarios.e2e.ts, 10 screenshots)
+
+Contains 3 complex combination test cases, covering:
+
+- folder + model + yolo (TC-A-10): verifies folder + non-default model + yolo permission.
+- file + model + default (TC-A-11): verifies file + non-default model + default permission.
+- Full combination (TC-A-12): the all-dimension folder + file + model + yolo combination.
+
+### Mid-conversation switching tests (mid-conversation-switch.e2e.ts, 12 screenshots)
+
+Contains 2 dynamic switching test cases, covering:
+
+- Consecutive switches (TC-A-08): three switches, model → permission → model (skipped in the current environment).
+- Multi-turn dialogue (TC-A-09): 3 rounds of conversation after a switch to verify persistence (skipped in the current environment).
+
+### Edge case tests (edge-cases.e2e.ts, 9 screenshots)
+
+Contains 3 edge scenario test cases, covering:
+
+- empty workspace (TC-A-13): verifies tolerance of an empty folder (⚠️ must be changed to "skip when the binary is unreachable").
+- long message (TC-A-14): verifies handling of a 2000-character message (⚠️ must be changed to "oversized file limit").
+- rapid messages (TC-A-15): verifies rapid consecutive messages (⚠️ must be changed to "non-existent folder").
+
+---
+
+## Test Quality Metrics
+
+### Screenshot coverage
+
+- **Every test includes screenshots**: 15/15 (100%)
+- **Meets the "at least 3" rule**: 15/15 (100%)
+- **Average screenshot count**: 4.0 per test (slightly below Gemini's 4.7, still within a reasonable range)
+
+### Test case completeness
+
+- **P0 core functionality coverage**: 5/5 (100%)
+- **P1 feature check coverage**: 7/7 (100%)
+- **P2 edge case coverage**: 3/3 (100%, but a rewrite is needed)
+
+### Balance of the implementation across files
+
+- **Largest file (mid-conversation-switch.e2e.ts)**: 2 tests, 13.3%
+- **Average tests per file**: 2.5
+- **File-to-test ratio**: 6 files / 15 tests = 0.4 (Gemini is 5/15 = 0.33, so this distribution is more spread out)
+
+---
+
+## Database Verification Strategy
+
+Every test uses the following DB assertions:
+
+### conversations table
 
 ```typescript
 const conv = await getAionrsConversationDB(page, conversationId);
 expect(conv.type).toBe('aionrs');
 
-// 验证 extra 字段（需处理 string/object 两种情况）
+// Verify the extra field (must handle both the string and the object case)
 const extra = typeof conv.extra === 'string' ? JSON.parse(conv.extra) : conv.extra;
-expect(['default', 'auto_edit', 'yolo']).toContain(extra.sessionMode); // 放宽断言，兼容用户默认设置
-expect(extra.workspace).toBe(workspacePath); // 或 undefined（无文件夹）
+expect(['default', 'auto_edit', 'yolo']).toContain(extra.sessionMode); // Relaxed assertion, tolerant of the user's default settings
+expect(extra.workspace).toBe(workspacePath); // Or undefined (no folder)
 ```
 
-### messages 表
+### messages table
 
-通过 `waitForAionrsReply()` helper 轮询验证：
+Verified by polling through the `waitForAionrsReply()` helper:
 
-- 等待 AI 回复完成（`conv.status === 'finished'` + content 稳定 2s）
-- 超时时间：150s（aionrs binary 比 Gemini API 快，但需要预留模型切换时间）
-- 字段名：`createdAt`（驼峰，非 `created_at`）
-- 状态字段：aionrs text messages 不设置 `status='finish'`，只依赖 `conv.status`
-
----
-
-## 清理机制验证
-
-所有测试文件在 `afterEach` 中执行清理：
-
-1. **UI 状态清理**：ESC × 5 次
-2. **数据库清理**：调用 `cleanupE2EAionrsConversations(page)`
-   - 使用 `remove-conversation` 批量删除 `E2E-aionrs-` 开头对话
-   - 依赖 FK CASCADE 自动删除关联 messages
-3. **sessionStorage 清理**：清除 `aionrs_initial_message_*` 和 `aionrs_initial_processed_*` keys
-4. **临时文件清理**：各测试在 `finally` 块调用 `tempWorkspace.cleanup()`
-
-**清理失败策略**：按需求文档，清理失败必须 throw（已在 helper 实现）
+- Wait for the AI reply to complete (`conv.status === 'finished'` plus content stable for 2s).
+- Timeout: 150s (the aionrs binary is faster than the Gemini API, but time must be reserved for model switching).
+- Field name: `createdAt` (camelCase, not `created_at`).
+- Status field: aionrs text messages do not set `status='finish'`, so only `conv.status` can be relied on.
 
 ---
 
-## 维护说明
+## Cleanup Mechanism Verification
 
-### 更新触发条件
+Every test file performs cleanup in `afterEach`:
 
-1. 新增测试用例到 `test-cases.zh.md`
-2. 修改测试用例 ID 或标题
-3. 调整测试用例优先级
-4. 重构测试文件结构（拆分/合并文件）
-5. 重写 TC-A-13/14/15 完成后
+1. **UI state cleanup**: ESC pressed 5 times.
+2. **Database cleanup**: call `cleanupE2EAionrsConversations(page)`.
+   - Uses `remove-conversation` to bulk delete conversations whose names start with `E2E-aionrs-`.
+   - Relies on FK CASCADE to delete the associated messages automatically.
+3. **sessionStorage cleanup**: clear the `aionrs_initial_message_*` and `aionrs_initial_processed_*` keys.
+4. **Temporary file cleanup**: each test calls `tempWorkspace.cleanup()` in a `finally` block.
 
-### 更新流程
+**Cleanup failure policy**: per the requirements document, a cleanup failure must throw (already implemented in the helper).
 
-1. 运行命令重新统计截图数：
+---
+
+## Maintenance Notes
+
+### When this document must be updated
+
+1. A new test case is added to `test-cases.md`.
+2. A test case ID or title changes.
+3. A test case priority is adjusted.
+4. The test file structure is refactored (files split or merged).
+5. After the rewrite of TC-A-13/14/15 is complete.
+
+### Update procedure
+
+1. Re-count the screenshots by running:
    ```bash
    for file in tests/e2e/features/conversations/aionrs/*.e2e.ts; do
      echo "$(basename $file): $(grep -c 'takeScreenshot' $file)";
    done
    ```
-2. 更新统计概览中的数字
-3. 更新对应的映射表行
-4. 验证分组小计 = 总数
-5. 提交变更并注明修改原因
+2. Update the numbers in the overview.
+3. Update the corresponding mapping table rows.
+4. Verify that the group subtotals add up to the totals.
+5. Commit the change and state the reason for the update.
 
 ---
 
-## 已知问题
+## Known Issues
 
-### TC-A-04 / TC-A-07 / TC-A-08 / TC-A-09: 运行时切换后消息挂起
+### TC-A-04 / TC-A-07 / TC-A-08 / TC-A-09: messages hang after a runtime switch
 
-**症状**：
-运行时切换 model 或 permission 后，后续消息发送时 aionrs binary 静默挂起，AI 回复永不到达。
+**Symptom**:
+After switching the model or the permission at runtime, the aionrs binary hangs silently when the next message is sent, and the AI reply never arrives.
 
-**复现场景**：
+**Reproduction scenarios**:
 
-1. **TC-A-04/07**：modelA → modelB 切换后发送消息
-2. **TC-A-08**：modelA → modelB → yolo → modelA 连续切换后发送消息
-3. **TC-A-09**：modelA → modelB + yolo 切换后进行多轮对话
+1. **TC-A-04/07**: send a message after switching modelA → modelB.
+2. **TC-A-08**: send a message after the consecutive switches modelA → modelB → yolo → modelA.
+3. **TC-A-09**: run a multi-turn conversation after switching to modelB + yolo.
 
-**典型复现步骤**（TC-A-08）：
+**Typical reproduction steps** (TC-A-08):
 
-1. 创建 aionrs 对话，使用 modelA + default 模式
-2. 发送第一条消息，等待 AI 回复完成（✅ 正常）
-3. 通过 UI 切换：modelA → modelB（模型切换）
-4. 通过 UI 切换：default → yolo（权限切换）
-5. 通过 UI 切换：modelB → modelA（再次模型切换）
-6. 发送第二条消息
-7. ❌ 观察到：`conv.status` 卡在 `running` 或 `pending`，2.7 分钟后超时
+1. Create an aionrs conversation using modelA plus default mode.
+2. Send the first message and wait for the AI reply to complete (✅ works).
+3. Switch through the UI: modelA → modelB (model switch).
+4. Switch through the UI: default → yolo (permission switch).
+5. Switch through the UI: modelB → modelA (another model switch).
+6. Send a second message.
+7. ❌ Observed: `conv.status` is stuck at `running` or `pending` and times out after 2.7 minutes.
 
-**数据库现场**（来自 `/tmp/aionrs-all-v3.log`）：
+**Database state at the time** (from `/tmp/aionrs-all-v3.log`):
 
 ```
 [waitForAionrsReply TIMEOUT] conv.status=pending, msg count=3
@@ -325,32 +325,32 @@ expect(extra.workspace).toBe(workspacePath); // 或 undefined（无文件夹）
 [waitForAionrsReply TIMEOUT]   - pos=right type=text status=null preview="After all switches."
 ```
 
-**已排除**：
+**Ruled out**:
 
-- ✅ 测试脚本正确：第二条消息已通过 `sendAionrsMessage` 送达（DB 有 right message）
-- ✅ Bridge 通信：message 入库说明 bridge → main process 路径正常
-- ✅ 初始模型选择：非切换场景（TC-A-01/02/03）正常完成
+- ✅ The test script is correct: the second message did reach the backend through `sendAionrsMessage` (the DB contains the right-hand message).
+- ✅ Bridge communication: the message reaching the database proves the bridge → main process path works.
+- ✅ Initial model selection: the non-switching scenarios (TC-A-01/02/03) complete normally.
 
-**待排查**：
+**Still to investigate**:
 
-- ❓ aionrs binary 的运行时状态机是否支持 model/permission 切换？
-- ❓ 切换后的 binary 进程是否正确重启/重新初始化？
-- ❓ 环境变量/配置文件在运行时变更后是否生效？
+- ❓ Does the runtime state machine of the aionrs binary support model/permission switching at all?
+- ❓ Is the binary process restarted or re-initialized correctly after a switch?
+- ❓ Do environment variable and config file changes take effect when made at runtime?
 
-**当前处理**：
+**Current handling**:
 
-- TC-A-04 / TC-A-07 / TC-A-08 / TC-A-09 标记为 `test.skip()`，跳过原因记录在测试代码注释中
-- 等待产品侧对 aionrs binary 的运行时切换逻辑进行诊断
-- 重开条件：产品团队确认 binary 支持运行时切换，或提供 workaround 方案
+- TC-A-04 / TC-A-07 / TC-A-08 / TC-A-09 are marked `test.skip()`, with the skip reason recorded in comments in the test code.
+- Waiting for the product side to diagnose the runtime switching logic of the aionrs binary.
+- Reopen conditions: the product team confirms that the binary supports runtime switching, or provides a workaround.
 
-**影响范围**：
+**Impact**:
 
-- P0 核心流程：1 个测试用例（TC-A-04）
-- P1 功能验证：3 个测试用例（TC-A-07, TC-A-08, TC-A-09）
-- 实际用户场景：对话中切换 model 或 permission 后，后续消息可能无响应
+- P0 core flows: 1 test case (TC-A-04).
+- P1 feature checks: 3 test cases (TC-A-07, TC-A-08, TC-A-09).
+- Real user scenario: after switching the model or the permission mid-conversation, subsequent messages may get no response.
 
 ---
 
-**最后更新**：2026-04-22
-**维护者**：chat-aionrs-engineer
-**状态**：✅ P0/P1 实现完整（除 TC-A-08/09 已知问题），✅ P2 已按原定义重写（TC-A-13/14/15）
+**Last updated**: 2026-04-22
+**Maintainer**: chat-aionrs-engineer
+**Status**: ✅ P0/P1 fully implemented (apart from the known TC-A-08/09 issue), ✅ P2 rewritten to match the original definitions (TC-A-13/14/15)

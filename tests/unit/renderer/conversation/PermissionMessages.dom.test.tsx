@@ -171,7 +171,7 @@ describe('permission message adapters', () => {
 
   it('shows the title once and no detail block when no raw command is available', () => {
     // Fallback A (2026-08-04 spec): the old behavior echoed the title into the
-    // detail block ("命令: AskUserQuestion" class of cards). With no raw_input
+    // detail block ("Command: AskUserQuestion" class of cards). With no raw_input
     // there is nothing to show — the title must appear exactly once.
     const message = makeAcpMessage();
     message.content.tool_call.raw_input = undefined;

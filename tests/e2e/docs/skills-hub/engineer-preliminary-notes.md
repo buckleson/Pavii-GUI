@@ -1,127 +1,127 @@
-# SkillsHub E2E 工程师预备笔记
+# SkillsHub E2E Engineer Preliminary Notes
 
-**作者**: skills-engineer-2
-**日期**: 2026-04-21
-**状态**: 预备阶段(门 1)
-
----
-
-## 一、已掌握材料
-
-### 1.1 E2E 基础设施
-
-- ✅ `tests/e2e/README.md` — 架构、launch 模式、编写规范
-- ✅ `tests/e2e/fixtures.ts` — Electron 启动、singleton 管理
-- ✅ `tests/e2e/helpers/` 全部模块:
-  - `bridge.ts` — invokeBridge 协议
-  - `navigation.ts` — navigateTo、goToSettings
-  - `selectors.ts` — CSS 选择器常量
-  - `conversation.ts` — 对话生命周期
-  - `assertions.ts` — 断言辅助
-  - `assistantSettings.ts` — Assistant CRUD helper(参考模板)
-  - `extensions.ts` — 扩展快照
-  - `screenshots.ts` — 手动截图
-
-### 1.2 SkillsHubSettings 源码
-
-- ✅ `src/renderer/pages/settings/SkillsHubSettings.tsx` (765 行)
-- ✅ `src/common/adapter/ipcBridge.ts` — skill 相关 bridge key
+**Author**: skills-engineer-2
+**Date**: 2026-04-21
+**Status**: Preparation phase (gate 1)
 
 ---
 
-## 二、ipcBridge Skill 端点清单
+## 1. Material Already Reviewed
 
-| Bridge Key                        | 参数                       | 返回                                  | 用途                                           |
-| --------------------------------- | -------------------------- | ------------------------------------- | ---------------------------------------------- |
-| `fs.listAvailableSkills`          | 无                         | `SkillInfo[]`                         | 列出已安装 skill(My Skills + Extension Skills) |
-| `fs.listBuiltinAutoSkills`        | 无                         | `{ name, description }[]`             | 列出内置自动注入 skill                         |
-| `fs.detectAndCountExternalSkills` | 无                         | `{ success, data: ExternalSource[] }` | 检测外部 skill 源(Claude Code CLI/etc)         |
-| `fs.getSkillPaths`                | 无                         | `{ userSkillsDir, builtinSkillsDir }` | 获取 skill 存储路径                            |
-| `fs.importSkillWithSymlink`       | `{ skillPath }`            | `IBridgeResponse<{ skillName }>`      | 导入外部 skill(符号链接)                       |
-| `fs.deleteSkill`                  | `{ skillName }`            | `IBridgeResponse`                     | 删除自定义 skill                               |
-| `fs.exportSkillWithSymlink`       | `{ skillPath, targetDir }` | `IBridgeResponse`                     | 导出 skill 到外部目录                          |
-| `fs.addCustomExternalPath`        | `{ name, path }`           | `IBridgeResponse`                     | 添加自定义外部 skill 路径                      |
+### 1.1 E2E infrastructure
 
-**E2E 使用原则**(来自 README):
+- ✅ `tests/e2e/README.md` — architecture, launch modes, authoring conventions
+- ✅ `tests/e2e/fixtures.ts` — Electron startup and singleton management
+- ✅ Every module under `tests/e2e/helpers/`:
+  - `bridge.ts` — the invokeBridge protocol
+  - `navigation.ts` — navigateTo, goToSettings
+  - `selectors.ts` — CSS selector constants
+  - `conversation.ts` — conversation lifecycle
+  - `assertions.ts` — assertion helpers
+  - `assistantSettings.ts` — Assistant CRUD helper (the reference template)
+  - `extensions.ts` — extension snapshots
+  - `screenshots.ts` — manual screenshots
 
-- ✅ **Setup/Assert/Cleanup** — 读取初始状态、验证后端状态、清理测试数据
-- ❌ **Trigger operations** — 操作必须通过 UI 交互触发(不能直接调 bridge 替代点击)
+### 1.2 SkillsHubSettings source
+
+- ✅ `src/renderer/pages/settings/SkillsHubSettings.tsx` (765 lines)
+- ✅ `src/common/adapter/ipcBridge.ts` — the skill-related bridge keys
 
 ---
 
-## 三、UI 现状分析
+## 2. Inventory of ipcBridge Skill Endpoints
 
-### 3.1 关键问题: **整页无 data-testid**
+| Bridge Key                        | Parameters                 | Returns                               | Purpose                                               |
+| --------------------------------- | -------------------------- | ------------------------------------- | ----------------------------------------------------- |
+| `fs.listAvailableSkills`          | none                       | `SkillInfo[]`                         | List installed skills (My Skills + Extension Skills)  |
+| `fs.listBuiltinAutoSkills`        | none                       | `{ name, description }[]`             | List the builtin auto-injected skills                 |
+| `fs.detectAndCountExternalSkills` | none                       | `{ success, data: ExternalSource[] }` | Detect external skill sources (Claude Code CLI, etc.) |
+| `fs.getSkillPaths`                | none                       | `{ userSkillsDir, builtinSkillsDir }` | Get the skill storage paths                           |
+| `fs.importSkillWithSymlink`       | `{ skillPath }`            | `IBridgeResponse<{ skillName }>`      | Import an external skill (via symlink)                |
+| `fs.deleteSkill`                  | `{ skillName }`            | `IBridgeResponse`                     | Delete a custom skill                                 |
+| `fs.exportSkillWithSymlink`       | `{ skillPath, targetDir }` | `IBridgeResponse`                     | Export a skill to an external directory               |
+| `fs.addCustomExternalPath`        | `{ name, path }`           | `IBridgeResponse`                     | Add a custom external skill path                      |
 
-当前 SkillsHubSettings.tsx **完全没有** `data-testid` 属性,所有元素依赖:
+**E2E usage principles** (from the README):
 
-- CSS class 匹配(`.bg-base`、`.rd-12px` 等 UnoCSS 原子类,不稳定)
-- 文本内容匹配(i18n key,双语问题)
-- DOM 结构匹配(易因 layout 调整而失效)
+- ✅ **Setup/Assert/Cleanup** — read the initial state, verify backend state, clean up test data
+- ❌ **Trigger operations** — operations must be triggered through UI interaction (calling the bridge directly is not a substitute for clicking)
 
-### 3.2 需要 data-testid 的元素清单
+---
 
-#### 外部 Skills 区域
+## 3. Current State of the UI
 
-- `[data-testid="external-skills-section"]` — 整个外部 skill 区域
-- `[data-testid="btn-refresh-external"]` — 刷新按钮
-- `[data-testid="input-search-external"]` — 搜索框
-- `[data-testid="external-source-tab-{source}"]` — 每个源标签按钮(Claude Code、Custom 等)
-- `[data-testid="btn-add-custom-source"]` — 添加自定义源按钮
-- `[data-testid="external-skill-card-{skillName}"]` — 每个外部 skill 卡片
-- `[data-testid="btn-import-{skillName}"]` — 单个 skill 导入按钮
-- `[data-testid="btn-import-all"]` — 导入全部按钮
+### 3.1 Key problem: **the entire page has no data-testid**
 
-#### My Skills 区域
+SkillsHubSettings.tsx currently has **no** `data-testid` attributes at all, so every element has to be located by:
 
-- `[data-testid="my-skills-section"]` — 整个我的 skill 区域
-- `[data-testid="btn-refresh-my-skills"]` — 刷新按钮
-- `[data-testid="input-search-my-skills"]` — 搜索框
-- `[data-testid="btn-manual-import"]` — 从文件夹导入按钮
-- `[data-testid="my-skill-card-{skillName}"]` — 每个 skill 卡片
-- `[data-testid="btn-export-{skillName}"]` — 导出按钮(Dropdown trigger)
-- `[data-testid="btn-delete-{skillName}"]` — 删除按钮(仅 custom skill)
-- `[data-testid="skill-badge-{skillName}"]` — Built-in/Custom 标签
+- CSS class matching (`.bg-base`, `.rd-12px` and other UnoCSS atomic classes, which are unstable)
+- Text content matching (i18n keys, with the bilingual problem)
+- DOM structure matching (easily broken by layout changes)
 
-#### Extension Skills 区域
+### 3.2 Inventory of elements that need a data-testid
 
-- `[data-testid="extension-skills-section"]` — 整个扩展 skill 区域
-- `[data-testid="extension-skill-card-{skillName}"]` — 每个扩展 skill 卡片
+#### External Skills area
 
-#### Builtin Auto-injected Skills 区域
+- `[data-testid="external-skills-section"]` — the whole external skills area
+- `[data-testid="btn-refresh-external"]` — refresh button
+- `[data-testid="input-search-external"]` — search box
+- `[data-testid="external-source-tab-{source}"]` — each source tab button (Claude Code, Custom, etc.)
+- `[data-testid="btn-add-custom-source"]` — add custom source button
+- `[data-testid="external-skill-card-{skillName}"]` — each external skill card
+- `[data-testid="btn-import-{skillName}"]` — import button for a single skill
+- `[data-testid="btn-import-all"]` — import-all button
 
-- `[data-testid="auto-skills-section"]` — 整个自动注入 skill 区域
-- `[data-testid="auto-skill-card-{skillName}"]` — 每个自动注入 skill 卡片
+#### My Skills area
+
+- `[data-testid="my-skills-section"]` — the whole My Skills area
+- `[data-testid="btn-refresh-my-skills"]` — refresh button
+- `[data-testid="input-search-my-skills"]` — search box
+- `[data-testid="btn-manual-import"]` — import-from-folder button
+- `[data-testid="my-skill-card-{skillName}"]` — each skill card
+- `[data-testid="btn-export-{skillName}"]` — export button (Dropdown trigger)
+- `[data-testid="btn-delete-{skillName}"]` — delete button (custom skills only)
+- `[data-testid="skill-badge-{skillName}"]` — Built-in/Custom badge
+
+#### Extension Skills area
+
+- `[data-testid="extension-skills-section"]` — the whole extension skills area
+- `[data-testid="extension-skill-card-{skillName}"]` — each extension skill card
+
+#### Builtin Auto-injected Skills area
+
+- `[data-testid="auto-skills-section"]` — the whole auto-injected skills area
+- `[data-testid="auto-skill-card-{skillName}"]` — each auto-injected skill card
 
 #### Modal: Add Custom Path
 
-- `[data-testid="modal-add-custom-path"]` — Modal 容器
-- `[data-testid="input-custom-path-name"]` — 名称输入框
-- `[data-testid="input-custom-path-value"]` — 路径输入框
-- `[data-testid="btn-browse-custom-path"]` — 浏览按钮
-- `[data-testid="btn-confirm-add-path"]` — 确认按钮(Modal okButton)
-- `[data-testid="btn-cancel-add-path"]` — 取消按钮(Modal cancelButton)
+- `[data-testid="modal-add-custom-path"]` — modal container
+- `[data-testid="input-custom-path-name"]` — name input
+- `[data-testid="input-custom-path-value"]` — path input
+- `[data-testid="btn-browse-custom-path"]` — browse button
+- `[data-testid="btn-confirm-add-path"]` — confirm button (modal okButton)
+- `[data-testid="btn-cancel-add-path"]` — cancel button (modal cancelButton)
 
-#### 删除确认 Modal
+#### Delete confirmation modal
 
-- `[data-testid="modal-delete-skill"]` — Modal 容器(wrapClassName)
-- `[data-testid="btn-confirm-delete"]` — 确认删除按钮
+- `[data-testid="modal-delete-skill"]` — modal container (wrapClassName)
+- `[data-testid="btn-confirm-delete"]` — confirm delete button
 
 ---
 
-## 四、现有 Helper 能力与缺口
+## 4. Existing Helper Capabilities and Gaps
 
-### 4.1 可直接复用
+### 4.1 Directly reusable
 
-- ✅ `invokeBridge(page, key, data)` — 调用上述所有 bridge endpoint
-- ✅ `navigateTo(page, hash)` — 需在 `navigation.ts` 的 `ROUTES.settings` 对象增加 `skills: '#/settings/skills'`
-- ✅ `takeScreenshot(page, name)` — 手动截图
+- ✅ `invokeBridge(page, key, data)` — calls all of the bridge endpoints listed above
+- ✅ `navigateTo(page, hash)` — requires adding `skills: '#/settings/skills'` to the `ROUTES.settings` object in `navigation.ts`
+- ✅ `takeScreenshot(page, name)` — manual screenshots
 
-### 4.2 需新建 helper 文件
+### 4.2 New helper file needed
 
-参考 `assistantSettings.ts` 结构,新建 `tests/e2e/helpers/skillsHubSettings.ts`:
+Following the structure of `assistantSettings.ts`, create `tests/e2e/helpers/skillsHubSettings.ts`:
 
-**导航类**
+**Navigation**
 
 ```typescript
 export async function goToSkillsHub(page: Page): Promise<void> {
@@ -129,7 +129,7 @@ export async function goToSkillsHub(page: Page): Promise<void> {
 }
 ```
 
-**断言类**
+**Assertions**
 
 ```typescript
 export async function getMySkills(page: Page): Promise<SkillInfo[]> {
@@ -142,17 +142,17 @@ export async function getExternalSources(page: Page): Promise<ExternalSource[]> 
 }
 ```
 
-**操作类**(基于 data-testid,待源码补充后实现)
+**Operations** (based on data-testid; to be implemented once the source has been updated)
 
 ```typescript
 export async function searchExternalSkills(page: Page, query: string): Promise<void>;
 export async function importSkill(page: Page, skillName: string): Promise<void>;
 export async function deleteSkill(page: Page, skillName: string): Promise<void>;
 export async function exportSkill(page: Page, skillName: string, targetSource: string): Promise<void>;
-// ... 等等
+// ... and so on
 ```
 
-### 4.3 需在 selectors.ts 增加常量
+### 4.3 Constants to add to selectors.ts
 
 ```typescript
 // Skills Hub
@@ -161,81 +161,81 @@ export function skillCardById(skillName: string): string {
 }
 export const BTN_IMPORT_SKILL = '[data-testid^="btn-import-"]';
 export const BTN_DELETE_SKILL = '[data-testid^="btn-delete-"]';
-// ... 等等
+// ... and so on
 ```
 
 ---
 
-## 五、E2E 可测试性待补充项
+## 5. Outstanding E2E Testability Items
 
-### 5.1 阻塞项(门 1 必须解决)
+### 5.1 Blockers (must be resolved for gate 1)
 
-- ❌ **所有交互元素无 data-testid** — 无法稳定定位元素
-- ❌ **列表项无唯一标识** — 无法精准操作特定 skill(依赖文本匹配易受 i18n 影响)
-- ❌ **Modal 无 testid** — 无法区分不同 Modal(删除 vs 添加路径)
+- ❌ **No data-testid on any interactive element** — elements cannot be located reliably
+- ❌ **List items have no unique identifier** — a specific skill cannot be targeted precisely (text matching is at the mercy of i18n)
+- ❌ **Modals have no testid** — different modals cannot be told apart (delete vs. add path)
 
-### 5.2 数据构造方案
+### 5.2 Test data construction plan
 
-**前置条件构造**:
+**Building the preconditions**:
 
-1. **外部 skill 源存在** — 需测试环境预置 Claude Code CLI skill 目录,或通过 `fs.addCustomExternalPath` 动态添加
-2. **My Skills 有数据** — 测试前通过 `fs.importSkillWithSymlink` 导入测试 skill,测试后通过 `fs.deleteSkill` 清理
-3. **Extension Skills 存在** — 依赖 E2E 的 `AIONUI_EXTENSIONS_PATH` 环境变量指向 `examples/` 目录
+1. **An external skill source exists** — either preinstall a Claude Code CLI skill directory in the test environment, or add one dynamically through `fs.addCustomExternalPath`
+2. **My Skills contains data** — import test skills through `fs.importSkillWithSymlink` before the test and clean them up afterwards with `fs.deleteSkill`
+3. **Extension Skills exist** — depends on the E2E `AIONUI_EXTENSIONS_PATH` environment variable pointing at the `examples/` directory
 
-**数据隔离**:
+**Data isolation**:
 
-- 所有测试 skill 名称前缀 `E2E-Test-`,清理时批量删除
-- 自定义外部路径使用临时目录(`fs.mkdtempSync`),测试后清理
+- Every test skill name is prefixed with `E2E-Test-` so they can be deleted in bulk during cleanup
+- Custom external paths use a temporary directory (`fs.mkdtempSync`) that is removed after the test
 
-### 5.3 不可直接 E2E 的需求及替代方案
+### 5.3 Requirements that cannot be tested directly in E2E, and their alternatives
 
-| 需求                      | 原因               | 替代方案                                             |
-| ------------------------- | ------------------ | ---------------------------------------------------- |
-| 导入后 skill 文件内容正确 | E2E 不读文件系统   | 导入后 `invokeBridge('fs.readSkillInfo')` 验证元信息 |
-| 符号链接创建成功          | E2E 不验证 symlink | 导入后 bridge 查路径包含源路径关键字                 |
-| 删除操作不影响源文件      | E2E 不访问外部路径 | 仅验证 UI 消失 + bridge 确认 skill 列表不含该项      |
-| 导出超时处理              | 超时难复现         | 单测覆盖,E2E 仅验证正常流程                          |
-
----
-
-## 六、对 Analyst 的输入建议
-
-### 6.1 需求文档应单独列出"测试依赖项"章节
-
-包含:
-
-- 所有需要补充的 data-testid 清单(见"三、3.2"节)
-- 前置数据构造方案(见"五、5.2"节)
-- 测试环境配置要求(外部 skill 源路径、Extension 路径)
-
-### 6.2 每条需求需标注"可测方式"
-
-- **UI 交互**: 点击、输入、断言 DOM 可见性
-- **Bridge 断言**: 操作后调 `invokeBridge` 验证后端状态
-- **截图验证**: 复杂 UI 状态(搜索结果、筛选后列表)
-
-### 6.3 边界条件需明确测试策略
-
-- 空列表状态(无外部源、无 My Skills)
-- 搜索无结果
-- 删除最后一个 custom skill
-- 导入已存在 skill(冲突处理)
-- Modal 取消操作
+| Requirement                                  | Reason                             | Alternative                                                                                           |
+| -------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Skill file contents are correct after import | E2E does not read the file system  | After importing, verify the metadata with `invokeBridge('fs.readSkillInfo')`                          |
+| The symlink was created successfully         | E2E does not verify symlinks       | After importing, query the path through the bridge and check that it contains the source path keyword |
+| Deleting does not affect the source files    | E2E does not access external paths | Only verify that the UI entry disappears and that the bridge no longer lists the skill                |
+| Export timeout handling                      | The timeout is hard to reproduce   | Cover it in unit tests; E2E only verifies the happy path                                              |
 
 ---
 
-## 七、待 Analyst 通知后执行 Review
+## 6. Suggested Input for the Analyst
 
-收到 `requirements.zh.md` 初稿通知后,将从以下维度 review:
+### 6.1 The requirements document should have a dedicated "test dependencies" chapter
 
-1. **完整性** — 是否覆盖所有 UI 区域(4 个 section + 2 个 Modal)
-2. **可测性** — 每条需求能否通过 UI 交互 + bridge 断言验证
-3. **数据依赖** — 前置条件是否可构造、清理策略是否明确
-4. **testid 充足性** — 对照"三、3.2"节检查遗漏项
-5. **替代方案** — 不可测项是否有 bridge 断言或单测兜底
+It should contain:
 
-Review 意见追加到 `tests/e2e/docs/skills-hub/discussion-log.zh.md`,通过 SendMessage 通知 skills-analyst-2。
+- The full list of data-testid attributes that need to be added (see section 3.2)
+- The plan for building the precondition data (see section 5.2)
+- The test environment configuration requirements (external skill source path, extension path)
+
+### 6.2 Every requirement needs a "how it is tested" annotation
+
+- **UI interaction**: clicking, typing, asserting DOM visibility
+- **Bridge assertion**: call `invokeBridge` after the operation to verify backend state
+- **Screenshot verification**: for complex UI states (search results, filtered lists)
+
+### 6.3 Boundary conditions need an explicit test strategy
+
+- Empty list states (no external source, no My Skills)
+- Search with no results
+- Deleting the last remaining custom skill
+- Importing a skill that already exists (conflict handling)
+- Cancelling a modal
 
 ---
 
-**状态**: ✅ 预备完成,等待 analyst 通知初稿就位
+## 7. Review to Run Once the Analyst Reports In
+
+Once notified that the first draft of `requirements.md` is ready, the review will cover:
+
+1. **Completeness** — are all UI areas covered (4 sections + 2 modals)?
+2. **Testability** — can every requirement be verified through UI interaction plus bridge assertions?
+3. **Data dependencies** — can the preconditions be constructed, and is the cleanup strategy explicit?
+4. **testid sufficiency** — check for omissions against section 3.2
+5. **Alternatives** — do the untestable items have a bridge assertion or unit test as a fallback?
+
+Review comments are appended to `tests/e2e/docs/skills-hub/discussion-log.md`, with skills-analyst-2 notified via SendMessage.
+
+---
+
+**Status**: ✅ Preparation complete, waiting for the analyst to report that the first draft is in place

@@ -176,8 +176,8 @@ test.describe('ACP multimodal prompt', () => {
 
       // 4. The reply must describe the pixels.
       const reply = await waitForAiReply(page, 300_000);
-      expect(reply.toLowerCase()).toMatch(/red|红/);
-      expect(reply.toLowerCase()).toMatch(/square|正方形|方块/);
+      expect(reply.toLowerCase()).toMatch(/red/);
+      expect(reply.toLowerCase()).toMatch(/square/);
     });
   }
 });

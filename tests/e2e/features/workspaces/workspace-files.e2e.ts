@@ -71,7 +71,7 @@ test.describe('Workspace Files — UI panel', () => {
       const menu = page.locator('[data-testid="team-create-workspace-menu"]');
       if (await menu.isVisible({ timeout: 3_000 }).catch(() => false)) {
         const chooseDifferent = menu
-          .locator('text=/Choose a different folder|选择其他文件夹/i')
+          .locator('text=/Choose a different folder/i')
           .or(menu.locator('.cursor-pointer').last());
         await chooseDifferent.first().click();
       }

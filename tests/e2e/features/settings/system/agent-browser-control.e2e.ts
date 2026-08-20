@@ -17,7 +17,7 @@ import { goToSettings, waitForSettle } from '../../../helpers/navigation';
 function browserSection(page: import('@playwright/test').Page) {
   return page
     .locator('div.bg-2')
-    .filter({ hasText: /应用內瀏覽器|应用内浏览器|In-app browser/i })
+    .filter({ hasText: /In-app browser/i })
     .first();
 }
 
@@ -25,7 +25,7 @@ function browserSection(page: import('@playwright/test').Page) {
 function agentControlRow(page: import('@playwright/test').Page) {
   return browserSection(page)
     .locator('div.flex.items-center.justify-between')
-    .filter({ hasText: /允許 Agent|允许 Agent|agent use the in-app browser/i })
+    .filter({ hasText: /agent use the in-app browser/i })
     .first();
 }
 

@@ -80,11 +80,11 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { defaultValue?: string }) =>
       key === 'agentMode.permission'
-        ? '权限'
+        ? 'Permission'
         : key === 'agentMode.default'
-          ? '默认'
+          ? 'Default'
           : key === 'agentMode.bypassPermissions'
-            ? '全自动'
+            ? 'Full Auto'
             : (options?.defaultValue ?? key),
   }),
 }));
@@ -120,8 +120,8 @@ describe('AgentModeSelector', () => {
         conversation_id='conv-1'
         compact
         initialMode='bypassPermissions'
-        modeLabelFormatter={(mode) => (mode.value === 'default' ? '默认' : '全自动')}
-        compactLabelPrefix='权限'
+        modeLabelFormatter={(mode) => (mode.value === 'default' ? 'Default' : 'Full Auto')}
+        compactLabelPrefix='Permission'
       />
     );
 
@@ -133,13 +133,13 @@ describe('AgentModeSelector', () => {
         conversation_id='conv-1'
         compact
         initialMode='bypassPermissions'
-        modeLabelFormatter={(mode) => (mode.value === 'default' ? '默认' : '全自动')}
-        compactLabelPrefix='权限'
+        modeLabelFormatter={(mode) => (mode.value === 'default' ? 'Default' : 'Full Auto')}
+        compactLabelPrefix='Permission'
       />
     );
 
     await waitFor(() => expect(screen.getByTestId('mode-selector')).toHaveAttribute('data-current-mode', 'default'));
-    expect(screen.getByText('权限 · 默认')).toBeInTheDocument();
+    expect(screen.getByText('Permission · Default')).toBeInTheDocument();
   });
 
   it('keeps compact mode selector hidden while runtime mode is initializing', () => {
@@ -158,8 +158,8 @@ describe('AgentModeSelector', () => {
         backend='claude'
         conversation_id='conv-1'
         compact
-        modeLabelFormatter={(mode) => (mode.value === 'default' ? '默认' : '全自动')}
-        compactLabelPrefix='权限'
+        modeLabelFormatter={(mode) => (mode.value === 'default' ? 'Default' : 'Full Auto')}
+        compactLabelPrefix='Permission'
       />
     );
 
@@ -183,8 +183,8 @@ describe('AgentModeSelector', () => {
         backend='claude'
         conversation_id='conv-1'
         compact
-        modeLabelFormatter={(mode) => (mode.value === 'default' ? '默认' : '全自动')}
-        compactLabelPrefix='权限'
+        modeLabelFormatter={(mode) => (mode.value === 'default' ? 'Default' : 'Full Auto')}
+        compactLabelPrefix='Permission'
       />
     );
 
@@ -192,7 +192,7 @@ describe('AgentModeSelector', () => {
     const loading = screen.getByTestId('runtime-selector-loading-indicator');
 
     expect(button).not.toHaveAttribute('loading');
-    expect(button).toHaveTextContent('权限 · 默认');
+    expect(button).toHaveTextContent('Permission · Default');
     expect(loading.parentElement?.lastElementChild).toBe(loading);
   });
 
@@ -230,7 +230,7 @@ describe('AgentModeSelector', () => {
   it('falls back to the raw mode value when the current value matches no option', async () => {
     // Regression: an out-of-catalog current value (e.g. backend mode-vocabulary
     // drift such as codex "agent-full-access" vs catalog "full-access") used to
-    // render an empty label — the compact pill showed a bare "权限 · ".
+    // render an empty label — the compact pill showed a bare "Permission · ".
     useAcpConfigOptionsMock.mockImplementation(() => ({
       setStatus: { state: 'idle' },
       isLoading: false,
@@ -250,12 +250,12 @@ describe('AgentModeSelector', () => {
       setConfigOption: vi.fn(),
     }));
 
-    render(<AgentModeSelector backend='codex' conversation_id='conv-1' compact compactLabelPrefix='权限' />);
+    render(<AgentModeSelector backend='codex' conversation_id='conv-1' compact compactLabelPrefix='Permission' />);
 
     await waitFor(() =>
       expect(screen.getByTestId('mode-selector')).toHaveAttribute('data-current-mode', 'agent-full-access')
     );
-    expect(screen.getByTestId('agent-mode-selector-codex')).toHaveTextContent('权限 · agent-full-access');
+    expect(screen.getByTestId('agent-mode-selector-codex')).toHaveTextContent('Permission · agent-full-access');
   });
 
   it('shows runtime mode descriptions in option tooltips', () => {

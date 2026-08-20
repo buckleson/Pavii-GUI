@@ -379,7 +379,7 @@ async function sendGuidMessageCapturingCreateRequest(
 async function toggleGuidSkill(page: Page, skillName: string): Promise<void> {
   await openGuidPlusDropdown(page);
   await page
-    .getByText(/Skills \(\d+\/\d+\)|技能 \(\d+\/\d+\)/)
+    .getByText(/Skills \(\d+\/\d+\)/)
     .first()
     .hover();
   const checkbox = page.locator('.arco-checkbox').filter({ hasText: skillName }).first();

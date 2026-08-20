@@ -213,7 +213,7 @@ describe('useGuidAssistantSelection', () => {
       {
         id: 'custom-1781258588874-26ad',
         source: 'user',
-        name: '文件规划助手 (Copy)',
+        name: 'File Planning Assistant (Copy)',
         name_i18n: {},
         description_i18n: {},
         enabled: true,

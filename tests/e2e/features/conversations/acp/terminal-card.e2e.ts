@@ -165,7 +165,7 @@ test.describe('ACP client-hosted terminal', () => {
     await expect(
       page
         .getByTestId('terminal-card-status')
-        .filter({ hasText: /Stopped|已停止/ })
+        .filter({ hasText: /Stopped/ })
         .first()
     ).toBeVisible({
       timeout: 30_000,

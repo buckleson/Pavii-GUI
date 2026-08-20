@@ -14,7 +14,7 @@ import { createTeam, deleteTeam, navigateTo, cleanupTeamsByName, TEAM_SUPPORTED_
 
 const SUGGESTION_KEYS = ['debate', 'interview', 'expert_review'] as const;
 const SUGGESTION_CLICK_KEY = 'debate';
-const EXPECTED_DEBATE_VALUE = /Organize a debate|组织.*辩论/;
+const EXPECTED_DEBATE_VALUE = /Organize a debate/;
 
 for (const leaderType of TEAM_SUPPORTED_BACKENDS) {
   const teamName = `E2E Empty State (${leaderType})`;
@@ -40,13 +40,13 @@ for (const leaderType of TEAM_SUPPORTED_BACKENDS) {
     await page.waitForURL(new RegExp(`/team/${teamId}`), { timeout: 10000 });
 
     // Scope every assertion to the empty-state container. Without this, a leftover
-    // sidebar conversation with the same name ("组织一场辩论赛…") will match
+    // sidebar conversation with the same name ("Organize a debate...") will match
     // text-based locators first and the click will navigate away from the team.
     const emptyState = page.locator('[data-testid="team-chat-empty-state"]').first();
     await expect(emptyState).toBeVisible({ timeout: 15000 });
 
     await expect(emptyState.locator('[data-testid="team-chat-empty-state-subtitle"]')).toHaveText(
-      /Describe your goal.*team working|描述你的目标/
+      /Describe your goal.*team working/
     );
 
     await page.screenshot({ path: `tests/e2e/results/team-empty-${leaderType}-greeting.png` });
@@ -63,9 +63,9 @@ for (const leaderType of TEAM_SUPPORTED_BACKENDS) {
     await suggestion.scrollIntoViewIfNeeded();
     await suggestion.click();
 
-    // The chat send-box textarea placeholder starts with "Send message to" / "发送消息到".
+    // The chat send-box textarea placeholder starts with "Send message to".
     // We scope via this placeholder so the sidebar search textarea never matches first.
-    const chatInput = page.locator('textarea[placeholder^="Send message"], textarea[placeholder^="发送消息"]').first();
+    const chatInput = page.locator('textarea[placeholder^="Send message"]').first();
     await expect(chatInput).toBeVisible({ timeout: 5000 });
     await page.screenshot({ path: `tests/e2e/results/team-empty-${leaderType}-after-click.png` });
     await expect(chatInput).toHaveValue(EXPECTED_DEBATE_VALUE, { timeout: 5000 });

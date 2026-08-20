@@ -19,7 +19,7 @@ const BACKEND_UI_PATTERN: Record<string, RegExp> = {
 test.describe('Team Create', () => {
   test('sidebar shows team section with create button', async ({ page }) => {
     // Wait for sidebar to render — no fixed timeout, listen for element
-    const teamSection = page.locator('text=Teams').or(page.locator('text=团队'));
+    const teamSection = page.locator('text=Teams');
     await expect(teamSection.first()).toBeVisible({ timeout: 15000 });
 
     // Screenshot: initial state
@@ -51,7 +51,7 @@ test.describe('Team Create', () => {
 
     // Verify assistant leader choices render, or the empty-state appears.
     const leaderOptions = modal.locator('[data-testid^="team-create-agent-option-"]');
-    const noAssistantsMsg = page.locator('.arco-modal').getByText(/No supported assistants available|没有支持的助手/i);
+    const noAssistantsMsg = page.locator('.arco-modal').getByText(/No supported assistants available/i);
     const hasOptions = await leaderOptions
       .first()
       .isVisible({ timeout: 3000 })

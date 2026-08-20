@@ -78,7 +78,7 @@ test.describe('Assistant Settings Edge Cases (P2)', () => {
     await takeScreenshot(page, 'assistants/p2-2/03-search-applied.png');
 
     // Switch to Disabled tab (if exists)
-    const disabledTab = page.locator('div[role="tab"]').filter({ hasText: /Disabled|禁用/i });
+    const disabledTab = page.locator('div[role="tab"]').filter({ hasText: /Disabled/i });
 
     if (await disabledTab.isVisible().catch(() => false)) {
       await disabledTab.click();
@@ -87,13 +87,13 @@ test.describe('Assistant Settings Edge Cases (P2)', () => {
       await takeScreenshot(page, 'assistants/p2-2/04-disabled-tab-selected.png');
 
       // Verify empty state message (search + tab filter)
-      const emptyMessage = page.locator('text=/No assistants match|没有匹配/i');
+      const emptyMessage = page.locator('text=/No assistants match/i');
       await expect(emptyMessage).toBeVisible({ timeout: 3000 });
 
       await takeScreenshot(page, 'assistants/p2-2/05-empty-state-both-filters.png');
     } else {
       // No Disabled tab, verify search empty state only
-      const emptyMessage = page.locator('text=/No assistants match|没有匹配/i');
+      const emptyMessage = page.locator('text=/No assistants match/i');
       await expect(emptyMessage).toBeVisible({ timeout: 3000 });
 
       await takeScreenshot(page, 'assistants/p2-2/05-empty-state-search-only.png');
@@ -135,14 +135,11 @@ test.describe('Assistant Settings Edge Cases (P2)', () => {
     const addSkillsBtn = drawer.locator('[data-testid="btn-add-skills"]');
     if (await addSkillsBtn.isVisible().catch(() => false)) {
       await addSkillsBtn.click();
-      const modal = page.locator('.arco-modal').filter({ hasText: /Add Skills|添加技能/i });
+      const modal = page.locator('.arco-modal').filter({ hasText: /Add Skills/i });
       await expect(modal).toBeVisible({ timeout: 5000 });
 
       // Find and add the test skill
-      const addBtns = modal
-        .locator('button')
-        .filter({ hasText: /Add|添加/i })
-        .filter({ hasNotText: /Added|已添加/i });
+      const addBtns = modal.locator('button').filter({ hasText: /Add/i }).filter({ hasNotText: /Added/i });
       if ((await addBtns.count()) > 0) {
         await addBtns.first().click();
         await page.waitForTimeout(500);
@@ -212,7 +209,7 @@ test.describe('Assistant Settings Edge Cases (P2)', () => {
     await takeScreenshot(page, 'assistants/p2-4/02-drawer-opened.png');
 
     await page.locator('[data-testid="btn-add-skills"]').click();
-    const skillsModal = page.locator('.arco-modal').filter({ hasText: /Add Skills|添加技能/i });
+    const skillsModal = page.locator('.arco-modal').filter({ hasText: /Add Skills/i });
     await expect(skillsModal).toBeVisible({ timeout: 5000 });
     await takeScreenshot(page, 'assistants/p2-4/03-skills-modal-opened.png');
 
@@ -237,7 +234,7 @@ test.describe('Assistant Settings Edge Cases (P2)', () => {
     await addPathBtn.click();
     await page.waitForTimeout(500);
 
-    const pathModal = page.locator('.arco-modal').filter({ hasText: /Add Custom|添加自定义|Add Path|新增/i });
+    const pathModal = page.locator('.arco-modal').filter({ hasText: /Add Custom|Add Path/i });
     const pathModalVisible = await pathModal.isVisible().catch(() => false);
 
     if (!pathModalVisible) {
@@ -300,7 +297,7 @@ test.describe('Assistant Settings Edge Cases (P2)', () => {
     await expect(drawer).toBeVisible({ timeout: 5000 });
 
     await page.locator('[data-testid="btn-add-skills"]').click();
-    const skillsModal = page.locator('.arco-modal').filter({ hasText: /Add Skills|添加技能/i });
+    const skillsModal = page.locator('.arco-modal').filter({ hasText: /Add Skills/i });
     await expect(skillsModal).toBeVisible({ timeout: 5000 });
 
     // Look for add path button
@@ -323,7 +320,7 @@ test.describe('Assistant Settings Edge Cases (P2)', () => {
     await addPathBtn.click();
     await page.waitForTimeout(500);
 
-    const pathModal = page.locator('.arco-modal').filter({ hasText: /Add Custom|添加自定义|Add Path|新增/i });
+    const pathModal = page.locator('.arco-modal').filter({ hasText: /Add Custom|Add Path/i });
     const pathModalVisible = await pathModal.isVisible().catch(() => false);
 
     if (!pathModalVisible) {

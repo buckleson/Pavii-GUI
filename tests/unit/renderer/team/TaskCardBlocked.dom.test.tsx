@@ -67,7 +67,7 @@ describe('TaskCard blocked_by label', () => {
   });
 
   it('exposes the full label via title so long names are not lost when truncated', () => {
-    const long = 'Delete team/poems files (小码) and confirm nothing else changed under the directory';
+    const long = 'Delete team/poems files (drafts) and confirm nothing else changed under the directory';
     renderWith((id) => (id === 'k1' ? { subject: long, status: 'completed' } : undefined));
     const labelEl = screen.getByText(new RegExp('Delete team/poems files'));
     expect(labelEl).toHaveAttribute('title');

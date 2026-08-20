@@ -33,7 +33,7 @@ function selectOptions(page: import('@playwright/test').Page) {
 async function findBuiltinAssistantId(page: import('@playwright/test').Page): Promise<string | null> {
   for (const id of await getVisibleAssistantIds(page)) {
     const cardText = await page.locator(`[data-testid="assistant-card-${id}"]`).textContent();
-    if (cardText?.match(/Official|官方/)) {
+    if (cardText?.match(/Official/)) {
       return id;
     }
   }
@@ -51,13 +51,13 @@ test.describe('Assistant Settings Defaults', () => {
     await fillAssistantName(page, `Defaults State ${Date.now()}`);
 
     await expect(page.locator('[data-testid="select-assistant-default-model"]')).toContainText(
-      /Remember last used automatically|自动记住上次/
+      /Remember last used automatically/
     );
     await expect(page.locator('[data-testid="select-assistant-default-permission"]')).toContainText(
-      /Remember last used automatically|自动记住上次/
+      /Remember last used automatically/
     );
     await expect(page.locator('[data-testid="select-assistant-default-mcp"]')).toContainText(
-      /Remember last used automatically|自动记住上次/
+      /Remember last used automatically/
     );
 
     await closeAssistantEditor(page);
@@ -71,7 +71,7 @@ test.describe('Assistant Settings Defaults', () => {
     await openSelect(page, 'select-assistant-default-model');
     await expect(
       selectOptions(page)
-        .filter({ hasText: /Remember last used automatically|自动记住上次/i })
+        .filter({ hasText: /Remember last used automatically/i })
         .first()
     ).toBeVisible();
     await page.keyboard.press('Escape');
@@ -79,7 +79,7 @@ test.describe('Assistant Settings Defaults', () => {
     await openSelect(page, 'select-assistant-default-permission');
     await expect(
       selectOptions(page)
-        .filter({ hasText: /Remember last used automatically|自动记住上次/i })
+        .filter({ hasText: /Remember last used automatically/i })
         .first()
     ).toBeVisible();
     await page.keyboard.press('Escape');
@@ -127,7 +127,7 @@ test.describe('Assistant Settings Defaults', () => {
     }
     await modelOptions.nth(2).click();
     await expect(page.locator('[data-testid="select-assistant-default-model"]')).not.toContainText(
-      /Remember last used automatically|自动记住上次/
+      /Remember last used automatically/
     );
 
     await openSelect(page, 'select-assistant-default-permission');
@@ -139,7 +139,7 @@ test.describe('Assistant Settings Defaults', () => {
     }
     await permissionOptions.nth(2).click();
     await expect(page.locator('[data-testid="select-assistant-default-permission"]')).not.toContainText(
-      /Remember last used automatically|自动记住上次/
+      /Remember last used automatically/
     );
 
     await openSelect(page, 'select-assistant-agent');
@@ -162,10 +162,10 @@ test.describe('Assistant Settings Defaults', () => {
     }
 
     await expect(page.locator('[data-testid="select-assistant-default-model"]')).toContainText(
-      /Remember last used automatically|自动记住上次/
+      /Remember last used automatically/
     );
     await expect(page.locator('[data-testid="select-assistant-default-permission"]')).toContainText(
-      /Remember last used automatically|自动记住上次/
+      /Remember last used automatically/
     );
 
     await closeAssistantEditor(page);

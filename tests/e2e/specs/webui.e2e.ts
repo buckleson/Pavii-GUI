@@ -21,7 +21,7 @@ test.describe('WebUI Service', () => {
 
   test('webui settings page renders', async ({ page }) => {
     await goToWebui(page);
-    await expectBodyContainsAny(page, ['WebUI', 'Web UI', 'Enable', '启用', 'webui']);
+    await expectBodyContainsAny(page, ['WebUI', 'Web UI', 'Enable', 'webui']);
   });
 
   // ── Enable toggle ──────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ test.describe('WebUI Service', () => {
     // In test environment, the service may not be started, so just verify
     // the WebUI page renders properly with relevant content.
     const hasUrl = body?.includes('localhost');
-    const hasWebUIContent = body?.includes('WebUI') || body?.includes('Enable') || body?.includes('启用');
+    const hasWebUIContent = body?.includes('WebUI') || body?.includes('Enable');
     expect(hasUrl || hasWebUIContent).toBeTruthy();
   });
 
@@ -89,9 +89,7 @@ test.describe('WebUI Service', () => {
         await page.waitForFunction(
           () => {
             const text = document.body.textContent || '';
-            return (
-              text.includes('✓') || text.includes('Running') || text.includes('运行中') || text.includes('running')
-            );
+            return text.includes('✓') || text.includes('Running') || text.includes('running');
           },
           { timeout: 5000 }
         );
@@ -100,8 +98,7 @@ test.describe('WebUI Service', () => {
       }
 
       const body = await page.locator('body').textContent();
-      const isRunning =
-        body?.includes('✓') || body?.includes('Running') || body?.includes('运行中') || body?.includes('running');
+      const isRunning = body?.includes('✓') || body?.includes('Running') || body?.includes('running');
 
       // If it started, toggle off to clean up
       if (isRunning) {

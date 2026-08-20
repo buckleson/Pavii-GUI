@@ -111,7 +111,7 @@ vi.mock('@renderer/pages/cron/ScheduledTasksPage/resolveCronAgentConfig', () => 
   resolveCronAgentConfig: vi.fn(() => ({
     agent_config: {
       assistant_id: 'assistant-1',
-      name: '问好助手',
+      name: 'Greeting Assistant',
       mode: 'default',
     },
   })),
@@ -238,7 +238,7 @@ describe('CreateTaskDialog', () => {
   it('shows the current task assistant by default in edit mode', async () => {
     render(<CreateTaskDialog visible onClose={() => {}} editJob={job()} />);
 
-    expect(await screen.findByText('问好助手')).toBeInTheDocument();
+    expect(await screen.findByText('Greeting Assistant')).toBeInTheDocument();
   });
 
   it('does not infer assistant identity from legacy backend fields after migration ownership moved server-side', async () => {
@@ -249,7 +249,7 @@ describe('CreateTaskDialog', () => {
     expect(await screen.findByDisplayValue('original prompt')).toBeInTheDocument();
     expect(screen.queryByText('代码助手')).not.toBeInTheDocument();
     expect(screen.queryByText('Codex')).not.toBeInTheDocument();
-    expect(screen.queryByText('问好助手')).not.toBeInTheDocument();
+    expect(screen.queryByText('Greeting Assistant')).not.toBeInTheDocument();
   });
 
   it('locks assistant selection when editing an ongoing conversation task', async () => {
@@ -381,8 +381,8 @@ describe('CreateTaskDialog', () => {
 function job(): ICronJob {
   return {
     id: 'job-1',
-    name: '问好',
-    description: '描述',
+    name: 'Greeting',
+    description: 'Description',
     enabled: true,
     schedule: {
       kind: 'cron',
@@ -399,7 +399,7 @@ function job(): ICronJob {
       agent_config: {
         assistant_id: 'assistant-1',
         backend: 'codex',
-        name: '问好助手',
+        name: 'Greeting Assistant',
         preset_agent_type: 'codex',
         is_preset: true,
       },
@@ -464,7 +464,7 @@ function assistants(): Assistant[] {
     {
       id: 'assistant-1',
       source: 'user',
-      name: '问好助手',
+      name: 'Greeting Assistant',
       name_i18n: {},
       description_i18n: {},
       avatar: '🤖',

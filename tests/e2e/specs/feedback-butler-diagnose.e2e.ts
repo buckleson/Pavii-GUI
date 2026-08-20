@@ -76,9 +76,9 @@ test('error bubble butler chip pre-fills a diagnosis prompt in the home chat', a
     );
 
     // The error bubble should surface both chips.
-    const butlerChip = page.locator('button:has-text("找 Your Pavii 排查"), button:has-text("Ask Your Pavii")').first();
+    const butlerChip = page.locator('button:has-text("Ask Your Pavii")').first();
     await expect(butlerChip).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('button:has-text("反馈问题"), button:has-text("Report Issue")').first()).toBeVisible();
+    await expect(page.locator('button:has-text("Report Issue")').first()).toBeVisible();
 
     await butlerChip.click();
 

@@ -46,20 +46,24 @@ test.describe('System Preferences', () => {
     const settingsTextEn = await page.locator('body').textContent();
     expect(settingsTextEn).toContain('Language');
 
+    // English is the only option offered.
+    //
+    // This half of the test used to switch to 简体中文 and assert the UI came
+    // back in Chinese. The app ships English only now: the picker is built from
+    // SUPPORTED_LANGUAGES, which i18n-config.json defines as ["en-US"], and
+    // normalizeLanguageCode collapses every other code -- including one
+    // persisted by an older multilingual build -- to en-US. Switching is no
+    // longer a behaviour to cover, so the assertion is inverted into the
+    // guarantee that replaced it.
     await selectTrigger.click();
 
-    const chineseOption = page.locator('.arco-select-option:has-text("简体中文")');
-    await expect(chineseOption).toBeVisible();
-    await chineseOption.click();
-    await page.waitForFunction(() => document.body.textContent?.includes('语言'), { timeout: 5_000 });
+    const options = page.locator('.arco-select-option');
+    await expect(options).toHaveCount(1);
+    await expect(options.first()).toHaveText(/English/);
 
-    await takeScreenshot(page, 'system-preferences/tc-pref-01/05-restored-chinese.png');
+    await takeScreenshot(page, 'system-preferences/tc-pref-01/05-english-only.png');
 
-    const restoredText = await selectTrigger.textContent();
-    expect(restoredText).toContain('简体中文');
-
-    const settingsTextZh = await page.locator('body').textContent();
-    expect(settingsTextZh).toContain('语言');
+    await page.keyboard.press('Escape');
   });
 
   // ──────────────────────────────────────────────────────────────────────────

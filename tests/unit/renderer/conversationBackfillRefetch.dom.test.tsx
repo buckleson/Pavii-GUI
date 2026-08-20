@@ -5,7 +5,7 @@
  */
 
 /**
- * Guards the project_id backfill path (卡点①, responsive / no-poll): opening a
+ * Guards the project_id backfill path (blocker ①, responsive / no-poll): opening a
  * workspace conversation lazily backfills its project_id server-side; the first
  * GET can land on the pre-backfill row (project_id null). The backend emits one
  * `conversation.listChanged` (action 'updated') when the backfill lands; the

@@ -42,7 +42,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { shortcut?: string }) =>
       key === 'conversation.chat.speech.recordTooltipWithShortcut'
-        ? '语音输入 cmd+M'
+        ? 'Voice input cmd+M'
         : options?.shortcut
           ? `${key}:${options.shortcut}`
           : key,

@@ -2,9 +2,9 @@
  * Aionrs Chat E2E Tests - Edge Cases (P2 Priority)
  *
  * Test Cases Covered:
- * - TC-A-13: Binary不可达时跳过
- * - TC-A-14: 超大文件上传限制
- * - TC-A-15: 关联不存在的文件夹
+ * - TC-A-13: Skip when the binary is unreachable
+ * - TC-A-14: Oversized file upload limit
+ * - TC-A-15: Associate a folder that does not exist
  *
  * Prerequisites:
  * - aionrs binary available (via ipcBridge.fs.findAionrsBinary)
@@ -64,7 +64,7 @@ test.describe('Aionrs Chat - Edge Cases (P2)', () => {
   });
 
   // ============================================================================
-  // TC-A-13: Binary不可达时跳过 (Binary unreachable skip)
+  // TC-A-13: Skip when the binary is unreachable
   // ============================================================================
 
   test('TC-A-13: should skip when aionrs binary is not reachable', async ({ page }) => {
@@ -82,7 +82,7 @@ test.describe('Aionrs Chat - Edge Cases (P2)', () => {
   });
 
   // ============================================================================
-  // TC-A-14: 超大文件上传限制 (Large file upload limit - 100MB)
+  // TC-A-14: Oversized file upload limit (100MB)
   // ============================================================================
 
   test('TC-A-14: should show error when uploading file exceeding 100MB limit', async ({ page }) => {
@@ -150,7 +150,7 @@ test.describe('Aionrs Chat - Edge Cases (P2)', () => {
   });
 
   // ============================================================================
-  // TC-A-15: 关联不存在的文件夹 (Associate non-existent folder)
+  // TC-A-15: Associate a folder that does not exist
   // ============================================================================
 
   test('TC-A-15: should show error when associating deleted folder path', async ({ page }) => {

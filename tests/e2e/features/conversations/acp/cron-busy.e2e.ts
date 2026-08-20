@@ -314,7 +314,7 @@ test.describe('ACP cron busy handling', () => {
 
       const runNowButton = page
         .locator('button')
-        .filter({ hasText: /立即执行|Run Now|Run now/i })
+        .filter({ hasText: /Run Now|Run now/i })
         .first();
       await expect(runNowButton).toBeVisible({ timeout: 10_000 });
 

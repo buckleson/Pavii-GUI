@@ -18,7 +18,7 @@ type ManagedAgent = {
 
 const DEPRECATED_RUNTIME_AGENT_TYPES = new Set(['nanobot', 'openclaw-gateway', 'remote', 'gemini']);
 
-const LEGACY_TEXT = /Install from Market|从市场安装|Discover More Agents|发现更多 Agent|Start Chat|开始对话/;
+const LEGACY_TEXT = /Install from Market|Discover More Agents|Start Chat/;
 
 function isVisibleManagedAgent(agent: ManagedAgent): boolean {
   return (

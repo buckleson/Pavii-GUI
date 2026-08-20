@@ -35,8 +35,8 @@ const PREVIEW_PANEL = '[data-project-preview-region]';
 /** Ceiling that `resolvePreviewPayload` applies to text-like previews. */
 const TEXT_CEILING_BYTES = 1024 * 1024;
 
-/** Matches the oversized heading in both shipped locales. */
-const OVERSIZED_HEADING = /File too large to preview|文件过大，无法预览/;
+/** Matches the oversized heading. */
+const OVERSIZED_HEADING = /File too large to preview/;
 
 type BackendWindow = Window & { __backendPort?: number };
 
@@ -166,7 +166,7 @@ test.describe('Preview — oversized gate (Explorer entry point)', () => {
     // Pull the sentence out first, so a missing notice fails here rather than
     // silently satisfying a negative assertion below.
     const notice = (await panel.innerText()).replace(/\s+/g, ' ');
-    expect(notice).toMatch(/1 MB|1 兆|> /);
+    expect(notice).toMatch(/1 MB|> /);
 
     /**
      * The failure being guarded against is a *bare* size that equals the limit —
@@ -230,7 +230,7 @@ test.describe('Preview — oversized gate (Explorer entry point)', () => {
    * What is known: clicking `at-ceiling.md` does render the file — a diagnostic
    * dump taken at the point of failure showed `data-project-preview-region`
    * present and the document's text (`yyyy…`) on screen, alongside the
-   * "原文 / 预览" toggle. So the behaviour under test appears correct.
+   * "Source / Preview" toggle. So the behaviour under test appears correct.
    *
    * What is not known: why the assertions do not see it. The region reports zero
    * size for a while (so `toBeVisible` fails), and a later `toHaveCount(1)` also

@@ -96,8 +96,8 @@ test.describe('Preview — file click triggers preview', () => {
     await page.screenshot({ path: 'tests/e2e/results/preview-conv-02-preview.png' });
 
     // Toolbar should have action buttons
-    const downloadBtn = previewPanel.locator('[title*="download"], [title*="Download"], [title*="下载"]').first();
-    const openBtn = previewPanel.locator('[title*="open"], [title*="Open"], [title*="打开"]').first();
+    const downloadBtn = previewPanel.locator('[title*="download"], [title*="Download"]').first();
+    const openBtn = previewPanel.locator('[title*="open"], [title*="Open"]').first();
     expect(
       (await downloadBtn.isVisible().catch(() => false)) || (await openBtn.isVisible().catch(() => false))
     ).toBeTruthy();

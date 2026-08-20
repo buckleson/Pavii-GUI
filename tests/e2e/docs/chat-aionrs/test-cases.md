@@ -1,852 +1,852 @@
-# Aion CLI (aionrs) E2E 测试用例
+# Aion CLI (aionrs) E2E Test Cases
 
-**版本**: Gate 2 初稿
-**作者**: chat-aionrs-designer
-**日期**: 2026-04-22
-**状态**: 待审核
+**Version**: Gate 2 first draft
+**Author**: chat-aionrs-designer
+**Date**: 2026-04-22
+**Status**: Awaiting review
 
 ---
 
-## 1. 用例结构说明
+## 1. Case Structure
 
-### 1.1 用例编号规则
+### 1.1 Case numbering rules
 
-- **P0（必测）**: TC-A-01 ~ TC-A-05（基线路径，最小可用功能）
-- **P1（常规）**: TC-A-06 ~ TC-A-12（维度组合，常用场景）
-- **P2（边界）**: TC-A-13 ~ TC-A-15（异常处理，边界验证）
+- **P0 (must test)**: TC-A-01 through TC-A-05 (baseline paths, the minimum usable functionality)
+- **P1 (regular)**: TC-A-06 through TC-A-12 (dimension combinations, common scenarios)
+- **P2 (edge)**: TC-A-13 through TC-A-15 (error handling, edge verification)
 
-### 1.2 全局前置条件
+### 1.2 Global preconditions
 
-**所有 aionrs 测试用例的前置条件**:
+**Preconditions shared by every aionrs test case**:
 
-1. **aionrs binary 可用**：通过 `ipcBridge.fs.findAionrsBinary.invoke()` 验证，否则 skip 全部测试
-2. **用户配置的模型列表至少 1 个可用 provider**：
-   - 调用 `ipcBridge.mode.getModelConfig.invoke()` 获取用户配置的 provider 列表
-   - 过滤：排除 Google Auth provider（`platform` 包含 `gemini-with-google-auth`）
-   - 验证：至少 1 个 provider 包含 apiKey 且有可用 model
-   - 若无可用 provider：skip 全部 aionrs 测试，原因："No non-Google-Auth provider with apiKey configured"
+1. **The aionrs binary is available**: verified through `ipcBridge.fs.findAionrsBinary.invoke()`; otherwise skip every test.
+2. **The user's configured model list has at least 1 usable provider**:
+   - Call `ipcBridge.mode.getModelConfig.invoke()` to fetch the user's configured provider list.
+   - Filter: exclude Google Auth providers (whose `platform` contains `gemini-with-google-auth`).
+   - Check: at least 1 provider has an apiKey and a usable model.
+   - If no provider is usable: skip every aionrs test with the reason "No non-Google-Auth provider with apiKey configured".
 
-3. **测试数据准备**：临时工作目录 `/tmp/e2e-aionrs-<timestamp>/`
+3. **Test data preparation**: the temporary working directory `/tmp/e2e-aionrs-<timestamp>/`.
 
-**模型获取 helper**（engineer 实现）:
+**Model lookup helper** (implemented by the engineer):
 
 ```typescript
 // tests/e2e/helpers/chatAionrs.ts
 export async function getAionrsTestModels(page: Page): Promise<{
-  modelA: TProviderWithModel; // 第一个可用模型（默认模型）
-  modelB: TProviderWithModel | null; // 第二个可用模型（若存在）
+  modelA: TProviderWithModel; // The first usable model (the default model)
+  modelB: TProviderWithModel | null; // The second usable model (if there is one)
 }>;
 ```
 
-### 1.3 维度说明
+### 1.3 Dimensions
 
-| 维度       | 可选值                     | 说明                                                                                               |
-| ---------- | -------------------------- | -------------------------------------------------------------------------------------------------- |
-| 关联文件夹 | 无 / 单 / 多               | `atPath` 数组（源码：`AionrsSendBox.tsx:331-337`）                                                 |
-| 上传文件   | 无 / 单 / 多               | `uploadFile` 数组（源码：`useSendBoxFiles.ts`）                                                    |
-| 模型       | 默认 / 自选                | 从用户配置的 provider 列表选择（源码：`ipcBridge.mode.getModelConfig.invoke()`，过滤 Google Auth） |
-| 权限       | default / auto_edit / yolo | 来源：aionrs runtime capabilities                                                                  |
-| 对话中操作 | 切换模型 / 切换权限 / 无   | 对话页 `AionrsModelSelector` / `AgentModeSelector`                                                 |
+| Dimension               | Possible values                         | Description                                                                                                                |
+| ----------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Folder attachment       | none / single / multiple                | The `atPath` array (source: `AionrsSendBox.tsx:331-337`)                                                                   |
+| File upload             | none / single / multiple                | The `uploadFile` array (source: `useSendBoxFiles.ts`)                                                                      |
+| Model                   | default / chosen                        | Picked from the user-configured provider list (source: `ipcBridge.mode.getModelConfig.invoke()`, Google Auth filtered out) |
+| Permission              | default / auto_edit / yolo              | Source: the aionrs runtime capabilities                                                                                    |
+| Mid-conversation action | switch model / switch permission / none | The conversation page's `AionrsModelSelector` / `AgentModeSelector`                                                        |
 
-### 1.4 清理约定
+### 1.4 Cleanup conventions
 
-**命名模式**: 所有测试对话命名为 `E2E-aionrs-<timestamp>-<scenario>`
+**Naming pattern**: every test conversation is named `E2E-aionrs-<timestamp>-<scenario>`.
 
-**清理顺序**（每个用例 `afterEach` 执行）:
+**Cleanup order** (run in `afterEach` for every case):
 
-1. 停止 binary 进程：`ipcBridge.conversation.stopAgent.invoke(conversationId)`
-2. 删除 DB 记录：`DELETE FROM conversations WHERE name LIKE 'E2E-aionrs-%'`（级联删除 messages）
-3. 删除临时目录：`fs.rm('/tmp/e2e-aionrs-*', { recursive: true })`
-4. 清理 sessionStorage：`sessionStorage.removeItem('aionrs_initial_message_*')` + `sessionStorage.removeItem('aionrs_initial_processed_*')`
+1. Stop the binary process: `ipcBridge.conversation.stopAgent.invoke(conversationId)`.
+2. Delete the DB records: `DELETE FROM conversations WHERE name LIKE 'E2E-aionrs-%'` (messages are deleted by cascade).
+3. Delete the temporary directory: `fs.rm('/tmp/e2e-aionrs-*', { recursive: true })`.
+4. Clean up sessionStorage: `sessionStorage.removeItem('aionrs_initial_message_*')` plus `sessionStorage.removeItem('aionrs_initial_processed_*')`.
 
-### 1.5 截图要求
+### 1.5 Screenshot requirements
 
-每个用例最少 3 张截图：
+At least 3 screenshots per case:
 
-1. guid 页选择 agent 后（显示输入框 + 配置项）
-2. 对话页首条消息发送后（显示用户消息 + AI 回复流式中）
-3. 对话完成后（显示最终消息列表 + DB 断言通过）
+1. The guid page after the agent is selected (showing the input box and the configuration controls).
+2. The conversation page after the first message is sent (showing the user message and the AI reply mid-stream).
+3. The conversation once it is complete (showing the final message list, with the DB assertions passing).
 
 ---
 
-## 2. P0 用例（基线路径）
+## 2. P0 Cases (baseline paths)
 
-### TC-A-01: 最小可用路径
+### TC-A-01: Minimal usable path
 
-**优先级**: P0
-**目标**: 验证无附件 + 默认模型 + default 权限的最小对话流程
+**Priority**: P0
+**Goal**: verify the minimal conversation flow with no attachments, the default model, and the default permission.
 
-**前置条件**:
+**Preconditions**:
 
-- 同 §1.2 全局前置条件
-- 调用 `getAionrsTestModels(page)` 获取 `modelA`（默认模型）
+- The global preconditions in §1.2.
+- Call `getAionrsTestModels(page)` to obtain `modelA` (the default model).
 
-**维度组合**:
-| 维度 | 值 |
+**Dimension combination**:
+| Dimension | Value |
 |------|------|
-| 关联文件夹 | 无 |
-| 上传文件 | 无 |
-| 模型 | 默认（`modelA`） |
-| 权限 | default |
-| 对话中操作 | 无 |
+| Folder attachment | none |
+| File upload | none |
+| Model | default (`modelA`) |
+| Permission | default |
+| Mid-conversation action | none |
 
-**操作步骤**:
+**Steps**:
 
-1. 打开应用，导航至 guid 页（`/#/guid`）
-2. 选择 aionrs agent（点击 `[data-agent-backend="aionrs"]`）
-3. 确认权限选择器显示 `default`（`AgentModeSelector` 默认值）
-4. 输入测试消息："Hello, aionrs! Please list files in current directory."
-5. 点击发送按钮
-6. 等待跳转至对话页（URL 匹配 `/conversation/aionrs/*`）
-7. 等待 AI 回复流式完成（轮询 DB `messages.status='finish'`，超时 60s）
+1. Open the app and navigate to the guid page (`/#/guid`).
+2. Select the aionrs agent (click `[data-agent-backend="aionrs"]`).
+3. Confirm the permission selector shows `default` (the `AgentModeSelector` default).
+4. Type the test message: "Hello, aionrs! Please list files in current directory."
+5. Click the send button.
+6. Wait for the navigation to the conversation page (the URL matches `/conversation/aionrs/*`).
+7. Wait for the streamed AI reply to finish (poll the DB for `messages.status='finish'`, 60s timeout).
 
-**DB 断言点**:
+**DB assertions**:
 
 ```sql
--- 1. 验证 conversation 创建
+-- 1. Verify the conversation was created
 SELECT id, name, type, model, status, json_extract(extra, '$.sessionMode') as mode
 FROM conversations
 WHERE name LIKE 'E2E-aionrs-%' AND id = ?;
--- 期望: type='aionrs', mode='default', status='finished'
+-- Expected: type='aionrs', mode='default', status='finished'
 
--- 2. 验证用户消息
+-- 2. Verify the user message
 SELECT id, type, position, content, status
 FROM messages
 WHERE conversation_id = ? AND position = 'right';
--- 期望: type='text', position='right', json_extract(content, '$.content') 包含 "Hello, aionrs!"
+-- Expected: type='text', position='right', json_extract(content, '$.content') contains "Hello, aionrs!"
 
--- 3. 验证 AI 回复
+-- 3. Verify the AI reply
 SELECT id, type, position, status, created_at
 FROM messages
 WHERE conversation_id = ? AND position = 'left' AND type = 'text';
--- 期望: 至少 1 条, status='finish', created_at > 用户消息 created_at
+-- Expected: at least 1 row, status='finish', created_at > the user message's created_at
 
--- 4. 验证消息顺序
+-- 4. Verify the message ordering
 SELECT COUNT(*) FROM messages WHERE conversation_id = ?;
--- 期望: ≥ 2（用户 + AI）
+-- Expected: >= 2 (user + AI)
 ```
 
-**清理义务**:
+**Cleanup obligations**:
 
 - conversations name: `E2E-aionrs-<timestamp>-minimal-path`
-- temp dir: `/tmp/e2e-aionrs-<timestamp>-tc-a-01/`（workspace）
+- temp dir: `/tmp/e2e-aionrs-<timestamp>-tc-a-01/` (the workspace)
 - sessionStorage: `aionrs_initial_message_${conversationId}`, `aionrs_initial_processed_${conversationId}`
 
-**截图数**: 3
+**Screenshots**: 3
 
 ---
 
-### TC-A-02: 关联单个文件夹
+### TC-A-02: Attach a single folder
 
-**优先级**: P0
-**目标**: 验证关联文件夹后，消息内容包含文件夹引用
+**Priority**: P0
+**Goal**: verify that once a folder is attached, the message content contains a reference to it.
 
-**前置条件**:
+**Preconditions**:
 
-- 同 §1.2 全局前置条件
-- 临时工作目录存在测试文件夹：`/tmp/e2e-aionrs-<timestamp>/test-folder/`
+- The global preconditions in §1.2.
+- The test folder exists in the temporary working directory: `/tmp/e2e-aionrs-<timestamp>/test-folder/`.
 
-**维度组合**:
-| 维度 | 值 |
+**Dimension combination**:
+| Dimension | Value |
 |------|------|
-| 关联文件夹 | 单（`test-folder/`） |
-| 上传文件 | 无 |
-| 模型 | 默认 |
-| 权限 | default |
-| 对话中操作 | 无 |
+| Folder attachment | single (`test-folder/`) |
+| File upload | none |
+| Model | default |
+| Permission | default |
+| Mid-conversation action | none |
 
-**操作步骤**:
+**Steps**:
 
-1. 创建临时目录 + 测试文件夹：
+1. Create the temporary directory and the test folder:
    ```bash
    mkdir -p /tmp/e2e-aionrs-<timestamp>/test-folder/
    echo "sample content" > /tmp/e2e-aionrs-<timestamp>/test-folder/sample.txt
    ```
-2. 打开 guid 页，选择 aionrs agent
-3. 从文件树选择 `test-folder/`（触发 `emitter.emit('aionrs.selected.file', [{ path, name, isFile: false }])`）
-4. 确认 guid 页显示文件夹 Tag（`data-testid="folder-tag-0"`）
-5. 输入消息："What files are in the attached folder?"
-6. 点击发送
-7. 等待对话页 AI 回复完成
+2. Open the guid page and select the aionrs agent.
+3. Pick `test-folder/` in the file tree (this fires `emitter.emit('aionrs.selected.file', [{ path, name, isFile: false }])`).
+4. Confirm the guid page shows the folder tag (`data-testid="folder-tag-0"`).
+5. Type the message: "What files are in the attached folder?"
+6. Click send.
+7. Wait for the AI reply on the conversation page to finish.
 
-**DB 断言点**:
+**DB assertions**:
 
 ```sql
--- 1. 验证用户消息包含文件夹引用
+-- 1. Verify the user message contains the folder reference
 SELECT json_extract(content, '$.attachedDirs') as dirs
 FROM messages
 WHERE conversation_id = ? AND position = 'right';
--- 期望: dirs 是 JSON 数组, 包含 '{"path": ".../test-folder", "name": "test-folder", "isFile": false}'
+-- Expected: dirs is a JSON array containing '{"path": ".../test-folder", "name": "test-folder", "isFile": false}'
 
--- 2. 验证消息内容
+-- 2. Verify the message content
 SELECT json_extract(content, '$.content') as text
 FROM messages
 WHERE conversation_id = ? AND position = 'right';
--- 期望: text 包含 "What files are in the attached folder?"
+-- Expected: text contains "What files are in the attached folder?"
 
--- 3. 验证 AI 回复
+-- 3. Verify the AI reply
 SELECT status FROM messages WHERE conversation_id = ? AND position = 'left' AND type = 'text';
--- 期望: status='finish'
+-- Expected: status='finish'
 ```
 
-**清理义务**:
+**Cleanup obligations**:
 
 - conversations name: `E2E-aionrs-<timestamp>-folder-single`
-- temp dir: `/tmp/e2e-aionrs-<timestamp>/`（包含 test-folder）
-- sessionStorage: 同 TC-A-01
+- temp dir: `/tmp/e2e-aionrs-<timestamp>/` (contains test-folder)
+- sessionStorage: same as TC-A-01
 
-**截图数**: 3
+**Screenshots**: 3
 
 ---
 
-### TC-A-03: 上传单个文件
+### TC-A-03: Upload a single file
 
-**优先级**: P0
-**目标**: 验证上传文件后，binary 接收 `files` 参数
+**Priority**: P0
+**Goal**: verify that after a file is uploaded, the binary receives the `files` parameter.
 
-**前置条件**:
+**Preconditions**:
 
-- 同 §1.2 全局前置条件
-- 测试文件存在：`/tmp/e2e-test-file.txt`（内容："Test file content for aionrs E2E"）
+- The global preconditions in §1.2.
+- The test file exists: `/tmp/e2e-test-file.txt` (contents: "Test file content for aionrs E2E").
 
-**维度组合**:
-| 维度 | 值 |
+**Dimension combination**:
+| Dimension | Value |
 |------|------|
-| 关联文件夹 | 无 |
-| 上传文件 | 单（`e2e-test-file.txt`） |
-| 模型 | 默认 |
-| 权限 | default |
-| 对话中操作 | 无 |
+| Folder attachment | none |
+| File upload | single (`e2e-test-file.txt`) |
+| Model | default |
+| Permission | default |
+| Mid-conversation action | none |
 
-**操作步骤**:
+**Steps**:
 
-1. 创建测试文件：
+1. Create the test file:
    ```bash
    echo "Test file content for aionrs E2E" > /tmp/e2e-test-file.txt
    ```
-2. 打开 guid 页，选择 aionrs agent
-3. 上传文件：
-   - WebUI: 使用 `<input type="file">` 选择 `/tmp/e2e-test-file.txt`
-   - Desktop: 调用 `ipcBridge.dialog.showOpen()` 选择文件
-4. 确认文件预览卡片显示（`data-testid="file-card-0"`）
-5. 输入消息："What is the content of the attached file?"
-6. 点击发送
-7. 等待对话页 AI 回复完成
+2. Open the guid page and select the aionrs agent.
+3. Upload the file:
+   - WebUI: use `<input type="file">` to pick `/tmp/e2e-test-file.txt`.
+   - Desktop: call `ipcBridge.dialog.showOpen()` to pick the file.
+4. Confirm the file preview card appears (`data-testid="file-card-0"`).
+5. Type the message: "What is the content of the attached file?"
+6. Click send.
+7. Wait for the AI reply on the conversation page to finish.
 
-**DB 断言点**:
+**DB assertions**:
 
 ```sql
--- 1. 验证用户消息包含文件引用
+-- 1. Verify the user message contains the file reference
 SELECT json_extract(content, '$.attachedFiles') as files
 FROM messages
 WHERE conversation_id = ? AND position = 'right';
--- 期望: files 是 JSON 数组, 包含 '/tmp/e2e-test-file.txt'
+-- Expected: files is a JSON array containing '/tmp/e2e-test-file.txt'
 
--- 2. 验证 AI 回复提到文件内容
+-- 2. Verify the AI reply mentions the file contents
 SELECT json_extract(content, '$.content') as text
 FROM messages
 WHERE conversation_id = ? AND position = 'left' AND type = 'text';
--- 期望: text 包含 "Test file content" 或文件名 "e2e-test-file.txt"
+-- Expected: text contains "Test file content" or the file name "e2e-test-file.txt"
 
--- 3. 验证消息完成
+-- 3. Verify the message completed
 SELECT status FROM messages WHERE conversation_id = ? AND position = 'left';
--- 期望: status='finish'
+-- Expected: status='finish'
 ```
 
-**清理义务**:
+**Cleanup obligations**:
 
 - conversations name: `E2E-aionrs-<timestamp>-file-single`
-- temp dir: `/tmp/e2e-aionrs-<timestamp>/`（workspace）
-- test file: `/tmp/e2e-test-file.txt`（测试后删除）
-- sessionStorage: 同 TC-A-01
+- temp dir: `/tmp/e2e-aionrs-<timestamp>/` (the workspace)
+- test file: `/tmp/e2e-test-file.txt` (deleted after the test)
+- sessionStorage: same as TC-A-01
 
-**截图数**: 3
+**Screenshots**: 3
 
 ---
 
-### TC-A-04: 使用第二个模型
+### TC-A-04: Use the second model
 
-**优先级**: P0
-**目标**: 验证在 guid 页选择非默认模型后，DB 记录正确模型 ID
+**Priority**: P0
+**Goal**: verify that after a non-default model is selected on the guid page, the DB records the correct model ID.
 
-**前置条件**:
+**Preconditions**:
 
-- 同 §1.2 全局前置条件
-- 调用 `getAionrsTestModels(page)` 获取 `{ modelA, modelB }`
-- 若 `modelB === null`：skip 此用例（原因："Only 1 model available, skipping guid page model selection test"）
+- The global preconditions in §1.2.
+- Call `getAionrsTestModels(page)` to obtain `{ modelA, modelB }`.
+- If `modelB === null`: skip this case (reason: "Only 1 model available, skipping guid page model selection test").
 
-**维度组合**:
-| 维度 | 值 |
+**Dimension combination**:
+| Dimension | Value |
 |------|------|
-| 关联文件夹 | 无 |
-| 上传文件 | 无 |
-| 模型 | 第二个（`modelB`） |
-| 权限 | default |
-| 对话中操作 | 无 |
+| Folder attachment | none |
+| File upload | none |
+| Model | the second one (`modelB`) |
+| Permission | default |
+| Mid-conversation action | none |
 
-**操作步骤**:
+**Steps**:
 
-1. 打开 guid 页，选择 aionrs agent
-2. 打开模型选择器（`GuidModelSelector`，仅当 `isGeminiMode=true` 可见，源码：`GuidPage.tsx:465-469`）
-   - 若不可见，skip 此用例（标注原因："guid page model selector not enabled"）
-3. 选择 `modelB`（不 hardcode 具体模型 ID）
-4. 输入消息："What model are you using?"
-5. 点击发送
-6. 等待对话页 AI 回复完成
+1. Open the guid page and select the aionrs agent.
+2. Open the model selector (`GuidModelSelector`, only visible when `isGeminiMode=true`, source: `GuidPage.tsx:465-469`).
+   - If it is not visible, skip this case (noting the reason: "guid page model selector not enabled").
+3. Select `modelB` (do not hardcode a specific model ID).
+4. Type the message: "What model are you using?"
+5. Click send.
+6. Wait for the AI reply on the conversation page to finish.
 
-**DB 断言点**:
+**DB assertions**:
 
 ```sql
--- 1. 验证 conversation 模型字段
+-- 1. Verify the conversation's model fields
 SELECT model, json_extract(extra, '$.model.useModel') as extra_model
 FROM conversations
 WHERE id = ?;
--- 期望: extra_model = modelB.useModel
+-- Expected: extra_model = modelB.useModel
 
--- 2. 验证对话完成
+-- 2. Verify the conversation finished
 SELECT status FROM conversations WHERE id = ?;
--- 期望: status='finished'
+-- Expected: status='finished'
 
--- 3. 验证 AI 回复
+-- 3. Verify the AI reply
 SELECT COUNT(*) FROM messages WHERE conversation_id = ? AND position = 'left';
--- 期望: ≥ 1
+-- Expected: >= 1
 ```
 
-**清理义务**:
+**Cleanup obligations**:
 
 - conversations name: `E2E-aionrs-<timestamp>-model-second`
 - temp dir: `/tmp/e2e-aionrs-<timestamp>/`
-- sessionStorage: 同 TC-A-01
+- sessionStorage: same as TC-A-01
 
-**截图数**: 3
+**Screenshots**: 3
 
-**备注**: 若 guid 页模型选择器未启用（需确认 `isGeminiMode` 状态），此用例改为在对话页切换模型（见 TC-A-07）
+**Note**: if the guid page model selector is not enabled (the `isGeminiMode` state must be confirmed), this case switches the model on the conversation page instead (see TC-A-07).
 
 ---
 
-### TC-A-05: 使用 yolo 权限
+### TC-A-05: Use the yolo permission
 
-**优先级**: P0
-**目标**: 验证 yolo 模式下，工具调用自动批准（无确认弹窗）
+**Priority**: P0
+**Goal**: verify that in yolo mode tool calls are auto-approved (no confirmation dialog).
 
-**前置条件**:
+**Preconditions**:
 
-- 同 §1.2 全局前置条件
+- The global preconditions in §1.2.
 
-**维度组合**:
-| 维度 | 值 |
+**Dimension combination**:
+| Dimension | Value |
 |------|------|
-| 关联文件夹 | 无 |
-| 上传文件 | 无 |
-| 模型 | 默认 |
-| 权限 | yolo |
-| 对话中操作 | 无 |
+| Folder attachment | none |
+| File upload | none |
+| Model | default |
+| Permission | yolo |
+| Mid-conversation action | none |
 
-**操作步骤**:
+**Steps**:
 
-1. 打开 guid 页，选择 aionrs agent
-2. 打开权限选择器（`AgentModeSelector`，`data-testid="agent-mode-selector-aionrs"`）
-3. 选择 `yolo` 模式（label: "YOLO"）
-4. 输入消息："Please create a file named test.txt with content 'E2E test'."
-5. 点击发送
-6. **验证无确认弹窗出现**（监听 `ConversationChatConfirm` 组件状态）
-7. 等待工具执行完成（轮询 DB `messages.type='tool_group'` 且 `status='Success'`）
+1. Open the guid page and select the aionrs agent.
+2. Open the permission selector (`AgentModeSelector`, `data-testid="agent-mode-selector-aionrs"`).
+3. Choose `yolo` mode (label: "YOLO").
+4. Type the message: "Please create a file named test.txt with content 'E2E test'."
+5. Click send.
+6. **Verify that no confirmation dialog appears** (by watching the state of the `ConversationChatConfirm` component).
+7. Wait for the tool to finish executing (poll the DB for `messages.type='tool_group'` with `status='Success'`).
 
-**DB 断言点**:
+**DB assertions**:
 
 ```sql
--- 1. 验证权限模式持久化
+-- 1. Verify the permission mode was persisted
 SELECT json_extract(extra, '$.sessionMode') as mode
 FROM conversations
 WHERE id = ?;
--- 期望: mode='yolo'
+-- Expected: mode='yolo'
 
--- 2. 验证工具调用记录
+-- 2. Verify the tool call records
 SELECT type, json_extract(content, '$[0].status') as tool_status
 FROM messages
 WHERE conversation_id = ? AND type = 'tool_group';
--- 期望: 至少 1 条, tool_status IN ('Success', 'Executing', 'Error')
--- 注意: yolo 模式不应出现 'Confirming' 状态
+-- Expected: at least 1 row, tool_status IN ('Success', 'Executing', 'Error')
+-- Note: the 'Confirming' status must never appear in yolo mode
 
--- 3. 验证无确认弹窗（前端逻辑验证）
--- E2E 层：page.waitForSelector('.confirmation-dialog', { timeout: 2000 }) 应超时（证明无弹窗）
+-- 3. Verify there is no confirmation dialog (a front-end behavior check)
+-- E2E layer: page.waitForSelector('.confirmation-dialog', { timeout: 2000 }) should time out (proving there is no dialog)
 ```
 
-**清理义务**:
+**Cleanup obligations**:
 
 - conversations name: `E2E-aionrs-<timestamp>-yolo-mode`
-- temp dir: `/tmp/e2e-aionrs-<timestamp>/`（包含 binary 创建的 test.txt）
-- sessionStorage: 同 TC-A-01
+- temp dir: `/tmp/e2e-aionrs-<timestamp>/` (contains the test.txt created by the binary)
+- sessionStorage: same as TC-A-01
 
-**截图数**: 3
+**Screenshots**: 3
 
 ---
 
-## 3. P1 用例（常规组合）
+## 3. P1 Cases (regular combinations)
 
-### TC-A-06: 使用 auto_edit 权限
+### TC-A-06: Use the auto_edit permission
 
-**优先级**: P1
-**目标**: 验证 auto_edit 模式下，edit/info 工具自动批准，exec 工具仍需确认
+**Priority**: P1
+**Goal**: verify that in auto_edit mode the edit/info tools are auto-approved while exec tools still require confirmation.
 
-**前置条件**:
+**Preconditions**:
 
-- 同 §1.2 全局前置条件
+- The global preconditions in §1.2.
 
-**维度组合**:
-| 维度 | 值 |
+**Dimension combination**:
+| Dimension | Value |
 |------|------|
-| 关联文件夹 | 无 |
-| 上传文件 | 无 |
-| 模型 | 默认 |
-| 权限 | auto_edit |
-| 对话中操作 | 无 |
+| Folder attachment | none |
+| File upload | none |
+| Model | default |
+| Permission | auto_edit |
+| Mid-conversation action | none |
 
-**操作步骤**:
+**Steps**:
 
-1. 打开 guid 页，选择 aionrs agent
-2. 选择 `auto_edit` 模式（label: "Auto-Accept Edits"）
-3. 输入消息："Please read the file ./README.md and summarize it."（触发 info 工具）
-4. 等待工具执行完成（无确认弹窗）
-5. 输入第二条消息："Now run command 'ls -la'."（触发 exec 工具）
-6. **验证出现确认弹窗**（`ConversationChatConfirm` 显示）
-7. 点击 "Yes, Allow Once" 批准
-8. 等待命令执行完成
+1. Open the guid page and select the aionrs agent.
+2. Choose `auto_edit` mode (label: "Auto-Accept Edits").
+3. Type the message: "Please read the file ./README.md and summarize it." (this triggers an info tool).
+4. Wait for the tool to finish executing (with no confirmation dialog).
+5. Type a second message: "Now run command 'ls -la'." (this triggers an exec tool).
+6. **Verify that a confirmation dialog appears** (`ConversationChatConfirm` is shown).
+7. Click "Yes, Allow Once" to approve it.
+8. Wait for the command to finish executing.
 
-**DB 断言点**:
+**DB assertions**:
 
 ```sql
--- 1. 验证权限模式
+-- 1. Verify the permission mode
 SELECT json_extract(extra, '$.sessionMode') as mode
 FROM conversations
 WHERE id = ?;
--- 期望: mode='auto_edit'
+-- Expected: mode='auto_edit'
 
--- 2. 验证工具调用记录（info 工具无 Confirming 状态）
+-- 2. Verify the tool call records (info tools never enter the Confirming status)
 SELECT json_extract(content, '$[0].name') as tool_name,
        json_extract(content, '$[0].status') as tool_status
 FROM messages
 WHERE conversation_id = ? AND type = 'tool_group';
--- 期望:
---   - info 类工具: status 直接从 Executing → Success（跳过 Confirming）
---   - exec 类工具: status 经历 Confirming → Executing → Success（需用户确认）
+-- Expected:
+--   - info tools: status goes straight from Executing to Success (skipping Confirming)
+--   - exec tools: status goes Confirming -> Executing -> Success (user confirmation required)
 ```
 
-**清理义务**:
+**Cleanup obligations**:
 
 - conversations name: `E2E-aionrs-<timestamp>-auto-edit-mode`
 - temp dir: `/tmp/e2e-aionrs-<timestamp>/`
-- sessionStorage: 同 TC-A-01
+- sessionStorage: same as TC-A-01
 
-**截图数**: 4（增加 1 张确认弹窗截图）
+**Screenshots**: 4 (one extra screenshot of the confirmation dialog)
 
 ---
 
-### TC-A-07: 对话中切换模型
+### TC-A-07: Switch the model mid-conversation
 
-**优先级**: P1
-**目标**: 验证对话中切换模型后，DB `conversations.extra.model` 更新为新模型 ID
+**Priority**: P1
+**Goal**: verify that after switching the model mid-conversation, DB `conversations.extra.model` is updated to the new model ID.
 
-**前置条件**:
+**Preconditions**:
 
-- 同 §1.2 全局前置条件
-- 调用 `getAionrsTestModels(page)` 获取 `{ modelA, modelB }`
-- 若 `modelB === null`：skip 此用例（原因："Only 1 model available, skipping model switch test"）
+- The global preconditions in §1.2.
+- Call `getAionrsTestModels(page)` to obtain `{ modelA, modelB }`.
+- If `modelB === null`: skip this case (reason: "Only 1 model available, skipping model switch test").
 
-**维度组合**:
-| 维度 | 值 |
+**Dimension combination**:
+| Dimension | Value |
 |------|------|
-| 关联文件夹 | 无 |
-| 上传文件 | 无 |
-| 模型 | 默认（`modelA`）→ 第二个（`modelB`） |
-| 权限 | default |
-| 对话中操作 | 切换模型 |
+| Folder attachment | none |
+| File upload | none |
+| Model | default (`modelA`) → the second one (`modelB`) |
+| Permission | default |
+| Mid-conversation action | switch model |
 
-**操作步骤**:
+**Steps**:
 
-1. 按 TC-A-01 创建对话（使用 `modelA`）
-2. 等待首条 AI 回复完成
-3. 点击对话页模型选择器（`AionrsModelSelector`，`data-testid="aionrs-model-selector"`）
-4. 选择 `modelB`（不 hardcode 具体模型 ID）
-5. 等待模型切换完成（轮询 DB `conversations.extra.model` 更新）
-6. 输入第二条消息："What model are you using now?"
-7. 等待 AI 回复完成
+1. Create the conversation as in TC-A-01 (using `modelA`).
+2. Wait for the first AI reply to finish.
+3. Click the conversation page's model selector (`AionrsModelSelector`, `data-testid="aionrs-model-selector"`).
+4. Select `modelB` (do not hardcode a specific model ID).
+5. Wait for the model switch to complete (poll the DB until `conversations.extra.model` is updated).
+6. Type a second message: "What model are you using now?"
+7. Wait for the AI reply to finish.
 
-**DB 断言点**:
+**DB assertions**:
 
 ```sql
--- 1. 验证模型切换后 DB 更新
+-- 1. Verify the DB is updated after the model switch
 SELECT json_extract(extra, '$.model.useModel') as current_model
 FROM conversations
 WHERE id = ?;
--- 期望: current_model = modelB.useModel
+-- Expected: current_model = modelB.useModel
 
--- 2. 验证消息数量
+-- 2. Verify the message count
 SELECT COUNT(*) FROM messages WHERE conversation_id = ?;
--- 期望: ≥ 4（用户消息1 + AI回复1 + 用户消息2 + AI回复2）
+-- Expected: >= 4 (user message 1 + AI reply 1 + user message 2 + AI reply 2)
 
--- 3. 验证第二条 AI 回复使用新模型（需从 AI 回复内容推断，或检查 request_trace 事件）
+-- 3. Verify the second AI reply used the new model (inferred from the reply content, or by checking the request_trace event)
 ```
 
-**清理义务**:
+**Cleanup obligations**:
 
 - conversations name: `E2E-aionrs-<timestamp>-switch-model`
 - temp dir: `/tmp/e2e-aionrs-<timestamp>/`
-- sessionStorage: 同 TC-A-01
+- sessionStorage: same as TC-A-01
 
-**截图数**: 4（增加 1 张模型选择器打开状态截图）
+**Screenshots**: 4 (one extra screenshot of the open model selector)
 
-**备注**: 根据议题 1 决策，只验证 DB 字段更新，不验证 binary 内部 sessionId 变化
+**Note**: per the decision on topic 1, only the DB field update is verified; changes to the binary's internal sessionId are not.
 
 ---
 
-### TC-A-08: 对话中切换权限（default → auto_edit）
+### TC-A-08: Switch the permission mid-conversation (default → auto_edit)
 
-**优先级**: P1
-**目标**: 验证对话中切换权限后，工具确认行为立即变化
+**Priority**: P1
+**Goal**: verify that after switching the permission mid-conversation, the tool confirmation behavior changes immediately.
 
-**前置条件**:
+**Preconditions**:
 
-- 同 §1.2 全局前置条件
+- The global preconditions in §1.2.
 
-**维度组合**:
-| 维度 | 值 |
+**Dimension combination**:
+| Dimension | Value |
 |------|------|
-| 关联文件夹 | 无 |
-| 上传文件 | 无 |
-| 模型 | 默认 |
-| 权限 | default → auto_edit |
-| 对话中操作 | 切换权限 |
+| Folder attachment | none |
+| File upload | none |
+| Model | default |
+| Permission | default → auto_edit |
+| Mid-conversation action | switch permission |
 
-**操作步骤**:
+**Steps**:
 
-1. 按 TC-A-01 创建对话（default 权限）
-2. 输入消息："Please edit file test.txt and add line 'line 1'."
-3. **验证出现确认弹窗**（default 模式需确认 edit 工具）
-4. 取消操作（点击 "No"）
-5. 打开权限选择器，切换为 `auto_edit`
-6. 重新输入相同消息
-7. **验证无确认弹窗**（auto_edit 模式自动批准 edit 工具）
-8. 等待工具执行完成
+1. Create the conversation as in TC-A-01 (default permission).
+2. Type the message: "Please edit file test.txt and add line 'line 1'."
+3. **Verify that a confirmation dialog appears** (default mode requires confirming edit tools).
+4. Cancel the operation (click "No").
+5. Open the permission selector and switch to `auto_edit`.
+6. Type the same message again.
+7. **Verify that no confirmation dialog appears** (auto_edit mode auto-approves edit tools).
+8. Wait for the tool to finish executing.
 
-**DB 断言点**:
+**DB assertions**:
 
 ```sql
--- 1. 验证权限切换后 DB 更新
+-- 1. Verify the DB is updated after the permission switch
 SELECT json_extract(extra, '$.sessionMode') as mode
 FROM conversations
 WHERE id = ?;
--- 期望: mode='auto_edit'
+-- Expected: mode='auto_edit'
 
--- 2. 验证第二次工具调用无 Confirming 状态
+-- 2. Verify the second tool call never entered the Confirming status
 SELECT json_extract(content, '$[0].status') as tool_status, created_at
 FROM messages
 WHERE conversation_id = ? AND type = 'tool_group'
 ORDER BY created_at DESC
 LIMIT 1;
--- 期望: tool_status = 'Executing' 或 'Success'（跳过 Confirming）
+-- Expected: tool_status = 'Executing' or 'Success' (Confirming is skipped)
 
--- 3. 验证第一次工具调用被取消
+-- 3. Verify the first tool call was cancelled
 SELECT json_extract(content, '$[0].status') as tool_status, created_at
 FROM messages
 WHERE conversation_id = ? AND type = 'tool_group'
 ORDER BY created_at ASC
 LIMIT 1;
--- 期望: tool_status = 'Canceled'
+-- Expected: tool_status = 'Canceled'
 ```
 
-**清理义务**:
+**Cleanup obligations**:
 
 - conversations name: `E2E-aionrs-<timestamp>-switch-permission-1`
 - temp dir: `/tmp/e2e-aionrs-<timestamp>/`
-- sessionStorage: 同 TC-A-01
+- sessionStorage: same as TC-A-01
 
-**截图数**: 5（2 张确认弹窗：第一次出现 + 第二次未出现）
+**Screenshots**: 5 (2 of the confirmation dialog: once when it appears and once when it does not)
 
 ---
 
-### TC-A-09: 对话中切换权限（auto_edit → yolo）
+### TC-A-09: Switch the permission mid-conversation (auto_edit → yolo)
 
-**优先级**: P1
-**目标**: 验证切换到 yolo 后，所有工具自动批准
+**Priority**: P1
+**Goal**: verify that after switching to yolo, every tool is auto-approved.
 
-**前置条件**:
+**Preconditions**:
 
-- 同 §1.2 全局前置条件
+- The global preconditions in §1.2.
 
-**维度组合**:
-| 维度 | 值 |
+**Dimension combination**:
+| Dimension | Value |
 |------|------|
-| 关联文件夹 | 无 |
-| 上传文件 | 无 |
-| 模型 | 默认 |
-| 权限 | auto_edit → yolo |
-| 对话中操作 | 切换权限 |
+| Folder attachment | none |
+| File upload | none |
+| Model | default |
+| Permission | auto_edit → yolo |
+| Mid-conversation action | switch permission |
 
-**操作步骤**:
+**Steps**:
 
-1. 创建对话（auto_edit 权限）
-2. 输入消息："Please run command 'pwd'."（触发 exec 工具）
-3. **验证出现确认弹窗**（auto_edit 模式不自动批准 exec）
-4. 取消操作
-5. 切换权限为 `yolo`
-6. 重新输入相同消息
-7. **验证无确认弹窗**（yolo 模式自动批准所有工具）
-8. 等待命令执行完成
+1. Create the conversation (auto_edit permission).
+2. Type the message: "Please run command 'pwd'." (this triggers an exec tool).
+3. **Verify that a confirmation dialog appears** (auto_edit mode does not auto-approve exec).
+4. Cancel the operation.
+5. Switch the permission to `yolo`.
+6. Type the same message again.
+7. **Verify that no confirmation dialog appears** (yolo mode auto-approves every tool).
+8. Wait for the command to finish executing.
 
-**DB 断言点**:
+**DB assertions**:
 
 ```sql
--- 1. 验证权限切换
+-- 1. Verify the permission switch
 SELECT json_extract(extra, '$.sessionMode') as mode
 FROM conversations
 WHERE id = ?;
--- 期望: mode='yolo'
+-- Expected: mode='yolo'
 
--- 2. 验证第二次工具调用无 Confirming 状态
+-- 2. Verify the second tool call never entered the Confirming status
 SELECT json_extract(content, '$[0].status') as tool_status
 FROM messages
 WHERE conversation_id = ? AND type = 'tool_group'
 ORDER BY created_at DESC
 LIMIT 1;
--- 期望: tool_status IN ('Executing', 'Success')
+-- Expected: tool_status IN ('Executing', 'Success')
 ```
 
-**清理义务**:
+**Cleanup obligations**:
 
 - conversations name: `E2E-aionrs-<timestamp>-switch-permission-2`
 - temp dir: `/tmp/e2e-aionrs-<timestamp>/`
-- sessionStorage: 同 TC-A-01
+- sessionStorage: same as TC-A-01
 
-**截图数**: 4
+**Screenshots**: 4
 
 ---
 
-### TC-A-10: 组合场景（关联文件夹 + 上传文件 + 非默认模型）
+### TC-A-10: Combination scenario (folder attachment + file upload + non-default model)
 
-**优先级**: P1
-**目标**: 验证多维度组合情况下，所有附件正确传递给 binary
+**Priority**: P1
+**Goal**: verify that in a multi-dimension combination every attachment is passed to the binary correctly.
 
-**前置条件**:
+**Preconditions**:
 
-- 同 §1.2 全局前置条件
-- 临时目录存在测试文件夹 + 测试文件
+- The global preconditions in §1.2.
+- The temporary directory contains the test folder and the test file.
 
-**维度组合**:
-| 维度 | 值 |
+**Dimension combination**:
+| Dimension | Value |
 |------|------|
-| 关联文件夹 | 单 |
-| 上传文件 | 单 |
-| 模型 | 第二个 |
-| 权限 | auto_edit |
-| 对话中操作 | 无 |
+| Folder attachment | single |
+| File upload | single |
+| Model | the second one |
+| Permission | auto_edit |
+| Mid-conversation action | none |
 
-**操作步骤**:
+**Steps**:
 
-1. 创建测试数据：
+1. Create the test data:
    ```bash
    mkdir -p /tmp/e2e-aionrs-<timestamp>/folder-a/
    echo "content A" > /tmp/e2e-aionrs-<timestamp>/folder-a/file-a.txt
    echo "content B" > /tmp/e2e-test-file-b.txt
    ```
-2. 打开 guid 页，选择 aionrs agent
-3. 选择第二个模型 + auto_edit 权限
-4. 关联文件夹 `folder-a/`
-5. 上传文件 `e2e-test-file-b.txt`
-6. 输入消息："Compare the content of the attached folder and file."
-7. 点击发送
-8. 等待 AI 回复完成
+2. Open the guid page and select the aionrs agent.
+3. Choose the second model plus the auto_edit permission.
+4. Attach the folder `folder-a/`.
+5. Upload the file `e2e-test-file-b.txt`.
+6. Type the message: "Compare the content of the attached folder and file."
+7. Click send.
+8. Wait for the AI reply to finish.
 
-**DB 断言点**:
+**DB assertions**:
 
 ```sql
--- 1. 验证用户消息包含文件夹 + 文件引用
+-- 1. Verify the user message contains both the folder and the file reference
 SELECT json_extract(content, '$.attachedDirs') as dirs,
        json_extract(content, '$.attachedFiles') as files
 FROM messages
 WHERE conversation_id = ? AND position = 'right';
--- 期望:
---   dirs 包含 'folder-a'
---   files 包含 'e2e-test-file-b.txt'
+-- Expected:
+--   dirs contains 'folder-a'
+--   files contains 'e2e-test-file-b.txt'
 
--- 2. 验证模型 + 权限
+-- 2. Verify the model and the permission
 SELECT json_extract(extra, '$.model.useModel') as model,
        json_extract(extra, '$.sessionMode') as mode
 FROM conversations
 WHERE id = ?;
--- 期望: model = 第二个模型 ID, mode='auto_edit'
+-- Expected: model = the second model's ID, mode='auto_edit'
 
--- 3. 验证 AI 回复提到两个文件
+-- 3. Verify the AI reply mentions both files
 SELECT json_extract(content, '$.content') as text
 FROM messages
 WHERE conversation_id = ? AND position = 'left' AND type = 'text';
--- 期望: text 包含 "content A" 或 "content B" 或文件名
+-- Expected: text contains "content A", "content B", or one of the file names
 ```
 
-**清理义务**:
+**Cleanup obligations**:
 
 - conversations name: `E2E-aionrs-<timestamp>-combo-folder-file-model`
 - temp dir: `/tmp/e2e-aionrs-<timestamp>/`
 - test file: `/tmp/e2e-test-file-b.txt`
-- sessionStorage: 同 TC-A-01
+- sessionStorage: same as TC-A-01
 
-**截图数**: 4
+**Screenshots**: 4
 
 ---
 
-### TC-A-11: 上传多个文件
+### TC-A-11: Upload multiple files
 
-**优先级**: P1
-**目标**: 验证多文件上传场景
+**Priority**: P1
+**Goal**: verify the multi-file upload scenario.
 
-**前置条件**:
+**Preconditions**:
 
-- 同 §1.2 全局前置条件
-- 测试文件存在：`/tmp/e2e-file-1.txt`, `/tmp/e2e-file-2.txt`, `/tmp/e2e-file-3.txt`
+- The global preconditions in §1.2.
+- The test files exist: `/tmp/e2e-file-1.txt`, `/tmp/e2e-file-2.txt`, `/tmp/e2e-file-3.txt`.
 
-**维度组合**:
-| 维度 | 值 |
+**Dimension combination**:
+| Dimension | Value |
 |------|------|
-| 关联文件夹 | 无 |
-| 上传文件 | 多（3 个文件） |
-| 模型 | 默认 |
-| 权限 | default |
-| 对话中操作 | 无 |
+| Folder attachment | none |
+| File upload | multiple (3 files) |
+| Model | default |
+| Permission | default |
+| Mid-conversation action | none |
 
-**操作步骤**:
+**Steps**:
 
-1. 创建测试文件：
+1. Create the test files:
    ```bash
    echo "File 1 content" > /tmp/e2e-file-1.txt
    echo "File 2 content" > /tmp/e2e-file-2.txt
    echo "File 3 content" > /tmp/e2e-file-3.txt
    ```
-2. 打开 guid 页，选择 aionrs agent
-3. 批量上传 3 个文件（WebUI: 选择多个文件；Desktop: 多次调用 dialog）
-4. 确认显示 3 个文件预览卡片
-5. 输入消息："Count the total lines across all attached files."
-6. 点击发送
-7. 等待 AI 回复完成
+2. Open the guid page and select the aionrs agent.
+3. Upload all 3 files at once (WebUI: select multiple files; Desktop: call the dialog several times).
+4. Confirm that 3 file preview cards are shown.
+5. Type the message: "Count the total lines across all attached files."
+6. Click send.
+7. Wait for the AI reply to finish.
 
-**DB 断言点**:
+**DB assertions**:
 
 ```sql
--- 1. 验证用户消息包含 3 个文件引用
+-- 1. Verify the user message contains all 3 file references
 SELECT json_extract(content, '$.attachedFiles') as files
 FROM messages
 WHERE conversation_id = ? AND position = 'right';
--- 期望: files 数组长度 = 3, 包含所有文件路径
+-- Expected: the files array has length 3 and contains every file path
 
--- 2. 验证 AI 回复计算正确
+-- 2. Verify the AI reply computed the right answer
 SELECT json_extract(content, '$.content') as text
 FROM messages
 WHERE conversation_id = ? AND position = 'left' AND type = 'text';
--- 期望: text 包含 "3" 或 "three"（行数）
+-- Expected: text contains "3" or "three" (the line count)
 ```
 
-**清理义务**:
+**Cleanup obligations**:
 
 - conversations name: `E2E-aionrs-<timestamp>-multi-files`
 - temp dir: `/tmp/e2e-aionrs-<timestamp>/`
 - test files: `/tmp/e2e-file-*.txt`
-- sessionStorage: 同 TC-A-01
+- sessionStorage: same as TC-A-01
 
-**截图数**: 3
+**Screenshots**: 3
 
 ---
 
-### TC-A-12: 关联多个文件夹
+### TC-A-12: Attach multiple folders
 
-**优先级**: P1
-**目标**: 验证多文件夹关联场景
+**Priority**: P1
+**Goal**: verify the multi-folder attachment scenario.
 
-**前置条件**:
+**Preconditions**:
 
-- 同 §1.2 全局前置条件
-- 临时目录存在多个测试文件夹
+- The global preconditions in §1.2.
+- The temporary directory contains several test folders.
 
-**维度组合**:
-| 维度 | 值 |
+**Dimension combination**:
+| Dimension | Value |
 |------|------|
-| 关联文件夹 | 多（2 个文件夹） |
-| 上传文件 | 无 |
-| 模型 | 默认 |
-| 权限 | default |
-| 对话中操作 | 无 |
+| Folder attachment | multiple (2 folders) |
+| File upload | none |
+| Model | default |
+| Permission | default |
+| Mid-conversation action | none |
 
-**操作步骤**:
+**Steps**:
 
-1. 创建测试数据：
+1. Create the test data:
    ```bash
    mkdir -p /tmp/e2e-aionrs-<timestamp>/folder-x/ /tmp/e2e-aionrs-<timestamp>/folder-y/
    echo "X content" > /tmp/e2e-aionrs-<timestamp>/folder-x/x.txt
    echo "Y content" > /tmp/e2e-aionrs-<timestamp>/folder-y/y.txt
    ```
-2. 打开 guid 页，选择 aionrs agent
-3. 从文件树依次选择 `folder-x/` 和 `folder-y/`
-4. 确认显示 2 个文件夹 Tag
-5. 输入消息："List all files in both attached folders."
-6. 点击发送
-7. 等待 AI 回复完成
+2. Open the guid page and select the aionrs agent.
+3. Pick `folder-x/` and then `folder-y/` in the file tree.
+4. Confirm that 2 folder tags are shown.
+5. Type the message: "List all files in both attached folders."
+6. Click send.
+7. Wait for the AI reply to finish.
 
-**DB 断言点**:
+**DB assertions**:
 
 ```sql
--- 1. 验证用户消息包含 2 个文件夹引用
+-- 1. Verify the user message contains both folder references
 SELECT json_extract(content, '$.attachedDirs') as dirs
 FROM messages
 WHERE conversation_id = ? AND position = 'right';
--- 期望: dirs 数组长度 = 2, 包含 'folder-x' 和 'folder-y'
+-- Expected: the dirs array has length 2 and contains 'folder-x' and 'folder-y'
 
--- 2. 验证 AI 回复列出两个文件夹的文件
+-- 2. Verify the AI reply lists the files from both folders
 SELECT json_extract(content, '$.content') as text
 FROM messages
 WHERE conversation_id = ? AND position = 'left' AND type = 'text';
--- 期望: text 包含 "x.txt" 和 "y.txt"
+-- Expected: text contains "x.txt" and "y.txt"
 ```
 
-**清理义务**:
+**Cleanup obligations**:
 
 - conversations name: `E2E-aionrs-<timestamp>-multi-folders`
-- temp dir: `/tmp/e2e-aionrs-<timestamp>/`（包含 folder-x, folder-y）
-- sessionStorage: 同 TC-A-01
+- temp dir: `/tmp/e2e-aionrs-<timestamp>/` (contains folder-x and folder-y)
+- sessionStorage: same as TC-A-01
 
-**截图数**: 3
+**Screenshots**: 3
 
 ---
 
-## 4. P2 用例（边界验证）
+## 4. P2 Cases (edge verification)
 
-### TC-A-13: Binary 不可达时跳过测试
+### TC-A-13: Skip the tests when the binary is unreachable
 
-**优先级**: P2
-**目标**: 验证 E2E 测试前 binary 检查机制生效
+**Priority**: P2
+**Goal**: verify that the pre-test binary check works.
 
-**前置条件**:
+**Preconditions**:
 
-- aionrs binary **不可用**（通过环境变量 `AION_CLI_PATH=/dev/null` 模拟）
+- The aionrs binary is **unavailable** (simulated with the environment variable `AION_CLI_PATH=/dev/null`).
 
-**维度组合**: N/A（验证前置检查逻辑）
+**Dimension combination**: N/A (this verifies the precondition check logic).
 
-**操作步骤**:
+**Steps**:
 
-1. 设置环境变量：`process.env.AION_CLI_PATH = '/dev/null'`
-2. 运行测试套件（或单个用例）
-3. 验证测试被 skip（状态：skipped，原因："aionrs binary not found"）
+1. Set the environment variable: `process.env.AION_CLI_PATH = '/dev/null'`.
+2. Run the test suite (or a single case).
+3. Verify that the test is skipped (status: skipped, reason: "aionrs binary not found").
 
-**DB 断言点**: N/A（测试未执行，不产生 DB 记录）
+**DB assertions**: N/A (the test never runs, so no DB records are produced).
 
-**预期行为**:
+**Expected behavior**:
 
-- 测试框架输出包含 `test.skip()` 标记
-- 控制台输出 skip 原因："aionrs binary not found, skipping E2E tests"
-- CI 报告显示测试为 skipped（非 failed）
+- The test framework output contains the `test.skip()` marker.
+- The console prints the skip reason: "aionrs binary not found, skipping E2E tests".
+- The CI report shows the test as skipped (not failed).
 
-**清理义务**: N/A（无 DB 记录产生）
+**Cleanup obligations**: N/A (no DB records are produced).
 
-**截图数**: 1（测试报告截图，显示 skip 状态）
+**Screenshots**: 1 (of the test report, showing the skipped status).
 
-**实现参考**:
+**Implementation reference**:
 
 ```typescript
 // tests/e2e/setup/aionrs.setup.ts
@@ -870,220 +870,220 @@ test.beforeAll(async () => {
 
 ---
 
-### TC-A-14: 超大文件上传限制
+### TC-A-14: Oversized file upload limit
 
-**优先级**: P2
-**目标**: 验证前端文件大小限制机制
+**Priority**: P2
+**Goal**: verify the front-end file size limit mechanism.
 
-**前置条件**:
+**Preconditions**:
 
-- 同 §1.2 全局前置条件
-- 测试文件存在：`/tmp/e2e-large-file.bin`（100MB）
+- The global preconditions in §1.2.
+- The test file exists: `/tmp/e2e-large-file.bin` (100MB).
 
-**维度组合**:
-| 维度 | 值 |
+**Dimension combination**:
+| Dimension | Value |
 |------|------|
-| 关联文件夹 | 无 |
-| 上传文件 | 超大（100MB） |
-| 模型 | 默认 |
-| 权限 | default |
-| 对话中操作 | 无 |
+| Folder attachment | none |
+| File upload | oversized (100MB) |
+| Model | default |
+| Permission | default |
+| Mid-conversation action | none |
 
-**操作步骤**:
+**Steps**:
 
-1. 创建超大测试文件：
+1. Create the oversized test file:
    ```bash
    dd if=/dev/zero of=/tmp/e2e-large-file.bin bs=1M count=100
    ```
-2. 打开 guid 页，选择 aionrs agent
-3. 尝试上传 `/tmp/e2e-large-file.bin`
-4. **验证出现错误提示**（预期：前端拦截，显示 "文件过大" 提示）
-5. 确认文件未被添加到 `uploadFile` 数组
+2. Open the guid page and select the aionrs agent.
+3. Attempt to upload `/tmp/e2e-large-file.bin`.
+4. **Verify that an error message appears** (expected: the front end blocks it and shows a "file too large" message).
+5. Confirm that the file was not added to the `uploadFile` array.
 
-**DB 断言点**: N/A（消息未发送，不产生 DB 记录）
+**DB assertions**: N/A (no message is sent, so no DB records are produced).
 
-**预期行为**:
+**Expected behavior**:
 
-- 前端显示错误提示（Toast / Message 组件）
-- 文件预览卡片不显示
-- 发送按钮可用（但消息体不包含该文件）
+- The front end shows an error message (a Toast or Message component).
+- No file preview card is shown.
+- The send button stays enabled (but the message body does not include that file).
 
-**清理义务**:
+**Cleanup obligations**:
 
 - test file: `/tmp/e2e-large-file.bin`
 
-**截图数**: 2（上传尝试 + 错误提示）
+**Screenshots**: 2 (the upload attempt and the error message).
 
-**备注**: 若前端未实现大小限制（需确认 `FileService.processDroppedFiles()` 逻辑），此用例改为验证 binary 层错误处理
+**Note**: if the front end does not implement a size limit (the logic in `FileService.processDroppedFiles()` must be confirmed), this case instead verifies error handling at the binary layer.
 
 ---
 
-### TC-A-15: 关联不存在的文件夹
+### TC-A-15: Attach a non-existent folder
 
-**优先级**: P2
-**目标**: 验证文件系统异常处理
+**Priority**: P2
+**Goal**: verify filesystem error handling.
 
-**前置条件**:
+**Preconditions**:
 
-- 同 §1.2 全局前置条件
+- The global preconditions in §1.2.
 
-**维度组合**:
-| 维度 | 值 |
+**Dimension combination**:
+| Dimension | Value |
 |------|------|
-| 关联文件夹 | 不存在（`/tmp/e2e-nonexistent-folder/`） |
-| 上传文件 | 无 |
-| 模型 | 默认 |
-| 权限 | default |
-| 对话中操作 | 无 |
+| Folder attachment | non-existent (`/tmp/e2e-nonexistent-folder/`) |
+| File upload | none |
+| Model | default |
+| Permission | default |
+| Mid-conversation action | none |
 
-**操作步骤**:
+**Steps**:
 
-1. 打开 guid 页，选择 aionrs agent
-2. 手动触发文件夹选择事件（模拟选择不存在的路径）：
+1. Open the guid page and select the aionrs agent.
+2. Fire the folder selection event manually (simulating the selection of a path that does not exist):
    ```typescript
    emitter.emit('aionrs.selected.file', [
      { path: '/tmp/e2e-nonexistent-folder/', name: 'e2e-nonexistent-folder', isFile: false },
    ]);
    ```
-3. 确认文件夹 Tag 显示（或显示错误提示）
-4. 输入消息："List files in the attached folder."
-5. 点击发送
-6. 等待 binary 处理（预期返回错误或空结果）
+3. Confirm that the folder tag is shown (or that an error message is shown).
+4. Type the message: "List files in the attached folder."
+5. Click send.
+6. Wait for the binary to handle it (an error or an empty result is expected).
 
-**DB 断言点**:
+**DB assertions**:
 
 ```sql
--- 1. 验证用户消息记录文件夹引用（即使路径不存在）
+-- 1. Verify the user message records the folder reference (even though the path does not exist)
 SELECT json_extract(content, '$.attachedDirs') as dirs
 FROM messages
 WHERE conversation_id = ? AND position = 'right';
--- 期望: dirs 包含 '/tmp/e2e-nonexistent-folder/'
+-- Expected: dirs contains '/tmp/e2e-nonexistent-folder/'
 
--- 2. 验证 AI 回复提示错误
+-- 2. Verify the AI reply reports the error
 SELECT json_extract(content, '$.content') as text
 FROM messages
 WHERE conversation_id = ? AND position = 'left' AND type = 'text';
--- 期望: text 包含 "not found" 或 "does not exist" 或类似错误提示
+-- Expected: text contains "not found", "does not exist", or a similar error message
 
--- 3. 验证对话状态
+-- 3. Verify the conversation status
 SELECT status FROM conversations WHERE id = ?;
--- 期望: status='finished'（非 'error'，因为是用户输入错误而非系统错误）
+-- Expected: status='finished' (not 'error', because this is bad user input rather than a system failure)
 ```
 
-**清理义务**:
+**Cleanup obligations**:
 
 - conversations name: `E2E-aionrs-<timestamp>-nonexistent-folder`
 - temp dir: `/tmp/e2e-aionrs-<timestamp>/`
-- sessionStorage: 同 TC-A-01
+- sessionStorage: same as TC-A-01
 
-**截图数**: 3
-
----
-
-## 5. 未覆盖场景（记录备查）
-
-根据议题 3 决策，以下场景本轮 E2E **不覆盖**：
-
-1. **工具确认中途切换权限**：
-   - 场景：弹窗确认中 → 切换权限为 yolo → 验证弹窗行为（是否自动消失/取消/重新评估）
-   - 原因：当前代码未显式定义该边界行为，E2E 不应固化不确定行为
-
-2. **流式输出中途切换模型**：
-   - 场景：AI 回复流式中 → 切换模型 → 验证当前 turn 是否中断/继续/使用新模型
-   - 原因：同上
-
-3. **跨对话/跨进程权限持久化**：
-   - 场景：对话 A 设置 "always allow" → 关闭应用 → 重启后创建对话 B → 验证权限是否记住
-   - 原因：根据议题 2 决策，本轮只测同一对话内切换生效
-
-4. **并发对话场景**（暂缓至后续 Gate）：
-   - 场景：同时打开 2 个 aionrs 对话，轮流发送消息 → 验证 binary 进程隔离
-   - 原因：需更复杂的测试编排（Playwright 多标签页 + 进程监控），本轮聚焦单对话流程
+**Screenshots**: 3
 
 ---
 
-## 6. 测试数据矩阵（用例汇总）
+## 5. Scenarios Not Covered (recorded for reference)
 
-| 用例 ID | 关联文件夹 | 上传文件  | 模型        | 权限              | 对话中操作 | 优先级 | 截图数 |
-| ------- | ---------- | --------- | ----------- | ----------------- | ---------- | ------ | ------ |
-| TC-A-01 | 无         | 无        | 默认        | default           | 无         | P0     | 3      |
-| TC-A-02 | 单         | 无        | 默认        | default           | 无         | P0     | 3      |
-| TC-A-03 | 无         | 单        | 默认        | default           | 无         | P0     | 3      |
-| TC-A-04 | 无         | 无        | 第二个      | default           | 无         | P0     | 3      |
-| TC-A-05 | 无         | 无        | 默认        | yolo              | 无         | P0     | 3      |
-| TC-A-06 | 无         | 无        | 默认        | auto_edit         | 无         | P1     | 4      |
-| TC-A-07 | 无         | 无        | 默认→第二个 | default           | 切换模型   | P1     | 4      |
-| TC-A-08 | 无         | 无        | 默认        | default→auto_edit | 切换权限   | P1     | 5      |
-| TC-A-09 | 无         | 无        | 默认        | auto_edit→yolo    | 切换权限   | P1     | 4      |
-| TC-A-10 | 单         | 单        | 第二个      | auto_edit         | 无         | P1     | 4      |
-| TC-A-11 | 无         | 多（3个） | 默认        | default           | 无         | P1     | 3      |
-| TC-A-12 | 多（2个）  | 无        | 默认        | default           | 无         | P1     | 3      |
-| TC-A-13 | N/A        | N/A       | N/A         | N/A               | N/A        | P2     | 1      |
-| TC-A-14 | 无         | 超大      | 默认        | default           | 无         | P2     | 2      |
-| TC-A-15 | 不存在     | 无        | 默认        | default           | 无         | P2     | 3      |
+Per the decision on topic 3, the following scenarios are **not covered** in this round of E2E work:
 
-**统计**:
+1. **Switching the permission during a tool confirmation**:
+   - Scenario: the confirmation dialog is open → switch the permission to yolo → verify the dialog's behavior (does it disappear, get cancelled, or get re-evaluated?).
+   - Reason: the current code does not define this edge behavior explicitly, and E2E should not lock in undefined behavior.
 
-- P0: 5 个用例（基线路径）
-- P1: 7 个用例（常规组合 + 对话中操作）
-- P2: 3 个用例（边界验证）
-- 总计: 15 个用例
-- 总截图数: 50 张
+2. **Switching the model mid-stream**:
+   - Scenario: the AI reply is streaming → switch the model → verify whether the current turn is interrupted, continues, or uses the new model.
+   - Reason: same as above.
+
+3. **Permission persistence across conversations and processes**:
+   - Scenario: set "always allow" in conversation A → close the app → restart and create conversation B → verify whether the permission is remembered.
+   - Reason: per the decision on topic 2, this round only tests that a switch takes effect within the same conversation.
+
+4. **Concurrent conversation scenarios** (deferred to a later gate):
+   - Scenario: open 2 aionrs conversations at once and send messages alternately → verify that the binary processes are isolated.
+   - Reason: this needs more complex test orchestration (multiple Playwright tabs plus process monitoring), and this round focuses on the single-conversation flow.
 
 ---
 
-## 7. 实现优先级建议
+## 6. Test Data Matrix (case summary)
 
-### Phase 1: P0 用例（必须通过）
+| Case ID | Folder attachment | File upload  | Model            | Permission        | Mid-conversation action | Priority | Screenshots |
+| ------- | ----------------- | ------------ | ---------------- | ----------------- | ----------------------- | -------- | ----------- |
+| TC-A-01 | none              | none         | default          | default           | none                    | P0       | 3           |
+| TC-A-02 | single            | none         | default          | default           | none                    | P0       | 3           |
+| TC-A-03 | none              | single       | default          | default           | none                    | P0       | 3           |
+| TC-A-04 | none              | none         | second           | default           | none                    | P0       | 3           |
+| TC-A-05 | none              | none         | default          | yolo              | none                    | P0       | 3           |
+| TC-A-06 | none              | none         | default          | auto_edit         | none                    | P1       | 4           |
+| TC-A-07 | none              | none         | default → second | default           | switch model            | P1       | 4           |
+| TC-A-08 | none              | none         | default          | default→auto_edit | switch permission       | P1       | 5           |
+| TC-A-09 | none              | none         | default          | auto_edit→yolo    | switch permission       | P1       | 4           |
+| TC-A-10 | single            | single       | second           | auto_edit         | none                    | P1       | 4           |
+| TC-A-11 | none              | multiple (3) | default          | default           | none                    | P1       | 3           |
+| TC-A-12 | multiple (2)      | none         | default          | default           | none                    | P1       | 3           |
+| TC-A-13 | N/A               | N/A          | N/A              | N/A               | N/A                     | P2       | 1           |
+| TC-A-14 | none              | oversized    | default          | default           | none                    | P2       | 2           |
+| TC-A-15 | non-existent      | none         | default          | default           | none                    | P2       | 3           |
 
-1. TC-A-01（最小路径）— 优先实现，验证端到端基础流程
-2. TC-A-02、TC-A-03（附件）— 验证文件/文件夹传递
-3. TC-A-04（模型）— 验证模型选择
-4. TC-A-05（yolo）— 验证权限档位
+**Totals**:
 
-### Phase 2: P1 用例（常规覆盖）
-
-1. TC-A-06（auto_edit）— 完整权限档位覆盖
-2. TC-A-07、TC-A-08、TC-A-09（对话中切换）— 验证动态行为
-3. TC-A-10、TC-A-11、TC-A-12（组合场景）— 验证维度交叉
-
-### Phase 3: P2 用例（边界收尾）
-
-1. TC-A-13（binary 检查）— CI 跳过机制
-2. TC-A-14、TC-A-15（异常处理）— 健壮性验证
-
----
-
-## 8. 下一步（Gate 2 → Gate 3）
-
-1. **chat-aionrs-engineer** review 本用例设计，评估实现工作量
-2. **team-lead** 批准后进入 Gate 3（实现）
-3. engineer 实现完成后，designer 产出 `implementation-mapping.zh.md`（TC ID → 文件:行号:函数名 映射）
-
----
-
-## 附录 A: 关键源码参考
-
-| 文件                                                                          | 关键行号 | 说明                                           |
-| ----------------------------------------------------------------------------- | -------- | ---------------------------------------------- |
-| `src/renderer/pages/guid/GuidPage.tsx`                                        | 465-469  | guid 页模型选择器可见性（`isGeminiMode`）      |
-| `src/renderer/pages/guid/components/AgentPillBar.tsx`                         | 58-122   | agent pill 点击事件                            |
-| `src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx`          | 331-337  | `atPath` 状态（关联文件夹数组）                |
-| `src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx`          | 103-125  | 文件上传 handler                               |
-| `src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx`          | 206-212  | 发送消息（传递 `files` 参数）                  |
-| `src/renderer/pages/conversation/platforms/aionrs/useAionrsModelSelection.ts` | 36-40    | 过滤 Google Auth 模型                          |
-| `src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx`          | —        | aionrs runtime capabilities 转换为权限选项     |
-| `src/process/task/AionrsManager.ts`                                           | 250-259  | 权限模式自动批准逻辑                           |
-| `src/process/task/AionrsManager.ts`                                           | 727-737  | `setMode()` 持久化                             |
-| `src/process/task/AionrsManager.ts`                                           | 452-489  | missing finish fallback（15s 超时）            |
-| `aioncore aionui.db`                                                          | —        | conversations + messages 由 backend 独占持久化 |
+- P0: 5 cases (baseline paths)
+- P1: 7 cases (regular combinations plus mid-conversation actions)
+- P2: 3 cases (edge verification)
+- Total: 15 cases
+- Total screenshots: 50
 
 ---
 
-## 附录 B: DB 断言查询模板
+## 7. Suggested Implementation Order
+
+### Phase 1: P0 cases (must pass)
+
+1. TC-A-01 (minimal path) — implement first; it verifies the basic end-to-end flow.
+2. TC-A-02 and TC-A-03 (attachments) — verify that files and folders are passed through.
+3. TC-A-04 (model) — verify model selection.
+4. TC-A-05 (yolo) — verify the permission levels.
+
+### Phase 2: P1 cases (regular coverage)
+
+1. TC-A-06 (auto_edit) — completes the coverage of the permission levels.
+2. TC-A-07, TC-A-08, TC-A-09 (mid-conversation switching) — verify the dynamic behavior.
+3. TC-A-10, TC-A-11, TC-A-12 (combination scenarios) — verify the dimensions crossing over.
+
+### Phase 3: P2 cases (edge wrap-up)
+
+1. TC-A-13 (binary check) — the CI skip mechanism.
+2. TC-A-14 and TC-A-15 (error handling) — robustness verification.
+
+---
+
+## 8. Next Steps (Gate 2 → Gate 3)
+
+1. **chat-aionrs-engineer** reviews this case design and estimates the implementation effort.
+2. Enter Gate 3 (implementation) once **team-lead** approves.
+3. Once the engineer finishes the implementation, the designer produces `implementation-mapping.md` (mapping TC ID → file:line:function name).
+
+---
+
+## Appendix A: Key Source References
+
+| File                                                                          | Key lines | Description                                                         |
+| ----------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------- |
+| `src/renderer/pages/guid/GuidPage.tsx`                                        | 465-469   | Visibility of the guid page model selector (`isGeminiMode`)         |
+| `src/renderer/pages/guid/components/AgentPillBar.tsx`                         | 58-122    | Agent pill click handling                                           |
+| `src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx`          | 331-337   | The `atPath` state (the attached folder array)                      |
+| `src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx`          | 103-125   | File upload handler                                                 |
+| `src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx`          | 206-212   | Sending a message (passing the `files` parameter)                   |
+| `src/renderer/pages/conversation/platforms/aionrs/useAionrsModelSelection.ts` | 36-40     | Filtering out Google Auth models                                    |
+| `src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx`          | —         | Converts the aionrs runtime capabilities into permission options    |
+| `src/process/task/AionrsManager.ts`                                           | 250-259   | Auto-approval logic for the permission modes                        |
+| `src/process/task/AionrsManager.ts`                                           | 727-737   | `setMode()` persistence                                             |
+| `src/process/task/AionrsManager.ts`                                           | 452-489   | The missing-finish fallback (15s timeout)                           |
+| `aioncore aionui.db`                                                          | —         | conversations and messages are persisted exclusively by the backend |
+
+---
+
+## Appendix B: DB Assertion Query Templates
 
 ```sql
--- 查询对话基本信息
+-- Query the basic conversation information
 SELECT
   id,
   name,
@@ -1096,7 +1096,7 @@ SELECT
 FROM conversations
 WHERE name LIKE 'E2E-aionrs-%';
 
--- 查询消息列表
+-- Query the message list
 SELECT
   id,
   msg_id,
@@ -1111,7 +1111,7 @@ FROM messages
 WHERE conversation_id = ?
 ORDER BY created_at ASC;
 
--- 查询工具调用
+-- Query the tool calls
 SELECT
   json_extract(content, '$[0].name') as tool_name,
   json_extract(content, '$[0].status') as tool_status,
@@ -1121,7 +1121,7 @@ FROM messages
 WHERE conversation_id = ? AND type = 'tool_group'
 ORDER BY created_at ASC;
 
--- 查询思考消息
+-- Query the thinking messages
 SELECT
   json_extract(content, '$.content') as thinking_text,
   json_extract(content, '$.duration') as duration_ms,
@@ -1129,10 +1129,10 @@ SELECT
 FROM messages
 WHERE conversation_id = ? AND type = 'thinking';
 
--- 清理所有 E2E 数据
+-- Clean up all E2E data
 DELETE FROM conversations WHERE name LIKE 'E2E-aionrs-%';
 ```
 
 ---
 
-**文档完成，等待 engineer review。**
+**Document complete, awaiting the engineer's review.**

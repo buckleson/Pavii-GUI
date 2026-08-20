@@ -53,12 +53,12 @@ test.describe('Team Stale URL', () => {
       // Router stayed on the route — verify fallback DOM content exists
       const fallbackEl = page
         .locator('body')
-        .filter({ hasText: /not found|找不到|empty|没有|no team/i })
+        .filter({ hasText: /not found|empty|no team/i })
         .first();
       const hasFallback = await fallbackEl.isVisible({ timeout: 3_000 }).catch(() => false);
 
       // Accept either a visible fallback UI or at minimum no error modal
-      const errorModal = page.locator('.arco-modal').filter({ hasText: /error|错误/i });
+      const errorModal = page.locator('.arco-modal').filter({ hasText: /error/i });
       const hasErrorModal = await errorModal.isVisible({ timeout: 1_000 }).catch(() => false);
       expect(hasErrorModal).toBe(false);
 
@@ -73,7 +73,7 @@ test.describe('Team Stale URL', () => {
     await page.screenshot({ path: 'tests/e2e/results/team-stale-02.png' });
 
     // [assert] Sidebar remains interactive — Teams label must still be visible
-    const teamsLabel = page.locator('text=Teams').or(page.locator('text=团队'));
+    const teamsLabel = page.locator('text=Teams');
     await expect(teamsLabel.first()).toBeVisible({ timeout: 10_000 });
   });
 });

@@ -19,8 +19,8 @@ test.describe('Team UI Details', () => {
       return;
     }
 
-    const collapseBtn = page.locator('button[aria-label="Collapse sidebar"], button[aria-label="折叠侧边栏"]');
-    const expandBtn = page.locator('button[aria-label="Expand sidebar"], button[aria-label="展开侧边栏"]');
+    const collapseBtn = page.locator('button[aria-label="Collapse sidebar"]');
+    const expandBtn = page.locator('button[aria-label="Expand sidebar"]');
 
     await collapseBtn.click({ timeout: 5_000 });
 
@@ -87,7 +87,7 @@ test.describe('Team UI Details', () => {
     const menuVisible = await menu.isVisible({ timeout: 3_000 }).catch(() => false);
 
     if (menuVisible) {
-      const browseOption = menu.locator('text=Choose a different folder').or(menu.locator('text=选择其他文件夹'));
+      const browseOption = menu.locator('text=Choose a different folder');
       await browseOption.first().click();
     }
 
@@ -104,7 +104,7 @@ test.describe('Team UI Details', () => {
 
     await page.waitForURL(/\/team\//, { timeout: 15_000 });
 
-    const wsTitle = page.locator('text=Workspace').or(page.locator('text=工作区'));
+    const wsTitle = page.locator('text=Workspace');
     await expect(wsTitle.first()).toBeVisible({ timeout: 10_000 });
 
     await cleanupTeamsByName(page, TEAM_WORKSPACE);

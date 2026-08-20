@@ -15,7 +15,7 @@ async function clickPreferredPermissionOption(card: Locator): Promise<boolean> {
 
   const preferredByText = card
     .locator('[data-testid*="option-"]')
-    .filter({ hasText: /always|始终|永远/i })
+    .filter({ hasText: /always/i })
     .first();
   if (await preferredByText.isVisible().catch(() => false)) {
     await preferredByText.click().catch(() => {});

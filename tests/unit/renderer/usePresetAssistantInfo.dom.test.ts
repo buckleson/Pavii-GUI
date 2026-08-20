@@ -547,7 +547,7 @@ function makeConversation(extra: Record<string, unknown>): TChatConversation {
   return {
     id: 'conv-1',
     user_id: 'user-1',
-    name: '测试',
+    name: 'Test',
     type: 'acp',
     model: {},
     extra,

@@ -1,6 +1,6 @@
 /**
  * Feedback button scenarios — walks each place in the product where the
- * "一键反馈" pill appears, verifies the pill shows up, clicks it, and
+ * "Report Issue" pill appears, verifies the pill shows up, clicks it, and
  * confirms the feedback modal opens with the correct module preselected.
  *
  * Covered scenarios:
@@ -21,7 +21,7 @@ import { test, expect, type Page } from '../fixtures';
 import { goToSettings } from '../helpers';
 
 // Label comes from i18n key settings.oneClickFeedback.
-const FEEDBACK_PILL = 'button:has-text("反馈问题"), button:has-text("Report Issue")';
+const FEEDBACK_PILL = 'button:has-text("Report Issue")';
 // The app can hold several FeedbackReportModal instances (FeedbackProvider's
 // plus per-page ones like About's), and Arco keeps closed modals mounted but
 // hidden — so always scope to the *visible* body, not the first in the DOM.
@@ -72,7 +72,7 @@ test('[1] About → Bug Report entry opens feedback modal', async ({ page }) => 
 
   const bugReportRow = page
     .locator('div')
-    .filter({ hasText: /^Report Issue$|^反馈问题$|^問題を報告$|^문제 보고$/ })
+    .filter({ hasText: /^Report Issue$/ })
     .first();
   await expect(bugReportRow).toBeVisible({ timeout: 10_000 });
   await bugReportRow.click();
@@ -112,15 +112,15 @@ async function openCustomAgentEditor(page: Page, command: string) {
 
   // The "Add custom Agent" entry is a TalkToButlerButton dropdown; open it and
   // choose "Add manually" to mount the inline editor modal.
-  const addButton = page.locator('button:has-text("添加自定义 Agent"), button:has-text("Add Custom Agent")').first();
+  const addButton = page.locator('button:has-text("Add Custom Agent")').first();
   await expect(addButton).toBeVisible({ timeout: 10_000 });
   await addButton.click();
-  const manualItem = page.locator('.arco-dropdown-menu-item', { hasText: /手动添加|Add manually/ }).first();
+  const manualItem = page.locator('.arco-dropdown-menu-item', { hasText: /Add manually/ }).first();
   await expect(manualItem).toBeVisible({ timeout: 5_000 });
   await manualItem.click();
 
   // Scope everything to the editor modal — the agent cards behind it also
-  // carry "测试连接" buttons, which the modal backdrop makes unclickable.
+  // carry "Test Connection" buttons, which the modal backdrop makes unclickable.
   const editorModal = page.locator('.arco-modal-wrapper', {
     has: page.locator('input[placeholder*="my-agent"]'),
   });
@@ -132,7 +132,7 @@ async function openCustomAgentEditor(page: Page, command: string) {
   await commandInput.fill(command);
 
   // Click "Test Connection"
-  const testBtn = editorModal.locator('button:has-text("测试连接"), button:has-text("Test Connection")').first();
+  const testBtn = editorModal.locator('button:has-text("Test Connection")').first();
   await testBtn.click();
 }
 

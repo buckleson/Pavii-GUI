@@ -63,12 +63,12 @@ test.describe('Assistant Settings Core Interactions (P0)', () => {
 
     const builtinCard = page
       .locator('[data-testid^="assistant-card-"]')
-      .filter({ hasText: /官方|Official/i })
+      .filter({ hasText: /Official/i })
       .first();
     await expect(builtinCard).toBeVisible({ timeout: 10_000 });
     const builtinId = ((await builtinCard.getAttribute('data-testid')) ?? '').replace('assistant-card-', '');
     await duplicateAssistant(page, builtinId);
-    await expect(page.locator('[data-testid="btn-save-assistant"]')).toContainText(/Create|创建/i);
+    await expect(page.locator('[data-testid="btn-save-assistant"]')).toContainText(/Create/i);
     await takeScreenshot(page, 'assistants/p0-2/03-builtin-duplicate-opens-create.png');
   });
 

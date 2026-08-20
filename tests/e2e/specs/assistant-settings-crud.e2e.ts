@@ -484,8 +484,8 @@ test.describe('Assistant Settings CRUD', () => {
     expect(await cards.count()).toBeGreaterThanOrEqual(1);
 
     const bodyText = await page.locator('body').textContent();
-    expect(bodyText).not.toMatch(/Enabled|已启用/);
-    expect(bodyText).not.toMatch(/Disabled|已禁用/);
+    expect(bodyText).not.toMatch(/Enabled/);
+    expect(bodyText).not.toMatch(/Disabled/);
   });
 
   test('duplicate builtin assistant creates an editable custom copy', async ({ page }) => {
@@ -497,7 +497,7 @@ test.describe('Assistant Settings CRUD', () => {
     if (!builtinAssistant) return;
 
     await duplicateAssistant(page, builtinAssistant.id);
-    await expect(page.locator(BTN_SAVE_ASSISTANT)).toContainText(/Create|创建/i);
+    await expect(page.locator(BTN_SAVE_ASSISTANT)).toContainText(/Create/i);
     await expect(page.locator('[data-testid="input-assistant-name"]')).not.toBeDisabled();
     await expect(page.locator('[data-testid="input-assistant-desc"]')).not.toBeDisabled();
 
@@ -513,7 +513,7 @@ test.describe('Assistant Settings CRUD', () => {
 
     await openAssistantEditor(page, duplicateId);
     await expect(page.locator(BTN_DELETE_ASSISTANT)).toBeVisible();
-    await expect(page.locator(BTN_SAVE_ASSISTANT)).toContainText(/Save|保存/i);
+    await expect(page.locator(BTN_SAVE_ASSISTANT)).toContainText(/Save/i);
 
     await deleteAssistant(page);
   });

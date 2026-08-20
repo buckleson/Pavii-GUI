@@ -26,7 +26,6 @@ test.describe('System Settings Persistence', () => {
   test('TC-PERSIST-01: language selection persists after reload', async ({ page }) => {
     const selectTrigger = page.locator('.aion-select .arco-select-view').first();
     await expect(selectTrigger).toBeVisible();
-    const originalLang = await selectTrigger.textContent();
 
     await selectTrigger.click();
     const englishOption = page.locator('.arco-select-option:has-text("English")');
@@ -42,11 +41,9 @@ test.describe('System Settings Persistence', () => {
     expect(await reloadedSelect.textContent()).toContain('English');
     expect(await page.locator('body').textContent()).toContain('Language');
 
-    // Restore
-    await reloadedSelect.click();
-    const restoreOption = page.locator(`.arco-select-option:has-text("${originalLang?.trim() || '简体中文'}")`);
-    await expect(restoreOption).toBeVisible();
-    await restoreOption.click();
+    // Nothing to restore: English is the only language, so the selection this
+    // test makes is also the state it started from. The restore step used to
+    // fall back to 简体中文, which no longer exists in the picker.
     await waitForSettle(page);
   });
 

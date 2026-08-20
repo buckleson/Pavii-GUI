@@ -70,7 +70,7 @@ describe('isActionable (action gating)', () => {
 describe('resourceKey (row identity)', () => {
   it('distinguishes the staged and unstaged entries of the SAME file', () => {
     // git reports one file twice when it has both staged and unstaged changes
-    // (source-control.md §变更清单) — pe_id + path alone would collide.
+    // (source-control.md, changed-file list) — pe_id + path alone would collide.
     const staged = res({ staged: true });
     const unstaged = res({ staged: false });
     expect(resourceKey(staged)).not.toBe(resourceKey(unstaged));

@@ -79,8 +79,8 @@ test.describe('Preview — view mode toggle', () => {
     }
 
     // Find Editor and Preview toggle text spans
-    const editorToggle = panel.getByText(/^Editor$|^编辑器$/).first();
-    const previewToggle = panel.getByText(/^Preview$|^预览$/).first();
+    const editorToggle = panel.getByText(/^Editor$/).first();
+    const previewToggle = panel.getByText(/^Preview$/).first();
 
     if (!(await editorToggle.isVisible({ timeout: 5_000 }).catch(() => false))) {
       test.skip(true, 'View mode toggle not available for this file type');

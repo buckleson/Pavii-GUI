@@ -254,14 +254,14 @@ describe('normalizeTextMessageContent', () => {
   it('normalizes snake_case team metadata from an object payload', () => {
     expect(
       normalizeTextMessageContent({
-        content: '已向 Lead Agent 报告就绪状态',
+        content: 'Reported ready status to the Lead Agent',
         teammate_message: true,
         sender_name: 'Codex Assistant',
         sender_backend: 'codex',
         sender_conversation_id: 'teammate-conversation-1',
       })
     ).toEqual({
-      content: '已向 Lead Agent 报告就绪状态',
+      content: 'Reported ready status to the Lead Agent',
       teammateMessage: true,
       senderName: 'Codex Assistant',
       senderAgentType: 'codex',
@@ -340,7 +340,7 @@ describe('transformMessage', () => {
     const message: IResponseMessage = {
       type: 'text',
       data: {
-        content: '你好',
+        content: 'Hello',
       },
       msg_id: 'team-user-message-1',
       conversation_id: CONVERSATION_ID,
@@ -355,7 +355,7 @@ describe('transformMessage', () => {
     expect(transformed.position).toBe('right');
     expect(transformed.status).toBe('finish');
     expect(transformed.content).toEqual({
-      content: '你好',
+      content: 'Hello',
       replace: true,
     });
   });

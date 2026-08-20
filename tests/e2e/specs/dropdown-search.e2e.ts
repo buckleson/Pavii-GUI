@@ -46,7 +46,7 @@ async function openGuidPlusDropdown(page: Page): Promise<void> {
   }
 }
 
-/** Hover a "+"-menu submenu title like `技能 (5/41)` / `Skills (5/41)` and return its total count. */
+/** Hover a "+"-menu submenu title like `Skills (5/41)` and return its total count. */
 async function hoverSubmenuAndGetTotal(page: Page, titlePattern: RegExp): Promise<number | null> {
   const title = page.getByText(titlePattern).first();
   if (!(await title.isVisible().catch(() => false))) return null;
@@ -63,7 +63,7 @@ test.describe('Guid plus-menu submenu search', () => {
     await goToGuid(page);
     await openGuidPlusDropdown(page);
 
-    const total = await hoverSubmenuAndGetTotal(page, /Skills \(\d+\/\d+\)|技能 \(\d+\/\d+\)/);
+    const total = await hoverSubmenuAndGetTotal(page, /Skills \(\d+\/\d+\)/);
     test.skip(total === null, 'No skills submenu in this environment');
 
     const search = page.locator('[data-testid="guid-skill-search"]');
@@ -87,7 +87,7 @@ test.describe('Guid plus-menu submenu search', () => {
       // Nonsense query shows the empty state instead of stale items.
       await search.fill('zz-no-such-skill-zz');
       await expect(checkboxes).toHaveCount(0);
-      await expect(page.getByText(/No matching skills|没有匹配的技能/).first()).toBeVisible();
+      await expect(page.getByText(/No matching skills/).first()).toBeVisible();
     } else {
       await expect(search).toHaveCount(0);
     }
@@ -112,7 +112,7 @@ test.describe('Guid plus-menu submenu search', () => {
 
       await search.fill('zz-no-such-server-zz');
       await expect(checkboxes).toHaveCount(0);
-      await expect(page.getByText(/No servers found|未找到符合条件的服务器/).first()).toBeVisible();
+      await expect(page.getByText(/No servers found/).first()).toBeVisible();
     } else {
       await expect(search).toHaveCount(0);
     }

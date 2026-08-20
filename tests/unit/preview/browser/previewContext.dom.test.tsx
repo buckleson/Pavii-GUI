@@ -5,11 +5,6 @@
  */
 
 /**
- * 浏览器 tab 在 PreviewContext 中的行为测试。
- *
- * 这里覆盖的都是"错了会很难查"的逻辑：tab 上限触发时的复用、空白页不被误合并、
- * 后台 tab 能被更新、以及持久化时活动角标必须被重置。
- *
  * Covers the PreviewContext behaviors whose failures are hard to diagnose: tab-cap
  * reuse, blank tabs not merging into each other, background tabs being patchable,
  * and the activity badge never being restored as active.
@@ -78,8 +73,6 @@ describe('PreviewContext browser tabs', () => {
   });
 
   it('stacks multiple blank browser tabs instead of merging them', () => {
-    // 关键行为：两个新建 tab 内容和标题都相同，普通去重逻辑会把它们合成一个，
-    // 用户点两次加号只会看到一个 tab。
     // Key behavior: two fresh tabs share content and title, so the normal dedupe
     // path would fold them into one and two plus-clicks would yield one tab.
     renderProvider();
@@ -108,7 +101,6 @@ describe('PreviewContext browser tabs', () => {
     act(() => ctx.openBrowserTab('https://overflow.example.com'));
 
     expect(browserTabs()).toHaveLength(MAX_BROWSER_TABS);
-    // 最旧的 tab 被导航到新地址，而不是新增一个
     // The oldest tab is navigated to the new address rather than a tab being added.
     expect(browserTabs()[0].id).toBe(oldestId);
     expect(browserTabs()[0].content).toBe('https://overflow.example.com');
@@ -143,7 +135,6 @@ describe('PreviewContext browser tab persistence', () => {
     act(() => ctx.closePreviewIfScopeChanged('project-a'));
     act(() => ctx.openBrowserTab('https://example.com'));
 
-    // 切换到另一个项目时，当前项目的状态被写入；浏览器 tab 属于项目而非会话
     // Switching to another project persists the current one. Browser tabs belong to
     // the project, not the conversation.
     act(() => ctx.closePreviewIfScopeChanged('project-b'));
@@ -153,19 +144,16 @@ describe('PreviewContext browser tab persistence', () => {
     expect(stored.tabs[0].content).toBe('https://example.com');
     expect(stored.tabs[0].content_type).toBe('browser');
 
-    // project-b 是新项目，不该看到 project-a 的 tab
     // project-b is a different project and must not see project-a's tabs.
     expect(browserTabs()).toHaveLength(0);
 
-    // 切回来后恢复 / Returning restores them
+    // Returning restores them
     act(() => ctx.closePreviewIfScopeChanged('project-a'));
     expect(browserTabs()).toHaveLength(1);
     expect(browserTabs()[0].content).toBe('https://example.com');
   });
 
   it('never restores the agent activity badge as active', () => {
-    // 关键行为：角标是"此刻 Agent 正在操作"的实时信号。若被持久化成 true，
-    // 重启后会永久亮着，用户会以为 Agent 在偷偷操作浏览器。
     // Key behavior: the badge means "the agent is acting right now". Persisted as
     // true it would stay lit forever after a restart, making the user think the
     // agent is secretly driving the browser.
@@ -200,10 +188,6 @@ describe('PreviewContext browser tab persistence', () => {
 
 describe('PreviewContext focus on open', () => {
   /**
-   * 回归测试：openPreview 曾把「该激活哪个 tab」的赋值写在 setTabs 的 updater 里，
-   * 而 React 只在 fiber 没有待处理更新时才急切求值 updater —— 于是第一次打开正常，
-   * 第二次之后打开的 tab 不会被激活。这个 bug 影响所有 tab 类型，不只是浏览器。
-   *
    * Regression: openPreview used to decide the next active tab inside the setTabs
    * updater, but React only eagerly evaluates an updater while the fiber has no
    * pending update — so the first open focused correctly and every later one did
@@ -261,10 +245,6 @@ describe('PreviewContext focus on open', () => {
   });
 
   /**
-   * `replace` 目前没有调用方（#3821 把文件树的 `{ replace: true }` 去掉了，改成追加
-   * 新 tab）。但 openPreview 仍支持它，所以这里锁住行为，避免将来重构时被静默改坏
-   * 或误删——语义是"复用当前 tab"，且当前 tab 有未保存修改时必须让位、另开新 tab。
-   *
    * `replace` currently has no caller (#3821 dropped `{ replace: true }` from the
    * explorer in favor of appending). openPreview still supports it, so pin the
    * behavior against silent breakage in future refactors: reuse the active tab, but
@@ -291,7 +271,7 @@ describe('PreviewContext focus on open', () => {
 
     act(() => ctx.openPreview('b', 'code', { file_name: 'b.ts' }, { replace: true }));
 
-    // 未保存的修改不能被覆盖掉 / Unsaved edits must not be discarded
+    // Unsaved edits must not be discarded
     expect(ctx.tabs).toHaveLength(2);
     expect(ctx.tabs[0].content).toBe('a edited');
   });
@@ -318,7 +298,6 @@ describe('PreviewContext updateTab', () => {
   });
 
   it('updates a background tab without stealing focus', () => {
-    // 关键行为：后台 tab 的页面标题也会变化，更新它不能把用户拽到那个 tab 上
     // Key behavior: a background tab's page title still changes, and updating it
     // must not drag the user over to that tab.
     renderProvider();
@@ -368,7 +347,6 @@ describe('PreviewContext updateTab', () => {
   });
 
   it('allows clearing the address to an empty string', () => {
-    // content 用 typeof 检查而非真值检查，空字符串是合法的清空操作
     // content is checked with typeof rather than truthiness, so clearing is valid.
     renderProvider();
     act(() => ctx.openBrowserTab('https://example.com'));

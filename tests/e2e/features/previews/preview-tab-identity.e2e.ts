@@ -33,8 +33,8 @@ import { goToGuid } from '../../helpers';
 /** The hoisted preview region — verified present at `Layout.tsx:550`. */
 const PREVIEW_PANEL = '[data-project-preview-region]';
 
-/** `preview.unsavedChangesTitle`, both shipped locales. */
-const DIRTY_MARK = /Unsaved Changes|未保存的修改/;
+/** `preview.unsavedChangesTitle`. */
+const DIRTY_MARK = /Unsaved Changes/;
 
 type BackendWindow = Window & { __backendPort?: number };
 

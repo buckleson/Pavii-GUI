@@ -144,14 +144,11 @@ export async function clearSearch(page: Page): Promise<void> {
   await searchToggle.click();
 }
 
-/**
- * Tab text mapping: supports both English and Chinese labels.
- * The actual text depends on the app's i18n locale.
- */
+/** Tab text mapping from logical tab name to the label the app renders. */
 const TAB_TEXT_MAP: Record<string, RegExp> = {
-  All: /^(All|全部)$/i,
-  System: /^(System|系统)$/i,
-  Custom: /^(Custom|自定义)$/i,
+  All: /^All$/i,
+  System: /^System$/i,
+  Custom: /^Custom$/i,
 };
 
 /** Select a filter tab by logical name (All / System / Custom). */

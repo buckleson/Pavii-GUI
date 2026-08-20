@@ -1,5 +1,5 @@
 /**
- * Skills Hub E2E Tests - Search功能 (P1 Priority)
+ * Skills Hub E2E Tests - Search (P1 Priority)
  *
  * Test Cases Covered:
  * - TC-S-02: Search My Skills (match scenario)

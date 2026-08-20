@@ -1,130 +1,130 @@
-# Assistant 设置页补充测试用例（门 2）
+# Assistant Settings Page — Supplementary Test Cases (Gate 2)
 
-- 基于需求文档：`requirements.zh.md` v1.1
-- 产出者：assistant-designer-2
-- 日期：2026-04-21
-- 版本：v1.0（门 2 初稿）
-- 目的：将需求文档第 8 章的 37 条补充测试清单细化为可执行的 Playwright 测试用例步骤
-
----
-
-## 测试用例格式说明
-
-每个测试用例包含：
-
-- **用例 ID**：P0-1 ~ P2-5（对应优先级）
-- **用例名称**：简短描述（英文，作为 `test('...')` 的标题）
-- **覆盖需求**：引用 requirements.zh.md 的需求 ID
-- **前置条件**：测试开始前的状态要求
-- **测试步骤**：编号步骤，包含具体操作 + data-testid + 断言点
-- **预期结果**：关键断言的期望值
-- **清理操作**：（如有）恢复测试前状态
+- Based on the requirements document: `requirements.md` v1.1
+- Author: assistant-designer-2
+- Date: 2026-04-21
+- Version: v1.0 (Gate 2 draft)
+- Purpose: turn the 37-item supplementary test checklist in chapter 8 of the requirements document into executable Playwright test case steps
 
 ---
 
-## P0 测试用例（核心交互，必测）
+## Test Case Format
 
-### P0-1: 搜索栏展开/折叠按钮行为 + 图标切换
+Every test case contains:
 
-**用例名称**：`search toggle — expand/collapse with icon change`
+- **Case ID**: P0-1 through P2-5 (matching the priority level)
+- **Case name**: a short description (in English, used as the title of `test('...')`)
+- **Requirements covered**: the requirement IDs referenced from requirements.md
+- **Preconditions**: the state required before the test starts
+- **Steps**: numbered steps covering the concrete actions plus the data-testid and assertion points
+- **Expected result**: the expected values of the key assertions
+- **Cleanup**: (if any) restore the state that existed before the test
 
-**覆盖需求**：F-S-01 / F-S-02 / F-S-03 / F-S-08
+---
 
-**前置条件**：
+## P0 Test Cases (core interactions, mandatory)
 
-- 导航到 Assistant 设置页（`#/settings/assistants`）
-- 列表至少有 1 个助手卡片可见
+### P0-1: Search bar expand/collapse button behavior + icon switch
 
-**测试步骤**：
+**Case name**: `search toggle — expand/collapse with icon change`
 
-1. **验证初始状态**
+**Requirements covered**: F-S-01 / F-S-02 / F-S-03 / F-S-08
+
+**Preconditions**:
+
+- Navigate to the Assistant settings page (`#/settings/assistants`)
+- At least one assistant card is visible in the list
+
+**Steps**:
+
+1. **Verify the initial state**
 
    ```typescript
    const searchToggle = page.locator('[data-testid="btn-search-toggle"]');
    const searchInput = page.locator('[data-testid="input-search-assistant"]');
 
-   // 搜索输入框不可见
+   // The search input field is not visible
    await expect(searchInput).toBeHidden();
 
-   // 搜索按钮图标为 Search（通过 SVG path 或 class 判断）
+   // The search button icon is Search (determined via the SVG path or class)
    const toggleIcon = searchToggle.locator('svg');
    await expect(toggleIcon).toBeVisible();
    ```
 
-2. **点击展开搜索**
+2. **Click to expand the search**
 
    ```typescript
    await searchToggle.click();
-   await page.waitForTimeout(200); // 等待展开动画
+   await page.waitForTimeout(200); // wait for the expand animation
 
-   // 搜索输入框可见
+   // The search input field is visible
    await expect(searchInput).toBeVisible();
 
-   // 按钮图标变为 CloseSmall
-   // （如果无法直接判断 SVG，可通过后续行为验证）
+   // The button icon changes to CloseSmall
+   // (if the SVG cannot be inspected directly, verify it through subsequent behavior)
    ```
 
-3. **验证 autoFocus（F-S-04）**
+3. **Verify autoFocus (F-S-04)**
 
    ```typescript
-   // 搜索输入框应自动获得焦点
+   // The search input field should receive focus automatically
    await expect(searchInput).toBeFocused();
    ```
 
-4. **输入查询并验证 searchQuery 非空时搜索栏保持可见（F-S-08）**
+4. **Type a query and verify the search bar stays visible while searchQuery is non-empty (F-S-08)**
 
    ```typescript
    await searchInput.fill('test');
 
-   // searchQuery 非空，即便 searchExpanded 可能为 false，搜索栏仍可见
+   // searchQuery is non-empty, so the search bar stays visible even if searchExpanded may be false
    await expect(searchInput).toBeVisible();
    ```
 
-5. **点击折叠并清空搜索**
+5. **Click to collapse and clear the search**
 
    ```typescript
    await searchToggle.click();
    await page.waitForTimeout(200);
 
-   // searchQuery 被清空
+   // searchQuery is cleared
    await expect(searchInput).toHaveValue('');
 
-   // 搜索输入框折叠（不可见）
+   // The search input field collapses (not visible)
    await expect(searchInput).toBeHidden();
    ```
 
-**预期结果**：
+**Expected result**:
 
-- 初始：搜索框隐藏，图标为 Search
-- 点击展开：搜索框可见且自动聚焦
-- 输入查询后搜索框保持可见
-- 再次点击：清空查询并折叠
+- Initially: the search box is hidden and the icon is Search
+- Click to expand: the search box is visible and automatically focused
+- After typing a query the search box stays visible
+- Click again: the query is cleared and the box collapses
 
-**清理操作**：无（搜索已清空）
+**Cleanup**: none (the search has already been cleared)
 
 ---
 
-### P0-2: 卡片点击区域隔离（主体 vs 右侧操作区）
+### P0-2: Card click-area isolation (body vs. right-hand action area)
 
-**用例名称**：`card click isolation — body opens drawer, actions do not`
+**Case name**: `card click isolation — body opens drawer, actions do not`
 
-**覆盖需求**：F-L-07 / B-08 / B-09
+**Requirements covered**: F-L-07 / B-08 / B-09
 
-**前置条件**：
+**Preconditions**:
 
-- 导航到 Assistant 设置页
-- 列表至少有 1 个 Custom 助手（用于测试 Switch）
+- Navigate to the Assistant settings page
+- At least one Custom assistant is in the list (needed to test the Switch)
 
-**测试步骤**：
+**Steps**:
 
-1. **获取第一个助手卡片**
+1. **Get the first assistant card**
 
    ```typescript
    const cards = page.locator('[data-testid^="assistant-card-"]');
    const firstCard = cards.first();
    const assistantId = (await firstCard.getAttribute('data-testid'))?.replace('assistant-card-', '') || '';
 
-   // 确保 Drawer 初始关闭
+   // Make sure the Drawer starts closed
    const drawer = page.locator('[data-testid="assistant-edit-drawer"]');
    if (await drawer.isVisible().catch(() => false)) {
      await page.keyboard.press('Escape');
@@ -132,91 +132,91 @@
    }
    ```
 
-2. **点击卡片主体 → Drawer 打开**
+2. **Click the card body → the Drawer opens**
 
    ```typescript
-   // 点击卡片左侧区域（Avatar + 名称）
+   // Click the left-hand area of the card (Avatar + name)
    await firstCard.locator('.flex.items-center.gap-12px').first().click();
 
-   // Drawer 应打开
+   // The Drawer should open
    await expect(drawer).toBeVisible({ timeout: 5000 });
 
-   // 关闭 Drawer 准备下一步测试
+   // Close the Drawer to prepare for the next step
    await page.keyboard.press('Escape');
    await drawer.waitFor({ state: 'hidden', timeout: 3000 });
    ```
 
-3. **点击 Switch → Drawer 不打开**
+3. **Click the Switch → the Drawer does not open**
 
    ```typescript
    const switchElement = page.locator(`[data-testid="switch-enabled-${assistantId}"]`);
    const isCheckedBefore = await switchElement.isChecked();
 
-   // 点击 Switch
+   // Click the Switch
    await switchElement.click();
    await page.waitForTimeout(300);
 
-   // Drawer 应保持关闭
+   // The Drawer should stay closed
    await expect(drawer).toBeHidden();
 
-   // Switch 状态应改变（验证点击生效）
+   // The Switch state should change (proving the click took effect)
    const isCheckedAfter = await switchElement.isChecked();
    expect(isCheckedAfter).toBe(!isCheckedBefore);
 
-   // 恢复原状态
+   // Restore the original state
    await switchElement.click();
    await page.waitForTimeout(300);
 
-   // 验证 Switch 状态已恢复到初始值
+   // Verify the Switch state has been restored to its initial value
    const isCheckedRestored = await switchElement.isChecked();
    expect(isCheckedRestored).toBe(isCheckedBefore);
    ```
 
-4. **Hover 并点击 Duplicate 按钮 → Drawer 打开（isCreating=true）**
+4. **Hover and click the Duplicate button → the Drawer opens (isCreating=true)**
 
    ```typescript
    await firstCard.hover();
    const duplicateBtn = page.locator(`[data-testid="btn-duplicate-${assistantId}"]`);
 
-   // Duplicate 按钮在 hover 时可见
+   // The Duplicate button is visible on hover
    await expect(duplicateBtn).toBeVisible();
 
    await duplicateBtn.click();
 
-   // Drawer 应打开且为新建模式
+   // The Drawer should open in create mode
    await expect(drawer).toBeVisible({ timeout: 5000 });
    const createBtn = page.locator('[data-testid="btn-save-assistant"]');
    await expect(createBtn).toContainText('Create');
 
-   // 关闭 Drawer
+   // Close the Drawer
    await page.keyboard.press('Escape');
    await drawer.waitFor({ state: 'hidden', timeout: 3000 });
    ```
 
-**预期结果**：
+**Expected result**:
 
-- 点击卡片主体 → Drawer 打开
-- 点击 Switch → Drawer 不打开，Switch 状态改变
-- 点击 Duplicate（stopPropagation 生效） → Drawer 打开且为 Create 模式
+- Click the card body → the Drawer opens
+- Click the Switch → the Drawer does not open and the Switch state changes
+- Click Duplicate (stopPropagation takes effect) → the Drawer opens in Create mode
 
-**清理操作**：Switch 已恢复原状态，Drawer 已关闭
+**Cleanup**: the Switch has been restored to its original state and the Drawer is closed
 
 ---
 
-### P0-3: Delete 确认弹窗含助手预览卡片
+### P0-3: Delete confirmation modal contains the assistant preview card
 
-**用例名称**：`delete modal shows assistant preview card`
+**Case name**: `delete modal shows assistant preview card`
 
-**覆盖需求**：F-R-03 / F-R-04 / F-R-05
+**Requirements covered**: F-R-03 / F-R-04 / F-R-05
 
-**前置条件**：
+**Preconditions**:
 
-- 导航到 Assistant 设置页
-- 创建一个测试用 Custom 助手（用于后续删除）
+- Navigate to the Assistant settings page
+- Create a Custom assistant for testing (to be deleted later)
 
-**测试步骤**：
+**Steps**:
 
-1. **创建测试助手**
+1. **Create the test assistant**
 
    ```typescript
    const timestamp = Date.now();
@@ -232,16 +232,16 @@
    await drawer.waitFor({ state: 'hidden', timeout: 10000 });
    ```
 
-2. **打开助手编辑 Drawer**
+2. **Open the assistant edit Drawer**
 
    ```typescript
-   // 找到刚创建的助手卡片
+   // Find the card of the assistant that was just created
    const targetCard = page.locator(`[data-testid^="assistant-card-"]`).filter({ hasText: testName });
    await targetCard.click();
    await drawer.waitFor({ state: 'visible', timeout: 5000 });
    ```
 
-3. **点击 Delete 按钮**
+3. **Click the Delete button**
 
    ```typescript
    const deleteBtn = page.locator('[data-testid="btn-delete-assistant"]');
@@ -249,96 +249,96 @@
    await deleteBtn.click();
    ```
 
-4. **验证 Delete Modal 渲染**
+4. **Verify the Delete Modal renders**
 
    ```typescript
    const modal = page.locator('[data-testid="modal-delete-assistant"]');
    await expect(modal).toBeVisible({ timeout: 3000 });
 
-   // 验证 Modal 标题
+   // Verify the modal title
    await expect(modal.locator('.arco-modal-title')).toContainText('Delete');
    ```
 
-5. **验证助手预览卡片内容**
+5. **Verify the content of the assistant preview card**
 
    ```typescript
-   // 预览区应包含 Avatar（32px 或类似尺寸）
+   // The preview area should contain an Avatar (32px or a similar size)
    const avatar = modal.locator('.arco-avatar');
    await expect(avatar).toBeVisible();
 
-   // 预览区应显示助手名称
+   // The preview area should show the assistant name
    await expect(modal).toContainText(testName);
 
-   // 预览区应显示助手描述
+   // The preview area should show the assistant description
    await expect(modal).toContainText(testDesc);
    ```
 
-6. **验证按钮渲染**
+6. **Verify the buttons render**
 
    ```typescript
-   // 确认按钮为 danger 状态，文案为 "Delete"
+   // The confirm button is in the danger state with the copy "Delete"
    const confirmBtn = modal.locator('.arco-btn-status-danger');
    await expect(confirmBtn).toBeVisible();
    await expect(confirmBtn).toContainText('Delete');
 
-   // 取消按钮文案为 "Cancel"
+   // The cancel button carries the copy "Cancel"
    const cancelBtn = modal.locator('.arco-btn').filter({ hasText: 'Cancel' });
    await expect(cancelBtn).toBeVisible();
    ```
 
-7. **确认删除**
+7. **Confirm the deletion**
 
    ```typescript
    await confirmBtn.click();
 
-   // Modal 关闭
+   // The modal closes
    await modal.waitFor({ state: 'hidden', timeout: 3000 });
 
-   // Drawer 关闭
+   // The Drawer closes
    await drawer.waitFor({ state: 'hidden', timeout: 3000 });
 
-   // 助手从列表中移除
+   // The assistant is removed from the list
    await expect(targetCard).toBeHidden({ timeout: 5000 });
    ```
 
-**预期结果**：
+**Expected result**:
 
-- Delete Modal 显示完整的助手预览卡片（Avatar + 名称 + 描述）
-- 确认按钮为 danger 样式，取消按钮正常渲染
-- 确认后助手被删除
+- The Delete Modal shows the complete assistant preview card (Avatar + name + description)
+- The confirm button uses the danger style and the cancel button renders normally
+- The assistant is deleted once the action is confirmed
 
-**清理操作**：测试助手已删除
+**Cleanup**: the test assistant has already been deleted
 
 ---
 
-### P0-4: highlightId 滚动到卡片并高亮 2 秒，之后清 query
+### P0-4: highlightId scrolls to the card, highlights it for 2 seconds, then clears the query
 
-**用例名称**：`highlight assistant card via query param`
+**Case name**: `highlight assistant card via query param`
 
-**覆盖需求**：3.2 交互流程
+**Requirements covered**: 3.2 Interaction flow
 
-**前置条件**：
+**Preconditions**:
 
-- 已知一个存在的助手 ID（如 `builtin-agent`）
+- A known existing assistant ID (for example `builtin-agent`)
 
-**测试步骤**：
+**Steps**:
 
-1. **导航到带 highlight 参数的 URL**
+1. **Navigate to the URL carrying the highlight parameter**
 
    ```typescript
-   const targetId = 'builtin-agent'; // 或从列表动态获取第一个
+   const targetId = 'builtin-agent'; // or take the first one dynamically from the list
    await page.goto('/#/settings/assistants?highlight=' + targetId);
 
    const targetCard = page.locator(`[data-testid="assistant-card-${targetId}"]`);
    await targetCard.waitFor({ state: 'visible', timeout: 10000 });
    ```
 
-2. **等待 150ms 延迟 + 验证滚动到视口**
+2. **Wait out the 150 ms delay and verify the card scrolls into the viewport**
 
    ```typescript
    await page.waitForTimeout(200);
 
-   // 卡片应滚动到视口中心附近（通过 scrollIntoView 实现）
+   // The card should scroll close to the center of the viewport (via scrollIntoView)
    const isInViewport = await targetCard.evaluate((el) => {
      const rect = el.getBoundingClientRect();
      return rect.top >= 0 && rect.bottom <= window.innerHeight;
@@ -346,76 +346,76 @@
    expect(isInViewport).toBe(true);
    ```
 
-3. **验证高亮样式**
+3. **Verify the highlight style**
 
    ```typescript
-   // 卡片应有高亮样式 'border-primary-5 bg-primary-1'
+   // The card should carry the highlight style 'border-primary-5 bg-primary-1'
    const cardClasses = await targetCard.getAttribute('class');
    expect(cardClasses).toContain('border-primary-5');
    expect(cardClasses).toContain('bg-primary-1');
    ```
 
-4. **等待 2 秒后验证高亮消失**
+4. **Wait 2 seconds and verify the highlight disappears**
 
    ```typescript
    await page.waitForTimeout(2100); // 2s + buffer
 
-   // 高亮样式应移除
+   // The highlight style should be removed
    const cardClassesAfter = await targetCard.getAttribute('class');
    expect(cardClassesAfter).not.toContain('border-primary-5');
    expect(cardClassesAfter).not.toContain('bg-primary-1');
    ```
 
-5. **验证 query param 被清空**
+5. **Verify the query param is cleared**
    ```typescript
    const currentUrl = page.url();
    expect(currentUrl).not.toContain('highlight=');
    ```
 
-**预期结果**：
+**Expected result**:
 
-- 导航后卡片滚动到视口并高亮 2 秒
-- 高亮结束后样式移除，query param 清空
+- After navigation the card scrolls into the viewport and is highlighted for 2 seconds
+- Once the highlight ends the style is removed and the query param is cleared
 
-**清理操作**：无
+**Cleanup**: none
 
 ---
 
-### P0-5: AddSkillsModal 搜索框过滤 + 无结果文案 "No skills found"
+### P0-5: AddSkillsModal search box filtering + the "No skills found" empty-state copy
 
-**用例名称**：`skills modal search filters and shows empty state`
+**Case name**: `skills modal search filters and shows empty state`
 
-**覆盖需求**：F-A-03 / F-A-04
+**Requirements covered**: F-A-03 / F-A-04
 
-**前置条件**：
+**Preconditions**:
 
-- 导航到 Assistant 设置页
-- 创建或打开一个 Custom 助手编辑 Drawer
-- 打开 AddSkillsModal
+- Navigate to the Assistant settings page
+- Create or open the edit Drawer of a Custom assistant
+- Open the AddSkillsModal
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 Custom 助手 Drawer 和 Skills Modal**
+1. **Open the Custom assistant Drawer and the Skills Modal**
 
    ```typescript
-   // 创建或打开 Custom 助手
+   // Create or open a Custom assistant
    await page.locator('[data-testid="btn-create-assistant"]').click();
    const drawer = page.locator('[data-testid="assistant-edit-drawer"]');
    await drawer.waitFor({ state: 'visible', timeout: 5000 });
 
-   // 点击 Add Skills 按钮
+   // Click the Add Skills button
    const addSkillsBtn = page.locator('[data-testid="btn-add-skills"]');
    await addSkillsBtn.click();
 
-   // Skills Modal 打开
+   // The Skills Modal opens
    const modal = page.locator('.arco-modal').filter({ hasText: 'Add Skills' });
    await expect(modal).toBeVisible({ timeout: 3000 });
    ```
 
-2. **验证搜索输入框存在**
+2. **Verify the search input field exists**
 
    ```typescript
-   // 搜索框无 data-testid，通过 prefix 图标 + .arco-input 定位
+   // The search box has no data-testid, so locate it via the prefix icon + .arco-input
    const searchInput = modal
      .locator('.arco-input-wrapper')
      .filter({ has: page.locator('[class*="icon"]') })
@@ -423,59 +423,59 @@
    await expect(searchInput).toBeVisible();
    ```
 
-3. **输入不存在的查询 → 验证空态文案**
+3. **Type a query that matches nothing → verify the empty-state copy**
 
    ```typescript
    await searchInput.fill('zzz_nonexistent_skill_12345');
    await page.waitForTimeout(300);
 
-   // 应显示 "No skills found" 文案
+   // The copy "No skills found" should be shown
    await expect(modal).toContainText('No skills found');
    ```
 
-4. **清空搜索 → 验证技能列表恢复**
+4. **Clear the search → verify the skill list comes back**
 
    ```typescript
    await searchInput.clear();
    await page.waitForTimeout(300);
 
-   // 如果有外部技能源，应显示技能卡片
-   // 如果无外部源，应显示 "No external skill sources discovered"
+   // If external skill sources exist, skill cards should be shown
+   // If there is no external source, "No external skill sources discovered" should be shown
    const hasSkills = (await modal.locator('[class*="skill"]').count()) > 0;
    const hasNoSourceMsg = await modal.textContent();
 
    expect(hasSkills || hasNoSourceMsg?.includes('No external skill sources')).toBe(true);
    ```
 
-5. **关闭 Modal**
+5. **Close the Modal**
    ```typescript
    await page.keyboard.press('Escape');
    await modal.waitFor({ state: 'hidden', timeout: 3000 });
    ```
 
-**预期结果**：
+**Expected result**:
 
-- 搜索不存在的技能 → 显示 "No skills found"
-- 清空搜索 → 技能列表恢复或显示 "No external skill sources discovered"
+- Searching for a skill that does not exist → "No skills found" is shown
+- Clearing the search → the skill list comes back or "No external skill sources discovered" is shown
 
-**清理操作**：关闭 Modal 和 Drawer（`Escape`）
+**Cleanup**: close the Modal and the Drawer (`Escape`)
 
 ---
 
-### P0-6: Extension 助手 Skills 区渲染验证
+### P0-6: Extension assistant Skills section rendering
 
-**用例名称**：`extension assistant shows skills section`
+**Case name**: `extension assistant shows skills section`
 
-**覆盖需求**：2.5.3（Extension showSkills）
+**Requirements covered**: 2.5.3 (Extension showSkills)
 
-**前置条件**：
+**Preconditions**:
 
-- 存在至少 1 个 Extension 助手（ID 前缀 `ext-`）
-- 如无 Extension 助手，此测试 skip
+- At least one Extension assistant exists (ID prefix `ext-`)
+- If there is no Extension assistant, skip this test
 
-**测试步骤**：
+**Steps**:
 
-1. **查找 Extension 助手**
+1. **Find an Extension assistant**
 
    ```typescript
    await page.goto('/#/settings/assistants');
@@ -499,7 +499,7 @@
    }
    ```
 
-2. **打开 Extension 助手 Drawer**
+2. **Open the Extension assistant Drawer**
 
    ```typescript
    const targetCard = page.locator(`[data-testid="assistant-card-${extensionId}"]`);
@@ -509,20 +509,20 @@
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-3. **验证 Skills 区渲染**
+3. **Verify the Skills section renders**
 
    ```typescript
    const skillsSection = drawer.locator('[data-testid="skills-section"]');
    await expect(skillsSection).toBeVisible();
    ```
 
-4. **验证 Skills 区为只读（Add Skills 按钮不可点击或不可见）**
+4. **Verify the Skills section is read-only (the Add Skills button is unclickable or not visible)**
 
    ```typescript
    const addSkillsBtn = drawer.locator('[data-testid="btn-add-skills"]');
 
-   // Extension 的 Skills 区应为只读
-   // 可能是按钮不可见，或 disabled
+   // The Skills section of an Extension should be read-only
+   // The button may either be invisible or disabled
    const isVisible = await addSkillsBtn.isVisible().catch(() => false);
    if (isVisible) {
      const isDisabled = await addSkillsBtn.isDisabled();
@@ -530,31 +530,31 @@
    }
    ```
 
-**预期结果**：
+**Expected result**:
 
-- Extension 助手 Drawer 显示 Skills 区（`data-testid="skills-section"`）
-- Skills 区为只读状态（Add Skills 按钮不可用）
+- The Extension assistant Drawer shows the Skills section (`data-testid="skills-section"`)
+- The Skills section is read-only (the Add Skills button is unavailable)
 
-**清理操作**：关闭 Drawer（`Escape`）
+**Cleanup**: close the Drawer (`Escape`)
 
 ---
 
-## P1 测试用例（重要 UI 状态，推荐测）
+## P1 Test Cases (key UI states, recommended)
 
-### P1-1: 搜索输入 autoFocus
+### P1-1: Search input autoFocus
 
-**用例名称**：`search input auto-focuses on expand`
+**Case name**: `search input auto-focuses on expand`
 
-**覆盖需求**：F-S-04
+**Requirements covered**: F-S-04
 
-**前置条件**：
+**Preconditions**:
 
-- 导航到 Assistant 设置页
-- 搜索栏初始为折叠状态
+- Navigate to the Assistant settings page
+- The search bar starts collapsed
 
-**测试步骤**：
+**Steps**:
 
-1. **点击搜索切换按钮**
+1. **Click the search toggle button**
 
    ```typescript
    const searchToggle = page.locator('[data-testid="btn-search-toggle"]');
@@ -564,85 +564,85 @@
    await expect(searchInput).toBeVisible({ timeout: 1000 });
    ```
 
-2. **验证 autoFocus**
+2. **Verify autoFocus**
    ```typescript
-   // 搜索输入框应自动获得焦点
+   // The search input field should receive focus automatically
    await expect(searchInput).toBeFocused();
    ```
 
-**预期结果**：搜索展开后输入框自动聚焦
+**Expected result**: the input field is focused automatically once the search expands
 
-**清理操作**：无
+**Cleanup**: none
 
 ---
 
-### P1-2: 搜索空白查询不过滤
+### P1-2: A blank search query does not filter
 
-**用例名称**：`search with blank query does not filter`
+**Case name**: `search with blank query does not filter`
 
-**覆盖需求**：F-S-07 / B-01
+**Requirements covered**: F-S-07 / B-01
 
-**前置条件**：
+**Preconditions**:
 
-- 导航到 Assistant 设置页
-- 列表有多个助手
+- Navigate to the Assistant settings page
+- The list contains multiple assistants
 
-**测试步骤**：
+**Steps**:
 
-1. **记录初始助手数量**
+1. **Record the initial number of assistants**
 
    ```typescript
    const cards = page.locator('[data-testid^="assistant-card-"]');
    const countBefore = await cards.count();
    ```
 
-2. **展开搜索并输入空白字符**
+2. **Expand the search and type whitespace**
 
    ```typescript
    const searchToggle = page.locator('[data-testid="btn-search-toggle"]');
    await searchToggle.click();
 
    const searchInput = page.locator('[data-testid="input-search-assistant"]');
-   await searchInput.fill('   '); // 仅空格
+   await searchInput.fill('   '); // spaces only
    await page.waitForTimeout(300);
    ```
 
-3. **验证列表不过滤**
+3. **Verify the list is not filtered**
    ```typescript
    const countAfter = await cards.count();
    expect(countAfter).toBe(countBefore);
    ```
 
-**预期结果**：空白查询（trim 后为空串）不过滤列表
+**Expected result**: a blank query (an empty string after trimming) does not filter the list
 
-**清理操作**：清空搜索
+**Cleanup**: clear the search
 
 ---
 
-### P1-3: Custom 来源标签显示 / Builtin 不显示
+### P1-3: The Custom source tag is shown, Builtin shows none
 
-**用例名称**：`custom assistant shows source tag, builtin does not`
+**Case name**: `custom assistant shows source tag, builtin does not`
 
-**覆盖需求**：F-L-06
+**Requirements covered**: F-L-06
 
-**前置条件**：
+**Preconditions**:
 
-- 列表中有 Builtin 和 Custom 助手
+- The list contains both Builtin and Custom assistants
 
-**测试步骤**：
+**Steps**:
 
-1. **查找 Builtin 助手卡片**
+1. **Find the Builtin assistant card**
 
    ```typescript
    const builtinCard = page.locator('[data-testid="assistant-card-builtin-agent"]').first();
    await expect(builtinCard).toBeVisible();
 
-   // Builtin 不应显示 "Custom" 标签
+   // Builtin should not show the "Custom" tag
    const builtinTag = builtinCard.locator('.arco-tag').filter({ hasText: 'Custom' });
    await expect(builtinTag).toBeHidden();
    ```
 
-2. **创建 Custom 助手并验证标签**
+2. **Create a Custom assistant and verify the tag**
 
    ```typescript
    const timestamp = Date.now();
@@ -655,16 +655,16 @@
    const drawer = page.locator('[data-testid="assistant-edit-drawer"]');
    await drawer.waitFor({ state: 'hidden', timeout: 10000 });
 
-   // 找到 Custom 助手卡片
+   // Find the Custom assistant card
    const customCard = page.locator('[data-testid^="assistant-card-"]').filter({ hasText: testName });
    await expect(customCard).toBeVisible();
 
-   // 应显示绿色 "Custom" 标签
+   // A green "Custom" tag should be shown
    const customTag = customCard.locator('.arco-tag').filter({ hasText: 'Custom' });
    await expect(customTag).toBeVisible();
    ```
 
-3. **清理 Custom 助手**
+3. **Clean up the Custom assistant**
    ```typescript
    await customCard.click();
    await drawer.waitFor({ state: 'visible' });
@@ -674,28 +674,28 @@
    await drawer.waitFor({ state: 'hidden' });
    ```
 
-**预期结果**：
+**Expected result**:
 
-- Builtin 助手不显示 "Custom" 标签
-- Custom 助手显示绿色 "Custom" 标签
+- The Builtin assistant does not show the "Custom" tag
+- The Custom assistant shows a green "Custom" tag
 
-**清理操作**：已删除测试助手
+**Cleanup**: the test assistant has been deleted
 
 ---
 
-### P1-4: 过滤结果为 0 的空态文案
+### P1-4: Empty-state copy when the filter returns 0 results
 
-**用例名称**：`filter with no results shows empty state`
+**Case name**: `filter with no results shows empty state`
 
-**覆盖需求**：F-L-08 / B-03
+**Requirements covered**: F-L-08 / B-03
 
-**前置条件**：
+**Preconditions**:
 
-- 导航到 Assistant 设置页
+- Navigate to the Assistant settings page
 
-**测试步骤**：
+**Steps**:
 
-1. **展开搜索并输入不存在的查询**
+1. **Expand the search and type a query that matches nothing**
 
    ```typescript
    await page.locator('[data-testid="btn-search-toggle"]').click();
@@ -704,38 +704,38 @@
    await page.waitForTimeout(300);
    ```
 
-2. **验证空态文案**
+2. **Verify the empty-state copy**
 
    ```typescript
    const emptyMessage = page.locator('text=No assistants match the current filters.');
    await expect(emptyMessage).toBeVisible();
    ```
 
-3. **清空搜索**
+3. **Clear the search**
    ```typescript
    await page.locator('[data-testid="btn-search-toggle"]').click();
    ```
 
-**预期结果**：搜索无结果时显示 "No assistants match the current filters."
+**Expected result**: when the search returns no results, "No assistants match the current filters." is shown
 
-**清理操作**：已清空搜索
+**Cleanup**: the search has already been cleared
 
 ---
 
-### P1-5: Duplicate 按钮仅在 hover 时可见
+### P1-5: The Duplicate button is only visible on hover
 
-**用例名称**：`duplicate button only visible on hover`
+**Case name**: `duplicate button only visible on hover`
 
-**覆盖需求**：F-L-03 / F-D-01
+**Requirements covered**: F-L-03 / F-D-01
 
-**前置条件**：
+**Preconditions**:
 
-- 导航到 Assistant 设置页
-- 列表至少有 1 个助手
+- Navigate to the Assistant settings page
+- At least one assistant is in the list
 
-**测试步骤**：
+**Steps**:
 
-1. **获取第一个助手卡片**
+1. **Get the first assistant card**
 
    ```typescript
    const firstCard = page.locator('[data-testid^="assistant-card-"]').first();
@@ -743,57 +743,57 @@
    const duplicateBtn = page.locator(`[data-testid="btn-duplicate-${assistantId}"]`);
    ```
 
-2. **验证默认不可见**
+2. **Verify it is invisible by default**
 
    ```typescript
-   // Duplicate 按钮默认不可见（invisible class）
+   // The Duplicate button is invisible by default (invisible class)
    const isVisible = await duplicateBtn.isVisible().catch(() => false);
    expect(isVisible).toBe(false);
    ```
 
-3. **Hover 卡片后验证可见**
+3. **Hover the card and verify it becomes visible**
 
    ```typescript
    await firstCard.hover();
    await page.waitForTimeout(100);
 
-   // Duplicate 按钮应变为可见
+   // The Duplicate button should become visible
    await expect(duplicateBtn).toBeVisible();
    ```
 
-4. **移开鼠标后验证再次不可见**
+4. **Move the mouse away and verify it becomes invisible again**
 
    ```typescript
-   await page.mouse.move(0, 0); // 移到页面左上角
+   await page.mouse.move(0, 0); // move to the top-left corner of the page
    await page.waitForTimeout(100);
 
    const isVisibleAfter = await duplicateBtn.isVisible().catch(() => false);
    expect(isVisibleAfter).toBe(false);
    ```
 
-**预期结果**：
+**Expected result**:
 
-- Duplicate 按钮默认不可见
-- Hover 时可见
-- 移开鼠标后再次不可见
+- The Duplicate button is invisible by default
+- It is visible on hover
+- It becomes invisible again once the mouse moves away
 
-**清理操作**：无
+**Cleanup**: none
 
 ---
 
-### P1-6: Extension Switch 为 disabled 且 checked
+### P1-6: The Extension Switch is disabled and checked
 
-**用例名称**：`extension assistant switch is disabled and checked`
+**Case name**: `extension assistant switch is disabled and checked`
 
-**覆盖需求**：F-L-04 / F-T-02 / B-10
+**Requirements covered**: F-L-04 / F-T-02 / B-10
 
-**前置条件**：
+**Preconditions**:
 
-- 存在至少 1 个 Extension 助手
+- At least one Extension assistant exists
 
-**测试步骤**：
+**Steps**:
 
-1. **查找 Extension 助手**
+1. **Find an Extension assistant**
 
    ```typescript
    const cards = page.locator('[data-testid^="assistant-card-"]');
@@ -814,37 +814,37 @@
    }
    ```
 
-2. **验证 Switch 状态**
+2. **Verify the Switch state**
 
    ```typescript
    const switchElement = page.locator(`[data-testid="switch-enabled-${extensionId}"]`);
 
-   // Switch 应为 checked
+   // The Switch should be checked
    await expect(switchElement).toBeChecked();
 
-   // Switch 应为 disabled
+   // The Switch should be disabled
    await expect(switchElement).toBeDisabled();
    ```
 
-**预期结果**：Extension 助手的启用开关为 checked 且 disabled
+**Expected result**: the enable switch of an Extension assistant is both checked and disabled
 
-**清理操作**：无
+**Cleanup**: none
 
 ---
 
-### P1-7: Drawer 关闭按钮（右上 Close 图标）
+### P1-7: Drawer close button (the Close icon in the top right)
 
-**用例名称**：`drawer close button closes drawer`
+**Case name**: `drawer close button closes drawer`
 
-**覆盖需求**：F-E-02
+**Requirements covered**: F-E-02
 
-**前置条件**：
+**Preconditions**:
 
-- 导航到 Assistant 设置页
+- Navigate to the Assistant settings page
 
-**测试步骤**：
+**Steps**:
 
-1. **打开任意助手 Drawer**
+1. **Open any assistant Drawer**
 
    ```typescript
    const firstCard = page.locator('[data-testid^="assistant-card-"]').first();
@@ -854,38 +854,38 @@
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-2. **点击右上 Close 图标**
+2. **Click the Close icon in the top right**
 
    ```typescript
-   // Close 按钮无 data-testid，通过 Drawer header + Close 图标定位
+   // The Close button has no data-testid, so locate it via the Drawer header + Close icon
    const closeBtn = drawer.locator('.arco-drawer-header').locator('svg[class*="close"]').first();
    await closeBtn.click();
    ```
 
-3. **验证 Drawer 关闭**
+3. **Verify the Drawer closes**
    ```typescript
    await expect(drawer).toBeHidden({ timeout: 3000 });
    ```
 
-**预期结果**：点击右上 Close 图标关闭 Drawer
+**Expected result**: clicking the Close icon in the top right closes the Drawer
 
-**清理操作**：无
+**Cleanup**: none
 
 ---
 
-### P1-8: Drawer footer 的 Cancel 按钮关闭 Drawer
+### P1-8: The Cancel button in the Drawer footer closes the Drawer
 
-**用例名称**：`drawer cancel button closes drawer`
+**Case name**: `drawer cancel button closes drawer`
 
-**覆盖需求**：F-E-05
+**Requirements covered**: F-E-05
 
-**前置条件**：
+**Preconditions**:
 
-- 导航到 Assistant 设置页
+- Navigate to the Assistant settings page
 
-**测试步骤**：
+**Steps**:
 
-1. **打开任意助手 Drawer**
+1. **Open any assistant Drawer**
 
    ```typescript
    await page.locator('[data-testid="btn-create-assistant"]').click();
@@ -894,38 +894,38 @@
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-2. **点击 Cancel 按钮**
+2. **Click the Cancel button**
 
    ```typescript
-   // Cancel 按钮无 data-testid，通过文本定位
+   // The Cancel button has no data-testid, so locate it by its text
    const cancelBtn = drawer.locator('.arco-drawer-footer').locator('button').filter({ hasText: 'Cancel' });
    await cancelBtn.click();
    ```
 
-3. **验证 Drawer 关闭**
+3. **Verify the Drawer closes**
    ```typescript
    await expect(drawer).toBeHidden({ timeout: 3000 });
    ```
 
-**预期结果**：点击 Cancel 按钮关闭 Drawer
+**Expected result**: clicking the Cancel button closes the Drawer
 
-**清理操作**：无
+**Cleanup**: none
 
 ---
 
-### P1-9: Rules 区 Expand/Collapse 切换高度
+### P1-9: Rules section Expand/Collapse toggles the height
 
-**用例名称**：`rules section expand collapse toggles height`
+**Case name**: `rules section expand collapse toggles height`
 
-**覆盖需求**：F-E-06
+**Requirements covered**: F-E-06
 
-**前置条件**：
+**Preconditions**:
 
-- 打开一个 Custom 助手 Drawer
+- The Drawer of a Custom assistant is open
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 Custom 助手 Drawer**
+1. **Open the Custom assistant Drawer**
 
    ```typescript
    await page.locator('[data-testid="btn-create-assistant"]').click();
@@ -934,10 +934,10 @@
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-2. **定位 Rules 区容器**
+2. **Locate the Rules section container**
 
    ```typescript
-   // Rules 区容器通过样式定位（height: 260px 或 220px）
+   // The Rules section container is located by its style (height: 260px or 220px)
    const rulesContainer = drawer
      .locator('.border.border-border-2.overflow-hidden.rounded-4px')
      .filter({ has: page.locator('textarea') });
@@ -945,21 +945,21 @@
    const initialHeight = await rulesContainer.evaluate((el) => window.getComputedStyle(el).height);
    ```
 
-3. **点击 Expand 按钮**
+3. **Click the Expand button**
 
    ```typescript
-   // Expand/Collapse 按钮无 data-testid，通过文本定位
+   // The Expand/Collapse button has no data-testid, so locate it by its text
    const expandBtn = drawer.locator('button').filter({ hasText: 'Expand' });
    await expandBtn.click();
    await page.waitForTimeout(200);
 
    const expandedHeight = await rulesContainer.evaluate((el) => window.getComputedStyle(el).height);
 
-   // 展开后高度应为 420px
+   // After expanding, the height should be 420px
    expect(expandedHeight).toBe('420px');
    ```
 
-4. **点击 Collapse 按钮**
+4. **Click the Collapse button**
 
    ```typescript
    const collapseBtn = drawer.locator('button').filter({ hasText: 'Collapse' });
@@ -968,32 +968,32 @@
 
    const collapsedHeight = await rulesContainer.evaluate((el) => window.getComputedStyle(el).height);
 
-   // 折叠后高度应恢复（260px 或 220px）
+   // After collapsing, the height should return to its previous value (260px or 220px)
    expect(collapsedHeight).toBe(initialHeight);
    ```
 
-**预期结果**：
+**Expected result**:
 
-- 点击 Expand → 高度变为 420px
-- 点击 Collapse → 高度恢复初始值
+- Click Expand → the height becomes 420px
+- Click Collapse → the height returns to its initial value
 
-**清理操作**：关闭 Drawer
+**Cleanup**: close the Drawer
 
 ---
 
-### P1-10: Rules 区 Edit/Preview Tab 切换
+### P1-10: Rules section Edit/Preview tab switching
 
-**用例名称**：`rules section edit preview tab switch`
+**Case name**: `rules section edit preview tab switch`
 
-**覆盖需求**：F-E-07 / F-E-08
+**Requirements covered**: F-E-07 / F-E-08
 
-**前置条件**：
+**Preconditions**:
 
-- 打开一个 Custom 助手 Drawer
+- The Drawer of a Custom assistant is open
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 Custom 助手 Drawer**
+1. **Open the Custom assistant Drawer**
 
    ```typescript
    await page.locator('[data-testid="btn-create-assistant"]').click();
@@ -1002,10 +1002,10 @@
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-2. **验证初始为 Edit 模式**
+2. **Verify Edit mode is active initially**
 
    ```typescript
-   // Edit Tab 应有 active 样式
+   // The Edit tab should carry the active style
    const editTab = drawer
      .locator('div')
      .filter({ hasText: /^Edit$/ })
@@ -1014,12 +1014,12 @@
    expect(editTabClass).toContain('text-primary');
    expect(editTabClass).toContain('border-primary');
 
-   // textarea 应可见
+   // The textarea should be visible
    const textarea = drawer.locator('textarea');
    await expect(textarea).toBeVisible();
    ```
 
-3. **切换到 Preview 模式（空内容）**
+3. **Switch to Preview mode (empty content)**
 
    ```typescript
    const previewTab = drawer
@@ -1029,18 +1029,18 @@
    await previewTab.click();
    await page.waitForTimeout(200);
 
-   // Preview Tab 应变为 active
+   // The Preview tab should become active
    const previewTabClass = await previewTab.getAttribute('class');
    expect(previewTabClass).toContain('text-primary');
 
-   // textarea 应隐藏
+   // The textarea should be hidden
    await expect(textarea).toBeHidden();
 
-   // 应显示空态文案 "No content to preview"
+   // The empty-state copy "No content to preview" should be shown
    await expect(drawer).toContainText('No content to preview');
    ```
 
-4. **输入内容后切换到 Preview**
+4. **Type some content and switch to Preview**
 
    ```typescript
    await editTab.click();
@@ -1048,33 +1048,33 @@
    await previewTab.click();
    await page.waitForTimeout(200);
 
-   // 应渲染 Markdown 内容
+   // The Markdown content should be rendered
    await expect(drawer.locator('.markdown-body, [class*="markdown"]')).toContainText('Test Rules');
    ```
 
-**预期结果**：
+**Expected result**:
 
-- Edit 模式显示 textarea
-- Preview 模式空内容显示 "No content to preview"
-- Preview 模式有内容渲染 Markdown
+- Edit mode shows the textarea
+- Preview mode with empty content shows "No content to preview"
+- Preview mode with content renders the Markdown
 
-**清理操作**：关闭 Drawer
+**Cleanup**: close the Drawer
 
 ---
 
-### P1-11: Rules 预览模式空内容占位文案
+### P1-11: Placeholder copy for empty content in Rules preview mode
 
-**用例名称**：`rules preview shows empty placeholder`
+**Case name**: `rules preview shows empty placeholder`
 
-**覆盖需求**：F-E-08
+**Requirements covered**: F-E-08
 
-**前置条件**：
+**Preconditions**:
 
-- 打开一个 Custom 助手 Drawer
+- The Drawer of a Custom assistant is open
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 Custom 助手 Drawer（Rules 为空）**
+1. **Open the Custom assistant Drawer (Rules is empty)**
 
    ```typescript
    await page.locator('[data-testid="btn-create-assistant"]').click();
@@ -1083,7 +1083,7 @@
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-2. **切换到 Preview 模式**
+2. **Switch to Preview mode**
 
    ```typescript
    const previewTab = drawer
@@ -1094,30 +1094,30 @@
    await page.waitForTimeout(200);
    ```
 
-3. **验证占位文案**
+3. **Verify the placeholder copy**
    ```typescript
    await expect(drawer).toContainText('No content to preview');
    ```
 
-**预期结果**：Preview 模式下 Rules 为空时显示 "No content to preview"
+**Expected result**: in Preview mode, "No content to preview" is shown when Rules is empty
 
-**清理操作**：关闭 Drawer
+**Cleanup**: close the Drawer
 
 ---
 
-### P1-12: Main Agent 下拉项显示 Extension tag
+### P1-12: Main Agent dropdown items show the Extension tag
 
-**用例名称**：`main agent dropdown shows extension tag`
+**Case name**: `main agent dropdown shows extension tag`
 
-**覆盖需求**：F-E-10
+**Requirements covered**: F-E-10
 
-**前置条件**：
+**Preconditions**:
 
-- 存在 Extension Agent（`opt.isExtension=true`）
+- An Extension Agent exists (`opt.isExtension=true`)
 
-**测试步骤**：
+**Steps**:
 
-1. **打开任意助手 Drawer**
+1. **Open any assistant Drawer**
 
    ```typescript
    await page.locator('[data-testid="btn-create-assistant"]').click();
@@ -1126,17 +1126,17 @@
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-2. **点击 Main Agent 下拉**
+2. **Click the Main Agent dropdown**
 
    ```typescript
    const agentSelect = page.locator('[data-testid="select-assistant-agent"]');
    await agentSelect.click();
    ```
 
-3. **验证 Extension Agent 选项显示 "ext" tag**
+3. **Verify the Extension Agent option shows the "ext" tag**
 
    ```typescript
-   // 查找包含 "ext" tag 的选项
+   // Find the option that contains the "ext" tag
    const extensionOption = page
      .locator('.arco-select-option')
      .filter({ has: page.locator('.arco-tag').filter({ hasText: 'ext' }) });
@@ -1148,25 +1148,25 @@
    }
    ```
 
-**预期结果**：Extension Agent 下拉项显示蓝色 "ext" tag
+**Expected result**: the Extension Agent dropdown item shows a blue "ext" tag
 
-**清理操作**：关闭 Drawer
+**Cleanup**: close the Drawer
 
 ---
 
-### P1-13: Skills 区分组 Header 计数格式（N/M + 状态点）
+### P1-13: Skills group header count format (N/M + status dot)
 
-**用例名称**：`skills section header shows count and status dot`
+**Case name**: `skills section header shows count and status dot`
 
-**覆盖需求**：F-SK-04
+**Requirements covered**: F-SK-04
 
-**前置条件**：
+**Preconditions**:
 
-- 打开一个有 Skills 的 Custom 助手 Drawer
+- The Drawer of a Custom assistant that has Skills is open
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 Custom 助手 Drawer**
+1. **Open the Custom assistant Drawer**
 
    ```typescript
    await page.locator('[data-testid="btn-create-assistant"]').click();
@@ -1175,55 +1175,55 @@
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-2. **定位 Skills 分组 Header**
+2. **Locate the Skills group header**
 
    ```typescript
    const skillsCollapse = drawer.locator('[data-testid="skills-collapse"]');
    const builtinHeader = skillsCollapse.locator('.arco-collapse-item-header').filter({ hasText: 'Builtin Skills' });
    ```
 
-3. **验证计数格式**
+3. **Verify the count format**
 
    ```typescript
-   // Header 应包含计数文本（如 "0/5" 或 "3/5"）
+   // The header should contain count text (for example "0/5" or "3/5")
    const headerText = await builtinHeader.textContent();
    expect(headerText).toMatch(/\d+\/\d+/);
    ```
 
-4. **验证状态点渲染**
+4. **Verify the status dot renders**
 
    ```typescript
-   // 状态点：8px 圆点，颜色根据激活状态（绿色 or 灰色）
+   // Status dot: an 8px circle whose color depends on the active state (green or gray)
    const statusDot = builtinHeader.locator('span[class*="w-8px"]');
    await expect(statusDot).toBeVisible();
 
    const dotStyle = await statusDot.evaluate((el) => window.getComputedStyle(el).background);
-   // 验证颜色为 success-6（绿）或 text-4（灰）
+   // Verify the color is success-6 (green) or text-4 (gray)
    expect(dotStyle).toBeTruthy();
    ```
 
-**预期结果**：
+**Expected result**:
 
-- 分组 Header 显示 "N/M" 格式计数
-- 状态点为 8px 圆形，颜色反映激活状态
+- The group header shows the count in "N/M" format
+- The status dot is an 8px circle whose color reflects the active state
 
-**清理操作**：关闭 Drawer
+**Cleanup**: close the Drawer
 
 ---
 
-### P1-14: 无 Pending 技能时不显示 PENDING 标签
+### P1-14: The PENDING badge is not shown when there are no pending skills
 
-**用例名称**：`no pending badge when no pending skills`
+**Case name**: `no pending badge when no pending skills`
 
-**覆盖需求**：F-SK-05
+**Requirements covered**: F-SK-05
 
-**前置条件**：
+**Preconditions**:
 
-- 导航到 Assistant 设置页
+- Navigate to the Assistant settings page
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 Custom 助手 Drawer**
+1. **Open the Custom assistant Drawer**
 
    ```typescript
    await page.locator('[data-testid="btn-create-assistant"]').click();
@@ -1232,38 +1232,38 @@
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-2. **验证无 PENDING 标签**
+2. **Verify there is no PENDING badge**
    ```typescript
-   // 确保 Skills 区没有任何 PENDING 标签（空态验证）
+   // Make sure the Skills section has no PENDING badge at all (empty-state verification)
    const pendingBadges = drawer.locator('span').filter({ hasText: 'PENDING' });
    await expect(pendingBadges).toHaveCount(0);
    ```
 
-**预期结果**：新创建的助手没有 Pending 技能，不显示 PENDING 标签
+**Expected result**: a newly created assistant has no pending skills, so no PENDING badge is shown
 
-**清理操作**：
+**Cleanup**:
 
 ```typescript
-// 关闭 Drawer（每个测试结尾必须清理）
+// Close the Drawer (every test must clean up at the end)
 await page.keyboard.press('Escape');
 await expect(drawer).toBeHidden({ timeout: 3000 });
 ```
 
 ---
 
-### P1-15: 无 Custom 技能时不显示 CUSTOM 标签
+### P1-15: The CUSTOM badge is not shown when there are no custom skills
 
-**用例名称**：`no custom badge when no custom skills`
+**Case name**: `no custom badge when no custom skills`
 
-**覆盖需求**：F-SK-06
+**Requirements covered**: F-SK-06
 
-**前置条件**：
+**Preconditions**:
 
-- 导航到 Assistant 设置页
+- Navigate to the Assistant settings page
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 Custom 助手 Drawer**
+1. **Open the Custom assistant Drawer**
 
    ```typescript
    await page.locator('[data-testid="btn-create-assistant"]').click();
@@ -1272,38 +1272,38 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-2. **验证无 CUSTOM 标签**
+2. **Verify there is no CUSTOM badge**
    ```typescript
-   // 确保所有 Builtin Skills 都没有 CUSTOM 标签（空态验证）
+   // Make sure none of the Builtin Skills carries a CUSTOM badge (empty-state verification)
    const customBadges = drawer.locator('span').filter({ hasText: 'CUSTOM' });
    await expect(customBadges).toHaveCount(0);
    ```
 
-**预期结果**：未导入 Custom 技能时，不显示 CUSTOM 标签
+**Expected result**: when no custom skills have been imported, no CUSTOM badge is shown
 
-**清理操作**：
+**Cleanup**:
 
 ```typescript
-// 关闭 Drawer
+// Close the Drawer
 await page.keyboard.press('Escape');
 await expect(drawer).toBeHidden({ timeout: 3000 });
 ```
 
 ---
 
-### P1-16: Builtin Skills Checkbox 取消勾选不触发删除弹窗
+### P1-16: Unchecking a Builtin Skills checkbox does not trigger the delete modal
 
-**用例名称**：`builtin skill checkbox unchecks without modal`
+**Case name**: `builtin skill checkbox unchecks without modal`
 
-**覆盖需求**：F-SK-08
+**Requirements covered**: F-SK-08
 
-**前置条件**：
+**Preconditions**:
 
-- 导航到 Assistant 设置页
+- Navigate to the Assistant settings page
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 Custom 助手 Drawer**
+1. **Open the Custom assistant Drawer**
 
    ```typescript
    await page.locator('[data-testid="btn-create-assistant"]').click();
@@ -1312,13 +1312,13 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-2. **展开 Builtin Skills 分组**
+2. **Expand the Builtin Skills group**
 
    ```typescript
    const skillsCollapse = drawer.locator('[data-testid="skills-collapse"]');
    const builtinHeader = skillsCollapse.locator('.arco-collapse-item-header').filter({ hasText: 'Builtin Skills' });
 
-   // 如果分组是收起状态，展开它
+   // If the group is collapsed, expand it
    const isExpanded = await builtinHeader.getAttribute('aria-expanded');
    if (isExpanded === 'false') {
      await builtinHeader.click();
@@ -1326,7 +1326,7 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    }
    ```
 
-3. **验证有 Builtin Skills 可用**
+3. **Verify that Builtin Skills are available**
 
    ```typescript
    const builtinSection = skillsCollapse.locator('.arco-collapse-item').filter({ hasText: 'Builtin Skills' });
@@ -1339,7 +1339,7 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    }
    ```
 
-4. **找到第一个已勾选的 Builtin Skill**
+4. **Find the first Builtin Skill that is already checked**
 
    ```typescript
    let checkedSkillCard = null;
@@ -1355,7 +1355,7 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    }
 
    if (!checkedSkillCard) {
-     // 如果没有已勾选的，勾选第一个
+     // If none is checked, check the first one
      const firstCheckbox = skillCards.first().locator('.arco-checkbox-icon');
      await firstCheckbox.click();
      await page.waitForTimeout(200);
@@ -1363,7 +1363,7 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    }
    ```
 
-5. **点击 Checkbox 取消勾选**
+5. **Click the checkbox to uncheck it**
 
    ```typescript
    const checkbox = checkedSkillCard.locator('.arco-checkbox-icon');
@@ -1371,70 +1371,70 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await page.waitForTimeout(200);
    ```
 
-6. **验证没有弹出删除确认弹窗**
+6. **Verify that no delete confirmation modal appears**
 
    ```typescript
    const modal = page.locator('.arco-modal').filter({ hasText: 'Remove' });
    await expect(modal).toHaveCount(0);
    ```
 
-7. **验证 Checkbox 已取消勾选**
+7. **Verify the checkbox is now unchecked**
 
    ```typescript
    await expect(checkbox).not.toBeChecked();
    ```
 
-8. **恢复原状态（再次勾选）**
+8. **Restore the original state (check it again)**
    ```typescript
    await checkbox.click();
    await page.waitForTimeout(200);
    await expect(checkbox).toBeChecked();
    ```
 
-**预期结果**：Builtin Skills 通过 Checkbox 取消勾选，不触发删除确认弹窗（只是取消激活，不是删除）
+**Expected result**: unchecking a Builtin Skill via its checkbox does not trigger the delete confirmation modal (it only deactivates the skill, it does not delete it)
 
-**清理操作**：
+**Cleanup**:
 
 ```typescript
-// 关闭 Drawer（使用 helper 或 Escape）
+// Close the Drawer (use the helper or Escape)
 await page.keyboard.press('Escape');
 await expect(drawer).toBeHidden({ timeout: 3000 });
 ```
 
 ---
 
-### P1-17: Pending/Custom 技能删除弹窗（不可测，已废弃）
+### P1-17: Pending/Custom skill delete modal (untestable, deprecated)
 
-**注**：此用例已废弃。原设计验证 Pending/Custom 技能的删除弹窗 + 消息提示，但：
+**Note**: this test case has been deprecated. The original design verified the delete modal plus the message prompt for Pending/Custom skills, but:
 
-1. **Pending Skills** 是临时 React state，invokeBridge 无法构造
-2. **Custom Skills** 需预置外部文件系统路径
-3. **Builtin Skills** 无删除按钮（只能 Checkbox 取消勾选，见 P1-16）
+1. **Pending Skills** are transient React state that invokeBridge cannot construct
+2. **Custom Skills** require an external file system path to be prepared in advance
+3. **Builtin Skills** have no delete button (they can only be unchecked via the checkbox, see P1-16)
 
-F-SC-01/F-SC-02（删除弹窗需求）属于不可测场景，P1-14/15 空态验证已覆盖标签渲染逻辑。
+F-SC-01/F-SC-02 (the delete modal requirements) are untestable scenarios, and the P1-14/15 empty-state verifications already cover the badge rendering logic.
 
-**原覆盖需求**：F-SC-01 / F-SC-02
-
----
+**Originally covered requirements**: F-SC-01 / F-SC-02
 
 ---
 
-### P1-18: 有 Auto-injected Skills 时显示该分组
+---
 
-**用例名称**：`auto-injected section shows when configured`
+### P1-18: The Auto-injected Skills group is shown when such skills exist
 
-**覆盖需求**：F-SK-10
+**Case name**: `auto-injected section shows when configured`
 
-**前置条件**：
+**Requirements covered**: F-SK-10
 
-- 导航到 Assistant 设置页
+**Preconditions**:
 
-**测试步骤**：
+- Navigate to the Assistant settings page
 
-1. **打开一个有 Auto-injected 配置的 Builtin 助手**
+**Steps**:
+
+1. **Open a Builtin assistant that has an Auto-injected configuration**
 
    ```typescript
-   // 大部分 Builtin 助手都有 defaultEnabledSkills 配置（如 word-creator、ppt-creator 等）
+   // Most Builtin assistants have a defaultEnabledSkills configuration (word-creator, ppt-creator, and so on)
    const builtinCards = page.locator('[data-testid^="assistant-card-builtin-"]');
    const firstBuiltin = builtinCards.first();
    await firstBuiltin.click();
@@ -1443,44 +1443,44 @@ F-SC-01/F-SC-02（删除弹窗需求）属于不可测场景，P1-14/15 空态�
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-2. **验证显示 Auto-injected Skills 分组**
+2. **Verify the Auto-injected Skills group is shown**
 
    ```typescript
    const autoSection = drawer.locator('.arco-collapse-item').filter({ hasText: 'Auto-injected Skills' });
    await expect(autoSection).toBeVisible();
    ```
 
-3. **验证分组 header 包含计数**
+3. **Verify the group header contains the count**
    ```typescript
    const headerText = await autoSection.locator('.arco-collapse-item-header').textContent();
-   expect(headerText).toMatch(/\d+\/\d+/); // 如 "2/5" 格式
+   expect(headerText).toMatch(/\d+\/\d+/); // for example the "2/5" format
    ```
 
-**预期结果**：有 Auto-injected 配置的 Builtin 助手显示 "Auto-injected Skills" 分组，header 包含 N/M 格式计数
+**Expected result**: a Builtin assistant with an Auto-injected configuration shows the "Auto-injected Skills" group, and the header contains a count in N/M format
 
-**清理操作**：
+**Cleanup**:
 
 ```typescript
-// 关闭 Drawer
+// Close the Drawer
 await page.keyboard.press('Escape');
 await expect(drawer).toBeHidden({ timeout: 3000 });
 ```
 
 ---
 
-### P1-19: Custom 空态文案 "No custom skills added"
+### P1-19: The "No custom skills added" empty-state copy
 
-**用例名称**：`custom skills section shows empty state`
+**Case name**: `custom skills section shows empty state`
 
-**覆盖需求**：F-SK-11 / B-04
+**Requirements covered**: F-SK-11 / B-04
 
-**前置条件**：
+**Preconditions**:
 
-- 打开一个无 Custom Skills 的 Custom 助手 Drawer
+- The Drawer of a Custom assistant with no Custom Skills is open
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 Custom 助手 Drawer**
+1. **Open the Custom assistant Drawer**
 
    ```typescript
    await page.locator('[data-testid="btn-create-assistant"]').click();
@@ -1489,42 +1489,42 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-2. **定位 Custom Skills 分组**
+2. **Locate the Custom Skills group**
 
    ```typescript
    const skillsCollapse = drawer.locator('[data-testid="skills-collapse"]');
    const customSection = skillsCollapse.locator('.arco-collapse-item').filter({ hasText: 'Imported Skills' });
 
-   // 展开分组（如未展开）
+   // Expand the group (if it is not already expanded)
    const customHeader = customSection.locator('.arco-collapse-item-header');
    await customHeader.click();
    await page.waitForTimeout(200);
    ```
 
-3. **验证空态文案**
+3. **Verify the empty-state copy**
    ```typescript
    await expect(customSection).toContainText('No custom skills added');
    ```
 
-**预期结果**：Custom Skills 为空时显示 "No custom skills added"
+**Expected result**: when Custom Skills is empty, "No custom skills added" is shown
 
-**清理操作**：关闭 Drawer
+**Cleanup**: close the Drawer
 
 ---
 
-### P1-20: AddSkillsModal 顶部外部源 pill 渲染 + 激活切换
+### P1-20: AddSkillsModal external-source pills render and switch active state
 
-**用例名称**：`skills modal source pills render and switch`
+**Case name**: `skills modal source pills render and switch`
 
-**覆盖需求**：F-A-01
+**Requirements covered**: F-A-01
 
-**前置条件**：
+**Preconditions**:
 
-- 存在至少 1 个外部技能源
+- At least one external skill source exists
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 AddSkillsModal**
+1. **Open the AddSkillsModal**
 
    ```typescript
    await page.locator('[data-testid="btn-create-assistant"]').click();
@@ -1536,10 +1536,10 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await expect(modal).toBeVisible({ timeout: 3000 });
    ```
 
-2. **验证外部源 pill 渲染**
+2. **Verify the external-source pills render**
 
    ```typescript
-   // pill 按钮显示源名 + 技能数（如 "User Skills (5)"）
+   // A pill button shows the source name + the skill count (for example "User Skills (5)")
    const pills = modal.locator('button').filter({ has: page.locator('span[class*="px-6px"]') });
    const pillCount = await pills.count();
 
@@ -1551,18 +1551,18 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    expect(pillCount).toBeGreaterThan(0);
    ```
 
-3. **验证激活 pill 样式**
+3. **Verify the style of the active pill**
 
    ```typescript
    const firstPill = pills.first();
    const firstPillClass = await firstPill.getAttribute('class');
 
-   // 激活 pill 应有蓝色背景 + 白字
+   // The active pill should have a blue background and white text
    expect(firstPillClass).toContain('bg-primary-6');
    expect(firstPillClass).toContain('text-white');
    ```
 
-4. **点击切换到第二个源（如有）**
+4. **Click to switch to the second source (if one exists)**
 
    ```typescript
    if (pillCount > 1) {
@@ -1570,45 +1570,45 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
      await secondPill.click();
      await page.waitForTimeout(300);
 
-     // 第二个 pill 应变为激活状态
+     // The second pill should become active
      const secondPillClass = await secondPill.getAttribute('class');
      expect(secondPillClass).toContain('bg-primary-6');
 
-     // 第一个 pill 应变为非激活状态
+     // The first pill should become inactive
      const firstPillClassAfter = await firstPill.getAttribute('class');
      expect(firstPillClassAfter).not.toContain('bg-primary-6');
    }
    ```
 
-**预期结果**：
+**Expected result**:
 
-- 外部源 pill 渲染，显示源名 + 技能数
-- 激活 pill 有蓝色背景，点击切换时样式变化
+- The external-source pills render, showing the source name and the skill count
+- The active pill has a blue background, and the style changes when another pill is clicked
 
-**清理操作**：关闭 Modal
+**Cleanup**: close the Modal
 
 ---
 
-### P1-21: AddSkillsModal 已添加技能显示 Added disabled
+### P1-21: AddSkillsModal shows already-added skills as a disabled Added button
 
-**用例名称**：`skills modal shows added skills as disabled`
+**Case name**: `skills modal shows added skills as disabled`
 
-**覆盖需求**：F-A-05
+**Requirements covered**: F-A-05
 
-**前置条件**：
+**Preconditions**:
 
-- 存在外部技能源且有已添加的技能
+- An external skill source exists and some of its skills have already been added
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 AddSkillsModal**（同 P1-20）
+1. **Open the AddSkillsModal** (same as P1-20)
 
    ```typescript
-   // ... 打开 Modal
+   // ... open the Modal
    test.skip(true, 'Requires external skill source with added skills');
    ```
 
-2. **查找已添加技能的 "Added" 按钮**
+2. **Find the "Added" button of an already-added skill**
 
    ```typescript
    const addedBtn = modal.locator('button').filter({ hasText: 'Added' }).first();
@@ -1622,23 +1622,23 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await expect(addedBtn).toBeDisabled();
    ```
 
-**预期结果**：已添加技能的按钮文案为 "Added" 且 disabled
+**Expected result**: the button of an already-added skill carries the copy "Added" and is disabled
 
-**清理操作**：关闭 Modal
+**Cleanup**: close the Modal
 
 ---
 
-### P1-22: Drawer 响应式宽度（480 / 1024 / 2048 viewport）
+### P1-22: Responsive Drawer width (480 / 1024 / 2048 viewport)
 
-**用例名称**：`drawer width responds to viewport size`
+**Case name**: `drawer width responds to viewport size`
 
-**覆盖需求**：F-E-01
+**Requirements covered**: F-E-01
 
-**前置条件**：
+**Preconditions**:
 
-- 导航到 Assistant 设置页
+- Navigate to the Assistant settings page
 
-**测试步骤**：
+**Steps**:
 
 1. **480px viewport**
 
@@ -1690,32 +1690,32 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await page.keyboard.press('Escape');
    ```
 
-**预期结果**：
+**Expected result**:
 
-- 480px viewport → Drawer 宽度 480px
-- 1024px viewport → Drawer 宽度 512px
-- 2048px viewport → Drawer 宽度 1024px（上限）
+- 480px viewport → Drawer width 480px
+- 1024px viewport → Drawer width 512px
+- 2048px viewport → Drawer width 1024px (the upper bound)
 
-**清理操作**：恢复默认 viewport
+**Cleanup**: restore the default viewport
 
 ---
 
-### P1-23: sessionStorage/路由 state 的 openAssistantEditorIntent 触发自动打开编辑器
+### P1-23: openAssistantEditorIntent from sessionStorage / router state opens the editor automatically
 
-**用例名称**：`session storage intent opens assistant editor`
+**Case name**: `session storage intent opens assistant editor`
 
-**覆盖需求**：3.3 交互流程
+**Requirements covered**: 3.3 Interaction flow
 
-**前置条件**：
+**Preconditions**:
 
-- 已知一个存在的助手 ID
+- A known existing assistant ID
 
-**测试步骤**：
+**Steps**:
 
-1. **设置 sessionStorage intent**
+1. **Set the sessionStorage intent**
 
    ```typescript
-   const targetId = 'builtin-agent'; // 或动态获取
+   const targetId = 'builtin-agent'; // or obtain it dynamically
 
    await page.evaluate((id) => {
      sessionStorage.setItem(
@@ -1725,21 +1725,21 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    }, targetId);
    ```
 
-2. **导航到 Assistant 设置页**
+2. **Navigate to the Assistant settings page**
 
    ```typescript
    await page.goto('/#/settings/assistants');
-   await page.waitForTimeout(1000); // 等待 useEffect 触发
+   await page.waitForTimeout(1000); // wait for the useEffect to fire
    ```
 
-3. **验证 Drawer 自动打开**
+3. **Verify the Drawer opens automatically**
 
    ```typescript
    const drawer = page.locator('[data-testid="assistant-edit-drawer"]');
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-4. **验证 sessionStorage 被清空**
+4. **Verify sessionStorage is cleared**
 
    ```typescript
    const intentAfter = await page.evaluate(() => {
@@ -1749,28 +1749,28 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    expect(intentAfter).toBeNull();
    ```
 
-**预期结果**：
+**Expected result**:
 
-- sessionStorage 设置后导航到页面 → Drawer 自动打开
-- sessionStorage 被清空
+- Navigating to the page after setting sessionStorage → the Drawer opens automatically
+- sessionStorage is cleared
 
-**清理操作**：关闭 Drawer
+**Cleanup**: close the Drawer
 
 ---
 
-### P1-24: 移动端布局响应式验证（按钮/搜索纵向排列 + 按钮宽度 100%）
+### P1-24: Mobile layout responsiveness (buttons/search stack vertically + buttons at 100% width)
 
-**用例名称**：`mobile layout stacks buttons vertically and full width`
+**Case name**: `mobile layout stacks buttons vertically and full width`
 
-**覆盖需求**：F-L-10
+**Requirements covered**: F-L-10
 
-**前置条件**：
+**Preconditions**:
 
-- 设置移动端 viewport（如 375px 宽度）
+- Set a mobile viewport (375px wide, for example)
 
-**测试步骤**：
+**Steps**:
 
-1. **设置移动端 viewport**
+1. **Set the mobile viewport**
 
    ```typescript
    await page.setViewportSize({ width: 375, height: 667 });
@@ -1778,16 +1778,16 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await page.locator('[data-testid^="assistant-card-"]').first().waitFor({ state: 'visible', timeout: 10000 });
    ```
 
-2. **验证按钮/搜索区纵向排列**
+2. **Verify the button/search area stacks vertically**
 
    ```typescript
-   // 顶部容器应有 flex-col
+   // The top container should have flex-col
    const headerContainer = page.locator('.flex.gap-12px').first();
    const headerClass = await headerContainer.getAttribute('class');
    expect(headerClass).toContain('flex-col');
    ```
 
-3. **验证 Create 按钮宽度 100%、高度 36px**
+3. **Verify the Create button is 100% wide and 36px tall**
 
    ```typescript
    const createBtn = page.locator('[data-testid="btn-create-assistant"]');
@@ -1797,28 +1797,28 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    expect(btnClass).toContain('!h-36px');
    ```
 
-**预期结果**：
+**Expected result**:
 
-- 移动端下按钮/搜索区纵向排列（`flex-col`）
-- Create 按钮宽度 100%、高度 36px
+- On mobile the button/search area stacks vertically (`flex-col`)
+- The Create button is 100% wide and 36px tall
 
-**清理操作**：恢复默认 viewport
+**Cleanup**: restore the default viewport
 
 ---
 
-### P1-25: AddSkillsModal 关闭时清空 `searchExternalQuery`
+### P1-25: AddSkillsModal clears `searchExternalQuery` when it closes
 
-**用例名称**：`skills modal clears search on close`
+**Case name**: `skills modal clears search on close`
 
-**覆盖需求**：F-A-07
+**Requirements covered**: F-A-07
 
-**前置条件**：
+**Preconditions**:
 
-- 打开 AddSkillsModal 并输入搜索
+- The AddSkillsModal is open and a search query has been typed
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 AddSkillsModal 并输入搜索**
+1. **Open the AddSkillsModal and type a search query**
 
    ```typescript
    await page.locator('[data-testid="btn-create-assistant"]').click();
@@ -1833,14 +1833,14 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await searchInput.fill('test query');
    ```
 
-2. **关闭 Modal**
+2. **Close the Modal**
 
    ```typescript
    await page.keyboard.press('Escape');
    await modal.waitFor({ state: 'hidden', timeout: 3000 });
    ```
 
-3. **重新打开 Modal 并验证搜索已清空**
+3. **Reopen the Modal and verify the search has been cleared**
 
    ```typescript
    await page.locator('[data-testid="btn-add-skills"]').click();
@@ -1850,76 +1850,76 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await expect(searchInputAgain).toHaveValue('');
    ```
 
-**预期结果**：关闭 Modal 后重新打开，搜索框为空
+**Expected result**: after closing and reopening the Modal, the search box is empty
 
-**清理操作**：关闭 Modal 和 Drawer
+**Cleanup**: close the Modal and the Drawer
 
 ---
 
-### P1-26: 列表排序——section 标题文案 + 数量显示 (N)
+### P1-26: List ordering — section title copy + count display (N)
 
-**用例名称**：`section headers show count`
+**Case name**: `section headers show count`
 
-**覆盖需求**：F-L-05
+**Requirements covered**: F-L-05
 
-**前置条件**：
+**Preconditions**:
 
-- 列表有启用和禁用的助手
+- The list contains both enabled and disabled assistants
 
-**测试步骤**：
+**Steps**:
 
-1. **导航到 Assistant 设置页**
+1. **Navigate to the Assistant settings page**
 
    ```typescript
    await page.goto('/#/settings/assistants');
    await page.locator('[data-testid^="assistant-card-"]').first().waitFor({ state: 'visible', timeout: 10000 });
    ```
 
-2. **验证 Enabled 区段标题和数量**
+2. **Verify the Enabled section title and count**
 
    ```typescript
    const enabledHeader = page.locator('text=/Enabled/').first();
    await expect(enabledHeader).toBeVisible();
 
    const enabledText = await enabledHeader.textContent();
-   // 应包含数量，如 "Enabled (3)"
+   // It should contain the count, for example "Enabled (3)"
    expect(enabledText).toMatch(/Enabled.*\(\d+\)/);
    ```
 
-3. **验证 Disabled 区段标题和数量**
+3. **Verify the Disabled section title and count**
 
    ```typescript
    const disabledHeader = page.locator('text=/Disabled/').first();
 
-   // 如果有禁用助手
+   // Only if there are disabled assistants
    if (await disabledHeader.isVisible().catch(() => false)) {
      const disabledText = await disabledHeader.textContent();
      expect(disabledText).toMatch(/Disabled.*\(\d+\)/);
    }
    ```
 
-**预期结果**：
+**Expected result**:
 
-- Enabled 区段标题显示 "Enabled (N)"
-- Disabled 区段标题显示 "Disabled (N)"
+- The Enabled section title shows "Enabled (N)"
+- The Disabled section title shows "Disabled (N)"
 
-**清理操作**：无
+**Cleanup**: none
 
 ---
 
-### P1-27: Summary Skills 计数 Tag 颜色（0=gray, >0=green）
+### P1-27: Summary Skills count tag color (0=gray, >0=green)
 
-**用例名称**：`summary skills count tag color changes with count`
+**Case name**: `summary skills count tag color changes with count`
 
-**覆盖需求**：F-E-09
+**Requirements covered**: F-E-09
 
-**前置条件**：
+**Preconditions**:
 
-- 打开 Custom 助手 Drawer
+- The Drawer of a Custom assistant is open
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 Custom 助手 Drawer（无技能）**
+1. **Open the Custom assistant Drawer (with no skills)**
 
    ```typescript
    await page.locator('[data-testid="btn-create-assistant"]').click();
@@ -1927,50 +1927,50 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await expect(drawer).toBeVisible({ timeout: 5000 });
    ```
 
-2. **定位 Summary 区 Skills 计数 Tag**
+2. **Locate the Skills count tag in the Summary area**
 
    ```typescript
    const summarySection = drawer.locator('.flex.flex-wrap.items-center.gap-8px.p-10px');
    const skillsTag = summarySection.locator('.arco-tag').filter({ hasText: /\d+/ }).last();
    ```
 
-3. **验证无技能时为 gray**
+3. **Verify the color is gray when there are no skills**
 
    ```typescript
    const tagColorInitial = await skillsTag.getAttribute('color');
    expect(tagColorInitial).toBe('gray');
    ```
 
-4. **添加技能后验证变为 green**（需实际添加技能或 mock）
+4. **Verify the color turns green after adding a skill** (requires actually adding a skill or mocking one)
    ```typescript
-   // 此步骤需要实际添加技能，或跳过
+   // This step requires actually adding a skill, otherwise skip it
    test.skip(true, 'Requires adding skills to verify color change');
    ```
 
-**预期结果**：
+**Expected result**:
 
-- 技能数为 0 → Tag 颜色 gray
-- 技能数 > 0 → Tag 颜色 green
+- Skill count 0 → tag color gray
+- Skill count > 0 → tag color green
 
-**清理操作**：关闭 Drawer
+**Cleanup**: close the Drawer
 
 ---
 
-## P2 测试用例（边界/辅助，可选）
+## P2 Test Cases (edge cases/supporting, optional)
 
-### P2-1: 高亮动画中途离开页面无 warning
+### P2-1: Leaving the page mid-highlight produces no warning
 
-**用例名称**：`highlight animation cleanup on unmount`
+**Case name**: `highlight animation cleanup on unmount`
 
-**覆盖需求**：B-14
+**Requirements covered**: B-14
 
-**前置条件**：
+**Preconditions**:
 
-- 已知一个存在的助手 ID
+- A known existing assistant ID
 
-**测试步骤**：
+**Steps**:
 
-1. **导航到带 highlight 参数的 URL**
+1. **Navigate to the URL carrying the highlight parameter**
 
    ```typescript
    const targetId = 'builtin-agent';
@@ -1980,20 +1980,20 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await targetCard.waitFor({ state: 'visible', timeout: 10000 });
    ```
 
-2. **等待 1 秒（高亮动画未完成）**
+2. **Wait 1 second (the highlight animation has not finished)**
 
    ```typescript
    await page.waitForTimeout(1000);
    ```
 
-3. **立即跳转到其他页面**
+3. **Immediately navigate to another page**
 
    ```typescript
    await page.goto('/#/settings/general');
    await page.waitForTimeout(500);
    ```
 
-4. **验证无 console warning/error**
+4. **Verify there is no console warning or error**
 
    ```typescript
    const errors: string[] = [];
@@ -2003,32 +2003,32 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
      }
    });
 
-   await page.waitForTimeout(3000); // 等待可能的延迟错误
+   await page.waitForTimeout(3000); // wait for any delayed errors
 
-   // 不应有内存泄漏相关的 warning
+   // There should be no warning related to a memory leak
    const hasMemoryWarning = errors.some((e) => e.includes('memory') || e.includes('timer') || e.includes('cleanup'));
    expect(hasMemoryWarning).toBe(false);
    ```
 
-**预期结果**：高亮动画期间离开页面不产生 warning/error
+**Expected result**: leaving the page while the highlight animation is running produces no warning or error
 
-**清理操作**：无
+**Cleanup**: none
 
 ---
 
-### P2-2: 搜索 + Tab 过滤同时生效空态
+### P2-2: Search + tab filter applied together produce the empty state
 
-**用例名称**：`search and tab filter both apply empty state`
+**Case name**: `search and tab filter both apply empty state`
 
-**覆盖需求**：B-15
+**Requirements covered**: B-15
 
-**前置条件**：
+**Preconditions**:
 
-- 列表有 Builtin 和 Custom 助手
+- The list contains both Builtin and Custom assistants
 
-**测试步骤**：
+**Steps**:
 
-1. **输入搜索 "Custom"**
+1. **Type the search query "Custom"**
 
    ```typescript
    await page.locator('[data-testid="btn-search-toggle"]').click();
@@ -2037,7 +2037,7 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await page.waitForTimeout(300);
    ```
 
-2. **切换到 System Tab**
+2. **Switch to the System tab**
 
    ```typescript
    const systemTab = page.locator('.arco-tabs-tab').filter({ hasText: 'System' });
@@ -2045,51 +2045,51 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await page.waitForTimeout(300);
    ```
 
-3. **验证空态文案**
+3. **Verify the empty-state copy**
    ```typescript
-   // 两个条件同时生效：searchQuery="Custom" + filter="builtin"
-   // 结果应为空
+   // Both conditions apply at once: searchQuery="Custom" + filter="builtin"
+   // The result should be empty
    const emptyMessage = page.locator('text=No assistants match the current filters.');
    await expect(emptyMessage).toBeVisible();
    ```
 
-**预期结果**：搜索 "Custom" + 切 System Tab → 显示空态文案
+**Expected result**: searching for "Custom" and switching to the System tab → the empty-state copy is shown
 
-**清理操作**：清空搜索
+**Cleanup**: clear the search
 
 ---
 
-### P2-3: Pending/Custom 技能 hover 显示删除按钮
+### P2-3: Hovering a Pending/Custom skill reveals the delete button
 
-**用例名称**：`skill delete button visible on hover`
+**Case name**: `skill delete button visible on hover`
 
-**覆盖需求**：F-SK-09
+**Requirements covered**: F-SK-09
 
-**前置条件**：
+**Preconditions**:
 
-- 有 Pending 或 Custom 技能
+- At least one Pending or Custom skill exists
 
-**测试步骤**：
+**Steps**:
 
-1. **定位 Pending/Custom 技能卡片**
+1. **Locate the Pending/Custom skill card**
 
    ```typescript
-   // 需要 Pending 或 Custom 技能
+   // Requires a pending or custom skill
    test.skip(true, 'Requires pending/custom skill');
    ```
 
-2. **验证默认删除按钮不可见**
+2. **Verify the delete button is invisible by default**
 
    ```typescript
    const skillCard = drawer.locator('.flex.items-start.gap-8px.p-8px').first();
    const deleteBtn = skillCard.locator('button').filter({ has: page.locator('svg[class*="delete"]') });
 
-   // 默认不可见（opacity-0）
+   // Invisible by default (opacity-0)
    const isVisible = await deleteBtn.isVisible().catch(() => false);
    expect(isVisible).toBe(false);
    ```
 
-3. **Hover 卡片后验证可见**
+3. **Hover the card and verify it becomes visible**
 
    ```typescript
    await skillCard.hover();
@@ -2098,28 +2098,28 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await expect(deleteBtn).toBeVisible();
    ```
 
-**预期结果**：
+**Expected result**:
 
-- 默认删除按钮不可见（`opacity-0`）
-- Hover 时可见（`group-hover:opacity-100`）
+- The delete button is invisible by default (`opacity-0`)
+- It becomes visible on hover (`group-hover:opacity-100`)
 
-**清理操作**：无
+**Cleanup**: none
 
 ---
 
-### P2-4: AddCustomPathModal OK 按钮 disabled 规则（Name/Path trim 后任一为空）
+### P2-4: AddCustomPathModal OK button disabled rules (Name/Path empty after trimming)
 
-**用例名称**：`add custom path ok button disabled when empty`
+**Case name**: `add custom path ok button disabled when empty`
 
-**覆盖需求**：F-P-03
+**Requirements covered**: F-P-03
 
-**前置条件**：
+**Preconditions**:
 
-- 打开 AddCustomPathModal
+- The AddCustomPathModal is open
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 AddSkillsModal 并点击 "+" 按钮**
+1. **Open the AddSkillsModal and click the "+" button**
 
    ```typescript
    await page.locator('[data-testid="btn-create-assistant"]').click();
@@ -2130,7 +2130,7 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    const skillsModal = page.locator('.arco-modal').filter({ hasText: 'Add Skills' });
    await expect(skillsModal).toBeVisible({ timeout: 3000 });
 
-   // 点击 "+" 按钮打开 Add Custom Path Modal
+   // Click the "+" button to open the Add Custom Path Modal
    const addPathBtn = skillsModal.locator('button').filter({ has: page.locator('[class*="plus"]') });
    await addPathBtn.click();
 
@@ -2138,7 +2138,7 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await expect(pathModal).toBeVisible({ timeout: 3000 });
    ```
 
-2. **验证 Name 为空时 OK 按钮 disabled**
+2. **Verify the OK button is disabled when Name is empty**
 
    ```typescript
    const nameInput = pathModal.locator('input').first();
@@ -2152,7 +2152,7 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await expect(okBtn).toBeDisabled();
    ```
 
-3. **验证 Path 为空时 OK 按钮 disabled**
+3. **Verify the OK button is disabled when Path is empty**
 
    ```typescript
    await nameInput.fill('Test');
@@ -2162,7 +2162,7 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await expect(okBtn).toBeDisabled();
    ```
 
-4. **验证仅空格时 OK 按钮 disabled**
+4. **Verify the OK button is disabled when both fields contain only spaces**
 
    ```typescript
    await nameInput.fill('   ');
@@ -2172,7 +2172,7 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await expect(okBtn).toBeDisabled();
    ```
 
-5. **验证两者都非空时 OK 按钮 enabled**
+5. **Verify the OK button is enabled when both fields are non-empty**
 
    ```typescript
    await nameInput.fill('Test');
@@ -2182,34 +2182,34 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    await expect(okBtn).toBeEnabled();
    ```
 
-**预期结果**：
+**Expected result**:
 
-- Name 或 Path 为空（trim 后）→ OK 按钮 disabled
-- 两者都非空 → OK 按钮 enabled
+- Name or Path empty (after trimming) → the OK button is disabled
+- Both non-empty → the OK button is enabled
 
-**清理操作**：关闭 Modal（`Escape`）
+**Cleanup**: close the Modal (`Escape`)
 
 ---
 
-### P2-5: AddCustomPathModal 选择目录按钮触发 dialog.showOpen（mock 返回路径）
+### P2-5: The AddCustomPathModal directory-picker button triggers dialog.showOpen (mocked to return a path)
 
-**用例名称**：`add custom path folder button triggers dialog`
+**Case name**: `add custom path folder button triggers dialog`
 
-**覆盖需求**：F-P-02
+**Requirements covered**: F-P-02
 
-**前置条件**：
+**Preconditions**:
 
-- 打开 AddCustomPathModal
+- The AddCustomPathModal is open
 
-**测试步骤**：
+**Steps**:
 
-1. **打开 AddCustomPathModal**（同 P2-4）
+1. **Open the AddCustomPathModal** (same as P2-4)
 
    ```typescript
-   // ... 打开 Modal
+   // ... open the Modal
    ```
 
-2. **Mock `dialog.showOpen` 返回路径**
+2. **Mock `dialog.showOpen` so that it returns a path**
 
    ```typescript
    await page.evaluate(() => {
@@ -2223,67 +2223,67 @@ await expect(drawer).toBeHidden({ timeout: 3000 });
    });
    ```
 
-3. **点击 FolderOpen 按钮**
+3. **Click the FolderOpen button**
 
    ```typescript
    const folderBtn = pathModal.locator('button').filter({ has: page.locator('[class*="folder"]') });
    await folderBtn.click();
    ```
 
-4. **验证 Path 输入框填入返回的路径**
+4. **Verify the Path input field is filled with the returned path**
    ```typescript
    const pathInput = pathModal.locator('input').last();
    await expect(pathInput).toHaveValue('/mock/selected/path');
    ```
 
-**预期结果**：点击 FolderOpen 按钮 → `dialog.showOpen` 被调用 → 返回路径填入输入框
+**Expected result**: clicking the FolderOpen button → `dialog.showOpen` is called → the returned path is filled into the input field
 
-**清理操作**：关闭 Modal
-
----
-
-## 测试实施注意事项
-
-### 数据依赖
-
-- **P0-6, P1-6**：依赖 Extension 助手存在（ID 前缀 `ext-`）。如无，测试应 skip。
-- **P1-14 ~ P1-17**：依赖外部技能源或 Pending/Custom 技能。建议 mock 或 skip。
-- **P1-18**：依赖 Builtin 助手有 Auto-injected Skills。建议用 `builtin-agent`（如有）。
-- **P1-21**：依赖已添加的技能。建议 skip 或 mock。
-
-### data-testid 缺失元素
-
-以下元素无 `data-testid`，需通过组合 selector 定位（已在用例中给出）：
-
-- AddSkillsModal 外部源 pill、搜索输入框、技能卡片 Add 按钮
-- Drawer 右上 Close 图标、Cancel 按钮
-- Rules 区 Expand/Collapse 按钮、Edit/Preview Tab
-- Skills 分组 Header、状态点、删除按钮
-- SkillConfirmModals OK 按钮
-- AddCustomPathModal 输入框、FolderOpen 按钮
-
-### 测试环境要求
-
-- **Viewport 测试**（P1-22, P1-24）：需支持 `page.setViewportSize()`。
-- **sessionStorage 测试**（P1-23）：需支持 `page.evaluate()`。
-- **Mock dialog.showOpen**（P2-5）：需在测试环境中 mock Electron IPC。
-
-### 清理策略
-
-- 测试创建的 Custom 助手应在用例结束时删除（除非明确作为后续用例的前置条件）。
-- 搜索、过滤状态应在用例结束时清空。
-- viewport 变更应在用例结束时恢复默认值。
+**Cleanup**: close the Modal
 
 ---
 
-## 总结
+## Implementation Notes
 
-本文档将 37 条补充测试清单细化为可执行的 Playwright 测试用例步骤，包含：
+### Data dependencies
 
-- **P0**：6 个核心交互用例（必测）
-- **P1**：27 个重要 UI 状态用例（推荐测）
-- **P2**：5 个边界/辅助用例（可选）
+- **P0-6, P1-6**: depend on an Extension assistant existing (ID prefix `ext-`). If there is none, the test should skip.
+- **P1-14 ~ P1-17**: depend on an external skill source or on Pending/Custom skills. Mocking or skipping is recommended.
+- **P1-18**: depends on a Builtin assistant that has Auto-injected Skills. Using `builtin-agent` is recommended (if available).
+- **P1-21**: depends on skills that have already been added. Skipping or mocking is recommended.
 
-每个用例明确覆盖的需求 ID、前置条件、详细步骤（含 data-testid 和断言点）、预期结果、清理操作。部分用例因依赖外部数据（Extension 助手、技能源等）标注为 skip，可在后续实施时补充 mock 或实际数据。
+### Elements with no data-testid
 
-下一步：由 Engineer 审核可实施性，Designer 确认步骤准确性，之后进入门 3（实际编写测试代码）。
+The following elements have no `data-testid` and must be located with a composed selector (already given in the test cases):
+
+- AddSkillsModal external-source pills, search input field, and the Add button on skill cards
+- The Drawer Close icon in the top right and the Cancel button
+- The Rules section Expand/Collapse button and the Edit/Preview tabs
+- The Skills group header, status dot, and delete button
+- The SkillConfirmModals OK button
+- The AddCustomPathModal input fields and FolderOpen button
+
+### Test environment requirements
+
+- **Viewport tests** (P1-22, P1-24): require support for `page.setViewportSize()`.
+- **sessionStorage tests** (P1-23): require support for `page.evaluate()`.
+- **Mocking dialog.showOpen** (P2-5): requires mocking Electron IPC in the test environment.
+
+### Cleanup strategy
+
+- A Custom assistant created by a test should be deleted when the test case ends (unless it is explicitly a precondition for a later test case).
+- The search and filter state should be cleared when the test case ends.
+- Any viewport change should be restored to the default value when the test case ends.
+
+---
+
+## Summary
+
+This document turns the 37-item supplementary test checklist into executable Playwright test case steps, covering:
+
+- **P0**: 6 core interaction test cases (mandatory)
+- **P1**: 27 key UI state test cases (recommended)
+- **P2**: 5 edge case/supporting test cases (optional)
+
+Each test case states the requirement IDs it covers, its preconditions, its detailed steps (including the data-testid values and assertion points), its expected result, and its cleanup. Some test cases are marked as skipped because they depend on external data (Extension assistants, skill sources, and so on); mocks or real data can be added when they are implemented later.
+
+Next step: the Engineer reviews these for implementability and the Designer confirms the steps are accurate, after which the work moves to Gate 3 (writing the actual test code).

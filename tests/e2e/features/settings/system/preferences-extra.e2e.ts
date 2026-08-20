@@ -99,37 +99,31 @@ test.describe('System Preferences — Extra', () => {
     expect(restored).toBe(wasChecked);
   });
 
-  // TC-PREF-08: Language round-trip — switch to Japanese then back to Chinese
-  test('TC-PREF-08: should switch language to Japanese and back to Chinese', async ({ page }) => {
+  // TC-PREF-08: the language picker offers English and nothing else.
+  //
+  // This was a Japanese-to-Chinese round-trip, written when the app shipped
+  // five locales. It now covers the opposite guarantee: the picker is built
+  // from SUPPORTED_LANGUAGES (i18n-config.json => ["en-US"]), so there is no
+  // second option to switch to, and no path by which a user reaches a
+  // non-English UI.
+  test('TC-PREF-08: language picker offers English only', async ({ page }) => {
     const selectTrigger = page.locator('.aion-select .arco-select-view').first();
     await expect(selectTrigger).toBeVisible();
+    await expect(selectTrigger).toHaveText(/English/);
 
     await selectTrigger.click();
-    const japaneseOption = page.locator('.arco-select-option:has-text("日本語")');
-    await expect(japaneseOption).toBeVisible();
-    await japaneseOption.click();
 
-    await page.waitForFunction(
-      () => {
-        const t = document.body.textContent ?? '';
-        return t.includes('言語') || t.includes('システム');
-      },
-      { timeout: 5_000 }
-    );
-    await takeScreenshot(page, 'system-preferences/tc-pref-08/01-japanese.png');
+    const options = page.locator('.arco-select-option');
+    await expect(options).toHaveCount(1);
+    await expect(options.first()).toHaveText(/English/);
 
-    const jpText = await selectTrigger.textContent();
-    expect(jpText).toContain('日本語');
+    await takeScreenshot(page, 'system-preferences/tc-pref-08/01-english-only.png');
 
-    await selectTrigger.click();
-    const chineseOption = page.locator('.arco-select-option:has-text("简体中文")');
-    await expect(chineseOption).toBeVisible();
-    await chineseOption.click();
+    await page.keyboard.press('Escape');
 
-    await page.waitForFunction(() => document.body.textContent?.includes('语言'), { timeout: 5_000 });
-    await takeScreenshot(page, 'system-preferences/tc-pref-08/02-restored-chinese.png');
-
-    const restoredText = await selectTrigger.textContent();
-    expect(restoredText).toContain('简体中文');
+    // The rendered UI carries no CJK at all -- the regression this guards is a
+    // component falling back to Arco's own default locale, which is zh-CN.
+    const body = (await page.locator('body').textContent()) ?? '';
+    expect(body).not.toMatch(/[　-〿぀-ヿ一-鿿]/);
   });
 });

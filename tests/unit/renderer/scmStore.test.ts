@@ -91,7 +91,7 @@ type Harness = {
   failList: (message: string) => void;
   failSubscribe: (message: string) => void;
   failStatus: (message: string) => void;
-  /** `failed[]` the next action responds with (empty =全成功). */
+  /** `failed[]` the next action responds with (empty = everything succeeded). */
   setActFailures: (failures: ScmActionFailure[]) => void;
   /** Make the next action reject with a **protocol** error of this code. */
   failAct: (code: number) => void;
@@ -597,7 +597,7 @@ describe('resource selection + diff', () => {
   });
 });
 
-describe('setSelectedRepo (front-end repo switch, D2丙)', () => {
+describe('setSelectedRepo (front-end repo switch, D2c)', () => {
   const twoRepos = async (): Promise<void> => {
     h.setRepos([repo(), repo({ repo_id: 'scm:pe2', root: { pe_id: 'pe2', relative_path: '' } })]);
     await openScmProject('p1');

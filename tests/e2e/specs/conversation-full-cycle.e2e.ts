@@ -867,14 +867,14 @@ test.describe('Conversation Full Cycle', () => {
     await page.waitForFunction(() => window.location.hash.includes('/scheduled'), { timeout: 10_000 }).catch(() => {});
     const heading = page
       .locator('h1')
-      .filter({ hasText: /Scheduled Tasks|定时任务/ })
+      .filter({ hasText: /Scheduled Tasks/ })
       .first();
     await heading.waitFor({ state: 'visible', timeout: 10_000 }).catch(() => {});
 
     // Click "New task"
     const createBtn = page
       .locator('button')
-      .filter({ hasText: /New task|新建任务|新建/ })
+      .filter({ hasText: /New task/ })
       .first();
     if (!(await createBtn.isVisible().catch(() => false))) {
       test.skip(true, 'Scheduled tasks page or create button not available');
@@ -883,7 +883,7 @@ test.describe('Conversation Full Cycle', () => {
     await createBtn.click();
     const manualCreateItem = page
       .locator('.arco-dropdown-menu-item')
-      .filter({ hasText: /Create manually|手动创建/ })
+      .filter({ hasText: /Create manually/ })
       .first();
     await manualCreateItem.waitFor({ state: 'visible', timeout: 5_000 });
     await manualCreateItem.click();
@@ -971,14 +971,14 @@ test.describe('Conversation Full Cycle', () => {
     await page.waitForFunction(() => window.location.hash.includes('/scheduled'), { timeout: 10_000 }).catch(() => {});
     await page
       .locator('h1')
-      .filter({ hasText: /Scheduled Tasks|定时任务/ })
+      .filter({ hasText: /Scheduled Tasks/ })
       .first()
       .waitFor({ state: 'visible', timeout: 10_000 })
       .catch(() => {});
 
     const createBtn = page
       .locator('button')
-      .filter({ hasText: /New task|新建任务|新建/ })
+      .filter({ hasText: /New task/ })
       .first();
     if (!(await createBtn.isVisible().catch(() => false))) {
       test.skip(true, 'Scheduled tasks page or create button not available');
@@ -987,7 +987,7 @@ test.describe('Conversation Full Cycle', () => {
     await createBtn.click();
     await page
       .locator('.arco-dropdown-menu-item')
-      .filter({ hasText: /Create manually|手动创建/ })
+      .filter({ hasText: /Create manually/ })
       .first()
       .click();
 
@@ -1007,9 +1007,7 @@ test.describe('Conversation Full Cycle', () => {
 
     // Preset group title is "Preset Assistants"; the first option after it is a preset.
     // Arco Select options have no data-value attr, so we use DOM structure instead.
-    const presetGroupTitle = page
-      .locator('.arco-select-group-title')
-      .filter({ hasText: /Preset|preset|预设|助手|Assistant/ });
+    const presetGroupTitle = page.locator('.arco-select-group-title').filter({ hasText: /Preset|preset|Assistant/ });
     if ((await presetGroupTitle.count()) === 0) {
       await page.keyboard.press('Escape');
       await page.keyboard.press('Escape');
@@ -1104,7 +1102,7 @@ test.describe('Conversation Full Cycle', () => {
     await page.waitForFunction(() => window.location.hash.includes('/scheduled'), { timeout: 10_000 }).catch(() => {});
     await page
       .locator('h1')
-      .filter({ hasText: /Scheduled Tasks|定时任务/ })
+      .filter({ hasText: /Scheduled Tasks/ })
       .first()
       .waitFor({ state: 'visible', timeout: 10_000 })
       .catch(() => {});
@@ -1112,7 +1110,7 @@ test.describe('Conversation Full Cycle', () => {
     // Create a task to test "Run now" on
     const createBtn = page
       .locator('button')
-      .filter({ hasText: /New task|新建任务|新建/ })
+      .filter({ hasText: /New task/ })
       .first();
     if (!(await createBtn.isVisible().catch(() => false))) {
       test.skip(true, 'Scheduled tasks page or create button not available');
@@ -1121,7 +1119,7 @@ test.describe('Conversation Full Cycle', () => {
     await createBtn.click();
     await page
       .locator('.arco-dropdown-menu-item')
-      .filter({ hasText: /Create manually|手动创建/ })
+      .filter({ hasText: /Create manually/ })
       .first()
       .click();
 
@@ -1155,10 +1153,10 @@ test.describe('Conversation Full Cycle', () => {
     // Verify detail page
     await expect(page.locator('h1').filter({ hasText: taskName }).first()).toBeVisible({ timeout: 5_000 });
 
-    // Click "Run now" — it's the primary button with text "Run now" / "立即执行"
+    // Click "Run now" — the primary button labelled "Run now"
     const runNowBtn = page
       .locator('button.arco-btn-primary')
-      .filter({ hasText: /Run now|立即执行/ })
+      .filter({ hasText: /Run now/ })
       .first();
     const runNowVisible = await runNowBtn
       .waitFor({ state: 'visible', timeout: 5_000 })
@@ -1390,14 +1388,14 @@ test.describe('Conversation Full Cycle', () => {
         .catch(() => {});
       await page
         .locator('h1')
-        .filter({ hasText: /Scheduled Tasks|定时任务/ })
+        .filter({ hasText: /Scheduled Tasks/ })
         .first()
         .waitFor({ state: 'visible', timeout: 10_000 })
         .catch(() => {});
 
       const createBtn = page
         .locator('button')
-        .filter({ hasText: /New task|新建任务|新建/ })
+        .filter({ hasText: /New task/ })
         .first();
       if (!(await createBtn.isVisible().catch(() => false))) {
         console.log('[cron-skill-suggest-e2e] skip: create button unavailable');
@@ -1407,7 +1405,7 @@ test.describe('Conversation Full Cycle', () => {
       await createBtn.click();
       await page
         .locator('.arco-dropdown-menu-item')
-        .filter({ hasText: /Create manually|手动创建/ })
+        .filter({ hasText: /Create manually/ })
         .first()
         .click();
 
@@ -1447,7 +1445,7 @@ test.describe('Conversation Full Cycle', () => {
 
       const runNowBtn = page
         .locator('button.arco-btn-primary')
-        .filter({ hasText: /Run now|立即执行/ })
+        .filter({ hasText: /Run now/ })
         .first();
       await runNowBtn.waitFor({ state: 'visible', timeout: 5_000 });
 

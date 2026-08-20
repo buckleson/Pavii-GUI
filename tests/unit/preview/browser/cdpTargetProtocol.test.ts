@@ -163,7 +163,6 @@ describe('cdpTargetProtocol — token comparison', () => {
 });
 
 /**
- * 以下三条来自用真实 puppeteer-core 跑集成验证时踩到的坑，固化成回归测试。
  * Regression tests for three bugs found while verifying against real puppeteer-core.
  */
 describe('cdpTargetProtocol — regressions found against real puppeteer', () => {

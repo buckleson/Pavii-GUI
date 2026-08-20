@@ -8,7 +8,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const ensureSessionMock = vi.fn();
-// 捕获 agentRuntimeStatusChanged 的订阅回调，供测试手动推送逐个成员事件。
+// Capture the agentRuntimeStatusChanged subscriber so tests can push per-member events by hand.
 let runtimeListener: ((event: unknown) => void) | undefined;
 let sessionStatusListener: ((event: unknown) => void) | undefined;
 const runtimeUnsub = vi.fn();
@@ -69,7 +69,8 @@ describe('useTeamWarmup', () => {
   });
 
   it('tracks per-member runtime status from agentRuntimeStatusChanged events', async () => {
-    // ensureSession 挂起，让 hook 停在 warming，便于观察逐个 runtime 信号。
+    // Leave ensureSession pending so the hook stays in warming and the per-member runtime
+    // signals can be observed one by one.
     ensureSessionMock.mockReturnValue(new Promise(() => {}));
     const { result } = renderHook(() => useTeamWarmup('team-1'));
 
@@ -84,7 +85,7 @@ describe('useTeamWarmup', () => {
       runtimeListener?.({ team_id: 'team-1', slot_id: 'leader', conversation_id: 'c1', status: 'ready' });
     });
     expect(result.current.runtimeStatus.get('leader')?.status).toBe('ready');
-    // 仍未 resolve → 整体闸门仍是 warming（成员就绪不等于团队就绪）。
+    // Still unresolved, so the overall gate stays warming: a ready member is not a ready team.
     expect(result.current.phase).toBe('warming');
   });
 

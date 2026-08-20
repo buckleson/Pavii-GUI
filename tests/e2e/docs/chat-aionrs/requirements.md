@@ -1,165 +1,165 @@
-# Aion CLI (aionrs) E2E 测试需求
+# Aion CLI (aionrs) E2E Test Requirements
 
-**版本**: v1.1（修订版）
-**作者**: chat-aionrs-analyst
-**日期**: 2026-04-22
-**状态**: 已完成 Gate 1 + v1.1 修订（纠正 aionrs 模型来源）
-
----
-
-## 1. 业务场景
-
-### 1.1 端到端流程
-
-用户从 **guid 首页** 选择 aionrs agent，配置上下文（文件/文件夹/模型/权限），发送消息，进入 **aionrs 对话页**，接收流式回复，并可在对话中切换模型/权限。
-
-**关键路径**（源码追溯）：
-
-1. **guid 首页** (`src/renderer/pages/guid/GuidPage.tsx:83-100`)
-   - 用户点击 `AgentPillBar` 中 aionrs pill（`data-agent-backend="aionrs"`）
-   - 可选：通过 `GuidModelSelector` 选择模型（ACP 模型列表）
-   - 可选：通过 `AgentModeSelector` 选择权限模式
-   - 可选：上传文件 / 关联文件夹（guid 页暂不支持，对话页支持）
-   - 输入消息，点击发送 → 创建对话并导航到 `/conversation/aionrs/<id>`
-
-2. **aionrs 对话页** (`src/renderer/pages/conversation/platforms/aionrs/AionrsChat.tsx:27-54`)
-   - 显示 `MessageList`（历史消息）
-   - `AionrsSendBox` 提供文件上传、文件夹关联、模型选择、权限选择
-   - 发送消息后，前端通过 `ipcBridge.conversation.sendMessage.invoke()` 调用进程端
-
-3. **进程端** (`src/process/task/AionrsManager.ts:78-781`)
-   - 创建 `AionrsAgent` 实例（`src/process/agent/aionrs/index.ts:54-450`）
-   - 启动 aionrs binary（stdin/stdout JSON Lines 协议）
-   - 处理流式事件（`stream_start`, `text_delta`, `thinking`, `tool_request`, `stream_end` 等）
-   - 权限确认逻辑（`auto_edit` / `yolo` 自动批准部分工具）
-
-4. **后端持久化**
-   - backend 独占 `aionui.db`，Electron 不再直接访问 SQLite
-   - 对话记录由 `/api/conversations*` 相关 contract 持久化
-   - 消息记录由 backend message persistence 负责
+**Version**: v1.1 (revised)
+**Author**: chat-aionrs-analyst
+**Date**: 2026-04-22
+**Status**: Gate 1 complete, plus the v1.1 revision (corrects where aionrs models come from)
 
 ---
 
-## 2. 测试维度枚举
+## 1. Business Scenario
 
-### 2.1 维度定义表
+### 1.1 End-to-end flow
 
-| 维度           | 档位 | 说明                                   | 源码追溯                                                 |
-| -------------- | ---- | -------------------------------------- | -------------------------------------------------------- |
-| **文件夹关联** | 2 档 | 无关联 / 关联                          | `AionrsSendBox.tsx:331-337` atPath 状态 + event listener |
-| **文件上传**   | 2 档 | 无上传 / 上传                          | `AionrsSendBox.tsx:103-125` file input handler           |
-| **模型**       | 2 档 | 从 ACP 模型列表挑 2 个（推荐配置见下） | `GuidModelSelector.tsx` + `useGuidModelSelection.ts`     |
-| **权限模式**   | 3 档 | default / auto_edit / yolo             | aionrs runtime capabilities + `AgentModeSelector`        |
-| **对话中切换** | 必测 | 切换模型 + 切换权限                    | `AionrsModelSelector.tsx` + `AgentModeSelector`          |
+The user picks the aionrs agent on the **guid home page**, configures the context (files / folders / model / permission), sends a message, lands on the **aionrs conversation page**, receives a streamed reply, and can switch the model or permission mid-conversation.
 
-### 2.2 维度详细说明
+**Critical path** (traced through the source):
 
-#### 文件夹关联（2 档）
+1. **guid home page** (`src/renderer/pages/guid/GuidPage.tsx:83-100`)
+   - The user clicks the aionrs pill in `AgentPillBar` (`data-agent-backend="aionrs"`).
+   - Optional: pick a model through `GuidModelSelector` (the ACP model list).
+   - Optional: pick a permission mode through `AgentModeSelector`.
+   - Optional: upload files / attach folders (not yet supported on the guid page, supported on the conversation page).
+   - Type a message and click send → a conversation is created and the app navigates to `/conversation/aionrs/<id>`.
 
-**档位 1 - 无关联**:
+2. **aionrs conversation page** (`src/renderer/pages/conversation/platforms/aionrs/AionrsChat.tsx:27-54`)
+   - Renders `MessageList` (the message history).
+   - `AionrsSendBox` provides file upload, folder attachment, model selection, and permission selection.
+   - After a message is sent, the front end calls into the process side through `ipcBridge.conversation.sendMessage.invoke()`.
 
-- 发送消息时 `atPath = []`
-- `workspace` 指向临时目录 `/tmp/e2e-chat-aionrs-<scenario>-<ts>/`
+3. **Process side** (`src/process/task/AionrsManager.ts:78-781`)
+   - Creates an `AionrsAgent` instance (`src/process/agent/aionrs/index.ts:54-450`).
+   - Starts the aionrs binary (stdin/stdout JSON Lines protocol).
+   - Handles the streamed events (`stream_start`, `text_delta`, `thinking`, `tool_request`, `stream_end`, and so on).
+   - Runs the permission confirmation logic (`auto_edit` / `yolo` auto-approve some tools).
 
-**档位 2 - 关联文件夹**:
-
-- 通过 `emitter.emit('aionrs.selected.file', items)` 触发
-- `atPath` 包含 `{path: '/tmp/...', name: 'folder-name', isFile: false}`
-- 对话页显示蓝色 Tag（`AionrsSendBox.tsx:423-446`）
-
-**前置条件**:
-
-- E2E 在 `/tmp/e2e-chat-aionrs-<scenario>-<ts>/` 创建临时文件夹
-- 通过 `invokeBridge(page, 'fs.readdir', ...)` 或 UI 文件树选择
-
-**验证点**:
-
-- DB `messages.content` 包含文件夹路径（JSON 字段）
-- Binary 接收到 `files` 参数（通过 IPC bridge 验证）
+4. **Backend persistence**
+   - The backend owns `aionui.db` exclusively; Electron no longer accesses SQLite directly.
+   - Conversation records are persisted by the `/api/conversations*` contracts.
+   - Message records are the responsibility of the backend message persistence layer.
 
 ---
 
-#### 文件上传（2 档）
+## 2. Enumeration of Test Dimensions
 
-**档位 1 - 无上传**:
+### 2.1 Dimension definitions
+
+| Dimension                   | Levels   | Description                                              | Source reference                                          |
+| --------------------------- | -------- | -------------------------------------------------------- | --------------------------------------------------------- |
+| **Folder attachment**       | 2 levels | Not attached / attached                                  | `AionrsSendBox.tsx:331-337` atPath state + event listener |
+| **File upload**             | 2 levels | No upload / upload                                       | `AionrsSendBox.tsx:103-125` file input handler            |
+| **Model**                   | 2 levels | Pick 2 from the ACP model list (recommended setup below) | `GuidModelSelector.tsx` + `useGuidModelSelection.ts`      |
+| **Permission mode**         | 3 levels | default / auto_edit / yolo                               | aionrs runtime capabilities + `AgentModeSelector`         |
+| **Mid-conversation switch** | Required | Switch the model and switch the permission               | `AionrsModelSelector.tsx` + `AgentModeSelector`           |
+
+### 2.2 Dimension details
+
+#### Folder attachment (2 levels)
+
+**Level 1 - not attached**:
+
+- `atPath = []` when the message is sent.
+- `workspace` points at the temporary directory `/tmp/e2e-chat-aionrs-<scenario>-<ts>/`.
+
+**Level 2 - folder attached**:
+
+- Triggered by `emitter.emit('aionrs.selected.file', items)`.
+- `atPath` contains `{path: '/tmp/...', name: 'folder-name', isFile: false}`.
+- The conversation page shows a blue tag (`AionrsSendBox.tsx:423-446`).
+
+**Preconditions**:
+
+- E2E creates a temporary folder at `/tmp/e2e-chat-aionrs-<scenario>-<ts>/`.
+- Selection happens through `invokeBridge(page, 'fs.readdir', ...)` or the UI file tree.
+
+**Verification points**:
+
+- DB `messages.content` contains the folder path (a JSON field).
+- The binary receives the `files` parameter (verified through the IPC bridge).
+
+---
+
+#### File upload (2 levels)
+
+**Level 1 - no upload**:
 
 - `uploadFile = []`
 
-**档位 2 - 上传文件**:
+**Level 2 - file uploaded**:
 
-- 桌面端: `ipcBridge.dialog.showOpen({ properties: ['openFile'] })`
+- Desktop: `ipcBridge.dialog.showOpen({ properties: ['openFile'] })`
 - WebUI: `page.setInputFiles('input[type="file"]', filePath)`
-- `uploadFile` 存储绝对路径数组
+- `uploadFile` holds an array of absolute paths.
 
-**前置条件**:
+**Preconditions**:
 
-- E2E 创建测试文件 `/tmp/e2e-chat-aionrs-<scenario>-<ts>/test.txt`（内容: "E2E test file"）
+- E2E creates the test file `/tmp/e2e-chat-aionrs-<scenario>-<ts>/test.txt` (contents: "E2E test file").
 
-**验证点**:
+**Verification points**:
 
-- 上传后显示文件预览卡片（`AionrsSendBox.tsx:413-421`）
-- DB `messages.content` 包含文件路径
-- Binary 接收到 `files` 参数
+- A file preview card appears after the upload (`AionrsSendBox.tsx:413-421`).
+- DB `messages.content` contains the file path.
+- The binary receives the `files` parameter.
 
 ---
 
-#### 模型（2 档）
+#### Model (2 levels)
 
-**模型来源**（用户配置的 provider 列表）:
+**Where models come from** (the user-configured provider list):
 
-**重要纠正**: aionrs **不使用 ACP 模型列表**，而是使用用户在 Settings → Model 里配置的通用 provider 列表。
+**Important correction**: aionrs does **not** use the ACP model list. It uses the general provider list that the user configures under Settings → Model.
 
-**源码追溯**:
+**Source reference**:
 
 - `src/renderer/pages/conversation/platforms/aionrs/useAionrsModelSelection.ts:34-40`:
   ```typescript
   const { providers: allProviders, ... } = useModelProviderList();
   const providers = allProviders.filter(p => !p.platform?.toLowerCase().includes('gemini-with-google-auth'));
   ```
-- `useModelProviderList()` 来源（`src/renderer/hooks/agent/useModelProviderList.ts:30`）:
+- Where `useModelProviderList()` gets its data (`src/renderer/hooks/agent/useModelProviderList.ts:30`):
   ```typescript
   const { data: modelConfig } = useSWR('model.config', () => ipcBridge.mode.getModelConfig.invoke());
   ```
-  → 即用户配置文件存储的 provider 列表（非动态探测）
+  → that is, the provider list stored in the user's config file (not dynamically probed).
 
-**与 ACP agent 的区别**:
+**Difference from ACP agents**:
 
-- **ACP agent**（Claude Code / Qwen Code / iFlow）: 模型从 `ipcBridge.acpConversation.getModelInfo` 探测（agent 进程启动后反馈）
-- **aionrs**: 模型从 `ipcBridge.mode.getModelConfig` 读取（用户配置文件，排除 `gemini-with-google-auth`）
+- **ACP agents** (Claude Code / Qwen Code / iFlow): models are probed through `ipcBridge.acpConversation.getModelInfo` (reported back after the agent process starts).
+- **aionrs**: models are read through `ipcBridge.mode.getModelConfig` (the user's config file, excluding `gemini-with-google-auth`).
 
-**档位定义**（runtime 动态决定，不可 hardcode）:
+**Level definitions** (determined dynamically at runtime, must not be hardcoded):
 
-1. **档位 1 - 默认模型**:
-   - E2E setup 查询 `ipcBridge.mode.getModelConfig.invoke()`
-   - 过滤 `gemini-with-google-auth`
-   - 取 `providers[0].model[0]`（第一个可用 provider 的第一个 model）
+1. **Level 1 - default model**:
+   - E2E setup queries `ipcBridge.mode.getModelConfig.invoke()`.
+   - Filters out `gemini-with-google-auth`.
+   - Takes `providers[0].model[0]` (the first model of the first available provider).
 
-2. **档位 2 - 切换模型**:
-   - 同一 provider 下的不同 model: `providers[0].model[1]`
-   - 或跨 provider: `providers[1].model[0]`（若存在第二个 provider）
+2. **Level 2 - switched model**:
+   - A different model under the same provider: `providers[0].model[1]`.
+   - Or a different provider: `providers[1].model[0]` (if a second provider exists).
 
-**E2E 前置条件**（见 §8 新增议题）:
+**E2E preconditions** (see the new topic in §8):
 
-- 至少 1 个非 Google Auth provider
-- 该 provider 至少有 2 个可用 model（用于切换测试）
-- 若只有 1 个 model，测试降级为"只验证当前 model，不测切换"
+- At least 1 non-Google-Auth provider.
+- That provider must have at least 2 usable models (for the switching test).
+- If there is only 1 model, the test degrades to "verify the current model only, do not test switching".
 
-**验证策略**:
+**Verification strategy**:
 
-- 通过 `invokeBridge(page, 'conversation.get', { id })` 查询 DB
-- 校验 `conversations.model` 字段（模型 ID）
-- 校验 `conversations.extra.model` (JSON) 包含 `{ id, useModel, name, ... }`
+- Query the DB through `invokeBridge(page, 'conversation.get', { id })`.
+- Check the `conversations.model` field (the model ID).
+- Check that `conversations.extra.model` (JSON) contains `{ id, useModel, name, ... }`.
 
-**已知约束**:
+**Known constraints**:
 
-- aionrs **不支持 Google Auth**（`useAionrsModelSelection.ts:36-40` 过滤）
-- 模型切换行为: E2E 只验证 DB 字段更新，不验证 binary 重启（见 §8 议题 1 决策）
+- aionrs **does not support Google Auth** (filtered in `useAionrsModelSelection.ts:36-40`).
+- Model switching behavior: E2E only verifies that the DB field is updated, not that the binary restarts (see the decision on topic 1 in §8).
 
 ---
 
-#### 权限模式（3 档）
+#### Permission mode (3 levels)
 
-**档位枚举**（由 aionrs runtime capabilities 上报）:
+**Enumeration of levels** (reported by the aionrs runtime capabilities):
 
 ```typescript
 aionrs: [
@@ -169,112 +169,112 @@ aionrs: [
 ];
 ```
 
-| mode        | label             | 行为                                             | 源码追溯                                |
-| ----------- | ----------------- | ------------------------------------------------ | --------------------------------------- |
-| `default`   | Default           | 每次工具调用需确认                               | `AionrsManager.ts:250-296` confirm 逻辑 |
-| `auto_edit` | Auto-Accept Edits | 自动批准 edit / info 类工具，exec / mcp 仍需确认 | `AionrsManager.ts:254-259`              |
-| `yolo`      | YOLO              | 全自动批准所有工具                               | `AionrsManager.ts:250-253`              |
+| mode        | label             | Behavior                                                                    | Source reference                              |
+| ----------- | ----------------- | --------------------------------------------------------------------------- | --------------------------------------------- |
+| `default`   | Default           | Every tool call requires confirmation                                       | `AionrsManager.ts:250-296` confirmation logic |
+| `auto_edit` | Auto-Accept Edits | Auto-approves edit and info tools; exec and mcp tools still need confirming | `AionrsManager.ts:254-259`                    |
+| `yolo`      | YOLO              | Auto-approves every tool                                                    | `AionrsManager.ts:250-253`                    |
 
-**权限切换接口**:
+**Permission switching entry points**:
 
-- guid 页: `GuidActionRow.tsx:277-287` — `AgentModeSelector` 组件
-- 对话页: `AionrsSendBox.tsx:391-401` — 同样使用 `AgentModeSelector`
-- 进程端: `AionrsManager.ts:727-737` — `setMode()` 更新 DB + 发送 `set_mode` 到 binary
+- guid page: `GuidActionRow.tsx:277-287` — the `AgentModeSelector` component.
+- Conversation page: `AionrsSendBox.tsx:391-401` — also uses `AgentModeSelector`.
+- Process side: `AionrsManager.ts:727-737` — `setMode()` updates the DB and sends `set_mode` to the binary.
 
-**验证策略**:
+**Verification strategy**:
 
-- 查询 DB: `SELECT json_extract(extra, '$.sessionMode') FROM conversations WHERE id = ?`
-- 期望值: `'default' | 'auto_edit' | 'yolo'`
+- Query the DB: `SELECT json_extract(extra, '$.sessionMode') FROM conversations WHERE id = ?`
+- Expected value: `'default' | 'auto_edit' | 'yolo'`
 
-**测试覆盖**:
+**Test coverage**:
 
-- guid 页选 3 种模式各 1 次（3 个用例）
-- 对话中切换 3 种模式（见 §2.3 对话中切换）
-
----
-
-#### 对话中切换（必测）
-
-**切换模型**:
-
-- 操作: 点击对话页 `AionrsModelSelector` 按钮 → 选择不同模型
-- 预期: 下次发送消息时生效（是否需重启 binary 待 E2E 探测）
-- 验证: 查 DB `conversations.extra.model.useModel`
-
-**切换权限**:
-
-- 操作: 点击对话页 `AgentModeSelector` 按钮 → 选择不同权限
-- 预期: 立即生效（`AionrsManager.setMode()` 发送 `set_mode` 到 binary）
-- 验证: 查 DB `conversations.extra.sessionMode`
-
-**边界场景**（待 team-lead 决策 — 见 §8 议题 3）:
-
-- 工具确认弹窗中途切换权限 → 当前行为待探测（是否取消 pending 确认？）
+- Select each of the 3 modes once on the guid page (3 cases).
+- Switch between the 3 modes mid-conversation (see "Mid-conversation switching" in §2.3).
 
 ---
 
-### 2.3 用例矩阵（正交覆盖）
+#### Mid-conversation switching (required)
 
-**全排列**: 2（文件夹） × 2（上传） × 2（模型） × 3（权限） = **24 组合**
+**Switching the model**:
 
-**收敛策略**（designer + engineer 共识）:
+- Action: click the `AionrsModelSelector` button on the conversation page and pick a different model.
+- Expectation: it takes effect on the next message sent (whether the binary must restart is still to be probed by E2E).
+- Verification: query the DB for `conversations.extra.model.useModel`.
 
-- **P0 核心用例**（5 个）: 无附件 + 默认模型 + default 权限（基础路径）
-- **P1 常用用例**（7 个）: 单文件、单文件夹、多文件、多文件夹、切换模型、切换权限
-- **P2 边界用例**（3-5 个）: 超大文件、并发对话、协议错误、进程崩溃
+**Switching the permission**:
 
-**推荐用例清单**（11-17 个，采用正交设计）:
+- Action: click the `AgentModeSelector` button on the conversation page and pick a different permission.
+- Expectation: it takes effect immediately (`AionrsManager.setMode()` sends `set_mode` to the binary).
+- Verification: query the DB for `conversations.extra.sessionMode`.
 
-| #   | 文件夹关联 | 文件上传     | 模型 | 权限      | 对话中切换  | 优先级 |
-| --- | ---------- | ------------ | ---- | --------- | ----------- | ------ |
-| 1   | 无         | 无           | 默认 | default   | -           | P0     |
-| 2   | 关联       | 无           | 默认 | default   | -           | P1     |
-| 3   | 无         | 上传         | 默认 | default   | -           | P1     |
-| 4   | 关联       | 上传         | 默认 | default   | -           | P1     |
-| 5   | 无         | 无           | 默认 | auto_edit | -           | P1     |
-| 6   | 无         | 无           | 默认 | yolo      | -           | P1     |
-| 7   | 无         | 无           | 默认 | default   | 切换模型    | P1     |
-| 8   | 无         | 无           | 默认 | default   | 切换权限    | P1     |
-| 9   | 无         | 上传（超大） | 默认 | default   | -           | P2     |
-| 10  | 无         | 无           | 默认 | default   | 并发对话    | P2     |
-| 11  | 无         | 无           | 默认 | default   | binary 崩溃 | P2     |
+**Edge scenario** (awaiting a team-lead decision — see topic 3 in §8):
+
+- Switching the permission while a tool confirmation dialog is open → current behavior still to be probed (does it cancel the pending confirmation?).
 
 ---
 
-## 3. Binary 前置条件
+### 2.3 Case matrix (orthogonal coverage)
 
-### 3.1 Binary 路径解析（Q3 决策）
+**Full permutation**: 2 (folder) x 2 (upload) x 2 (model) x 3 (permission) = **24 combinations**
 
-**解析策略**（二选一，推荐选项 2）:
+**Convergence strategy** (designer and engineer consensus):
 
-**选项 1 - Hardcode 路径**:
+- **P0 core cases** (5): no attachments + default model + default permission (the baseline path).
+- **P1 common cases** (7): single file, single folder, multiple files, multiple folders, model switching, permission switching.
+- **P2 edge cases** (3-5): oversized files, concurrent conversations, protocol errors, process crashes.
+
+**Recommended case list** (11-17 cases, orthogonal design):
+
+| #   | Folder attachment | File upload        | Model   | Permission | Mid-conversation switch  | Priority |
+| --- | ----------------- | ------------------ | ------- | ---------- | ------------------------ | -------- |
+| 1   | none              | none               | default | default    | -                        | P0       |
+| 2   | attached          | none               | default | default    | -                        | P1       |
+| 3   | none              | upload             | default | default    | -                        | P1       |
+| 4   | attached          | upload             | default | default    | -                        | P1       |
+| 5   | none              | none               | default | auto_edit  | -                        | P1       |
+| 6   | none              | none               | default | yolo       | -                        | P1       |
+| 7   | none              | none               | default | default    | switch model             | P1       |
+| 8   | none              | none               | default | default    | switch permission        | P1       |
+| 9   | none              | upload (oversized) | default | default    | -                        | P2       |
+| 10  | none              | none               | default | default    | concurrent conversations | P2       |
+| 11  | none              | none               | default | default    | binary crash             | P2       |
+
+---
+
+## 3. Binary Preconditions
+
+### 3.1 Resolving the binary path (decision Q3)
+
+**Resolution strategy** (pick one; option 2 is recommended):
+
+**Option 1 - hardcoded path**:
 
 ```typescript
 const AIONRS_BINARY_PATH = '/Users/zhoukai/.local/bin/aionrs';
 ```
 
-**选项 2 - 从 PATH 查找**（**推荐**，更健壮）:
+**Option 2 - look it up on PATH** (**recommended**, more robust):
 
 ```typescript
-// 通过 binaryResolver 查找
+// Look it up through binaryResolver
 const binary = await ipcBridge.fs.findAionrsBinary.invoke();
 if (!binary) {
   test.skip('aionrs binary not found in PATH or ~/.local/bin/aionrs, skipping E2E tests');
 }
 ```
 
-**源码追溯**: `src/process/agent/aionrs/binaryResolver.ts`
+**Source reference**: `src/process/agent/aionrs/binaryResolver.ts`
 
-- 解析顺序: 环境变量 `AION_CLI_PATH` → `~/.aionui/bin/aion-<platform>-<arch>` → 系统 PATH 中的 `aion` 命令
+- Resolution order: the `AION_CLI_PATH` environment variable → `~/.aionui/bin/aion-<platform>-<arch>` → the `aion` command on the system PATH.
 
-**验证命令**（team-lead 已确认）:
+**Verification command** (confirmed by team-lead):
 
 ```bash
 $ which aionrs
 /Users/zhoukai/.local/bin/aionrs
 ```
 
-**E2E 实现规范**:
+**E2E implementation convention**:
 
 ```typescript
 // tests/e2e/setup/aionrs.setup.ts
@@ -302,97 +302,97 @@ test.beforeAll(async ({ page }) => {
 });
 ```
 
-**关键要求**（team-lead 指示）:
+**Key requirements** (team-lead instruction):
 
-- 若 binary 不存在，**必须** `test.skip()` 并打印明确错误信息（不要悄悄跳过）
-- 错误信息示例: `aionrs binary not found in PATH or ~/.local/bin/aionrs`
+- If the binary is missing, the test **must** call `test.skip()` and print a clear error message (never skip silently).
+- Example error message: `aionrs binary not found in PATH or ~/.local/bin/aionrs`
 
 ---
 
-### 3.2 Binary 启动与超时
+### 3.2 Binary startup and timeouts
 
-**启动流程** (`src/process/agent/aionrs/index.ts:85-157`):
+**Startup flow** (`src/process/agent/aionrs/index.ts:85-157`):
 
-1. 创建 `AionrsAgent` 实例
-2. 调用 `spawn(binaryPath, args, { env, stdio: ['pipe', 'pipe', 'pipe'] })`
-3. 等待 `ready` 事件（JSON Lines: `{"type":"ready","session_id":"...","capabilities":{...}}`）
-4. 超时时间: **30s**（`index.ts:136-140`）
+1. Create the `AionrsAgent` instance.
+2. Call `spawn(binaryPath, args, { env, stdio: ['pipe', 'pipe', 'pipe'] })`.
+3. Wait for the `ready` event (JSON Lines: `{"type":"ready","session_id":"...","capabilities":{...}}`).
+4. Timeout: **30s** (`index.ts:136-140`).
 
-**E2E timeout 设置**:
+**E2E timeout setting**:
 
 ```typescript
 test(
   'should start aionrs conversation',
   async ({ page }) => {
-    // Playwright test timeout: 60s（留足 binary 启动时间）
+    // Playwright test timeout: 60s (leaves plenty of room for the binary to start)
   },
   { timeout: 60000 }
 );
 ```
 
-**失败场景**:
+**Failure scenarios**:
 
-- 启动超时: 抛出 `Error('aionrs ready timeout (30s)')`
-- 进程崩溃: `childProcess.on('exit')` 触发，前端收到 `error` 事件
+- Startup timeout: throws `Error('aionrs ready timeout (30s)')`.
+- Process crash: `childProcess.on('exit')` fires and the front end receives an `error` event.
 
 ---
 
-## 4. 临时目录与清理契约（Q4 决策）
+## 4. Temporary Directories and the Cleanup Contract (decision Q4)
 
-### 4.1 临时目录规范
+### 4.1 Temporary directory convention
 
-**目录结构**:
+**Directory layout**:
 
 ```
 /tmp/e2e-chat-aionrs-<scenario>-<timestamp>/
-├── test-file.txt          # 文件上传测试文件
-├── test-folder/           # 文件夹关联测试目录
+├── test-file.txt          # Test file for the file upload case
+├── test-folder/           # Test directory for the folder attachment case
 │   └── sample.md
-└── .aionrs/               # aionrs session 文件（binary 自动创建）
+└── .aionrs/               # aionrs session files (created by the binary)
 ```
 
-**命名规范**:
+**Naming convention**:
 
-- `<scenario>`: 用例场景描述（如 `no-attach`, `single-file`, `single-folder`, `multi-attach`）
-- `<timestamp>`: `Date.now()` 或 `YYYYMMDD-HHmmss`
+- `<scenario>`: a description of the case scenario (such as `no-attach`, `single-file`, `single-folder`, `multi-attach`).
+- `<timestamp>`: `Date.now()` or `YYYYMMDD-HHmmss`.
 
-**创建时机**: `beforeEach()` 或用例开始前
+**When it is created**: in `beforeEach()`, or just before the case starts.
 
 ---
 
-### 4.2 清理契约（team-lead 硬性要求）
+### 4.2 Cleanup contract (mandatory per team-lead)
 
-#### 清理顺序（必须按序执行，避免外键冲突）
+#### Cleanup order (must run in this order to avoid foreign key conflicts)
 
 ```typescript
 afterEach(async ({ page }) => {
-  const conversationId = /* 当前用例的对话 ID */;
-  const tmpDir = /* 当前用例的临时目录 */;
+  const conversationId = /* the conversation ID of the current case */;
+  const tmpDir = /* the temporary directory of the current case */;
 
   try {
-    // 1. 停止 aionrs binary 进程
+    // 1. Stop the aionrs binary process
     await invokeBridge(page, 'conversation.stop', { conversation_id: conversationId });
 
-    // 2. 清理 DB（级联删除 messages）
+    // 2. Clean up the DB (messages are deleted by cascade)
     await invokeBridge(page, 'db.exec', {
       sql: "DELETE FROM conversations WHERE name LIKE 'E2E-aionrs-%'"
     });
 
-    // 3. 清理 FS（临时目录 + aionrs session 文件）
+    // 3. Clean up the filesystem (temporary directory plus the aionrs session files)
     await invokeBridge(page, 'fs.rm', { path: tmpDir, recursive: true });
 
-    // 4. 清理 UI state（ESC×5 关闭所有弹窗/模态框）
+    // 4. Clean up the UI state (ESC x 5 closes every popup and modal)
     for (let i = 0; i < 5; i++) {
       await page.keyboard.press('Escape');
       await page.waitForTimeout(100);
     }
 
-    // 5. 清理 sessionStorage
+    // 5. Clean up sessionStorage
     await page.evaluate(() => {
       sessionStorage.clear();
     });
 
-    // 6. 验证清理完成（可选，但推荐）
+    // 6. Verify the cleanup completed (optional, but recommended)
     const remaining = await invokeBridge(page, 'db.query', {
       sql: "SELECT COUNT(*) as count FROM conversations WHERE name LIKE 'E2E-aionrs-%'"
     });
@@ -400,57 +400,57 @@ afterEach(async ({ page }) => {
       throw new Error(`E2E cleanup failed: ${remaining[0].count} conversations still exist`);
     }
   } catch (error) {
-    // 清理失败必须 throw（team-lead 硬性要求）
+    // A cleanup failure must throw (mandatory per team-lead)
     console.error('[E2E Cleanup] Failed:', error);
     throw error;
   }
 });
 ```
 
-#### 清理范围
+#### Cleanup scope
 
-| 资源类型              | 清理规则                                | 验证方式                      |
-| --------------------- | --------------------------------------- | ----------------------------- |
-| **DB conversations**  | `DELETE WHERE name LIKE 'E2E-aionrs-%'` | `SELECT COUNT(*)` 期望 0      |
-| **DB messages**       | 级联删除（`ON DELETE CASCADE`）         | 自动清理                      |
-| **FS 临时目录**       | `rm -rf /tmp/e2e-chat-aionrs-*`         | `fs.existsSync()` 期望 false  |
-| **FS aionrs session** | 包含在临时目录内                        | 同上                          |
-| **UI state**          | ESC×5 + 导航到安全页面（如 `/guid`）    | 截图验证                      |
-| **sessionStorage**    | `clear()`                               | `sessionStorage.length === 0` |
+| Resource type         | Cleanup rule                                             | How it is verified              |
+| --------------------- | -------------------------------------------------------- | ------------------------------- |
+| **DB conversations**  | `DELETE WHERE name LIKE 'E2E-aionrs-%'`                  | `SELECT COUNT(*)` expects 0     |
+| **DB messages**       | Cascade delete (`ON DELETE CASCADE`)                     | Cleaned up automatically        |
+| **FS temp directory** | `rm -rf /tmp/e2e-chat-aionrs-*`                          | `fs.existsSync()` expects false |
+| **FS aionrs session** | Contained inside the temp directory                      | Same as above                   |
+| **UI state**          | ESC x 5 plus navigation to a safe page (such as `/guid`) | Verified by screenshot          |
+| **sessionStorage**    | `clear()`                                                | `sessionStorage.length === 0`   |
 
-#### 对话命名规范（必须遵守）
+#### Conversation naming convention (mandatory)
 
 ```typescript
 const conversationName = `E2E-aionrs-${scenario}-${Date.now()}`;
-// 示例: 'E2E-aionrs-no-attach-1745327890123'
+// Example: 'E2E-aionrs-no-attach-1745327890123'
 ```
 
-**关键要求**:
+**Key requirements**:
 
-- 前缀 **必须** 是 `E2E-aionrs-`（清理 SQL 依赖此前缀）
-- 包含场景描述（便于日志追溯）
-- 包含时间戳（避免重名）
+- The prefix **must** be `E2E-aionrs-` (the cleanup SQL depends on it).
+- Include a scenario description (so logs are easy to trace).
+- Include a timestamp (to avoid name collisions).
 
 ---
 
-## 5. 数据库验证字段
+## 5. Database Fields to Verify
 
-### 5.1 conversations 表验证
+### 5.1 conversations table
 
-**关键字段**（backend-owned `conversations` 持久化）:
+**Key fields** (persisted in the backend-owned `conversations` table):
 
-| 字段         | 类型        | 验证规则                               | 源码追溯                   |
-| ------------ | ----------- | -------------------------------------- | -------------------------- |
-| `id`         | TEXT PK     | 非空，UUID 格式                        | -                          |
-| `name`       | TEXT        | 匹配 `'E2E-aionrs-*'` 模式             | -                          |
-| `type`       | TEXT        | 固定 `'aionrs'`                        | -                          |
-| `model`      | TEXT        | 模型 ID（如 `'claude-opus-4-7'`）      | `AionrsManager.ts:108`     |
-| `status`     | TEXT        | `'pending' \| 'running' \| 'finished'` | `AionrsManager.ts:524-526` |
-| `extra`      | TEXT (JSON) | 见 §5.1.1 extra 字段                   | -                          |
-| `created_at` | INTEGER     | 时间戳（ms）                           | -                          |
-| `updated_at` | INTEGER     | ≥ created_at                           | -                          |
+| Field        | Type        | Validation rule                            | Source reference           |
+| ------------ | ----------- | ------------------------------------------ | -------------------------- |
+| `id`         | TEXT PK     | Not null, UUID format                      | -                          |
+| `name`       | TEXT        | Matches the `'E2E-aionrs-*'` pattern       | -                          |
+| `type`       | TEXT        | Always `'aionrs'`                          | -                          |
+| `model`      | TEXT        | The model ID (such as `'claude-opus-4-7'`) | `AionrsManager.ts:108`     |
+| `status`     | TEXT        | `'pending' \| 'running' \| 'finished'`     | `AionrsManager.ts:524-526` |
+| `extra`      | TEXT (JSON) | See the extra field in §5.1.1              | -                          |
+| `created_at` | INTEGER     | Timestamp (ms)                             | -                          |
+| `updated_at` | INTEGER     | ≥ created_at                               | -                          |
 
-#### 5.1.1 extra 字段结构（JSON）
+#### 5.1.1 Structure of the extra field (JSON)
 
 ```json
 {
@@ -470,60 +470,60 @@ const conversationName = `E2E-aionrs-${scenario}-${Date.now()}`;
 }
 ```
 
-**源码追溯**:
+**Source references**:
 
 - `sessionMode`: `AionrsManager.ts:740-747` — `saveSessionMode()`
 - `lastTokenUsage`: `AionrsManager.ts:432-449` — `saveContextUsage()`
-- `model`: `useGuidModelSelection.ts:119-120` — 持久化模型选择
+- `model`: `useGuidModelSelection.ts:119-120` — persists the model selection
 
 ---
 
-### 5.2 messages 表验证
+### 5.2 messages table
 
-**关键字段**（backend-owned `messages` 持久化）:
+**Key fields** (persisted in the backend-owned `messages` table):
 
-| 字段              | 类型        | 验证规则                                      | 源码追溯     |
-| ----------------- | ----------- | --------------------------------------------- | ------------ |
-| `id`              | TEXT PK     | 非空，UUID 格式                               | -            |
-| `conversation_id` | TEXT FK     | 关联 conversations.id                         | -            |
-| `msg_id`          | TEXT        | binary 流式 msg_id（AI 回复）或用户消息 ID    | -            |
-| `type`            | TEXT        | `'text' \| 'tool_group' \| 'thinking' \| ...` | `chatLib.ts` |
-| `content`         | TEXT (JSON) | 见 §5.2.1 content 字段                        | -            |
-| `position`        | TEXT        | `'left' \| 'right' \| 'center' \| 'pop'`      | -            |
-| `status`          | TEXT        | `'finish' \| 'pending' \| 'error' \| 'work'`  | -            |
-| `created_at`      | INTEGER     | 时间戳（ms）                                  | -            |
+| Field             | Type        | Validation rule                                                       | Source reference |
+| ----------------- | ----------- | --------------------------------------------------------------------- | ---------------- |
+| `id`              | TEXT PK     | Not null, UUID format                                                 | -                |
+| `conversation_id` | TEXT FK     | References conversations.id                                           | -                |
+| `msg_id`          | TEXT        | The binary's streaming msg_id (for AI replies) or the user message ID | -                |
+| `type`            | TEXT        | `'text' \| 'tool_group' \| 'thinking' \| ...`                         | `chatLib.ts`     |
+| `content`         | TEXT (JSON) | See the content field in §5.2.1                                       | -                |
+| `position`        | TEXT        | `'left' \| 'right' \| 'center' \| 'pop'`                              | -                |
+| `status`          | TEXT        | `'finish' \| 'pending' \| 'error' \| 'work'`                          | -                |
+| `created_at`      | INTEGER     | Timestamp (ms)                                                        | -                |
 
-#### 5.2.1 content 字段结构（JSON）
+#### 5.2.1 Structure of the content field (JSON)
 
-**用户消息（position='right'）**:
+**User message (position='right')**:
 
 ```json
 {
-  "content": "用户输入的消息文本",
+  "content": "The message text the user typed",
   "attachedFiles": ["/tmp/.../test.txt"],
   "attachedDirs": ["/tmp/.../test-folder"]
 }
 ```
 
-**AI 文本回复（type='text', position='left'）**:
+**AI text reply (type='text', position='left')**:
 
 ```json
 {
-  "content": "AI 回复的文本内容（增量拼接）"
+  "content": "The text of the AI reply (assembled from the deltas)"
 }
 ```
 
-**思考消息（type='thinking'）**:
+**Thinking message (type='thinking')**:
 
 ```json
 {
-  "content": "<think> 标签或 thought 事件内容",
+  "content": "The contents of a <think> tag or a thought event",
   "duration": 1234,
   "status": "thinking" | "done"
 }
 ```
 
-**工具调用（type='tool_group'）**:
+**Tool call (type='tool_group')**:
 
 ```json
 [
@@ -540,33 +540,33 @@ const conversationName = `E2E-aionrs-${scenario}-${Date.now()}`;
 
 ---
 
-### 5.3 E2E 断言示例
+### 5.3 Example E2E assertions
 
 ```typescript
 test('should verify DB records after conversation', async ({ page }) => {
   const conversationId = /* ... */;
 
-  // 1. 验证 conversation 存在且类型正确
+  // 1. Verify the conversation exists and has the right type
   const conv = await invokeBridge(page, 'conversation.get', { id: conversationId });
   expect(conv).toBeDefined();
   expect(conv.type).toBe('aionrs');
   expect(conv.status).toBe('finished');
   expect(conv.extra.sessionMode).toBe('default');
 
-  // 2. 验证至少有 2 条消息（用户 + AI）
+  // 2. Verify there are at least 2 messages (user + AI)
   const messages = await invokeBridge(page, 'db.query', {
     sql: 'SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC',
     params: [conversationId]
   });
   expect(messages.length).toBeGreaterThanOrEqual(2);
 
-  // 3. 验证用户消息
+  // 3. Verify the user message
   const userMsg = messages[0];
   expect(userMsg.position).toBe('right');
   expect(userMsg.type).toBe('text');
   expect(JSON.parse(userMsg.content).content).toContain('Hello');
 
-  // 4. 验证 AI 回复
+  // 4. Verify the AI reply
   const aiMsg = messages.find(m => m.position === 'left' && m.type === 'text');
   expect(aiMsg).toBeDefined();
   expect(aiMsg.status).toBe('finish');
@@ -576,42 +576,42 @@ test('should verify DB records after conversation', async ({ page }) => {
 
 ---
 
-## 6. 可测试性评估
+## 6. Testability Assessment
 
-### 6.1 现有 data-testid 覆盖
+### 6.1 Existing data-testid coverage
 
-**guid 页**（engineer 发现，之前误判）:
+**guid page** (found by the engineer; previously misjudged):
 
-- ✅ **已有**: `data-agent-pill="true"`, `data-agent-backend="aionrs"`, `data-agent-selected`
-- 位置: `src/renderer/pages/guid/components/AgentPillBar.tsx:79-82`
+- ✅ **Already present**: `data-agent-pill="true"`, `data-agent-backend="aionrs"`, `data-agent-selected`
+- Location: `src/renderer/pages/guid/components/AgentPillBar.tsx:79-82`
 
-**对话页**:
+**Conversation page**:
 
-- ❌ **0 个** testid（需补充）
+- ❌ **Zero** testids (they must be added)
 
 ---
 
-### 6.2 需新增 data-testid 清单
+### 6.2 List of data-testids to add
 
-#### P0 优先级（阻塞测试，必须添加）
+#### P0 priority (blocks testing, must be added)
 
 ```tsx
 // src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx
 <div data-testid="aionrs-sendbox">
-  {/* SendBox 根元素 */}
+  {/* The SendBox root element */}
 </div>
 
 // src/renderer/pages/conversation/platforms/aionrs/AionrsModelSelector.tsx
 <Button data-testid="aionrs-model-selector">
-  {/* 模型选择器按钮 */}
+  {/* The model selector button */}
 </Button>
 
-// src/renderer/components/agent/AgentModeSelector.tsx（通用组件）
+// src/renderer/components/agent/AgentModeSelector.tsx (shared component)
 <Button data-testid={`agent-mode-selector-${backend}`}>
-  {/* backend='aionrs' 时 → data-testid="agent-mode-selector-aionrs" */}
+  {/* When backend='aionrs' → data-testid="agent-mode-selector-aionrs" */}
 </Button>
 
-// src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx（file input）
+// src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx (file input)
 <input
   type="file"
   data-testid="aionrs-file-upload-input"
@@ -619,147 +619,147 @@ test('should verify DB records after conversation', async ({ page }) => {
   style={{ display: 'none' }}
 />
 
-// src/renderer/pages/guid/components/GuidActionRow.tsx（文件夹关联按钮）
+// src/renderer/pages/guid/components/GuidActionRow.tsx (attach folder button)
 <Button
   data-testid="aionrs-attach-folder-btn"
   onClick={() => ipcBridge.dialog.showOpen({ properties: ['openDirectory'] })}
 >
-  {/* 关联文件夹按钮（仅桌面端） */}
+  {/* The attach folder button (desktop only) */}
 </Button>
 ```
 
-#### P1 优先级（提升稳定性，推荐添加）
+#### P1 priority (improves stability, recommended)
 
 ```tsx
-// 发送按钮
+// Send button
 <Button data-testid="aionrs-send-btn" />
 
-// 文件预览卡片
+// File preview card
 <FilePreview key={path} data-testid={`aionrs-file-preview-${idx}`} />
 
-// 文件夹 Tag
+// Folder tag
 <Tag key={item.path} data-testid={`aionrs-folder-tag-${idx}`} />
 
-// 模型下拉菜单项
+// Model dropdown item
 <Menu.Item key={modelId} data-testid={`aionrs-model-menu-item-${modelId}`} />
 
-// 权限下拉菜单项
+// Permission dropdown item
 <Menu.Item key={mode} data-testid={`aionrs-mode-menu-item-${mode}`} />
 ```
 
 ---
 
-### 6.3 E2E 操作路径示例
+### 6.3 Example E2E interaction path
 
-**场景**: 无附件 + 默认模型 + default 权限
+**Scenario**: no attachments + default model + default permission
 
 ```typescript
 test('should complete aionrs conversation with no attachments', async ({ page }) => {
-  // 1. 导航到 guid 页
+  // 1. Navigate to the guid page
   await page.goto('/#/guid');
 
-  // 2. 选择 aionrs agent
+  // 2. Select the aionrs agent
   await page.click('[data-agent-backend="aionrs"][data-agent-selected="false"]');
 
-  // 3. 输入消息（通过 Playwright locator）
+  // 3. Type a message (through a Playwright locator)
   const textarea = page.locator('textarea[placeholder*="aionrs"]');
   await textarea.fill('Hello, aionrs!');
 
-  // 4. 点击发送按钮
-  await page.click('.send-button-custom'); // 或 [data-testid="aionrs-send-btn"]
+  // 4. Click the send button
+  await page.click('.send-button-custom'); // Or [data-testid="aionrs-send-btn"]
 
-  // 5. 等待导航到对话页
+  // 5. Wait for the navigation to the conversation page
   await page.waitForURL(/\/conversation\/aionrs\/.+/, { timeout: 10000 });
 
-  // 6. 提取 conversationId
+  // 6. Extract the conversationId
   const url = page.url();
   const conversationId = url.match(/\/conversation\/aionrs\/(.+)/)?.[1];
   expect(conversationId).toBeTruthy();
 
-  // 7. 等待 AI 回复（轮询 DB）
+  // 7. Wait for the AI reply (by polling the DB)
   await waitForAIResponse(page, conversationId, { timeout: 60000 });
 
-  // 8. 验证 DB 记录
+  // 8. Verify the DB records
   const messages = await invokeBridge(page, 'db.query', {
     sql: 'SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at',
     params: [conversationId],
   });
   expect(messages.length).toBeGreaterThanOrEqual(2);
-  expect(messages[0].position).toBe('right'); // 用户消息
-  expect(messages[1].position).toBe('left'); // AI 回复
+  expect(messages[0].position).toBe('right'); // The user message
+  expect(messages[1].position).toBe('left'); // The AI reply
 });
 ```
 
 ---
 
-## 7. 边界与异常场景
+## 7. Edge and Failure Scenarios
 
-### 7.1 Binary 层异常
+### 7.1 Binary layer failures
 
-| 场景            | 预期行为                                | 源码追溯                   |
-| --------------- | --------------------------------------- | -------------------------- |
-| binary 不存在   | `test.skip()` + 明确错误信息            | `binaryResolver.ts`        |
-| 启动超时（30s） | 抛出 `Error('aionrs ready timeout')`    | `index.ts:136-140`         |
-| 进程崩溃        | 前端收到 `error` 事件，对话标记为 error | `AionrsManager.ts:297-298` |
-| resume 失败     | 自动降级为新 session                    | `index.ts:143-154`         |
-
----
-
-### 7.2 并发对话
-
-**场景**: 同时打开 2 个 aionrs 对话，轮流发送消息
-
-**预期**: 每个对话独立维护 binary 进程 + session（`AionrsManager` 实例独立）
-
-**验证点**:
-
-- DB 中有 2 条 `conversations` 记录（不同 `id`）
-- 每个对话有各自的 `sessionId`（从 binary `ready` 事件获取）
+| Scenario              | Expected behavior                                                               | Source reference           |
+| --------------------- | ------------------------------------------------------------------------------- | -------------------------- |
+| Binary missing        | `test.skip()` plus a clear error message                                        | `binaryResolver.ts`        |
+| Startup timeout (30s) | Throws `Error('aionrs ready timeout')`                                          | `index.ts:136-140`         |
+| Process crash         | The front end receives an `error` event and the conversation is marked as error | `AionrsManager.ts:297-298` |
+| Resume fails          | Falls back to a new session automatically                                       | `index.ts:143-154`         |
 
 ---
 
-### 7.3 超大文件上传
+### 7.2 Concurrent conversations
 
-**场景**: 上传 >100MB 文件（或 >1000 个文件）
+**Scenario**: open 2 aionrs conversations at once and send messages alternately.
 
-**预期**: 前端文件处理层（`FileService.processDroppedFiles()`）应限制大小/数量，显示错误提示
+**Expectation**: each conversation maintains its own binary process and session (the `AionrsManager` instances are independent).
 
-**验证点**:
+**Verification points**:
 
-- E2E 创建 100MB 测试文件，尝试上传
-- 验证是否显示 `Message.error()` 提示
-
-**已知约束**: 具体限制需查看 `FileService` 源码（暂未在本需求文档中追溯）
+- The DB contains 2 `conversations` rows (with different `id` values).
+- Each conversation has its own `sessionId` (taken from the binary's `ready` event).
 
 ---
 
-### 7.4 协议错误
+### 7.3 Oversized file upload
 
-**场景**: Binary 返回非法 JSON Lines（如 `{"type":"unknown"}`）
+**Scenario**: upload a file larger than 100MB (or more than 1000 files).
 
-**预期**: 前端解析失败，记录错误日志，不崩溃
+**Expectation**: the front-end file handling layer (`FileService.processDroppedFiles()`) should limit the size/count and show an error message.
 
-**源码追溯**: `src/process/agent/aionrs/index.ts:116-119` — `try-catch` 包裹 `JSON.parse()`
+**Verification points**:
+
+- E2E creates a 100MB test file and attempts to upload it.
+- Verify whether a `Message.error()` prompt is shown.
+
+**Known constraint**: the exact limits must be checked in the `FileService` source (not yet traced in this requirements document).
 
 ---
 
-## 8. 待决策议题（team-lead 已决策）
+### 7.4 Protocol errors
 
-### 议题 0: E2E 环境 provider 配置前置条件（新增）
+**Scenario**: the binary returns invalid JSON Lines (such as `{"type":"unknown"}`).
 
-**背景**: aionrs 使用用户配置的 provider 列表（非 ACP 探测），E2E 需依赖测试环境的 provider 配置
+**Expectation**: the front end fails to parse it, logs an error, and does not crash.
 
-**前置条件**:
+**Source reference**: `src/process/agent/aionrs/index.ts:116-119` — `JSON.parse()` is wrapped in a `try-catch`.
 
-1. **至少 1 个非 Google Auth provider**（过滤 `gemini-with-google-auth`）
-2. **该 provider 至少有 2 个可用 model**（用于档位 1 + 档位 2 切换测试）
+---
 
-**降级策略**（若条件不满足）:
+## 8. Topics Awaiting Decisions (team-lead has decided)
 
-- 若只有 1 个 model: 测试降级为"只验证当前 model，跳过切换场景"
-- 若无可用 provider: `test.skip('No available providers for aionrs, skipping E2E tests')`
+### Topic 0: provider configuration prerequisites for the E2E environment (new)
 
-**动态 model 选择**（E2E setup 实现）:
+**Background**: aionrs uses the user-configured provider list (not ACP probing), so E2E depends on the provider configuration of the test environment.
+
+**Preconditions**:
+
+1. **At least 1 non-Google-Auth provider** (with `gemini-with-google-auth` filtered out).
+2. **That provider must have at least 2 usable models** (for the level 1 plus level 2 switching test).
+
+**Degradation strategy** (when the conditions are not met):
+
+- Only 1 model available: the tests degrade to "verify the current model only, skip the switching scenarios".
+- No usable provider: `test.skip('No available providers for aionrs, skipping E2E tests')`.
+
+**Dynamic model selection** (implemented in the E2E setup):
 
 ```typescript
 // tests/e2e/setup/aionrs.setup.ts
@@ -769,7 +769,7 @@ export async function getAionrsTestModels(page: Page): Promise<{
 }> {
   const providers = await invokeBridge(page, 'mode.getModelConfig');
 
-  // 过滤 gemini-with-google-auth
+  // Filter out gemini-with-google-auth
   const availableProviders = providers.filter(
     (p) => !p.platform?.toLowerCase().includes('gemini-with-google-auth') && p.enabled !== false
   );
@@ -786,62 +786,62 @@ export async function getAionrsTestModels(page: Page): Promise<{
 }
 ```
 
-**验证点**:
+**Verification points**:
 
-- E2E beforeAll 检查 `getAionrsTestModels()` 返回值
-- 若 `defaultModel === null`: skip 全部测试
-- 若 `switchModel === null`: skip 模型切换相关测试（TC-A-07）
+- The E2E `beforeAll` checks the return value of `getAionrsTestModels()`.
+- If `defaultModel === null`: skip every test.
+- If `switchModel === null`: skip the model switching tests (TC-A-07).
 
 ---
 
-### 议题 1: 模型切换是否需重启 binary？（P0，已决策）
+### Topic 1: does switching the model require restarting the binary? (P0, decided)
 
-**背景**: `AionrsAgent.setConfig(model)` 发送 `set_config` 命令，但 binary 能力未验证
+**Background**: `AionrsAgent.setConfig(model)` sends a `set_config` command, but the binary's capability has not been verified.
 
-**engineer 建议**: 用 **E2E 探测式测试** 记录当前行为，无需提前验证
+**engineer's suggestion**: use an **exploratory E2E test** to record the current behavior; no advance verification is needed.
 
 ```typescript
-test('模型切换探测', async ({ page }) => {
-  // 1. 发送消息 A（模型 M1）
-  // 2. 切换模型到 M2
-  // 3. 发送消息 B
-  // 4. 查 DB：messages[B].extra.model === M2 ? '运行时切换生效' : '需重启'
+test('model switching probe', async ({ page }) => {
+  // 1. Send message A (model M1)
+  // 2. Switch the model to M2
+  // 3. Send message B
+  // 4. Query the DB: messages[B].extra.model === M2 ? 'runtime switching works' : 'a restart is required'
 });
 ```
 
-**决策**: [待 team-lead 填写]
+**Decision**: [to be filled in by team-lead]
 
 ---
 
-### 议题 2: 权限 "always allow" 是否需持久化？（P2，reviewer 已共识选 B）
+### Topic 2: does the "always allow" permission need to be persisted? (P2, reviewers agreed on B)
 
-**背景**: 当前存储在内存（`AionrsApprovalStore`），进程重启后失效
+**Background**: it is currently held in memory (`AionrsApprovalStore`) and is lost when the process restarts.
 
-**reviewer 共识**: **保持内存存储**（B 选项），持久化属产品需求，非 E2E 阻塞项
+**Reviewer consensus**: **keep it in memory** (option B); persistence is a product requirement and not an E2E blocker.
 
-**决策**: **B**（team-lead 采纳 reviewer 建议）
-
----
-
-### 议题 3: 工具确认中途切换权限/模型的行为？（P1，待决策）
-
-**背景**: 当前代码未显式处理（`AionrsManager.ts:253-296` confirm 逻辑独立）
-
-**选项**:
-
-- A) 切换权限时取消 pending 确认（analyst + designer 建议）
-- B) 切换权限时保留 pending 确认（保持现状）
-- C) 用 E2E 探测当前行为后再决定（engineer 建议）
-
-**决策**: [待 team-lead 填写]
+**Decision**: **B** (team-lead adopts the reviewers' suggestion)
 
 ---
 
-### 议题 4: CI 环境 binary 来源？（P0，reviewer 已共识选 C）
+### Topic 3: what happens when the permission/model is switched during a tool confirmation? (P1, undecided)
 
-**reviewer 共识**: **短期 skip**（C 选项），长期 DevOps 配置
+**Background**: the current code does not handle this explicitly (the confirmation logic in `AionrsManager.ts:253-296` is independent).
 
-**实现方案**（若选 C）:
+**Options**:
+
+- A) Cancel the pending confirmation when the permission is switched (the analyst's and designer's suggestion).
+- B) Keep the pending confirmation when the permission is switched (leave things as they are).
+- C) Probe the current behavior with E2E first, then decide (the engineer's suggestion).
+
+**Decision**: [to be filled in by team-lead]
+
+---
+
+### Topic 4: where does the binary come from in CI? (P0, reviewers agreed on C)
+
+**Reviewer consensus**: **skip short term** (option C), with DevOps configuration in the long term.
+
+**Implementation plan** (if C is chosen):
 
 ```typescript
 // tests/e2e/setup/aionrs.setup.ts
@@ -863,81 +863,81 @@ test.beforeAll(async ({ page }) => {
 });
 ```
 
-**决策**: **C**（team-lead 采纳 reviewer 建议）
+**Decision**: **C** (team-lead adopts the reviewers' suggestion)
 
 ---
 
-## 9. 交付文档清单
+## 9. Deliverable Document List
 
-| 文档            | 路径                                              | 状态                        |
-| --------------- | ------------------------------------------------- | --------------------------- |
-| Gate 1 需求文档 | `tests/e2e/docs/chat-aionrs/requirements.zh.md`   | ✅ 完成（本文档）           |
-| Gate 1 讨论记录 | `tests/e2e/docs/chat-aionrs/discussion-log.zh.md` | ✅ 完成（双 reviewer 审核） |
-| Gate 2 测试用例 | `tests/e2e/docs/chat-aionrs/test-cases.zh.md`     | ⏳ 待 designer 起草         |
-| Gate 3 实现映射 | `tests/e2e/docs/chat-aionrs/implementation.md`    | ⏳ 待 engineer 起草         |
-
----
-
-## 10. 下一步（Gate 1 → Gate 2）
-
-1. ✅ **Gate 1 完成**: analyst 起草需求 + designer/engineer 审核 + team-lead 决策
-2. ⏳ **Gate 2 启动**: designer 起草 `test-cases.zh.md`（15 个用例，P0/P1/P2 分级）
-3. ⏳ **前置工作**（阻塞 Gate 3）:
-   - engineer 补充对话页 15+ data-testid（预估 1-2 小时）
-   - engineer 实现 DB 清理 helper（预估 30 分钟）
-4. ⏳ **Gate 3 实现**: engineer 实现 E2E 测试套件（预估 3-5 天）
+| Document                     | Path                                           | Status                                |
+| ---------------------------- | ---------------------------------------------- | ------------------------------------- |
+| Gate 1 requirements document | `tests/e2e/docs/chat-aionrs/requirements.md`   | ✅ Complete (this document)           |
+| Gate 1 discussion log        | `tests/e2e/docs/chat-aionrs/discussion-log.md` | ✅ Complete (reviewed by 2 reviewers) |
+| Gate 2 test cases            | `tests/e2e/docs/chat-aionrs/test-cases.md`     | ⏳ Awaiting the designer's draft      |
+| Gate 3 implementation map    | `tests/e2e/docs/chat-aionrs/implementation.md` | ⏳ Awaiting the engineer's draft      |
 
 ---
 
+## 10. Next Steps (Gate 1 → Gate 2)
+
+1. ✅ **Gate 1 complete**: the analyst drafted the requirements, the designer and engineer reviewed them, and team-lead made the decisions.
+2. ⏳ **Gate 2 starting**: the designer drafts `test-cases.md` (15 cases, graded P0/P1/P2).
+3. ⏳ **Prerequisite work** (blocks Gate 3):
+   - The engineer adds 15+ data-testids to the conversation page (estimated 1-2 hours).
+   - The engineer implements the DB cleanup helper (estimated 30 minutes).
+4. ⏳ **Gate 3 implementation**: the engineer implements the E2E test suite (estimated 3-5 days).
+
 ---
 
-## 修订记录
+---
+
+## Revision History
 
 ### v1.1 (2026-04-22)
 
-**修订人**: chat-aionrs-analyst
-**触发原因**: 用户指出调研错误 — aionrs 模型来源非 ACP 探测
+**Revised by**: chat-aionrs-analyst
+**Trigger**: the user pointed out a research error — aionrs models do not come from ACP probing.
 
-**修订内容**:
+**Changes**:
 
-1. **§2 维度 C (模型)** — 纠正模型来源
-   - ❌ 错误: "从 ACP 模型列表选择"
-   - ✅ 正确: "从用户配置的 provider 列表选择（排除 gemini-with-google-auth）"
-   - 来源: `ipcBridge.mode.getModelConfig.invoke()`（配置文件），非 `ipcBridge.acpConversation.getModelInfo`（动态探测）
+1. **§2 dimension C (model)** — corrected where models come from
+   - ❌ Wrong: "selected from the ACP model list"
+   - ✅ Right: "selected from the user-configured provider list (excluding gemini-with-google-auth)"
+   - Source: `ipcBridge.mode.getModelConfig.invoke()` (the config file), not `ipcBridge.acpConversation.getModelInfo` (dynamic probing).
 
-2. **§8 议题 0（新增）** — E2E 环境 provider 配置前置条件
-   - 至少 1 个非 Google Auth provider
-   - 该 provider 至少有 2 个可用 model
-   - 降级策略: 若只有 1 个 model，跳过切换测试；若无 provider，skip 全部测试
-   - 动态 model 选择实现: `getAionrsTestModels()` helper
+2. **§8 topic 0 (new)** — provider configuration prerequisites for the E2E environment
+   - At least 1 non-Google-Auth provider.
+   - That provider must have at least 2 usable models.
+   - Degradation strategy: with only 1 model, skip the switching tests; with no provider, skip every test.
+   - Dynamic model selection implementation: the `getAionrsTestModels()` helper.
 
-3. **源码追溯补充**:
+3. **Additional source references**:
    - `src/renderer/hooks/agent/useModelProviderList.ts:30` — `ipcBridge.mode.getModelConfig.invoke()`
-   - `src/renderer/pages/conversation/platforms/aionrs/useAionrsModelSelection.ts:34-40` — 过滤 Google Auth
+   - `src/renderer/pages/conversation/platforms/aionrs/useAionrsModelSelection.ts:34-40` — filters out Google Auth
 
-**影响范围**:
+**Impact**:
 
-- Gate 2 用例设计: designer 需确认 TC-A-04（guid 页选模型）和 TC-A-07（对话中切换）的前置条件
-- Gate 3 实现: engineer 需实现 `getAionrsTestModels()` helper（动态查询 provider 列表）
+- Gate 2 case design: the designer must confirm the preconditions of TC-A-04 (choosing a model on the guid page) and TC-A-07 (switching mid-conversation).
+- Gate 3 implementation: the engineer must implement the `getAionrsTestModels()` helper (which queries the provider list dynamically).
 
 ---
 
-## 附录: 源码文件清单
+## Appendix: Source File List
 
-| 文件                                                                          | 行号   | 关键功能                                                            |
-| ----------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------- |
-| `src/renderer/pages/guid/GuidPage.tsx`                                        | 83-100 | providerAgentKey 状态（aionrs/gemini）                              |
-| `src/renderer/pages/guid/components/AgentPillBar.tsx`                         | 79-82  | agent pill 渲染 + data-testid                                       |
-| `src/renderer/pages/guid/components/GuidActionRow.tsx`                        | 67-330 | 文件附件 + 模式选择器 + 发送按钮                                    |
-| `src/renderer/pages/guid/components/GuidModelSelector.tsx`                    | 35-100 | 模型选择器（guid 页）                                               |
-| `src/renderer/hooks/agent/useModelProviderList.ts`                            | 30     | `ipcBridge.mode.getModelConfig.invoke()` — 用户配置的 provider 列表 |
-| `src/renderer/pages/conversation/platforms/aionrs/AionrsChat.tsx`             | 19-57  | 对话页容器 + MessageList + SendBox                                  |
-| `src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx`          | 88-459 | 发送框逻辑 + 文件附件 + 权限选择                                    |
-| `src/renderer/pages/conversation/platforms/aionrs/AionrsModelSelector.tsx`    | 19-135 | 模型选择器（对话页）                                                |
-| `src/renderer/pages/conversation/platforms/aionrs/useAionrsModelSelection.ts` | 24-73  | 模型选择 hook（过滤 google auth）                                   |
-| `src/renderer/pages/conversation/platforms/aionrs/useAionrsMessage.ts`        | 20-321 | 流式消息处理 + 工具状态                                             |
-| `src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx`          | —      | aionrs runtime capabilities 转换为权限选项                          |
-| `src/process/task/AionrsManager.ts`                                           | 78-781 | 进程管理 + 权限审批 + DB 持久化                                     |
-| `src/process/agent/aionrs/index.ts`                                           | 54-450 | binary 启动 + stdin/stdout 协议                                     |
-| `src/process/agent/aionrs/binaryResolver.ts`                                  | —      | binary 路径解析逻辑                                                 |
-| `aioncore aionui.db`                                                          | —      | conversations + messages 由 backend 独占持久化                      |
+| File                                                                          | Lines  | Key functionality                                                            |
+| ----------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------- |
+| `src/renderer/pages/guid/GuidPage.tsx`                                        | 83-100 | providerAgentKey state (aionrs/gemini)                                       |
+| `src/renderer/pages/guid/components/AgentPillBar.tsx`                         | 79-82  | Agent pill rendering plus data-testid                                        |
+| `src/renderer/pages/guid/components/GuidActionRow.tsx`                        | 67-330 | File attachments, mode selector, send button                                 |
+| `src/renderer/pages/guid/components/GuidModelSelector.tsx`                    | 35-100 | Model selector (guid page)                                                   |
+| `src/renderer/hooks/agent/useModelProviderList.ts`                            | 30     | `ipcBridge.mode.getModelConfig.invoke()` — the user-configured provider list |
+| `src/renderer/pages/conversation/platforms/aionrs/AionrsChat.tsx`             | 19-57  | Conversation page container, MessageList, SendBox                            |
+| `src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx`          | 88-459 | Send box logic, file attachments, permission selection                       |
+| `src/renderer/pages/conversation/platforms/aionrs/AionrsModelSelector.tsx`    | 19-135 | Model selector (conversation page)                                           |
+| `src/renderer/pages/conversation/platforms/aionrs/useAionrsModelSelection.ts` | 24-73  | Model selection hook (filters out Google Auth)                               |
+| `src/renderer/pages/conversation/platforms/aionrs/useAionrsMessage.ts`        | 20-321 | Streamed message handling and tool status                                    |
+| `src/renderer/pages/conversation/platforms/aionrs/AionrsSendBox.tsx`          | —      | Converts the aionrs runtime capabilities into permission options             |
+| `src/process/task/AionrsManager.ts`                                           | 78-781 | Process management, permission approval, DB persistence                      |
+| `src/process/agent/aionrs/index.ts`                                           | 54-450 | Binary startup and the stdin/stdout protocol                                 |
+| `src/process/agent/aionrs/binaryResolver.ts`                                  | —      | Binary path resolution logic                                                 |
+| `aioncore aionui.db`                                                          | —      | conversations and messages are persisted exclusively by the backend          |

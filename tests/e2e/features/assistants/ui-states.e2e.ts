@@ -33,7 +33,7 @@ test.describe('Assistant Settings UI States (P1)', () => {
 
     const builtinCard = page
       .locator('[data-testid^="assistant-card-"]')
-      .filter({ hasText: /官方|Official/i })
+      .filter({ hasText: /Official/i })
       .first();
     await expect(builtinCard).toBeVisible({ timeout: 10_000 });
     await takeScreenshot(page, 'assistants/p1-2/01-builtin-official-tag.png');
@@ -46,7 +46,7 @@ test.describe('Assistant Settings UI States (P1)', () => {
 
     const customCard = page.locator('[data-testid^="assistant-card-"]').filter({ hasText: name }).first();
     await expect(customCard).toBeVisible({ timeout: 10_000 });
-    await expect(customCard.locator('.arco-tag')).toContainText(/自定义|Custom/i);
+    await expect(customCard.locator('.arco-tag')).toContainText(/Custom/i);
     await takeScreenshot(page, 'assistants/p1-2/02-custom-tag.png');
   });
 
@@ -55,7 +55,7 @@ test.describe('Assistant Settings UI States (P1)', () => {
 
     const builtinCard = page
       .locator('[data-testid^="assistant-card-"]')
-      .filter({ hasText: /官方|Official/i })
+      .filter({ hasText: /Official/i })
       .first();
     await expect(builtinCard).toBeVisible({ timeout: 10_000 });
     const builtinId = ((await builtinCard.getAttribute('data-testid')) ?? '').replace('assistant-card-', '');
@@ -128,7 +128,7 @@ test.describe('Assistant Settings UI States (P1)', () => {
 
     const builtinCard = page
       .locator('[data-testid^="assistant-card-"]')
-      .filter({ hasText: /官方|Official/i })
+      .filter({ hasText: /Official/i })
       .first();
     await expect(builtinCard).toBeVisible({ timeout: 10_000 });
     const builtinId = ((await builtinCard.getAttribute('data-testid')) ?? '').replace('assistant-card-', '');
@@ -136,7 +136,7 @@ test.describe('Assistant Settings UI States (P1)', () => {
     await page.locator(`[data-testid="btn-duplicate-${builtinId}"]`).click();
     const editor = page.locator('[data-testid="assistant-editor-page"]');
     await expect(editor).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator('[data-testid="btn-save-assistant"]')).toContainText(/Create|创建/i);
+    await expect(page.locator('[data-testid="btn-save-assistant"]')).toContainText(/Create/i);
     await takeScreenshot(page, 'assistants/p1-6/01-duplicate-opens-create.png');
   });
 });

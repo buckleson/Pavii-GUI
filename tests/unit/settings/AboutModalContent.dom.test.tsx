@@ -20,9 +20,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, params?: Record<string, string>) =>
       key === 'update.preparingInstall'
-        ? '准备安装...'
+        ? 'Preparing install...'
         : key === 'settings.updateReadyInstall'
-          ? `${params?.version} 已就绪, 立即安装`
+          ? `${params?.version} is ready, install now`
           : key,
   }),
 }));
@@ -99,7 +99,7 @@ describe('AboutModalContent update ready state', () => {
       );
     });
 
-    fireEvent.click(await screen.findByRole('button', { name: '2.1.14 已就绪, 立即安装' }));
+    fireEvent.click(await screen.findByRole('button', { name: '2.1.14 is ready, install now' }));
 
     expect(mocks.quitAndInstallMock).toHaveBeenCalledTimes(1);
   });
@@ -126,16 +126,16 @@ describe('AboutModalContent update ready state', () => {
       );
     });
 
-    fireEvent.click(await screen.findByRole('button', { name: '2.1.14 已就绪, 立即安装' }));
+    fireEvent.click(await screen.findByRole('button', { name: '2.1.14 is ready, install now' }));
 
-    expect(await screen.findByRole('button', { name: '准备安装...' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: 'Preparing install...' })).toBeDisabled();
     expect(mocks.quitAndInstallMock).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       rejectInstall(new Error('prepare failed'));
     });
 
-    expect(await screen.findByRole('button', { name: '2.1.14 已就绪, 立即安装' })).not.toBeDisabled();
+    expect(await screen.findByRole('button', { name: '2.1.14 is ready, install now' })).not.toBeDisabled();
   });
 
   it('reveals the notification card only when an update is available, with no toast', async () => {

@@ -328,7 +328,7 @@ describe('MessageText attachment paths', () => {
   });
 
   it('renders assistant marker mentions as full message text without file previews', () => {
-    const content = '请不要使用 [[AION_FILES]] 这种格式';
+    const content = 'Please do not use the [[AION_FILES]] format';
 
     renderMessageText(content);
 
@@ -340,20 +340,20 @@ describe('MessageText attachment paths', () => {
 
   it('keeps assistant marker-tail markdown visible as message text', () => {
     const content = [
-      '不是用 `[[AION_FILES]]` 路径形式。',
+      'Do not use the `[[AION_FILES]]` path form.',
       '',
       '[[AION_FILES]]',
-      '## 怎么解决',
-      '- 路径引用...模型看不到像素',
+      '## How to fix it',
+      '- A path reference... the model cannot see the pixels',
     ].join('\n');
 
     renderMessageText(content);
 
     const messageContent = screen.getByTestId('message-text-content');
-    expect(messageContent).toHaveTextContent('不是用 `[[AION_FILES]]` 路径形式。');
+    expect(messageContent).toHaveTextContent('Do not use the `[[AION_FILES]]` path form.');
     expect(messageContent).toHaveTextContent('[[AION_FILES]]');
-    expect(messageContent).toHaveTextContent('## 怎么解决');
-    expect(messageContent).toHaveTextContent('- 路径引用...模型看不到像素');
+    expect(messageContent).toHaveTextContent('## How to fix it');
+    expect(messageContent).toHaveTextContent('- A path reference... the model cannot see the pixels');
     expect(screen.queryByTestId('file-preview')).not.toBeInTheDocument();
     expect(mockFilePreview).not.toHaveBeenCalled();
     expect(ipcBridge.fs.getFileMetadata.invoke).not.toHaveBeenCalled();
@@ -374,7 +374,7 @@ describe('MessageText attachment paths', () => {
   });
 
   it('keeps teammate marker text visible without file previews', () => {
-    const content = '请不要使用 [[AION_FILES]] 这种格式';
+    const content = 'Please do not use the [[AION_FILES]] format';
 
     renderMessageText(
       content,
@@ -395,7 +395,7 @@ describe('MessageText attachment paths', () => {
   it.each([
     {
       name: 'markdown heading and list',
-      tailLines: ['## 怎么解决', '- 路径引用...模型看不到像素'],
+      tailLines: ['## How to fix it', '- A path reference... the model cannot see the pixels'],
     },
     {
       name: 'code fence',
@@ -422,7 +422,7 @@ describe('MessageText attachment paths', () => {
   });
 
   it('copies complete assistant marker text', async () => {
-    const content = '请不要使用 [[AION_FILES]] 这种格式';
+    const content = 'Please do not use the [[AION_FILES]] format';
 
     renderMessageText(content);
 
@@ -436,7 +436,7 @@ describe('MessageText attachment paths', () => {
   });
 
   it('copies complete teammate marker text', async () => {
-    const content = '请不要使用 [[AION_FILES]] 这种格式';
+    const content = 'Please do not use the [[AION_FILES]] format';
 
     renderMessageText(
       content,

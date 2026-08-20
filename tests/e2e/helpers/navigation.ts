@@ -211,7 +211,7 @@ export async function goToChannelsTab(page: Page): Promise<void> {
   const stableTab = page.locator(webuiTabByKey('channels')).first();
   const fallbackTab = page
     .locator('.arco-tabs-header-title, .arco-tabs-nav-tab-title')
-    .filter({ hasText: /channel|频道|渠道/i })
+    .filter({ hasText: /channel/i })
     .first();
 
   let switched = false;

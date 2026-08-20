@@ -1,128 +1,128 @@
-# Aion CLI (aionrs) E2E 测试 - 讨论记录
+# Aion CLI (aionrs) E2E Tests - Discussion Log
 
-**项目**: AionUi E2E Coverage
-**子组**: chat-aionrs
-**日期**: 2026-04-22
-
----
-
-## Gate 1: 需求分析阶段
-
-### 2026-04-22 初稿完成
-
-**参与人**: chat-aionrs-analyst
-
-**完成内容**:
-
-1. 分析 aionrs 源码（guid 入口、对话页、进程端、权限枚举、DB schema）
-2. 起草 `requirements.zh.md` 初稿
-3. 识别 8 个重大不确定性（模型切换、权限存储范围、binary 来源等）
-
-**待办事项**:
-
-- [x] chat-aionrs-designer 审核需求，补充测试用例设计建议
-- [ ] chat-aionrs-engineer 审核需求，评估技术可行性
-- [ ] team-lead 澄清 §8 重大不确定性
-
-**已知约束**:
-
-- aionrs **不支持 Google Auth**（`useAionrsModelSelection.ts:36-40` 过滤）
-- 权限 "always allow" 当前仅内存存储（进程重启后失效）
-- ~~guid 页和对话页均无 `data-testid`~~ **更正**（engineer 发现）：guid 页已有 `data-agent-backend` 等属性，对话页需新增 15+ testid
+**Project**: AionUi E2E Coverage
+**Sub-group**: chat-aionrs
+**Date**: 2026-04-22
 
 ---
 
-### 2026-04-22 designer 审核完成
+## Gate 1: Requirements Analysis
 
-**参与人**: chat-aionrs-designer
+### 2026-04-22 first draft complete
 
-**审核结论**: ✅ **无重大阻塞问题，可进入 Gate 2**
+**Participant**: chat-aionrs-analyst
 
-**审核维度**:
+**Work completed**:
 
-1. ✅ **测试维度完整性** — 已覆盖关联文件夹/上传文件/模型/权限/对话中切换，建议补充多文件/多文件夹场景
-2. ⚠️ **组合矩阵收敛** — 全排列 30+ 用例需收敛至 15 用例（P0 5 + P1 7 + P2 3），采用正交/配对覆盖
-3. ⚠️ **异常路径补充** — 建议增加协议错误、空消息、进程清理验证
-4. ✅ **DB 断言明确** — conversations + messages 字段清晰，建议补充流式消息/思考消息/工具调用断言
-5. ✅ **清理契约可落地** — DB/FS/sessionStorage 清理方案合理，补充 binary 进程清理验证
-6. ✅ **状态转换清晰** — 建议补充 Mermaid 状态图（Gate 2 用例设计参考）
-7. ✅ **可测试性评估** — 新增 testid 建议合理，补充发送按钮/消息列表/附件卡片 testid
+1. Analyzed the aionrs source (guid entry point, conversation page, process side, permission enums, DB schema).
+2. Drafted the first version of `requirements.md`.
+3. Identified 8 major uncertainties (model switching, the scope of permission storage, where the binary comes from, and so on).
 
-**关键建议**:
+**Action items**:
 
-1. **维度补充**（Gate 2 用例设计）:
-   - 关联文件夹 → 3 档（无/单/多）
-   - 上传文件 → 3 档（无/单/多）
-   - 对话中切换模型 → 增加"往返切换"（验证状态回滚）
+- [x] chat-aionrs-designer reviews the requirements and adds test case design suggestions
+- [ ] chat-aionrs-engineer reviews the requirements and assesses technical feasibility
+- [ ] team-lead resolves the major uncertainties in §8
 
-2. **用例优先级**（控制真实 binary 调用成本）:
-   - P0（必测）：无附件、单文件、单文件夹 + 默认模型 + default 权限
-   - P1（常用）：多文件+多文件夹、切换模型、切换权限
-   - P2（边界）：超大文件、并发对话、协议错误
+**Known constraints**:
 
-3. **DB 断言补充**（Gate 3 实现参考）:
+- aionrs **does not support Google Auth** (filtered out in `useAionrsModelSelection.ts:36-40`).
+- The "always allow" permission is currently stored in memory only (it is lost when the process restarts).
+- ~~Neither the guid page nor the conversation page has any `data-testid`~~ **Correction** (found by the engineer): the guid page already has attributes such as `data-agent-backend`; the conversation page needs 15+ new testids.
+
+---
+
+### 2026-04-22 designer review complete
+
+**Participant**: chat-aionrs-designer
+
+**Review verdict**: ✅ **No major blockers, ready for Gate 2**
+
+**Review dimensions**:
+
+1. ✅ **Coverage of test dimensions** — folder attachment, file upload, model, permission, and mid-conversation switching are all covered; suggest adding multi-file and multi-folder scenarios.
+2. ⚠️ **Convergence of the combination matrix** — the full permutation of 30+ cases needs to converge to 15 cases (P0 5 + P1 7 + P2 3), using orthogonal/pairwise coverage.
+3. ⚠️ **More failure paths** — suggest adding protocol errors, empty messages, and process cleanup verification.
+4. ✅ **DB assertions are explicit** — the conversations and messages fields are clear; suggest adding assertions for streamed messages, thinking messages, and tool calls.
+5. ✅ **The cleanup contract is implementable** — the DB/FS/sessionStorage cleanup plan is sound; add verification that the binary process is cleaned up.
+6. ✅ **State transitions are clear** — suggest adding a Mermaid state diagram (as a reference for the Gate 2 case design).
+7. ✅ **Testability assessment** — the proposed new testids are reasonable; add testids for the send button, the message list, and attachment cards.
+
+**Key suggestions**:
+
+1. **Additional dimensions** (Gate 2 case design):
+   - Folder attachment → 3 levels (none / single / multiple)
+   - File upload → 3 levels (none / single / multiple)
+   - Mid-conversation model switching → add a "round-trip switch" (to verify state rollback)
+
+2. **Case priorities** (to control the cost of invoking the real binary):
+   - P0 (must test): no attachments, single file, single folder + default model + default permission
+   - P1 (common): multiple files + multiple folders, model switching, permission switching
+   - P2 (edge): oversized files, concurrent conversations, protocol errors
+
+3. **Additional DB assertions** (reference for the Gate 3 implementation):
 
    ```sql
-   -- 验证流式消息完成
+   -- Verify that the streamed message completed
    SELECT status FROM messages WHERE conversation_id = ? AND position = 'left' AND type = 'text';
-   -- 期望: status = 'finish'
+   -- Expected: status = 'finish'
 
-   -- 验证思考消息
+   -- Verify the thinking message
    SELECT json_extract(content, '$.duration') FROM messages WHERE type = 'thinking';
-   -- 期望: 正整数（ms）
+   -- Expected: a positive integer (ms)
 
-   -- 验证权限模式持久化
+   -- Verify that the permission mode is persisted
    SELECT json_extract(extra, '$.sessionMode') FROM conversations WHERE id = ?;
-   -- 期望: 'default' | 'auto_edit' | 'yolo'
+   -- Expected: 'default' | 'auto_edit' | 'yolo'
    ```
 
-4. **清理顺序**（避免外键冲突）:
+4. **Cleanup order** (to avoid foreign key conflicts):
 
    ```typescript
-   // 1. 停止 binary 进程
+   // 1. Stop the binary process
    await ipcBridge.conversation.stopAgent.invoke(conversationId);
 
-   // 2. 清理 DB（级联删除 messages）
+   // 2. Clean up the DB (messages are deleted by cascade)
    await db.exec("DELETE FROM conversations WHERE name LIKE 'E2E-aionrs-%'");
 
-   // 3. 清理 FS
+   // 3. Clean up the filesystem
    await fs.rm('/tmp/e2e-aionrs-*', { recursive: true });
 
-   // 4. 清理 sessionStorage
+   // 4. Clean up sessionStorage
    sessionStorage.clear();
    ```
 
-**§8 不确定性建议**:
+**Suggestions for the §8 uncertainties**:
 
-| 议题                                | designer 建议                        | 测试策略                                                                               |
-| ----------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
-| 1. 模型切换是否需重启 binary？      | 等 team-lead 验证能力                | A（运行时切换）验证 sessionId 不变；B（需重启）验证 sessionId 变化；C（不支持）UI 降级 |
-| 2. 权限 "always allow" 是否持久化？ | 保持内存存储（B 选项）               | 验证单次对话内生效 + 重启应用后失效                                                    |
-| 3. 工具确认中途切换权限/模型？      | 切换权限取消 pending 确认            | 用例：弹窗确认中 → 切换 yolo → 验证弹窗消失 + 自动批准                                 |
-| 4. CI 环境 binary 来源？            | 跳过 CI E2E（C 选项） + 本地测试套件 | `test.beforeAll()` 检查 binary，不存在则 `test.skip('aionrs binary not found')`        |
+| Topic                                                      | designer's suggestion                                     | Test strategy                                                                                                                                          |
+| ---------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1. Does switching the model require restarting the binary? | Wait for team-lead to verify the capability               | A (runtime switching) verifies the sessionId does not change; B (restart required) verifies the sessionId does change; C (unsupported) degrades the UI |
+| 2. Is the "always allow" permission persisted?             | Keep it in memory (option B)                              | Verify that it takes effect within a single conversation and is lost after the app restarts                                                            |
+| 3. Switching permission/model during a tool confirmation?  | Switching the permission cancels the pending confirmation | Case: confirmation dialog open → switch to yolo → verify the dialog disappears and the call is auto-approved                                           |
+| 4. Where does the binary come from in CI?                  | Skip E2E in CI (option C) plus a local test suite         | `test.beforeAll()` checks for the binary and calls `test.skip('aionrs binary not found')` when it is missing                                           |
 
-**下一步**:
+**Next steps**:
 
-1. team-lead 优先澄清议题 1 和 4（1 工作日内）
-2. designer 起草 `test-cases.zh.md`（预计 15 个用例，P0/P1/P2 分级）
-3. engineer 同步 review 需求（技术可行性角度）
+1. team-lead resolves topics 1 and 4 first (within 1 working day).
+2. designer drafts `test-cases.md` (roughly 15 cases, graded P0/P1/P2).
+3. engineer reviews the requirements in parallel (from a technical feasibility angle).
 
 ---
 
-### 2026-04-22 engineer 审核完成
+### 2026-04-22 engineer review complete
 
-**参与人**: chat-aionrs-engineer
+**Participant**: chat-aionrs-engineer
 
-**审核结论**: ✅ **技术可行**，需求文档质量 ⭐⭐⭐⭐⭐ (5/5)
+**Review verdict**: ✅ **Technically feasible**; requirements document quality ⭐⭐⭐⭐⭐ (5/5)
 
-**关键发现**:
+**Key findings**:
 
-1. **guid 页 data-testid 已有**（之前误判为 0 个）
-   - 现有属性: `data-agent-pill="true"`, `data-agent-backend="aionrs"`, `data-agent-selected`
-   - 位置: `AgentPillBar.tsx:79-82`
+1. **The guid page already has data-testids** (previously misjudged as having none)
+   - Existing attributes: `data-agent-pill="true"`, `data-agent-backend="aionrs"`, `data-agent-selected`
+   - Location: `AgentPillBar.tsx:79-82`
 
-2. **对话页需新增 15+ testid**（否则无法定位元素）
-   - **P0 优先级**（阻塞测试）: 5 个
+2. **The conversation page needs 15+ new testids** (otherwise elements cannot be located)
+   - **P0 priority** (blocks testing): 5 of them
      ```tsx
      [data-testid="aionrs-sendbox"]
      [data-testid="aionrs-model-selector"]
@@ -130,126 +130,126 @@
      [data-testid="aionrs-file-upload-input"]
      [data-testid="aionrs-attach-folder-btn"]
      ```
-   - **P1 优先级**（提升稳定性）: 10 个
-     - 发送按钮、文件预览、文件夹 Tag、模型/权限下拉项等
+   - **P1 priority** (improves stability): 10 of them
+     - The send button, file previews, folder tags, model/permission dropdown items, and so on
 
-3. **DB 清理需补充 helper**
-   - 文件位置: `tests/e2e/helpers/chatAionrs.ts`
-   - 函数: `cleanupE2EAionrsConversations()`, `getAionrsMessages()` 等
+3. **DB cleanup needs additional helpers**
+   - File location: `tests/e2e/helpers/chatAionrs.ts`
+   - Functions: `cleanupE2EAionrsConversations()`, `getAionrsMessages()`, and others
 
-4. **binary 已验证可用**
-   - 版本: aionrs v0.1.12
-   - 路径: `/Users/zhoukai/.local/bin/aionrs`
+4. **The binary has been verified as usable**
+   - Version: aionrs v0.1.12
+   - Path: `/Users/zhoukai/.local/bin/aionrs`
 
-**技术建议**（对 §8 不确定性）:
+**Technical suggestions** (for the §8 uncertainties):
 
-| 议题                                | engineer 建议                            | 实现策略                                                                                  |
-| ----------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------- |
-| 1. 模型切换是否需重启 binary？      | 用 **E2E 探测式测试** 记录当前行为       | 发送消息 A（模型 M1）→ 切换到 M2 → 发送消息 B → 查 DB: `messages[B].extra.model === M2 ?` |
-| 2. 权限 "always allow" 是否持久化？ | **内存存储不阻塞 E2E**，持久化属产品需求 | 同一对话内验证 "always allow" 生效即可                                                    |
-| 3. 工具确认中途切换权限/模型？      | E2E 先 **记录当前行为**（截图+日志）     | 触发弹窗 → 切换模式 → 观察弹窗状态 → 提交 team-lead 决策                                  |
-| 4. CI 环境 binary 来源？            | 短期 **CI skip**，长期 DevOps 配置       | `test.skip(() => resolveAionrsBinary() === null, 'aionrs binary not found')`              |
+| Topic                                                      | engineer's suggestion                                                          | Implementation strategy                                                                                      |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| 1. Does switching the model require restarting the binary? | Use an **exploratory E2E test** to record the current behavior                 | Send message A (model M1) → switch to M2 → send message B → query the DB: `messages[B].extra.model === M2 ?` |
+| 2. Is the "always allow" permission persisted?             | **In-memory storage does not block E2E**; persistence is a product requirement | Verifying that "always allow" takes effect within a single conversation is enough                            |
+| 3. Switching permission/model during a tool confirmation?  | Have E2E **record the current behavior** first (screenshots + logs)            | Trigger the dialog → switch mode → observe the dialog state → hand the decision to team-lead                 |
+| 4. Where does the binary come from in CI?                  | **Skip in CI** short term, DevOps configuration long term                      | `test.skip(() => resolveAionrsBinary() === null, 'aionrs binary not found')`                                 |
 
-**工作量预估**:
+**Effort estimate**:
 
-- **Gate 2**（用例设计）: 8-12 核心用例 + 3-5 边界用例
-- **Gate 3**（实现）: ~2000 行代码，**3-5 天**（假设 testid 已补充）
+- **Gate 2** (case design): 8-12 core cases plus 3-5 edge cases
+- **Gate 3** (implementation): ~2000 lines of code, **3-5 days** (assuming the testids have been added)
 
-**前置工作**（阻塞 Gate 3）:
+**Prerequisite work** (blocks Gate 3):
 
-1. **补充对话页 15+ data-testid**（预估 1-2 小时）
-2. **实现 DB 清理 helper**（预估 30 分钟）
+1. **Add 15+ data-testids to the conversation page** (estimated 1-2 hours).
+2. **Implement the DB cleanup helper** (estimated 30 minutes).
 
-**与 designer 建议的对比**:
+**Comparison with the designer's suggestions**:
 
-| 维度                 | designer                               | engineer               | 综合结论                   |
-| -------------------- | -------------------------------------- | ---------------------- | -------------------------- |
-| 测试维度补充         | 关联文件夹/上传文件 → 3 档（无/单/多） | 同意                   | ✅ 采纳（Gate 2 体现）     |
-| 用例数量控制         | 收敛至 15 用例（正交/配对）            | 8-12 核心 + 3-5 边界   | ✅ 一致（总计 11-17 用例） |
-| 议题 2（权限持久化） | 保持内存存储（B 选项）                 | 内存存储不阻塞 E2E     | ✅ 一致                    |
-| 议题 4（CI binary）  | 跳过 CI（C 选项）                      | 短期 skip，长期 DevOps | ✅ 一致                    |
+| Dimension                        | designer                                                       | engineer                             | Combined conclusion                  |
+| -------------------------------- | -------------------------------------------------------------- | ------------------------------------ | ------------------------------------ |
+| Additional test dimensions       | Folder attachment / file upload → 3 levels (none/single/multi) | Agreed                               | ✅ Adopted (reflected in Gate 2)     |
+| Controlling the number of cases  | Converge to 15 cases (orthogonal/pairwise)                     | 8-12 core plus 3-5 edge              | ✅ Consistent (11-17 cases in total) |
+| Topic 2 (permission persistence) | Keep it in memory (option B)                                   | In-memory storage does not block E2E | ✅ Consistent                        |
+| Topic 4 (CI binary)              | Skip in CI (option C)                                          | Skip short term, DevOps long term    | ✅ Consistent                        |
 
-**下一步**:
+**Next steps**:
 
-1. analyst 汇总两位 reviewer 意见，SendMessage 通知 team-lead
-2. team-lead 澄清议题 1 和 3（1-2 工作日内）
-3. designer 起草 `test-cases.zh.md`（Gate 2）
-
----
-
-## 待讨论议题
-
-### 议题 1: 模型切换是否需重启 binary？
-
-**背景**: `AionrsAgent.setConfig(model)` 发送 `set_config` 命令，但 binary 能力未验证
-
-**选项**:
-
-- A) 支持运行时切换（E2E 验证切换后下次消息生效，sessionId 不变）
-- B) 需重启 binary（E2E 验证切换后 sessionId 变化）
-- C) 当前不支持（E2E 仅测试 guid 页选模型）
-
-**决策**: [待 team-lead 填写]
+1. The analyst consolidates both reviewers' feedback and notifies team-lead via SendMessage.
+2. team-lead resolves topics 1 and 3 (within 1-2 working days).
+3. The designer drafts `test-cases.md` (Gate 2).
 
 ---
 
-### 议题 2: 权限 "always allow" 是否需持久化？
+## Open Topics
 
-**背景**: 当前存储在 `AionrsApprovalStore`（内存），进程重启后失效
+### Topic 1: Does switching the model require restarting the binary?
 
-**选项**:
+**Background**: `AionrsAgent.setConfig(model)` sends a `set_config` command, but the binary's capability has not been verified.
 
-- A) 持久化到 DB（对齐 Gemini 行为）
-- B) 保持内存存储（单次对话有效）
+**Options**:
 
-**engineer 评估**:
+- A) Runtime switching is supported (E2E verifies the switch takes effect on the next message and the sessionId does not change).
+- B) The binary must be restarted (E2E verifies the sessionId changes after the switch).
+- C) Not currently supported (E2E only tests model selection on the guid page).
 
-- **当前 E2E 可测性**: ✅ 可测（内存存储即可，同一对话内验证 "always allow" 生效）
-- **持久化属产品需求**，非 E2E 阻塞项
-
-**team-lead 决策**: **选 B 内存存储**
-
-- **理由**: 跨对话持久化是产品决策，非 E2E 本轮范围
-- **实施**: 只测同一对话内切换权限立即生效，不测跨对话 / 跨进程重启后的持久化
+**Decision**: [to be filled in by team-lead]
 
 ---
 
-### 议题 3: 工具确认中途切换权限/模型的行为？
+### Topic 2: Does the "always allow" permission need to be persisted?
 
-**背景**: 当前代码未显式处理
+**Background**: it is currently held in `AionrsApprovalStore` (in memory) and is lost when the process restarts.
 
-**analyst 建议**: 切换权限时取消 pending 确认，要求用户重新确认
+**Options**:
 
-**engineer 建议**: E2E 先 **记录当前行为**（不预设期望），提交 team-lead 决策
+- A) Persist it to the DB (matching Gemini's behavior).
+- B) Keep it in memory (valid for a single conversation).
 
-**team-lead 决策**: **本轮 E2E 不覆盖**
+**engineer's assessment**:
 
-- **理由**: 代码未定义该行为，E2E 不应固化不确定行为
-- **处理**: 记入 discussion-log 作为未来候选，待产品明确预期后再补测
+- **Current E2E testability**: ✅ testable (in-memory storage is enough; verify that "always allow" takes effect within a single conversation).
+- **Persistence is a product requirement**, not an E2E blocker.
+
+**team-lead decision**: **Option B, in-memory storage**
+
+- **Reasoning**: cross-conversation persistence is a product decision and is out of scope for this round of E2E work.
+- **Implementation**: only test that switching the permission takes effect immediately within the same conversation; do not test persistence across conversations or across process restarts.
 
 ---
 
-### 议题 4: CI 环境 binary 来源？
+### Topic 3: What happens when the permission/model is switched during a tool confirmation?
 
-**背景**: E2E 需依赖 aionrs binary
+**Background**: the current code does not handle this explicitly.
 
-**选项**:
+**analyst's suggestion**: cancel the pending confirmation when the permission is switched and require the user to confirm again.
 
-- A) CI 预装（需 DevOps 配置）
-- B) 测试前动态下载（需提供 URL + 版本锁定）
-- C) 跳过 aionrs E2E（标记 skip + 原因）
+**engineer's suggestion**: have E2E **record the current behavior** first (without presupposing an expectation) and hand the decision to team-lead.
 
-**engineer 建议**: 先实现 **local E2E**，CI 策略延后
+**team-lead decision**: **Not covered in this round of E2E**
 
-- **短期**: CI 跳过 aionrs E2E（`test.skip(() => resolveAionrsBinary() === null, 'aionrs binary not found')`）
-- **长期**: DevOps 配置预装 或 动态下载（需 team-lead 协调）
+- **Reasoning**: the code does not define this behavior, and E2E should not lock in undefined behavior.
+- **Handling**: recorded in the discussion log as a future candidate, to be tested once the product side defines the expectation.
 
-**team-lead 决策**: **选 C CI 跳过**（短期）
+---
 
-- **理由**: 长期 CI 策略延后，不阻塞本轮 E2E 交付
-- **实施**: `test.skip(() => resolveAionrsBinary() === null, 'aionrs binary not found')`
+### Topic 4: Where does the binary come from in CI?
 
-**实现方案**:
+**Background**: E2E depends on the aionrs binary.
+
+**Options**:
+
+- A) Pre-install it in CI (requires DevOps configuration).
+- B) Download it dynamically before the tests (requires a URL plus a pinned version).
+- C) Skip the aionrs E2E tests (mark them skipped with a reason).
+
+**engineer's suggestion**: implement **local E2E** first and defer the CI strategy.
+
+- **Short term**: skip the aionrs E2E tests in CI (`test.skip(() => resolveAionrsBinary() === null, 'aionrs binary not found')`).
+- **Long term**: DevOps configures a pre-installed binary, or it is downloaded dynamically (needs team-lead coordination).
+
+**team-lead decision**: **Option C, skip in CI** (short term)
+
+- **Reasoning**: the long-term CI strategy is deferred and must not block this round of E2E delivery.
+- **Implementation**: `test.skip(() => resolveAionrsBinary() === null, 'aionrs binary not found')`
+
+**Implementation plan**:
 
 ```typescript
 // tests/e2e/setup/aionrs.setup.ts
@@ -273,69 +273,69 @@ test.beforeAll(async () => {
 
 ---
 
-## Gate 2: 用例设计阶段
+## Gate 2: Test Case Design
 
-### 2026-04-22 用例设计完成
+### 2026-04-22 case design complete
 
-**参与人**: chat-aionrs-designer
+**Participant**: chat-aionrs-designer
 
-**完成内容**:
+**Work completed**:
 
-1. 基于 4 议题决策，产出 `test-cases.zh.md`（15 个用例）
-2. 用例分级：P0 5 个（基线路径）+ P1 7 个（常规组合）+ P2 3 个（边界验证）
-3. 每个用例包含：ID / 前置 / 维度组合 / 步骤 / DB 断言 / 清理义务 / 截图数
+1. Produced `test-cases.md` (15 cases) based on the decisions on the 4 topics.
+2. Case grading: 5 P0 cases (baseline paths) + 7 P1 cases (regular combinations) + 3 P2 cases (edge verification).
+3. Each case includes: ID / preconditions / dimension combination / steps / DB assertions / cleanup obligations / screenshot count.
 
-**关键设计决策**:
+**Key design decisions**:
 
-1. **权限命名统一**：使用 aionrs runtime capabilities 上报的 `auto_edit`，避免与 Gemini 的 `autoEdit` 混淆
-2. **模型选择回退**：TC-A-04 若 guid 页模型选择器未启用，改为对话页切换模型（见 TC-A-07）
-3. **组合矩阵收敛**：原 30+ 用例 → 15 用例，优先覆盖单维度 + 代表性组合
-4. **异常场景简化**：P2 用例只覆盖 binary 检查 + 大文件限制 + 不存在路径（并发对话延后）
+1. **Unified permission naming**: use `auto_edit` as reported by the aionrs runtime capabilities, to avoid confusion with Gemini's `autoEdit`.
+2. **Model selection fallback**: if the model selector on the guid page is not enabled for TC-A-04, switch the model on the conversation page instead (see TC-A-07).
+3. **Convergence of the combination matrix**: 30+ original cases → 15 cases, prioritizing single dimensions plus representative combinations.
+4. **Simplified failure scenarios**: the P2 cases cover only the binary check, the large file limit, and a non-existent path (concurrent conversations are deferred).
 
-**用例矩阵**:
+**Case matrix**:
 
-| 优先级 | 关联文件夹 | 上传文件 | 模型        | 权限                   | 对话中操作    | 用例数 |
-| ------ | ---------- | -------- | ----------- | ---------------------- | ------------- | ------ |
-| P0     | 无/单      | 无/单    | 默认/第二个 | default/yolo           | 无            | 5      |
-| P1     | 单/多      | 单/多    | 默认/第二个 | default/auto_edit/yolo | 切换模型/权限 | 7      |
-| P2     | N/A/不存在 | 超大     | 默认        | default                | 无            | 3      |
+| Priority | Folder attachment | File upload     | Model          | Permission             | Mid-conversation action | Cases |
+| -------- | ----------------- | --------------- | -------------- | ---------------------- | ----------------------- | ----- |
+| P0       | none/single       | none/single     | default/second | default/yolo           | none                    | 5     |
+| P1       | single/multiple   | single/multiple | default/second | default/auto_edit/yolo | switch model/permission | 7     |
+| P2       | N/A/non-existent  | oversized       | default        | default                | none                    | 3     |
 
-**待办事项**:
+**Action items**:
 
-- [ ] chat-aionrs-engineer review 用例设计，评估实现工作量
-- [ ] team-lead 批准后进入 Gate 3（实现）
+- [ ] chat-aionrs-engineer reviews the case design and estimates the implementation effort
+- [ ] Enter Gate 3 (implementation) once team-lead approves
 
-**已知约束**:
+**Known constraints**:
 
-- 议题 1 决策：只验证 DB `extra.model` 更新，不验证 binary sessionId
-- 议题 2 决策：只测同一对话内切换生效，不测跨对话持久化
-- 议题 3 决策：不覆盖工具确认中途切换权限/模型的边界行为
-- 议题 4 决策：本轮 local only，CI skip（用 `test.skip()` + binary 检查）
-
----
-
-### 2026-04-22 engineer review Gate 2 test-cases
-
-**参与人**: chat-aionrs-engineer
-
-**审核结论**: ✅ **整体优秀**，需调整 4 处细节
-
-**审核维度**:
-
-1. **TC-A-04 备注（guid 页模型选择器启用条件）** — ⚠️ 需调整
-2. **TC-A-05 断言（确认弹窗选择器）** — ⚠️ 需明确
-3. **TC-A-08/TC-A-14 断言（取消状态/文件限制）** — ⚠️ 需验证代码
-4. **TC-A-13 方案（环境变量注入）** — ⚠️ 需调整实现
-5. **用例备注一致性** — ⚠️ 需补充
+- Topic 1 decision: only verify that the DB `extra.model` is updated; do not verify the binary's sessionId.
+- Topic 2 decision: only test that a switch takes effect within the same conversation; do not test cross-conversation persistence.
+- Topic 3 decision: do not cover the edge behavior of switching the permission/model during a tool confirmation.
+- Topic 4 decision: local only this round, skipped in CI (using `test.skip()` plus a binary check).
 
 ---
 
-#### 1. TC-A-04 备注成立性
+### 2026-04-22 engineer review of the Gate 2 test cases
 
-**问题**:
-TC-A-04 备注称"若 guid 页模型选择器未启用（`isGeminiMode` 分支），改为 TC-A-07 对话页切换"。
+**Participant**: chat-aionrs-engineer
 
-**源码验证**（`GuidPage.tsx:467-469`）:
+**Review verdict**: ✅ **Excellent overall**; 4 details need adjusting
+
+**Review dimensions**:
+
+1. **TC-A-04 note (the conditions under which the guid page model selector is enabled)** — ⚠️ needs adjusting
+2. **TC-A-05 assertion (the confirmation dialog selector)** — ⚠️ needs clarifying
+3. **TC-A-08 / TC-A-14 assertions (cancelled status / file limit)** — ⚠️ needs verifying against the code
+4. **TC-A-13 approach (environment variable injection)** — ⚠️ the implementation needs adjusting
+5. **Consistency of the case notes** — ⚠️ needs filling in
+
+---
+
+#### 1. Whether the TC-A-04 note holds
+
+**Problem**:
+The TC-A-04 note says "if the model selector on the guid page is not enabled (the `isGeminiMode` branch), fall back to switching on the conversation page in TC-A-07."
+
+**Source verification** (`GuidPage.tsx:467-469`):
 
 ```typescript
 const PROVIDER_BASED_AGENTS = new Set(['gemini', 'aionrs']);
@@ -344,153 +344,153 @@ const isGeminiMode =
   (!agentSelection.isPresetAgent || agentSelection.currentEffectiveAgentInfo.isAvailable);
 ```
 
-**结论**: **备注不成立** — `isGeminiMode` 对 `aionrs` 默认为 **true**（`PROVIDER_BASED_AGENTS` 包含 aionrs）
+**Conclusion**: **The note does not hold** — `isGeminiMode` defaults to **true** for `aionrs` (because `PROVIDER_BASED_AGENTS` contains aionrs).
 
-**建议调整**:
+**Suggested adjustments**:
 
-- 删除 TC-A-04 备注："若 guid 页模型选择器未启用...改为 TC-A-07"
-- 保留 TC-A-04 操作步骤 2："打开模型选择器（`GuidModelSelector`），选择第二个模型"
-- 补充 TC-A-04 前置条件："验证 `isGeminiMode=true`（aionrs 默认启用）"
+- Delete the TC-A-04 note: "if the model selector on the guid page is not enabled ... fall back to TC-A-07".
+- Keep step 2 of TC-A-04: "open the model selector (`GuidModelSelector`) and choose the second model".
+- Add a TC-A-04 precondition: "verify `isGeminiMode=true` (enabled by default for aionrs)".
 
 ---
 
-#### 2. TC-A-05 断言（确认弹窗选择器）
+#### 2. TC-A-05 assertion (the confirmation dialog selector)
 
-**问题**:
-TC-A-05 第 328 行称："E2E 层：`page.waitForSelector('.confirmation-dialog', { timeout: 2000 })` 应超时（证明无弹窗）"
+**Problem**:
+Line 328 of TC-A-05 says: "E2E layer: `page.waitForSelector('.confirmation-dialog', { timeout: 2000 })` should time out (proving there is no dialog)".
 
-**源码验证**（`ConversationChatConfirm.tsx`）:
+**Source verification** (`ConversationChatConfirm.tsx`):
 
-- 确认弹窗 **非** class `confirmation-dialog`
-- 实际结构：`<div className="relative p-16px bg-dialog-fill-0 ...">`（动态生成，无稳定 class）
-- 组件 **无** `data-testid`
+- The confirmation dialog does **not** use the class `confirmation-dialog`.
+- Actual structure: `<div className="relative p-16px bg-dialog-fill-0 ...">` (generated dynamically, no stable class).
+- The component has **no** `data-testid`.
 
-**建议调整**:
+**Suggested adjustments**:
 
-- 方案 A（推荐）：补充 testid 到 `ConversationChatConfirm.tsx:216` → `<div data-testid="conversation-confirmation-dialog">`
-- 方案 B（临时）：改用文本选择器 `page.locator('text=/Yes, Allow|Allow Once/')` 等待超时
-- TC-A-05 断言改写：
+- Option A (recommended): add a testid at `ConversationChatConfirm.tsx:216` → `<div data-testid="conversation-confirmation-dialog">`.
+- Option B (stopgap): use a text selector instead, `page.locator('text=/Yes, Allow|Allow Once/')`, and wait for it to time out.
+- Rewrite the TC-A-05 assertion as:
   ```typescript
-  // 验证无确认弹窗（yolo 模式自动批准）
+  // Verify there is no confirmation dialog (yolo mode auto-approves)
   await expect(page.locator('[data-testid="conversation-confirmation-dialog"]')).not.toBeVisible({ timeout: 5000 });
   ```
 
 ---
 
-#### 3. TC-A-08/TC-A-14 断言（取消状态/文件限制）
+#### 3. TC-A-08 / TC-A-14 assertions (cancelled status / file limit)
 
-**TC-A-08 问题**（L498）:
-断言称第一次工具调用被取消后 `tool_status = 'Canceled'`。
+**TC-A-08 problem** (L498):
+The assertion says that after the first tool call is cancelled, `tool_status = 'Canceled'`.
 
-**源码验证**（`chatLib.ts:183`）:
+**Source verification** (`chatLib.ts:183`):
 
 ```typescript
 status: 'Executing' | 'Success' | 'Error' | 'Canceled' | 'Pending' | 'Confirming';
 ```
 
-**结论**: ✅ **状态存在**，但需验证 **取消行为是否写入 DB**
+**Conclusion**: ✅ **The status exists**, but we still need to verify that **the cancellation is written to the DB**.
 
-- `AionrsManager.ts:766-772` 调用 `agent.denyTool(callId, reason)` 发送 `tool_deny` 命令
-- `index.ts:272-286` 触发 `tool_cancelled` 事件 → `type: 'tool_group', status: 'Canceled'`
-- **确认**: 取消状态 **会** 写入 DB（`addOrUpdateMessage` 调用链）
+- `AionrsManager.ts:766-772` calls `agent.denyTool(callId, reason)`, which sends a `tool_deny` command.
+- `index.ts:272-286` fires the `tool_cancelled` event → `type: 'tool_group', status: 'Canceled'`.
+- **Confirmed**: the cancelled status **is** written to the DB (through the `addOrUpdateMessage` call chain).
 
-**建议**: ✅ **断言有效**，无需调整
+**Suggestion**: ✅ **The assertion is valid**, no adjustment needed.
 
 ---
 
-**TC-A-14 问题**（L835）:
-断言称"前端文件大小限制"，备注称"若前端未实现大小限制...此用例改为验证 binary 层错误处理"
+**TC-A-14 problem** (L835):
+The assertion refers to a "front-end file size limit", and the note says "if the front end does not implement a size limit ... change this case to verify error handling at the binary layer".
 
-**源码验证**（`FileService.ts:255-310`）:
+**Source verification** (`FileService.ts:255-310`):
 
 ```typescript
 async processDroppedFiles(files: FileList, ...) {
-  // L291-294: 捕获 FILE_TOO_LARGE 错误并 re-throw
+  // L291-294: catch the FILE_TOO_LARGE error and re-throw it
   if (error.message === 'FILE_TOO_LARGE') {
     throw error;
   }
 }
 ```
 
-**发现**: **前端有大小限制机制**（WebUI 上传 via HTTP 时服务端检查，抛出 `FILE_TOO_LARGE`）
+**Finding**: **the front end does have a size limit mechanism** (when the WebUI uploads over HTTP the server checks the size and throws `FILE_TOO_LARGE`).
 
-- Electron 模式：无前端限制，直接写文件到 workspace
-- WebUI 模式：服务端限制（需查 HTTP API 配置）
+- Electron mode: no front-end limit; the file is written straight into the workspace.
+- WebUI mode: the server enforces the limit (check the HTTP API configuration).
 
-**建议调整**:
+**Suggested adjustments**:
 
-- **TC-A-14 保留**（在 Electron 环境测试 binary 层错误处理）
-- 修改操作步骤：不验证前端拦截，改为 **验证 binary/AI 返回错误提示**
-- 修改预期行为：
+- **Keep TC-A-14** (test error handling at the binary layer in the Electron environment).
+- Change the steps: do not verify a front-end block; instead **verify the error message returned by the binary/AI**.
+- Change the expected behavior to:
   ```
-  - 文件成功添加到 uploadFile 数组（前端不拦截）
-  - 发送消息后，AI 回复包含 "file too large" 或 binary 层错误（timeout/OOM）
+  - The file is added to the uploadFile array successfully (the front end does not block it).
+  - After the message is sent, the AI reply contains "file too large", or an error surfaces at the binary layer (timeout/OOM).
   ```
-- 删除备注"若前端未实现大小限制..."（已确认前端 WebUI 有限制，Electron 无限制）
+- Delete the note "if the front end does not implement a size limit ..." (it is now confirmed that the WebUI front end has a limit and Electron does not).
 
 ---
 
-#### 4. TC-A-13 方案（环境变量注入）
+#### 4. TC-A-13 approach (environment variable injection)
 
-**问题**（L757）:
-操作步骤称"设置环境变量：`process.env.AION_CLI_PATH = '/dev/null'`"
+**Problem** (L757):
+The steps say "set the environment variable: `process.env.AION_CLI_PATH = '/dev/null'`".
 
-**E2E 环境评估**:
+**E2E environment assessment**:
 
-- `process.env` 在 **Node.js 测试进程**中修改，但 **不影响已启动的 Electron 子进程**
-- aionrs binary 解析在 **main process**（`binaryResolver.ts`），读取 `process.env.AION_CLI_PATH`
+- `process.env` is modified in the **Node.js test process**, which **does not affect the already-launched Electron child process**.
+- The aionrs binary is resolved in the **main process** (`binaryResolver.ts`), which reads `process.env.AION_CLI_PATH`.
 
-**建议调整**:
+**Suggested adjustments**:
 
-- 方案 A（推荐）：在 `test.beforeAll()` **启动 Electron 前** 设置环境变量
+- Option A (recommended): set the environment variable in `test.beforeAll()` **before Electron starts**.
   ```typescript
   test.beforeAll(async () => {
     process.env.AION_CLI_PATH = '/dev/null';
-    // Electron 启动会继承此环境变量
+    // The Electron launch inherits this environment variable
   });
   ```
-- 方案 B（更复杂）：通过 `electronApp.evaluate()` 动态修改 main process 环境
+- Option B (more involved): modify the main process environment dynamically through `electronApp.evaluate()`.
   ```typescript
   await electronApp.evaluate(() => {
     process.env.AION_CLI_PATH = '/dev/null';
   });
   ```
-- **TC-A-13 调整**：操作步骤改为"在测试启动前设置 `AION_CLI_PATH=/dev/null`（通过 `test.beforeAll` 或命令行 `AION_CLI_PATH=/dev/null npm run test:e2e`）"
+- **TC-A-13 adjustment**: change the steps to "set `AION_CLI_PATH=/dev/null` before the test starts (via `test.beforeAll` or on the command line, `AION_CLI_PATH=/dev/null npm run test:e2e`)".
 
 ---
 
-#### 5. 用例备注一致性
+#### 5. Consistency of the case notes
 
-**问题**:
-TC-A-07 备注"根据议题 1 决策，不验证 binary 内部 sessionId"，但 TC-A-08/09（对话中切换权限）无类似备注。
+**Problem**:
+TC-A-07 has the note "per the decision on topic 1, the binary's internal sessionId is not verified", but TC-A-08/09 (switching the permission mid-conversation) have no comparable note.
 
-**建议补充**（保持风格一致）:
+**Suggested additions** (to keep the style consistent):
 
-- TC-A-08 补充备注："根据议题 3 决策，不覆盖工具确认中途切换权限的边界行为（只测取消 → 重新发送）"
-- TC-A-09 补充备注："根据议题 2 决策，不验证 'always allow' 跨对话持久化，只测同一对话内切换生效"
-- TC-A-13 补充备注："根据议题 4 决策，本轮 local only，CI 通过 skip 机制处理 binary 缺失"
-
----
-
-### 审核总结
-
-| 审核点          | 状态          | 调整建议                                                |
-| --------------- | ------------- | ------------------------------------------------------- |
-| 1. TC-A-04 备注 | ⚠️ 不成立     | 删除"改为 TC-A-07"备注，aionrs 默认启用模型选择器       |
-| 2. TC-A-05 断言 | ⚠️ 选择器错误 | 补充 testid 到 ConversationChatConfirm 或改用文本选择器 |
-| 3. TC-A-08 断言 | ✅ 有效       | 无需调整，`Canceled` 状态存在且写入 DB                  |
-| 4. TC-A-14 断言 | ⚠️ 需调整     | Electron 无前端限制，改测 binary 层错误处理             |
-| 5. TC-A-13 实现 | ⚠️ 需调整     | 环境变量在 `test.beforeAll` 设置（Electron 启动前）     |
-| 6. 备注一致性   | ⚠️ 需补充     | TC-A-08/09/13 补充议题决策备注                          |
-
-**下一步**:
-
-- designer 根据审核意见调整 `test-cases.zh.md`（预计 30 分钟）
-- engineer 补充 ConversationChatConfirm testid（前置工作，5 分钟）
-- team-lead 批准后进入 Gate 3
+- Add to TC-A-08: "per the decision on topic 3, the edge behavior of switching the permission during a tool confirmation is not covered (only cancel → resend is tested)".
+- Add to TC-A-09: "per the decision on topic 2, cross-conversation persistence of 'always allow' is not verified; only that a switch takes effect within the same conversation".
+- Add to TC-A-13: "per the decision on topic 4, this round is local only; CI handles a missing binary through the skip mechanism".
 
 ---
 
-## 后续记录
+### Review Summary
 
-[Gate 3 讨论记录将追加在此]
+| Review point              | Status              | Suggested adjustment                                                                 |
+| ------------------------- | ------------------- | ------------------------------------------------------------------------------------ |
+| 1. TC-A-04 note           | ⚠️ Does not hold    | Delete the "fall back to TC-A-07" note; aionrs enables the model selector by default |
+| 2. TC-A-05 assertion      | ⚠️ Wrong selector   | Add a testid to ConversationChatConfirm, or use a text selector instead              |
+| 3. TC-A-08 assertion      | ✅ Valid            | No adjustment needed; the `Canceled` status exists and is written to the DB          |
+| 4. TC-A-14 assertion      | ⚠️ Needs adjusting  | Electron has no front-end limit, so test error handling at the binary layer          |
+| 5. TC-A-13 implementation | ⚠️ Needs adjusting  | Set the environment variable in `test.beforeAll` (before Electron starts)            |
+| 6. Note consistency       | ⚠️ Needs filling in | Add the topic decision notes to TC-A-08/09/13                                        |
+
+**Next steps**:
+
+- The designer adjusts `test-cases.md` according to the review feedback (estimated 30 minutes).
+- The engineer adds the ConversationChatConfirm testid (prerequisite work, 5 minutes).
+- Enter Gate 3 once team-lead approves.
+
+---
+
+## Follow-up Records
+
+[Gate 3 discussion records will be appended here]

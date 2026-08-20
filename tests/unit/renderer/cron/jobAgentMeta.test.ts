@@ -26,7 +26,7 @@ describe('getJobAgentMeta', () => {
       [
         assistant({
           id: 'assistant-1',
-          name: '文件规划助手',
+          name: 'File Planning Assistant',
           avatar: '🤖',
         }),
       ],
@@ -34,7 +34,7 @@ describe('getJobAgentMeta', () => {
     );
 
     expect(meta).toEqual({
-      name: '文件规划助手',
+      name: 'File Planning Assistant',
       emoji: '🤖',
     });
   });
@@ -45,7 +45,7 @@ describe('getJobAgentMeta', () => {
         metadata: {
           agent_type: 'acp',
           agent_config: {
-            name: 'Codex 助手',
+            name: 'Codex Assistant',
           },
         },
       }),
@@ -53,7 +53,7 @@ describe('getJobAgentMeta', () => {
       LOGOS
     );
 
-    expect(meta.name).toBe('Codex 助手');
+    expect(meta.name).toBe('Codex Assistant');
     expect(meta.logo).toBeNull();
   });
 
@@ -71,7 +71,7 @@ describe('getJobAgentMeta', () => {
       [
         assistant({
           id: 'assistant-1',
-          name: '文件规划助手',
+          name: 'File Planning Assistant',
           avatar: '🤖',
         }),
       ],

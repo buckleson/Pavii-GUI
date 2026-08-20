@@ -28,10 +28,10 @@ const PREVIEW_PANEL = '[data-project-preview-region]';
 const REFRESH_BUTTON = '[data-refresh-state]';
 
 /** `preview.refresh.confirmTitle` — the dirty-tab confirmation. */
-const CONFIRM_TITLE = /Reload and lose unsaved changes|重新加载将丢失未保存的修改/;
+const CONFIRM_TITLE = /Reload and lose unsaved changes/;
 
 /** `preview.refresh.discardAndRefresh` — the only path that proceeds to a reload. */
-const DISCARD_AND_REFRESH = /Discard changes and reload|放弃修改并刷新/;
+const DISCARD_AND_REFRESH = /Discard changes and reload/;
 
 type BackendWindow = Window & { __backendPort?: number };
 type ProjectIds = { conversationId: string; projectId: string };

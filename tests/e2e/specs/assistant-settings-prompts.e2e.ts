@@ -36,20 +36,16 @@ test.describe('Assistant Settings Recommended Prompts', () => {
 
   test('recommended prompts can be created and clicked from guid', async ({ page }) => {
     const assistantName = `Prompt Assistant ${Date.now()}`;
-    const promptText = `帮我总结这段文本 ${Date.now()}`;
+    const promptText = `Summarize this passage for me ${Date.now()}`;
 
     await goToAssistantSettings(page);
     await clickCreateAssistant(page);
     await fillAssistantName(page, assistantName);
     await fillAssistantDescription(page, 'Prompt coverage assistant');
 
-    await page.getByRole('button', { name: /Add|添加/i }).click();
+    await page.getByRole('button', { name: /Add/i }).click();
     await page.locator('[data-testid="input-assistant-recommended-prompt-new"]').fill(promptText);
-    await page
-      .getByTestId('assistant-card-prompts')
-      .getByRole('button', { name: /Add|添加/i })
-      .nth(1)
-      .click();
+    await page.getByTestId('assistant-card-prompts').getByRole('button', { name: /Add/i }).nth(1).click();
 
     await saveAssistant(page);
     await waitForAssistantEditorClose(page);
@@ -71,19 +67,15 @@ test.describe('Assistant Settings Recommended Prompts', () => {
   test('editing prompt and name is reflected on subsequent guid visit', async ({ page }) => {
     const originalName = `Prompt Update ${Date.now()}`;
     const updatedName = `${originalName} Updated`;
-    const originalPrompt = `给这段话起标题 ${Date.now()}`;
-    const updatedPrompt = `帮我改写成更正式的语气 ${Date.now()}`;
+    const originalPrompt = `Write a title for this paragraph ${Date.now()}`;
+    const updatedPrompt = `Rewrite this in a more formal tone ${Date.now()}`;
 
     await goToAssistantSettings(page);
     await clickCreateAssistant(page);
     await fillAssistantName(page, originalName);
-    await page.getByRole('button', { name: /Add|添加/i }).click();
+    await page.getByRole('button', { name: /Add/i }).click();
     await page.locator('[data-testid="input-assistant-recommended-prompt-new"]').fill(originalPrompt);
-    await page
-      .getByTestId('assistant-card-prompts')
-      .getByRole('button', { name: /Add|添加/i })
-      .nth(1)
-      .click();
+    await page.getByTestId('assistant-card-prompts').getByRole('button', { name: /Add/i }).nth(1).click();
     await saveAssistant(page);
     await waitForAssistantEditorClose(page);
 
@@ -93,13 +85,10 @@ test.describe('Assistant Settings Recommended Prompts', () => {
 
     await openAssistantEditor(page, assistantId);
     await fillAssistantName(page, updatedName);
-    await page
-      .getByRole('button', { name: /Edit|编辑/i })
-      .first()
-      .click();
+    await page.getByRole('button', { name: /Edit/i }).first().click();
     const promptsCard = page.getByTestId('assistant-card-prompts');
     await promptsCard.locator('[data-testid="input-assistant-recommended-prompt-0"]').fill(updatedPrompt);
-    await promptsCard.getByRole('button', { name: /Save|保存/i }).click();
+    await promptsCard.getByRole('button', { name: /Save/i }).click();
     await saveAssistant(page);
     await waitForAssistantEditorClose(page);
     await expect(page.locator(`[data-testid="assistant-card-${assistantId}"]`)).toContainText(updatedName);

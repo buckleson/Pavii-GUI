@@ -1,271 +1,271 @@
-# SkillsHubSettings E2E 测试用例
+# SkillsHubSettings E2E Test Cases
 
-**文档版本**：v1.3
-**基于需求**：requirements.zh.md v1.2
-**修订日期**：2026-04-21
-**起草者**：skills-designer-2
+**Document version**: v1.3
+**Based on requirements**: requirements.md v1.2
+**Revision date**: 2026-04-21
+**Drafted by**: skills-designer-2
 
-**修订历史**：
+**Revision history**:
 
-- v1.0（初稿）：26 个测试用例
-- v1.1：补充 3 个 P1 测试用例（TC-S-27~29），响应 skills-analyst-2 覆盖度 review
-- v1.2：统一 testid 命名（14 个用例），响应 skills-engineer-2 可执行性 review
-- v1.3：彻底移除所有 test.skip/限制措辞，TC-S-27/28/29 全部无条件执行（响应 team-lead + analyst 最终复审）
-
----
-
-## 1. 概述
-
-### 1.1 测试范围
-
-本文档涵盖 SkillsHubSettings 页面的 UI 交互测试用例，聚焦：
-
-- 技能列表展示（4 个板块）
-- 技能导入/导出/删除操作
-- 搜索与筛选
-- 自定义路径管理
-- URL 高亮定位
-
-### 1.2 测试用例编号规则
-
-- **前缀**：`TC-S-` (Test Case - Skills)
-- **编号**：从 `01` 开始递增
-- **示例**：`TC-S-01`, `TC-S-02`
-
-### 1.3 优先级定义
-
-| 优先级 | 定义                   | 执行频率   |
-| ------ | ---------------------- | ---------- |
-| P0     | 核心功能，阻塞发布     | 每次提交   |
-| P1     | 重要功能，影响用户体验 | 每日构建   |
-| P2     | 辅助功能，边界场景     | 每周回归   |
-| P3     | 极端场景，低频使用     | 发布前回归 |
-
-### 1.4 断言类型
-
-- **UI 断言**：验证页面元素可见性、文本、状态
-- **Bridge 断言**：验证 IPC 调用返回的数据正确性
-- **混合断言**：同时验证 UI 和 Bridge 状态
+- v1.0 (first draft): 26 test cases
+- v1.1: added 3 P1 test cases (TC-S-27 to TC-S-29) in response to the coverage review from skills-analyst-2
+- v1.2: unified the testid naming (14 cases) in response to the executability review from skills-engineer-2
+- v1.3: removed all test.skip usage and hedging language; TC-S-27/28/29 now run unconditionally (in response to the final re-review by the team lead and the analyst)
 
 ---
 
-## 2. 测试用例清单
+## 1. Overview
 
-### 2.1 我的技能（My Skills）板块
+### 1.1 Test scope
 
-#### TC-S-01：渲染我的技能列表（基础场景）
+This document covers the UI interaction test cases for the SkillsHubSettings page, focusing on:
 
-**覆盖需求**：requirements.zh.md § 2.1.1
-**优先级**：P0
-**前置条件**：
+- Skill list rendering (4 boards)
+- Skill import/export/delete operations
+- Search and filtering
+- Custom path management
+- URL-driven highlight and scroll-to
 
-- 用户技能目录 `~/.aionui/skills/` 中存在 2 个测试技能：
-  - `E2E-Test-Builtin`（builtin 技能）
-  - `E2E-Test-Custom`（custom 技能）
+### 1.2 Test case numbering rules
 
-**测试步骤**：
+- **Prefix**: `TC-S-` (Test Case - Skills)
+- **Number**: increments starting from `01`
+- **Examples**: `TC-S-01`, `TC-S-02`
 
-1. 导航到 Skills Hub 页面（`#/settings/skills`）
-2. 定位"我的技能"板块容器（`my-skills-section`）
-3. 验证板块标题显示"My Skills"
-4. 验证技能数量标记显示"2"
+### 1.3 Priority definitions
 
-**预期结果**：
+| Priority | Definition                                       | Execution frequency    |
+| -------- | ------------------------------------------------ | ---------------------- |
+| P0       | Core functionality, blocks a release             | Every commit           |
+| P1       | Important functionality, affects user experience | Daily build            |
+| P2       | Supporting functionality, edge scenarios         | Weekly regression      |
+| P3       | Extreme scenarios, rarely exercised              | Pre-release regression |
 
-- ✅ 板块容器可见
-- ✅ 显示 2 个技能卡片：
-  - 卡片 1：名称 `E2E-Test-Builtin`，标签 `Built-in`
-  - 卡片 2：名称 `E2E-Test-Custom`，标签 `Custom`
-- ✅ 每个卡片包含头像、名称、描述、来源标签
+### 1.4 Assertion types
 
-**断言类型**：UI 断言 + Bridge 断言
-
-- UI：验证卡片可见性和文本
-- Bridge：`invokeBridge('fs.listAvailableSkills')` 返回包含 2 个技能
+- **UI assertion**: verifies element visibility, text, and state on the page
+- **Bridge assertion**: verifies the correctness of the data returned by an IPC call
+- **Mixed assertion**: verifies both the UI and the bridge state
 
 ---
 
-#### TC-S-02：搜索技能（匹配场景）
+## 2. Test Case Inventory
 
-**覆盖需求**：requirements.zh.md § 2.5.1
-**优先级**：P0
-**前置条件**：
+### 2.1 My Skills board
 
-- 用户技能目录中存在 3 个测试技能：
-  - `E2E-Test-Search-Target`（描述：target skill for search test）
+#### TC-S-01: Render the My Skills list (baseline scenario)
+
+**Covers requirement**: requirements.md § 2.1.1
+**Priority**: P0
+**Preconditions**:
+
+- The user skill directory `~/.aionui/skills/` contains 2 test skills:
+  - `E2E-Test-Builtin` (a builtin skill)
+  - `E2E-Test-Custom` (a custom skill)
+
+**Test steps**:
+
+1. Navigate to the Skills Hub page (`#/settings/skills`)
+2. Locate the My Skills board container (`my-skills-section`)
+3. Verify the board title reads "My Skills"
+4. Verify the skill count badge reads "2"
+
+**Expected results**:
+
+- ✅ The board container is visible
+- ✅ Two skill cards are shown:
+  - Card 1: name `E2E-Test-Builtin`, badge `Built-in`
+  - Card 2: name `E2E-Test-Custom`, badge `Custom`
+- ✅ Every card contains an avatar, a name, a description, and a source badge
+
+**Assertion type**: UI assertion + bridge assertion
+
+- UI: verify card visibility and text
+- Bridge: `invokeBridge('fs.listAvailableSkills')` returns 2 skills
+
+---
+
+#### TC-S-02: Search skills (matching scenario)
+
+**Covers requirement**: requirements.md § 2.5.1
+**Priority**: P0
+**Preconditions**:
+
+- The user skill directory contains 3 test skills:
+  - `E2E-Test-Search-Target` (description: target skill for search test)
   - `E2E-Test-Alpha`
   - `E2E-Test-Beta`
 
-**测试步骤**：
+**Test steps**:
 
-1. 导航到 Skills Hub 页面
-2. 定位搜索框（`input-search-my-skills`）
-3. 输入搜索关键词 `"Search"`
-4. 等待搜索结果渲染
+1. Navigate to the Skills Hub page
+2. Locate the search box (`input-search-my-skills`)
+3. Type the search keyword `"Search"`
+4. Wait for the search results to render
 
-**预期结果**：
+**Expected results**:
 
-- ✅ 仅显示 1 个技能卡片：`E2E-Test-Search-Target`
-- ✅ 其他 2 个卡片不可见
-- ✅ 搜索框保持焦点
+- ✅ Only 1 skill card is shown: `E2E-Test-Search-Target`
+- ✅ The other 2 cards are not visible
+- ✅ The search box keeps focus
 
-**断言类型**：UI 断言
+**Assertion type**: UI assertion
 
-- 验证 `my-skill-card-E2E-Test-Search-Target` 可见
-- 验证 `my-skill-card-E2E-Test-Alpha` 不可见
-
----
-
-#### TC-S-03：搜索技能（无匹配场景）
-
-**覆盖需求**：requirements.zh.md § 2.5.1
-**优先级**：P1
-**前置条件**：
-
-- 用户技能目录中存在至少 1 个测试技能
-
-**测试步骤**：
-
-1. 导航到 Skills Hub 页面
-2. 定位搜索框（`input-search-my-skills`）
-3. 输入不存在的关键词 `"NonExistentKeyword"`
-4. 等待搜索结果渲染
-
-**预期结果**：
-
-- ✅ 显示空状态提示：`"No skills found. Import some to get started."`
-- ✅ 所有技能卡片不可见
-
-**已知问题**：
-
-- 当前实现无法区分"无技能"和"搜索无匹配"场景（requirements.zh.md § 2.1.1 line 64-70）
-
-**断言类型**：UI 断言
+- Verify `my-skill-card-E2E-Test-Search-Target` is visible
+- Verify `my-skill-card-E2E-Test-Alpha` is not visible
 
 ---
 
-#### TC-S-04：刷新技能列表
+#### TC-S-03: Search skills (no-match scenario)
 
-**覆盖需求**：requirements.zh.md § 2.1.1
-**优先级**：P1
-**前置条件**：
+**Covers requirement**: requirements.md § 2.5.1
+**Priority**: P1
+**Preconditions**:
 
-- 用户技能目录中存在 1 个测试技能
+- The user skill directory contains at least 1 test skill
 
-**测试步骤**：
+**Test steps**:
 
-1. 导航到 Skills Hub 页面
-2. 通过 Bridge 动态添加新技能：
+1. Navigate to the Skills Hub page
+2. Locate the search box (`input-search-my-skills`)
+3. Type a keyword that does not exist: `"NonExistentKeyword"`
+4. Wait for the search results to render
+
+**Expected results**:
+
+- ✅ The empty state message is shown: `"No skills found. Import some to get started."`
+- ✅ No skill card is visible
+
+**Known issue**:
+
+- The current implementation cannot distinguish "no skills" from "search returned no match" (requirements.md § 2.1.1 line 64-70)
+
+**Assertion type**: UI assertion
+
+---
+
+#### TC-S-04: Refresh the skills list
+
+**Covers requirement**: requirements.md § 2.1.1
+**Priority**: P1
+**Preconditions**:
+
+- The user skill directory contains 1 test skill
+
+**Test steps**:
+
+1. Navigate to the Skills Hub page
+2. Add a new skill dynamically through the bridge:
    ```ts
    await invokeBridge(page, 'fs.importSkillWithSymlink', {
      skillPath: '/path/to/E2E-Test-New-Skill',
    });
    ```
-3. 点击刷新按钮（`btn-refresh-my-skills`）
-4. 等待刷新完成（loading 状态消失）
+3. Click the refresh button (`btn-refresh-my-skills`)
+4. Wait for the refresh to finish (the loading state disappears)
 
-**预期结果**：
+**Expected results**:
 
-- ✅ 技能数量标记从"1"变为"2"
-- ✅ 新技能卡片 `E2E-Test-New-Skill` 出现在列表中
-- ✅ 显示成功提示 Message："Refreshed"
+- ✅ The skill count badge changes from "1" to "2"
+- ✅ The new skill card `E2E-Test-New-Skill` appears in the list
+- ✅ A success message is shown: "Refreshed"
 
-**断言类型**：混合断言
+**Assertion type**: mixed assertion
 
-- UI：验证新卡片可见
-- Bridge：`listAvailableSkills` 返回包含新技能
-
----
-
-#### TC-S-05：删除自定义技能（成功场景）
-
-**覆盖需求**：requirements.zh.md § 2.4.1
-**优先级**：P0
-**前置条件**：
-
-- 用户技能目录中存在 1 个 custom 技能 `E2E-Test-Delete-Target`
-
-**测试步骤**：
-
-1. 导航到 Skills Hub 页面
-2. 定位目标技能卡片（`my-skill-card-E2E-Test-Delete-Target`）
-3. Hover 到卡片上，显示操作按钮
-4. 点击删除按钮（`btn-delete-E2E-Test-Delete-Target`）
-5. 在确认 Modal 中点击"确认"按钮（`btn-confirm-delete`）
-6. 等待删除完成
-
-**预期结果**：
-
-- ✅ 确认 Modal 显示，标题："Delete Skill"
-- ✅ Modal 内容：`"Are you sure you want to delete \"E2E-Test-Delete-Target\"?"`
-- ✅ 点击确认后 Modal 关闭
-- ✅ 显示成功提示 Message："Skill deleted"
-- ✅ 目标卡片从列表中消失
-- ✅ 技能数量标记减 1
-
-**断言类型**：混合断言
-
-- UI：验证卡片消失、Message 显示
-- Bridge：`listAvailableSkills` 不再包含该技能
+- UI: verify the new card is visible
+- Bridge: `listAvailableSkills` returns the new skill
 
 ---
 
-#### TC-S-06：删除 builtin 技能（无删除按钮）
+#### TC-S-05: Delete a custom skill (success scenario)
 
-**覆盖需求**：requirements.zh.md § 2.4.1
-**优先级**：P1
-**前置条件**：
+**Covers requirement**: requirements.md § 2.4.1
+**Priority**: P0
+**Preconditions**:
 
-- 用户技能目录中存在 1 个 builtin 技能
+- The user skill directory contains 1 custom skill, `E2E-Test-Delete-Target`
 
-**测试步骤**：
+**Test steps**:
 
-1. 导航到 Skills Hub 页面
-2. 定位 builtin 技能卡片
-3. Hover 到卡片上
+1. Navigate to the Skills Hub page
+2. Locate the target skill card (`my-skill-card-E2E-Test-Delete-Target`)
+3. Hover over the card so the action buttons appear
+4. Click the delete button (`btn-delete-E2E-Test-Delete-Target`)
+5. Click the "Confirm" button in the confirmation modal (`btn-confirm-delete`)
+6. Wait for the deletion to finish
 
-**预期结果**：
+**Expected results**:
 
-- ✅ 操作按钮区仅显示"Export"按钮
-- ✅ **无删除按钮**（builtin 技能不可删除）
+- ✅ The confirmation modal appears with the title "Delete Skill"
+- ✅ The modal body reads: `"Are you sure you want to delete \"E2E-Test-Delete-Target\"?"`
+- ✅ The modal closes after confirming
+- ✅ A success message is shown: "Skill deleted"
+- ✅ The target card disappears from the list
+- ✅ The skill count badge decreases by 1
 
-**断言类型**：UI 断言
+**Assertion type**: mixed assertion
 
----
-
-#### TC-S-07：空状态展示（无技能）
-
-**覆盖需求**：requirements.zh.md § 2.1.1
-**优先级**：P1
-**前置条件**：
-
-- 用户技能目录为空（无任何技能）
-
-**测试步骤**：
-
-1. 导航到 Skills Hub 页面
-2. 定位"我的技能"板块容器
-
-**预期结果**：
-
-- ✅ 板块容器可见
-- ✅ 显示空状态提示：`"No skills found. Import some to get started."`
-- ✅ 技能数量标记显示"0"
-- ✅ 无技能卡片渲染
-
-**断言类型**：UI 断言
+- UI: verify the card disappears and the message is shown
+- Bridge: `listAvailableSkills` no longer contains the skill
 
 ---
 
-### 2.2 发现外部技能（Discovered External Skills）板块
+#### TC-S-06: Delete a builtin skill (no delete button)
 
-#### TC-S-08：渲染外部技能列表（单源场景）
+**Covers requirement**: requirements.md § 2.4.1
+**Priority**: P1
+**Preconditions**:
 
-**覆盖需求**：requirements.zh.md § 2.1.2
-**优先级**：P0
-**前置条件**：
+- The user skill directory contains 1 builtin skill
 
-- 通过 Bridge 添加自定义外部路径：
+**Test steps**:
+
+1. Navigate to the Skills Hub page
+2. Locate the builtin skill card
+3. Hover over the card
+
+**Expected results**:
+
+- ✅ The action button area only shows the "Export" button
+- ✅ **No delete button** (builtin skills cannot be deleted)
+
+**Assertion type**: UI assertion
+
+---
+
+#### TC-S-07: Empty state display (no skills)
+
+**Covers requirement**: requirements.md § 2.1.1
+**Priority**: P1
+**Preconditions**:
+
+- The user skill directory is empty (no skills at all)
+
+**Test steps**:
+
+1. Navigate to the Skills Hub page
+2. Locate the My Skills board container
+
+**Expected results**:
+
+- ✅ The board container is visible
+- ✅ The empty state message is shown: `"No skills found. Import some to get started."`
+- ✅ The skill count badge reads "0"
+- ✅ No skill card is rendered
+
+**Assertion type**: UI assertion
+
+---
+
+### 2.2 Discovered External Skills board
+
+#### TC-S-08: Render the external skills list (single-source scenario)
+
+**Covers requirement**: requirements.md § 2.1.2
+**Priority**: P0
+**Preconditions**:
+
+- Add a custom external path through the bridge:
   ```ts
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-external-'));
   fs.mkdirSync(path.join(tempDir, 'test-skill'));
@@ -279,615 +279,615 @@
   });
   ```
 
-**测试步骤**：
+**Test steps**:
 
-1. 导航到 Skills Hub 页面
-2. 定位"发现外部技能"板块容器（`external-skills-section`）
-3. 验证板块标题显示"Discovered External Skills"
-4. 验证外部技能总数标记
+1. Navigate to the Skills Hub page
+2. Locate the Discovered External Skills board container (`external-skills-section`)
+3. Verify the board title reads "Discovered External Skills"
+4. Verify the total external skill count badge
 
-**预期结果**：
+**Expected results**:
 
-- ✅ 板块容器可见
-- ✅ 显示 1 个 Tab 按钮："E2E Test Source (1)"
-- ✅ Tab 处于激活状态
-- ✅ 显示 1 个技能卡片：`E2E-Test-External`
-- ✅ 显示源路径：`tempDir`
+- ✅ The board container is visible
+- ✅ One tab button is shown: "E2E Test Source (1)"
+- ✅ The tab is in the active state
+- ✅ One skill card is shown: `E2E-Test-External`
+- ✅ The source path is shown: `tempDir`
 
-**断言类型**：混合断言
+**Assertion type**: mixed assertion
 
-- UI：验证 Tab 和卡片可见性
-- Bridge：`detectAndCountExternalSkills` 返回包含 1 个源
-
----
-
-#### TC-S-09：Tab 切换外部源（多源场景）
-
-**覆盖需求**：requirements.zh.md § 2.1.2
-**优先级**：P0
-**前置条件**：
-
-- 添加 2 个自定义外部路径：
-  - `E2E Source A`（包含 2 个技能）
-  - `E2E Source B`（包含 3 个技能）
-
-**测试步骤**：
-
-1. 导航到 Skills Hub 页面
-2. 验证默认激活的 Tab（第一个源）
-3. 点击第二个 Tab 按钮（`external-source-tab-e2e-source-b`）
-4. 等待技能列表更新
-
-**预期结果**：
-
-- ✅ 第一个 Tab 变为未激活状态
-- ✅ 第二个 Tab 变为激活状态（蓝色背景）
-- ✅ 技能列表更新，显示 3 个技能卡片
-- ✅ 源路径更新为 `E2E Source B` 的路径
-
-**断言类型**：UI 断言
+- UI: verify tab and card visibility
+- Bridge: `detectAndCountExternalSkills` returns 1 source
 
 ---
 
-#### TC-S-10：单项导入外部技能（成功场景）
+#### TC-S-09: Switch external sources by tab (multi-source scenario)
 
-**覆盖需求**：requirements.zh.md § 2.2.1
-**优先级**：P0
-**前置条件**：
+**Covers requirement**: requirements.md § 2.1.2
+**Priority**: P0
+**Preconditions**:
 
-- 外部源中存在 1 个技能 `E2E-Test-Import-Single`
+- Add 2 custom external paths:
+  - `E2E Source A` (contains 2 skills)
+  - `E2E Source B` (contains 3 skills)
 
-**测试步骤**：
+**Test steps**:
 
-1. 导航到 Skills Hub 页面
-2. 定位外部技能卡片（`external-skill-card-E2E-Test-Import-Single`）
-3. 点击"Import"按钮（`btn-import-E2E-Test-Import-Single`）
-4. 等待导入完成
+1. Navigate to the Skills Hub page
+2. Verify which tab is active by default (the first source)
+3. Click the second tab button (`external-source-tab-e2e-source-b`)
+4. Wait for the skill list to update
 
-**预期结果**：
+**Expected results**:
 
-- ✅ 显示成功提示 Message："Skill imported successfully"
-- ✅ "我的技能"板块自动刷新，新技能出现
-- ✅ 技能数量标记增加 1
+- ✅ The first tab becomes inactive
+- ✅ The second tab becomes active (blue background)
+- ✅ The skill list updates and shows 3 skill cards
+- ✅ The source path updates to the path of `E2E Source B`
 
-**断言类型**：混合断言
-
-- UI：验证 Message 显示、新卡片出现
-- Bridge：`listAvailableSkills` 包含新技能
-
----
-
-#### TC-S-11：批量导入外部技能（部分成功场景）
-
-**覆盖需求**：requirements.zh.md § 2.2.3
-**优先级**：P1
-**前置条件**：
-
-- 外部源中存在 3 个技能：
-  - `E2E-Test-Batch-1`（有效）
-  - `E2E-Test-Batch-2`（已存在于"我的技能"）
-  - `E2E-Test-Batch-3`（有效）
-
-**测试步骤**：
-
-1. 导航到 Skills Hub 页面
-2. 点击"Import All"按钮（`btn-import-all`）
-3. 等待批量导入完成
-
-**预期结果**：
-
-- ✅ 显示成功提示 Message："2 skills imported"（跳过已存在的）
-- ✅ "我的技能"板块自动刷新
-- ✅ 新增 2 个技能卡片（`E2E-Test-Batch-1` 和 `E2E-Test-Batch-3`）
-
-**已知限制**：
-
-- 无 loading 状态、无进度反馈、无取消机制（requirements.zh.md § 2.2.3 line 256-265）
-
-**断言类型**：混合断言
+**Assertion type**: UI assertion
 
 ---
 
-#### TC-S-12：搜索外部技能（匹配场景）
+#### TC-S-10: Import a single external skill (success scenario)
 
-**覆盖需求**：requirements.zh.md § 2.5.2
-**优先级**：P1
-**前置条件**：
+**Covers requirement**: requirements.md § 2.2.1
+**Priority**: P0
+**Preconditions**:
 
-- 外部源中存在 3 个技能：
+- The external source contains 1 skill, `E2E-Test-Import-Single`
+
+**Test steps**:
+
+1. Navigate to the Skills Hub page
+2. Locate the external skill card (`external-skill-card-E2E-Test-Import-Single`)
+3. Click the "Import" button (`btn-import-E2E-Test-Import-Single`)
+4. Wait for the import to finish
+
+**Expected results**:
+
+- ✅ A success message is shown: "Skill imported successfully"
+- ✅ The My Skills board refreshes automatically and the new skill appears
+- ✅ The skill count badge increases by 1
+
+**Assertion type**: mixed assertion
+
+- UI: verify the message is shown and the new card appears
+- Bridge: `listAvailableSkills` contains the new skill
+
+---
+
+#### TC-S-11: Batch import external skills (partial success scenario)
+
+**Covers requirement**: requirements.md § 2.2.3
+**Priority**: P1
+**Preconditions**:
+
+- The external source contains 3 skills:
+  - `E2E-Test-Batch-1` (valid)
+  - `E2E-Test-Batch-2` (already exists in My Skills)
+  - `E2E-Test-Batch-3` (valid)
+
+**Test steps**:
+
+1. Navigate to the Skills Hub page
+2. Click the "Import All" button (`btn-import-all`)
+3. Wait for the batch import to finish
+
+**Expected results**:
+
+- ✅ A success message is shown: "2 skills imported" (the existing one is skipped)
+- ✅ The My Skills board refreshes automatically
+- ✅ Two new skill cards are added (`E2E-Test-Batch-1` and `E2E-Test-Batch-3`)
+
+**Known limitation**:
+
+- There is no loading state, no progress feedback, and no way to cancel (requirements.md § 2.2.3 line 256-265)
+
+**Assertion type**: mixed assertion
+
+---
+
+#### TC-S-12: Search external skills (matching scenario)
+
+**Covers requirement**: requirements.md § 2.5.2
+**Priority**: P1
+**Preconditions**:
+
+- The external source contains 3 skills:
   - `E2E-Test-External-Alpha`
   - `E2E-Test-External-Beta`
   - `E2E-Test-External-Search-Target`
 
-**测试步骤**：
+**Test steps**:
 
-1. 导航到 Skills Hub 页面
-2. 定位外部技能搜索框（`input-search-external`）
-3. 输入搜索关键词 `"Search"`
-4. 等待搜索结果渲染
+1. Navigate to the Skills Hub page
+2. Locate the external skills search box (`input-search-external`)
+3. Type the search keyword `"Search"`
+4. Wait for the search results to render
 
-**预期结果**：
+**Expected results**:
 
-- ✅ 仅显示 1 个技能卡片：`E2E-Test-External-Search-Target`
-- ✅ 其他 2 个卡片不可见
+- ✅ Only 1 skill card is shown: `E2E-Test-External-Search-Target`
+- ✅ The other 2 cards are not visible
 
-**断言类型**：UI 断言
-
----
-
-#### TC-S-13：搜索外部技能（无匹配场景）
-
-**覆盖需求**：requirements.zh.md § 2.5.2
-**优先级**：P1
-**前置条件**：
-
-- 外部源中存在至少 1 个技能
-
-**测试步骤**：
-
-1. 导航到 Skills Hub 页面
-2. 定位外部技能搜索框（`input-search-external`）
-3. 输入不存在的关键词 `"NonExistentKeyword"`
-4. 等待搜索结果渲染
-
-**预期结果**：
-
-- ✅ 显示空结果提示：`"No matching skills found"`
-- ✅ 所有技能卡片不可见
-
-**断言类型**：UI 断言
+**Assertion type**: UI assertion
 
 ---
 
-#### TC-S-14：刷新外部技能列表
+#### TC-S-13: Search external skills (no-match scenario)
 
-**覆盖需求**：requirements.zh.md § 2.1.2
-**优先级**：P1
-**前置条件**：
+**Covers requirement**: requirements.md § 2.5.2
+**Priority**: P1
+**Preconditions**:
 
-- 外部源中存在 1 个技能
+- The external source contains at least 1 skill
 
-**测试步骤**：
+**Test steps**:
 
-1. 导航到 Skills Hub 页面
-2. 通过文件系统动态添加新技能到外部源目录：
+1. Navigate to the Skills Hub page
+2. Locate the external skills search box (`input-search-external`)
+3. Type a keyword that does not exist: `"NonExistentKeyword"`
+4. Wait for the search results to render
+
+**Expected results**:
+
+- ✅ The no-results message is shown: `"No matching skills found"`
+- ✅ No skill card is visible
+
+**Assertion type**: UI assertion
+
+---
+
+#### TC-S-14: Refresh the external skills list
+
+**Covers requirement**: requirements.md § 2.1.2
+**Priority**: P1
+**Preconditions**:
+
+- The external source contains 1 skill
+
+**Test steps**:
+
+1. Navigate to the Skills Hub page
+2. Add a new skill to the external source directory through the file system:
    ```ts
    fs.mkdirSync(path.join(tempDir, 'new-skill'));
    fs.writeFileSync(path.join(tempDir, 'new-skill/SKILL.md'), '---\nname: E2E-Test-New-External\n---');
    ```
-3. 点击外部技能刷新按钮（`btn-refresh-external`）
-4. 等待刷新完成
+3. Click the external skills refresh button (`btn-refresh-external`)
+4. Wait for the refresh to finish
 
-**预期结果**：
+**Expected results**:
 
-- ✅ 外部技能数量标记从"1"变为"2"
-- ✅ 新技能卡片 `E2E-Test-New-External` 出现
-- ✅ 显示成功提示 Message："Refreshed"
-- ✅ 刷新按钮的 icon 显示旋转动画（`animate-spin`）
+- ✅ The external skill count badge changes from "1" to "2"
+- ✅ The new skill card `E2E-Test-New-External` appears
+- ✅ A success message is shown: "Refreshed"
+- ✅ The refresh button icon plays the spin animation (`animate-spin`)
 
-**断言类型**：混合断言
-
----
-
-#### TC-S-15：空外部源状态（无外部技能）
-
-**覆盖需求**：requirements.zh.md § 2.1.2
-**优先级**：P2
-**前置条件**：
-
-- 无任何外部源（预定义路径不存在，无自定义路径）
-
-**测试步骤**：
-
-1. 导航到 Skills Hub 页面
-2. 检查"发现外部技能"板块是否渲染
-
-**预期结果**：
-
-- ✅ **整个板块不渲染**（`external-skills-section` 不存在）
-- ✅ 仅显示"我的技能"板块和其他板块
-
-**断言类型**：UI 断言
+**Assertion type**: mixed assertion
 
 ---
 
-### 2.3 自定义路径管理
+#### TC-S-15: Empty external source state (no external skills)
 
-#### TC-S-16：添加自定义外部路径（成功场景）
+**Covers requirement**: requirements.md § 2.1.2
+**Priority**: P2
+**Preconditions**:
 
-**覆盖需求**：requirements.zh.md § 2.7.1
-**优先级**：P0
-**前置条件**：
+- There are no external sources at all (no predefined path exists and no custom path is configured)
 
-- 创建临时目录并添加测试技能：
+**Test steps**:
+
+1. Navigate to the Skills Hub page
+2. Check whether the Discovered External Skills board is rendered
+
+**Expected results**:
+
+- ✅ **The whole board is not rendered** (`external-skills-section` does not exist)
+- ✅ Only the My Skills board and the other boards are shown
+
+**Assertion type**: UI assertion
+
+---
+
+### 2.3 Custom path management
+
+#### TC-S-16: Add a custom external path (success scenario)
+
+**Covers requirement**: requirements.md § 2.7.1
+**Priority**: P0
+**Preconditions**:
+
+- Create a temporary directory and add a test skill:
   ```ts
   const customPath = fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-custom-'));
   fs.mkdirSync(path.join(customPath, 'test-skill'));
   fs.writeFileSync(path.join(customPath, 'test-skill/SKILL.md'), '---\nname: E2E-Test-Custom-Path\n---');
   ```
 
-**测试步骤**：
+**Test steps**:
 
-1. 导航到 Skills Hub 页面
-2. 点击添加自定义路径按钮（`btn-add-custom-source`，Plus 图标）
-3. 在 Modal 中填写：
-   - Name 输入框（`input-custom-path-name`）：`"E2E Custom Source"`
-   - Path 输入框（`input-custom-path-value`）：`customPath`
-4. 点击"Confirm"按钮
-5. 等待添加完成
+1. Navigate to the Skills Hub page
+2. Click the add custom path button (`btn-add-custom-source`, the plus icon)
+3. Fill in the modal:
+   - Name input (`input-custom-path-name`): `"E2E Custom Source"`
+   - Path input (`input-custom-path-value`): `customPath`
+4. Click the "Confirm" button
+5. Wait for the path to be added
 
-**预期结果**：
+**Expected results**:
 
-- ✅ Modal 关闭
-- ✅ 新增 Tab 按钮："E2E Custom Source (1)"
-- ✅ 自动切换到新 Tab
-- ✅ 显示技能卡片：`E2E-Test-Custom-Path`
+- ✅ The modal closes
+- ✅ A new tab button appears: "E2E Custom Source (1)"
+- ✅ The view switches to the new tab automatically
+- ✅ The skill card `E2E-Test-Custom-Path` is shown
 
-**断言类型**：混合断言
+**Assertion type**: mixed assertion
 
-- UI：验证 Tab 和卡片出现
-- Bridge：`detectAndCountExternalSkills` 包含新源
-- Bridge：`getCustomExternalPaths` 包含新路径
-
----
-
-#### TC-S-17：添加自定义路径（路径重复场景）
-
-**覆盖需求**：requirements.zh.md § 2.7.1
-**优先级**：P1
-**前置条件**：
-
-- 已存在自定义路径 `/path/to/existing-source`
-
-**测试步骤**：
-
-1. 导航到 Skills Hub 页面
-2. 点击添加自定义路径按钮
-3. 在 Modal 中填写：
-   - Name：`"Duplicate Source"`
-   - Path：`/path/to/existing-source`（已存在）
-4. 点击"Confirm"按钮
-
-**预期结果**：
-
-- ✅ 显示错误提示 Message："Path already exists"
-- ✅ Modal 保持打开状态
-- ✅ 无新 Tab 添加
-
-**断言类型**：UI 断言
+- UI: verify the tab and the card appear
+- Bridge: `detectAndCountExternalSkills` includes the new source
+- Bridge: `getCustomExternalPaths` includes the new path
 
 ---
 
-#### TC-S-18：添加自定义路径（必填验证）
+#### TC-S-17: Add a custom path (duplicate path scenario)
 
-**覆盖需求**：requirements.zh.md § 2.7.1
-**优先级**：P1
-**前置条件**：无
+**Covers requirement**: requirements.md § 2.7.1
+**Priority**: P1
+**Preconditions**:
 
-**测试步骤**：
+- The custom path `/path/to/existing-source` already exists
 
-1. 导航到 Skills Hub 页面
-2. 点击添加自定义路径按钮
-3. 保持 Name 和 Path 输入框为空
-4. 检查"Confirm"按钮状态
+**Test steps**:
 
-**预期结果**：
+1. Navigate to the Skills Hub page
+2. Click the add custom path button
+3. Fill in the modal:
+   - Name: `"Duplicate Source"`
+   - Path: `/path/to/existing-source` (already exists)
+4. Click the "Confirm" button
 
-- ✅ "Confirm"按钮为禁用状态（`disabled` 属性）
-- ✅ 无法点击确认
+**Expected results**:
 
-**测试步骤（填写 Name 后）**：
+- ✅ An error message is shown: "Path already exists"
+- ✅ The modal stays open
+- ✅ No new tab is added
 
-1. 在 Name 输入框填写 `"Test Source"`
-2. Path 输入框保持为空
-3. 检查"Confirm"按钮状态
-
-**预期结果**：
-
-- ✅ "Confirm"按钮仍为禁用状态（Path 必填）
-
-**断言类型**：UI 断言
+**Assertion type**: UI assertion
 
 ---
 
-### 2.4 技能导出
+#### TC-S-18: Add a custom path (required-field validation)
 
-#### TC-S-19：导出技能到外部源（成功场景）
+**Covers requirement**: requirements.md § 2.7.1
+**Priority**: P1
+**Preconditions**: none
 
-**覆盖需求**：requirements.zh.md § 2.3.1
-**优先级**：P0
-**前置条件**：
+**Test steps**:
 
-- "我的技能"中存在 1 个技能 `E2E-Test-Export-Source`
-- 存在外部源 `E2E Target Source`
+1. Navigate to the Skills Hub page
+2. Click the add custom path button
+3. Leave both the Name and Path inputs empty
+4. Check the state of the "Confirm" button
 
-**测试步骤**：
+**Expected results**:
 
-1. 导航到 Skills Hub 页面
-2. 定位目标技能卡片（`my-skill-card-E2E-Test-Export-Source`）
-3. Hover 到卡片上，显示操作按钮
-4. 点击"Export"按钮（`btn-export-E2E-Test-Export-Source`）
-5. 在 Dropdown 中选择目标源："E2E Target Source"
-6. 等待导出完成
+- ✅ The "Confirm" button is disabled (has the `disabled` attribute)
+- ✅ It cannot be clicked
 
-**预期结果**：
+**Test steps (after filling in Name)**:
 
-- ✅ Dropdown 展开，显示可选外部源列表
-- ✅ 显示 Loading Message："Processing..."
-- ✅ 导出完成后显示成功提示 Message："Skill exported successfully"
-- ✅ Loading Message 隐藏
-- ✅ **"我的技能"列表不刷新**（因为列表未变化，requirements.zh.md § 2.1.1 line 58-59）
+1. Type `"Test Source"` into the Name input
+2. Leave the Path input empty
+3. Check the state of the "Confirm" button
 
-**断言类型**：UI 断言（E2E 不验证目标目录文件）
+**Expected results**:
 
----
+- ✅ The "Confirm" button is still disabled (Path is required)
 
-#### TC-S-20：导出技能（目标已存在场景）
-
-**覆盖需求**：requirements.zh.md § 2.3.1
-**优先级**：P1
-**前置条件**：
-
-- "我的技能"中存在 1 个技能 `E2E-Test-Export-Duplicate`
-- 外部源 `E2E Target Source` 中已存在同名技能
-
-**测试步骤**：
-
-1. 导航到 Skills Hub 页面
-2. 定位目标技能卡片
-3. 点击"Export"按钮
-4. 在 Dropdown 中选择目标源
-5. 等待导出完成
-
-**预期结果**：
-
-- ✅ 显示错误提示 Message："Target already exists: /path/to/target"
-- ✅ Loading Message 隐藏
-
-**断言类型**：UI 断言
+**Assertion type**: UI assertion
 
 ---
 
-#### TC-S-21：导出技能（无外部源场景）
+### 2.4 Skill export
 
-**覆盖需求**：requirements.zh.md § 2.3.1
-**优先级**：P2
-**前置条件**：
+#### TC-S-19: Export a skill to an external source (success scenario)
 
-- "我的技能"中存在 1 个技能
-- 无任何外部源（`externalSources.length === 0`）
+**Covers requirement**: requirements.md § 2.3.1
+**Priority**: P0
+**Preconditions**:
 
-**测试步骤**：
+- My Skills contains 1 skill, `E2E-Test-Export-Source`
+- The external source `E2E Target Source` exists
 
-1. 导航到 Skills Hub 页面
-2. 定位目标技能卡片
-3. Hover 到卡片上
+**Test steps**:
 
-**预期结果**：
+1. Navigate to the Skills Hub page
+2. Locate the target skill card (`my-skill-card-E2E-Test-Export-Source`)
+3. Hover over the card so the action buttons appear
+4. Click the "Export" button (`btn-export-E2E-Test-Export-Source`)
+5. Pick the target source in the dropdown: "E2E Target Source"
+6. Wait for the export to finish
 
-- ✅ **无"Export"按钮显示**（Dropdown 条件渲染，requirements.zh.md line 492）
+**Expected results**:
 
-**断言类型**：UI 断言
+- ✅ The dropdown expands and lists the available external sources
+- ✅ A loading message is shown: "Processing..."
+- ✅ Once the export finishes, a success message is shown: "Skill exported successfully"
+- ✅ The loading message is hidden
+- ✅ **The My Skills list does not refresh** (the list has not changed, requirements.md § 2.1.1 line 58-59)
 
----
-
-### 2.5 URL 高亮定位
-
-#### TC-S-22：URL 参数高亮技能（成功场景）
-
-**覆盖需求**：requirements.zh.md § 2.8.1
-**优先级**：P1
-**前置条件**：
-
-- "我的技能"中存在 1 个技能 `E2E-Test-Highlight-Target`
-
-**测试步骤**：
-
-1. 导航到 `#/settings/skills?highlight=E2E-Test-Highlight-Target`
-2. 等待页面加载和滚动动画完成
-3. 检查目标技能卡片状态
-
-**预期结果**：
-
-- ✅ 页面自动滚动到目标卡片（`scrollIntoView`）
-- ✅ 目标卡片应用高亮样式：
-  - 边框：`border-primary-5`
-  - 背景：`bg-primary-1`
-- ✅ 2 秒后高亮样式消失
-- ✅ URL 中的 `?highlight` 参数被清除
-
-**断言类型**：UI 断言
-
-- 验证卡片 class 包含高亮样式
-- 等待 2 秒后验证高亮样式移除
-- 验证 URL 不再包含 `highlight` 参数
+**Assertion type**: UI assertion (E2E does not verify the files in the target directory)
 
 ---
 
-#### TC-S-23：URL 参数高亮技能（技能不存在场景）
+#### TC-S-20: Export a skill (target already exists scenario)
 
-**覆盖需求**：requirements.zh.md § 2.8.1
-**优先级**：P2
-**前置条件**：
+**Covers requirement**: requirements.md § 2.3.1
+**Priority**: P1
+**Preconditions**:
 
-- "我的技能"中不存在 `NonExistentSkill`
+- My Skills contains 1 skill, `E2E-Test-Export-Duplicate`
+- The external source `E2E Target Source` already contains a skill with the same name
 
-**测试步骤**：
+**Test steps**:
 
-1. 导航到 `#/settings/skills?highlight=NonExistentSkill`
-2. 等待页面加载完成
+1. Navigate to the Skills Hub page
+2. Locate the target skill card
+3. Click the "Export" button
+4. Pick the target source in the dropdown
+5. Wait for the export to finish
 
-**预期结果**：
+**Expected results**:
 
-- ✅ 无滚动动画触发
-- ✅ 无技能卡片应用高亮样式
-- ✅ URL 参数被清除（即使技能不存在）
+- ✅ An error message is shown: "Target already exists: /path/to/target"
+- ✅ The loading message is hidden
 
-**断言类型**：UI 断言
+**Assertion type**: UI assertion
 
 ---
 
-### 2.6 边界与异常场景
+#### TC-S-21: Export a skill (no external source scenario)
 
-#### TC-S-24：技能名称包含特殊字符（导入场景）
+**Covers requirement**: requirements.md § 2.3.1
+**Priority**: P2
+**Preconditions**:
 
-**覆盖需求**：requirements.zh.md § 5.1.4
-**优先级**：P2
-**前置条件**：
+- My Skills contains 1 skill
+- There are no external sources at all (`externalSources.length === 0`)
 
-- 创建技能名称包含特殊字符的测试技能：
+**Test steps**:
+
+1. Navigate to the Skills Hub page
+2. Locate the target skill card
+3. Hover over the card
+
+**Expected results**:
+
+- ✅ **No "Export" button is shown** (the dropdown is conditionally rendered, requirements.md line 492)
+
+**Assertion type**: UI assertion
+
+---
+
+### 2.5 URL-driven highlight
+
+#### TC-S-22: Highlight a skill via URL parameter (success scenario)
+
+**Covers requirement**: requirements.md § 2.8.1
+**Priority**: P1
+**Preconditions**:
+
+- My Skills contains 1 skill, `E2E-Test-Highlight-Target`
+
+**Test steps**:
+
+1. Navigate to `#/settings/skills?highlight=E2E-Test-Highlight-Target`
+2. Wait for the page to load and the scroll animation to finish
+3. Check the state of the target skill card
+
+**Expected results**:
+
+- ✅ The page scrolls to the target card automatically (`scrollIntoView`)
+- ✅ The target card gets the highlight styling:
+  - Border: `border-primary-5`
+  - Background: `bg-primary-1`
+- ✅ The highlight styling disappears after 2 seconds
+- ✅ The `?highlight` parameter is removed from the URL
+
+**Assertion type**: UI assertion
+
+- Verify the card's class list contains the highlight styling
+- Wait 2 seconds and verify the highlight styling has been removed
+- Verify the URL no longer contains the `highlight` parameter
+
+---
+
+#### TC-S-23: Highlight a skill via URL parameter (skill does not exist)
+
+**Covers requirement**: requirements.md § 2.8.1
+**Priority**: P2
+**Preconditions**:
+
+- `NonExistentSkill` is not present in My Skills
+
+**Test steps**:
+
+1. Navigate to `#/settings/skills?highlight=NonExistentSkill`
+2. Wait for the page to finish loading
+
+**Expected results**:
+
+- ✅ No scroll animation is triggered
+- ✅ No skill card gets the highlight styling
+- ✅ The URL parameter is removed (even though the skill does not exist)
+
+**Assertion type**: UI assertion
+
+---
+
+### 2.6 Boundary and error scenarios
+
+#### TC-S-24: Skill names containing special characters (import scenario)
+
+**Covers requirement**: requirements.md § 5.1.4
+**Priority**: P2
+**Preconditions**:
+
+- Create a test skill whose name contains special characters:
   ```markdown
   ---
   name: E2E:Test/Skill*Name
   ---
   ```
 
-**测试步骤**：
+**Test steps**:
 
-1. 通过 Bridge 导入该技能：
+1. Import the skill through the bridge:
    ```ts
    await invokeBridge(page, 'fs.importSkillWithSymlink', {
      skillPath: '/path/to/special-char-skill',
    });
    ```
-2. 检查导入结果
+2. Check the import result
 
-**预期结果**：
+**Expected results**:
 
-- ✅ 导入失败，显示错误提示（依赖文件系统报错）
-- 或
-- ✅ 导入成功，但 `data-testid` 中的特殊字符被转义为 `-`
+- ✅ The import fails and an error message is shown (relying on the file system error)
+- or
+- ✅ The import succeeds, but the special characters in the `data-testid` are escaped to `-`
 
-**已知限制**：
+**Known limitation**:
 
-- 当前实现无特殊字符过滤（requirements.zh.md § 5.1.4）
+- The current implementation does not filter special characters (requirements.md § 5.1.4)
 
-**断言类型**：混合断言
-
----
-
-#### TC-S-25：大规模技能列表渲染（性能场景）
-
-**覆盖需求**：requirements.zh.md § 5.5.1
-**优先级**：P3
-**前置条件**：
-
-- 通过 Bridge 批量创建 50 个测试技能
-
-**测试步骤**：
-
-1. 导航到 Skills Hub 页面
-2. 测量"我的技能"板块渲染时间
-3. 验证页面响应性
-
-**预期结果**：
-
-- ✅ 渲染时间 < 1 秒
-- ✅ 滚动流畅（无明显卡顿）
-- ✅ 搜索输入响应延迟 < 100ms
-
-**已知限制**：
-
-- 无虚拟滚动，建议技能数量 ≤ 100（requirements.zh.md § 5.5.1）
-
-**断言类型**：性能断言（使用 Playwright 的 performance API）
+**Assertion type**: mixed assertion
 
 ---
 
-#### TC-S-26：并发操作（连续快速刷新）
+#### TC-S-25: Rendering a large skills list (performance scenario)
 
-**覆盖需求**：requirements.zh.md § 5.4.1
-**优先级**：P2
-**前置条件**：
+**Covers requirement**: requirements.md § 5.5.1
+**Priority**: P3
+**Preconditions**:
 
-- "我的技能"中存在至少 1 个技能
+- Create 50 test skills in bulk through the bridge
 
-**测试步骤**：
+**Test steps**:
 
-1. 导航到 Skills Hub 页面
-2. 快速连续点击刷新按钮 3 次（间隔 < 100ms）
-3. 观察刷新行为
+1. Navigate to the Skills Hub page
+2. Measure the render time of the My Skills board
+3. Verify that the page stays responsive
 
-**预期结果**：
+**Expected results**:
 
-- ✅ 第二次和第三次点击被阻止（按钮禁用或无响应）
-- ✅ 仅触发 1 次刷新请求
-- ✅ 刷新完成后显示成功提示
+- ✅ Render time < 1 second
+- ✅ Scrolling is smooth (no noticeable stutter)
+- ✅ Search input response latency < 100ms
 
-**断言类型**：UI 断言
+**Known limitation**:
 
----
+- There is no virtual scrolling, so the recommended skill count is ≤ 100 (requirements.md § 5.5.1)
 
-#### TC-S-27：渲染扩展技能板块
-
-**覆盖需求**：requirements.zh.md § 2.1.3
-**优先级**：P1
-**前置条件**：
-
-- 无（不依赖实际扩展数据）
-
-**测试步骤**：
-
-1. 导航到 Skills Hub 页面
-2. 定位"扩展技能"板块容器（`extension-skills-section`）
-3. 验证板块标题显示"Extension Skills"
-4. 验证板块容器渲染正确
-
-**预期结果**：
-
-- ✅ 板块容器可见且结构正确
-- ✅ 板块标题显示"Extension Skills"
-- ✅ 如存在扩展技能，卡片应显示 Extension 标签和 Puzzle 图标（紫色）
-- ✅ 如无扩展技能，显示空状态或无卡片
-
-**断言类型**：UI 断言
-
-- UI：验证板块容器存在、标题正确、布局结构完整
+**Assertion type**: performance assertion (using Playwright's performance API)
 
 ---
 
-#### TC-S-28：渲染自动注入技能板块
+#### TC-S-26: Concurrent operations (rapid repeated refresh)
 
-**覆盖需求**：requirements.zh.md § 2.1.4
-**优先级**：P1
-**前置条件**：
+**Covers requirement**: requirements.md § 5.4.1
+**Priority**: P2
+**Preconditions**:
 
-- 无（不依赖 `_builtin/` 目录实际内容）
+- My Skills contains at least 1 skill
 
-**测试步骤**：
+**Test steps**:
 
-1. 导航到 Skills Hub 页面
-2. 定位"自动注入技能"板块容器（`auto-skills-section`）
-3. 验证板块标题显示"Auto-injected Skills"
-4. 验证板块容器渲染正确
+1. Navigate to the Skills Hub page
+2. Click the refresh button 3 times in quick succession (less than 100ms apart)
+3. Observe the refresh behaviour
 
-**预期结果**：
+**Expected results**:
 
-- ✅ 板块容器可见且结构正确
-- ✅ 板块标题显示"Auto-injected Skills"
-- ✅ 如存在自动注入技能，卡片应显示 Auto 标签和 Lightning 图标（绿色）
-- ✅ 如无自动注入技能，显示空状态或无卡片
+- ✅ The second and third clicks are blocked (the button is disabled or does not respond)
+- ✅ Only 1 refresh request is triggered
+- ✅ A success message is shown once the refresh completes
 
-**断言类型**：UI 断言 + Bridge 断言
-
-- UI：验证板块容器存在、标题正确、布局结构完整
-- Bridge：`invokeBridge('fs.listBuiltinAutoSkills')` 查询自动技能列表（可能为空）
+**Assertion type**: UI assertion
 
 ---
 
-#### TC-S-29：从文件夹导入技能（Mock 场景）
+#### TC-S-27: Render the Extension Skills board
 
-**覆盖需求**：requirements.zh.md § 2.2.1
-**优先级**：P1
-**前置条件**：
+**Covers requirement**: requirements.md § 2.1.3
+**Priority**: P1
+**Preconditions**:
 
-- 创建临时测试技能目录并生成 `SKILL.md`
-- Mock `dialog.showOpenDialog` 返回测试技能路径
+- None (does not depend on real extension data)
 
-**测试步骤**：
+**Test steps**:
 
-1. 导航到 Skills Hub 页面
-2. 在测试开始时注入 Mock：
+1. Navigate to the Skills Hub page
+2. Locate the Extension Skills board container (`extension-skills-section`)
+3. Verify the board title reads "Extension Skills"
+4. Verify the board container renders correctly
+
+**Expected results**:
+
+- ✅ The board container is visible and structured correctly
+- ✅ The board title reads "Extension Skills"
+- ✅ If extension skills exist, their cards show the Extension badge and the puzzle icon (purple)
+- ✅ If no extension skills exist, an empty state or no cards are shown
+
+**Assertion type**: UI assertion
+
+- UI: verify the board container exists, the title is correct, and the layout structure is complete
+
+---
+
+#### TC-S-28: Render the Auto-injected Skills board
+
+**Covers requirement**: requirements.md § 2.1.4
+**Priority**: P1
+**Preconditions**:
+
+- None (does not depend on the actual contents of the `_builtin/` directory)
+
+**Test steps**:
+
+1. Navigate to the Skills Hub page
+2. Locate the Auto-injected Skills board container (`auto-skills-section`)
+3. Verify the board title reads "Auto-injected Skills"
+4. Verify the board container renders correctly
+
+**Expected results**:
+
+- ✅ The board container is visible and structured correctly
+- ✅ The board title reads "Auto-injected Skills"
+- ✅ If auto-injected skills exist, their cards show the Auto badge and the lightning icon (green)
+- ✅ If no auto-injected skills exist, an empty state or no cards are shown
+
+**Assertion type**: UI assertion + bridge assertion
+
+- UI: verify the board container exists, the title is correct, and the layout structure is complete
+- Bridge: `invokeBridge('fs.listBuiltinAutoSkills')` queries the auto skills list (it may be empty)
+
+---
+
+#### TC-S-29: Import a skill from a folder (mocked scenario)
+
+**Covers requirement**: requirements.md § 2.2.1
+**Priority**: P1
+**Preconditions**:
+
+- Create a temporary test skill directory and generate its `SKILL.md`
+- Mock `dialog.showOpenDialog` so it returns the test skill path
+
+**Test steps**:
+
+1. Navigate to the Skills Hub page
+2. Inject the mock at the start of the test:
    ```ts
    await electronApp.evaluate(async ({ dialog }, targetPath) => {
      dialog.showOpenDialog = () =>
@@ -897,37 +897,37 @@
        });
    }, testSkillPath);
    ```
-3. 点击"Import from Folder"按钮（`btn-manual-import`）
-4. 等待导入完成
+3. Click the "Import from Folder" button (`btn-manual-import`)
+4. Wait for the import to finish
 
-**预期结果**：
+**Expected results**:
 
-- ✅ 显示成功提示 Message
-- ✅ 新技能卡片出现在"我的技能"列表
-- ✅ 卡片显示 Custom 标签
+- ✅ A success message is shown
+- ✅ The new skill card appears in the My Skills list
+- ✅ The card shows the Custom badge
 
-**断言类型**：混合断言
+**Assertion type**: mixed assertion
 
-- UI：验证成功 Message、卡片出现
-- Bridge：`invokeBridge('fs.listAvailableSkills')` 返回包含新导入技能
+- UI: verify the success message and that the card appears
+- Bridge: `invokeBridge('fs.listAvailableSkills')` returns the newly imported skill
 
 ---
 
-## 3. 数据构造策略
+## 3. Data Construction Strategy
 
-### 3.1 测试数据命名规范
+### 3.1 Test data naming convention
 
-所有测试数据使用 `E2E-Test-*` 前缀，便于识别和批量清理：
+All test data uses the `E2E-Test-*` prefix so it is easy to recognize and clean up in bulk:
 
-- 技能名称：`E2E-Test-{场景}-{描述}`
-- 外部源名称：`E2E Source {标识}`
-- 示例：`E2E-Test-Import-Single`, `E2E Source A`
+- Skill names: `E2E-Test-{scenario}-{description}`
+- External source names: `E2E Source {identifier}`
+- Examples: `E2E-Test-Import-Single`, `E2E Source A`
 
-### 3.2 测试前置（Setup）
+### 3.2 Test setup
 
-每个测试文件的 `beforeAll` 或 `beforeEach` 中：
+In each test file's `beforeAll` or `beforeEach`:
 
-1. **清理遗留数据**：
+1. **Clean up leftover data**:
 
    ```ts
    const skills = await invokeBridge(page, 'fs.listAvailableSkills');
@@ -938,21 +938,21 @@
    }
    ```
 
-2. **创建临时外部源**：
+2. **Create the temporary external source**:
    ```ts
    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-external-'));
-   // 添加测试技能...
+   // add the test skills...
    await invokeBridge(page, 'fs.addCustomExternalPath', {
      name: 'E2E Test Source',
      path: tempDir,
    });
    ```
 
-### 3.3 测试清理（Cleanup）
+### 3.3 Test cleanup
 
-每个测试文件的 `afterAll` 中：
+In each test file's `afterAll`:
 
-1. **删除测试技能**：
+1. **Delete the test skills**:
 
    ```ts
    const skills = await invokeBridge(page, 'fs.listAvailableSkills');
@@ -963,13 +963,13 @@
    }
    ```
 
-2. **清理临时目录**：
+2. **Remove the temporary directory**:
 
    ```ts
    fs.rmSync(tempDir, { recursive: true, force: true });
    ```
 
-3. **清理自定义外部路径**：
+3. **Remove the custom external paths**:
    ```ts
    const customPaths = await invokeBridge(page, 'fs.getCustomExternalPaths');
    for (const path of customPaths) {
@@ -981,95 +981,95 @@
 
 ---
 
-## 4. testid 补充需求
+## 4. testid Requirements
 
-### 4.1 必需 testid（P0 优先级）
+### 4.1 Mandatory testids (P0 priority)
 
-以下 testid 必须在源码中添加，否则测试用例无法执行：
+The following testids must be added to the source, otherwise the test cases cannot run:
 
-**我的技能板块**：
+**My Skills board**:
 
-- `my-skills-section`（板块容器）
-- `my-skill-card-${normalizedName}`（技能卡片，需转义）
-- `btn-delete-${normalizedName}`（删除按钮）
+- `my-skills-section` (board container)
+- `my-skill-card-${normalizedName}` (skill card, name must be escaped)
+- `btn-delete-${normalizedName}` (delete button)
 
-**发现外部技能板块**：
+**Discovered External Skills board**:
 
-- `external-skills-section`（板块容器）
-- `external-source-tab-${source}`（Tab 按钮）
-- `external-skill-card-${normalizedName}`（技能卡片）
-- `btn-import-${normalizedName}`（单项导入按钮）
-- `btn-import-all`（批量导入按钮）
+- `external-skills-section` (board container)
+- `external-source-tab-${source}` (tab button)
+- `external-skill-card-${normalizedName}` (skill card)
+- `btn-import-${normalizedName}` (single import button)
+- `btn-import-all` (batch import button)
 
-**自定义路径 Modal**：
+**Custom path modal**:
 
-- `btn-add-custom-source`（Plus 按钮）
-- `add-custom-path-modal`（Modal 容器）
-- `input-custom-path-name`（Name 输入框）
-- `input-custom-path-value`（Path 输入框）
+- `btn-add-custom-source` (plus button)
+- `add-custom-path-modal` (modal container)
+- `input-custom-path-name` (Name input)
+- `input-custom-path-value` (Path input)
 
-### 4.2 testid 转义规则
+### 4.2 testid escaping rule
 
-技能名称中的特殊字符需转义为 `-`：
+Special characters in skill names must be escaped to `-`:
 
 ```ts
 const normalizeTestId = (name: string) => name.replace(/[:\/\s<>"'|?*]/g, '-');
 ```
 
-**示例**：
+**Examples**:
 
-- 技能名称：`my:skill` → testid：`my-skill-card-my-skill`
-- 技能名称：`test/skill` → testid：`my-skill-card-test-skill`
+- Skill name `my:skill` → testid `my-skill-card-my-skill`
+- Skill name `test/skill` → testid `my-skill-card-test-skill`
 
 ---
 
-## 5. 测试执行策略
+## 5. Test Execution Strategy
 
-### 5.1 测试分组
+### 5.1 Test grouping
 
-建议按优先级分组执行：
+Grouping runs by priority is recommended:
 
 ```bash
-# P0 核心功能（每次提交）
+# P0 core functionality (every commit)
 npx playwright test --grep "@p0"
 
-# P1 重要功能（每日构建）
+# P1 important functionality (daily build)
 npx playwright test --grep "@p1"
 
-# P2-P3 边界场景（发布前）
+# P2-P3 edge scenarios (before a release)
 npx playwright test --grep "@p2|@p3"
 ```
 
-### 5.2 并行执行
+### 5.2 Parallel execution
 
-Skills 模块测试与 Assistant 模块测试是否可并行执行，需等待 engineer 调研结论（可能因 Electron 单实例冲突需串行）。
-
----
-
-## 6. 已知限制与注意事项
-
-### 6.1 UI 层未实现功能
-
-以下功能在需求文档中已标注为 UI 未实现，测试用例不覆盖：
-
-- 删除自定义外部路径（Bridge 已实现，UI 未调用）
-- Skills Market 集成（完全未实现）
-
-### 6.2 边界场景未处理
-
-以下边界场景当前实现未处理，测试用例需验证当前行为：
-
-- 技能名称包含特殊字符（依赖文件系统报错）
-- 搜索空结果歧义（无技能 vs 搜索无匹配，提示相同）
-
-### 6.3 性能限制
-
-- 单个板块建议技能数量 ≤ 100（无虚拟滚动）
-- 批量导入无 loading 状态、无进度反馈
-- 搜索无防抖（快速输入可能频繁触发计算）
+Whether the Skills module tests can run in parallel with the Assistant module tests is pending the engineer's investigation (they may have to run serially because of the Electron single-instance conflict).
 
 ---
 
-**文档状态**：✅ v1.3 定稿（29 个测试用例，所有用例无条件执行）
-**修订说明**：彻底移除所有 test.skip/限制措辞，TC-S-27/28/29 全部无条件断言容器存在
-**下一步**：通知 analyst、engineer、team-lead 最终复审 v1.3
+## 6. Known Limitations and Caveats
+
+### 6.1 Features not implemented in the UI
+
+The requirements document marks the following as not implemented in the UI, so the test cases do not cover them:
+
+- Removing a custom external path (implemented in the bridge, not called by the UI)
+- Skills Market integration (not implemented at all)
+
+### 6.2 Unhandled boundary scenarios
+
+The current implementation does not handle the following boundary scenarios; the test cases verify the current behaviour instead:
+
+- Skill names containing special characters (relies on the file system to raise the error)
+- Ambiguous empty search results (no skills vs. search with no match produce the same message)
+
+### 6.3 Performance limits
+
+- The recommended skill count per board is ≤ 100 (there is no virtual scrolling)
+- Batch import has no loading state and no progress feedback
+- Search is not debounced (typing quickly can trigger the computation repeatedly)
+
+---
+
+**Document status**: ✅ v1.3 final (29 test cases, all of them run unconditionally)
+**Revision notes**: all test.skip usage and hedging language has been removed; TC-S-27/28/29 now assert unconditionally that the containers exist
+**Next step**: notify the analyst, engineer, and team lead for the final re-review of v1.3

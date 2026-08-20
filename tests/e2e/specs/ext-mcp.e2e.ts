@@ -9,7 +9,7 @@ import { goToSettings, expectBodyContainsAny, takeScreenshot, waitForSettle, ARC
 test.describe('Extension: MCP Servers', () => {
   test('MCP tools page loads', async ({ page }) => {
     await goToSettings(page, 'capabilities');
-    await expectBodyContainsAny(page, ['MCP', 'mcp', 'Server', 'server', '工具', '配置', '添加', 'Add']);
+    await expectBodyContainsAny(page, ['MCP', 'mcp', 'Server', 'server', 'Add']);
   });
 
   test('extension MCP servers registered (page functional)', async ({ page }) => {

@@ -4,28 +4,28 @@
 import { test, expect } from '../../fixtures';
 import { cleanupTeamsByName, createTeam } from '../../helpers';
 
-// 三点菜单触发按钮
+// Kebab (three-dot) menu trigger button
 const MENU_TRIGGER = '[data-testid="sider-item-menu-trigger"]';
 
 /**
- * 在侧边栏找到指定 team，hover 后点三点菜单，再点指定菜单项
+ * Find the given team in the sidebar, hover it, open the three-dot menu, and click the named item.
  */
 async function clickTeamMenuItem(
   page: import('@playwright/test').Page,
   teamName: string,
   menuKey: string
 ): Promise<void> {
-  // 找到包含 team 名称的 SiderItem 行
+  // The SiderItem row that contains the team name
   const row = page.locator('.group').filter({ hasText: teamName }).first();
   await expect(row).toBeVisible({ timeout: 10_000 });
 
-  // hover 让三点菜单出现
+  // Hovering reveals the three-dot menu
   await row.hover();
   const trigger = row.locator(MENU_TRIGGER);
   await expect(trigger).toBeVisible({ timeout: 3_000 });
   await trigger.click();
 
-  // 等 dropdown 菜单弹出，点击对应 key 的 menu item（用文本匹配）
+  // Wait for the dropdown to open, then click the menu item matching the key by text
   const item = page
     .locator('.arco-dropdown-menu-item')
     .or(page.locator('.arco-menu-item'))
@@ -36,14 +36,14 @@ async function clickTeamMenuItem(
 }
 
 /**
- * 获取侧边栏 team 列表中所有 team 名称（按显示顺序）
+ * Collect every team name in the sidebar list, in display order.
  */
 async function getSidebarTeamNames(page: import('@playwright/test').Page): Promise<string[]> {
-  // 等 Teams section 加载
-  const section = page.locator('text=Teams').or(page.locator('text=团队'));
+  // Wait for the Teams section to load
+  const section = page.locator('text=Teams');
   await expect(section.first()).toBeVisible({ timeout: 10_000 });
 
-  // 每个 SiderItem 行里的名称文本
+  // The name text inside each SiderItem row
   const items = page.locator('.group .text-ellipsis span');
   const count = await items.count();
   const names: string[] = [];
@@ -60,7 +60,7 @@ test.describe('Team Rename & Pin', () => {
   const PIN_A = 'E2E-Pin-A';
   const PIN_B = 'E2E-Pin-B';
 
-  // 每次测试前清理可能残留的 team
+  // Clear any teams left behind by a previous run before each test
   test.beforeEach(async ({ page }) => {
     for (const name of [RENAME_ORIG, RENAME_NEW, PIN_A, PIN_B]) {
       await cleanupTeamsByName(page, name);
@@ -74,28 +74,28 @@ test.describe('Team Rename & Pin', () => {
   });
 
   test('rename team', async ({ page }) => {
-    // 1. 通过 UI 创建 team
+    // 1. Create the team through the UI
     await createTeam(page, RENAME_ORIG);
 
-    // 2. 侧边栏 → hover → 三点菜单 → rename
+    // 2. Sidebar -> hover -> three-dot menu -> rename
     await clickTeamMenuItem(page, RENAME_ORIG, 'rename');
 
-    // 3. rename modal 弹出，清空输入框并填入新名字
+    // 3. The rename modal opens: clear the input and type the new name
     const modal = page.locator('.arco-modal').last();
     await expect(modal).toBeVisible({ timeout: 5_000 });
     const input = modal.locator('input').first();
     await input.clear();
     await input.fill(RENAME_NEW);
 
-    // 4. 点确认
+    // 4. Confirm
     const okBtn = modal.locator('.arco-btn-primary');
     await expect(okBtn).toBeEnabled({ timeout: 3_000 });
     await okBtn.click();
 
-    // 等 modal 关闭
+    // Wait for the modal to close
     await expect(modal).toBeHidden({ timeout: 5_000 });
 
-    // 5. 验证侧边栏显示新名字，旧名字消失
+    // 5. The sidebar should show the new name and no longer show the old one
     const newName = page.locator('.group').filter({ hasText: RENAME_NEW });
     await expect(newName.first()).toBeVisible({ timeout: 10_000 });
     const oldName = page.locator('.group').filter({ hasText: RENAME_ORIG });
@@ -103,18 +103,18 @@ test.describe('Team Rename & Pin', () => {
   });
 
   test('pin/unpin team changes ordering', async ({ page }) => {
-    // 1. 创建两个 team，A 先创建排在前面
+    // 1. Create two teams; A is created first so it sorts ahead of B
     await createTeam(page, PIN_A);
-    // 回到首页避免阻塞第二次创建
+    // Return to the home route so the second creation is not blocked
     await page.goto(page.url().replace(/#.*/, '#/'), { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1_000);
     await createTeam(page, PIN_B);
 
-    // 回到首页让侧边栏完整渲染
+    // Return to the home route so the sidebar renders in full
     await page.goto(page.url().replace(/#.*/, '#/'), { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1_000);
 
-    // 确认初始顺序：A 在 B 前面
+    // Confirm the initial order: A before B
     let names = await getSidebarTeamNames(page);
     const idxA1 = names.indexOf(PIN_A);
     const idxB1 = names.indexOf(PIN_B);
@@ -122,7 +122,7 @@ test.describe('Team Rename & Pin', () => {
     expect(idxB1).toBeGreaterThanOrEqual(0);
     expect(idxA1).toBeLessThan(idxB1);
 
-    // 2. Pin B → B 应该排到 A 前面
+    // 2. Pin B -> B should move ahead of A
     await clickTeamMenuItem(page, PIN_B, 'pin');
     await page.waitForTimeout(500);
 
@@ -131,7 +131,7 @@ test.describe('Team Rename & Pin', () => {
     const idxB2 = names.indexOf(PIN_B);
     expect(idxB2).toBeLessThan(idxA2);
 
-    // 3. Unpin B → 恢复原顺序
+    // 3. Unpin B -> the original order is restored
     await clickTeamMenuItem(page, PIN_B, 'pin');
     await page.waitForTimeout(500);
 

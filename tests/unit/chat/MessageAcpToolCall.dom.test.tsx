@@ -283,7 +283,7 @@ describe('MessageAcpToolCall image output', () => {
       <MessageAcpToolCall
         message={createMessage({
           ...baseUpdate,
-          rawInput: { prompt: '一只小猫' },
+          rawInput: { prompt: 'a kitten' },
           content: [
             {
               type: 'content',
@@ -316,7 +316,7 @@ describe('MessageAcpToolCall image output', () => {
       />
     );
 
-    expect(screen.getByText(/"prompt": "一只小猫"/)).toBeInTheDocument();
+    expect(screen.getByText(/"prompt": "a kitten"/)).toBeInTheDocument();
     expect(screen.getByText('done')).toBeInTheDocument();
     expect(screen.getAllByTestId('file-changes-panel')).toHaveLength(2);
   });

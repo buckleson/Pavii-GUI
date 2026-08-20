@@ -400,7 +400,7 @@ describe('ScmPanel lifecycle (tab switch must not release the subscription)', ()
   });
 });
 
-describe('ScmPanel multi-repo (top list + click to switch, D2丙)', () => {
+describe('ScmPanel multi-repo (top list + click to switch, D2c)', () => {
   const twoRepos = (): PortSetup => ({
     repositories: [
       repo(),

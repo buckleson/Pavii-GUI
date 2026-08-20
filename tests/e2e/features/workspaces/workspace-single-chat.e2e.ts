@@ -91,17 +91,14 @@ test.describe('Workspace — single chat', () => {
     // Switch to Changes tab and back
     const changesTab = panel
       .locator('.arco-tabs-header-title')
-      .filter({ hasText: /Changes|更改/ })
+      .filter({ hasText: /Changes/ })
       .first();
     if (await changesTab.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await changesTab.click();
       await page.screenshot({ path: 'tests/e2e/results/ws-single-04-changes.png' });
     }
 
-    const filesTab = panel
-      .locator('.arco-tabs-header-title')
-      .filter({ hasText: /Files|文件/ })
-      .first();
+    const filesTab = panel.locator('.arco-tabs-header-title').filter({ hasText: /Files/ }).first();
     if (await filesTab.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await filesTab.click();
       await expect(panel.getByText('readme.md').first()).toBeVisible({ timeout: 5_000 });

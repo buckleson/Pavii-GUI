@@ -175,7 +175,7 @@ describe('agentLogo', () => {
       expect(isDefaultModel(null, 'recommended model')).toBe(true);
     });
 
-    it('returns true when text contains 默认', () => {
+    it('returns true when text contains the Chinese word for "default"', () => {
       expect(isDefaultModel('', '默认模型')).toBe(true);
     });
 

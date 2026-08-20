@@ -55,8 +55,8 @@ test.describe('Team Assistant Leader Options', () => {
     const modal = page.locator('.team-create-modal');
     await expect(modal).toBeVisible({ timeout: 5000 });
     const allOptions = modal.locator('[data-testid^="team-create-agent-option-"]');
-    const emptyState = modal.getByText(/No supported assistants available|未检测到可用的助手|没有支持的助手/i);
-    const noSearchResults = modal.getByText(/No results found|未找到结果/i);
+    const emptyState = modal.getByText(/No supported assistants available/i);
+    const noSearchResults = modal.getByText(/No results found/i);
     await expect
       .poll(
         async () => {

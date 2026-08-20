@@ -21,8 +21,8 @@ test.describe('Agent Diagnostics', () => {
   test('agent settings page has management UI', async ({ page }) => {
     await goToSettings(page, 'agent');
     await expectUrlContains(page, 'agent');
-    await expectBodyContainsAny(page, ['Agent', 'agent', '助手', '预设', 'Preset', 'Custom', 'Assistants']);
-    await expect(page.getByRole('button', { name: /Test Connection|测试连接/ }).first()).toBeVisible({
+    await expectBodyContainsAny(page, ['Agent', 'agent', 'Preset', 'Custom', 'Assistants']);
+    await expect(page.getByRole('button', { name: /Test Connection/ }).first()).toBeVisible({
       timeout: 8_000,
     });
   });
@@ -50,7 +50,7 @@ test.describe('Agent Diagnostics', () => {
     await goToSettings(page, 'capabilities');
     await expectUrlContains(page, 'capabilities');
     await expect(page.locator(settingsSiderItemById('capabilities')).first()).toBeVisible({ timeout: 8_000 });
-    await expectBodyContainsAny(page, ['MCP', 'mcp', 'Server', 'server', '工具', '配置', '添加', 'Add']);
+    await expectBodyContainsAny(page, ['MCP', 'mcp', 'Server', 'server', 'Add']);
   });
 
   test('can query available agents via IPC', async ({ page, electronApp }) => {

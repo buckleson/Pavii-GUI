@@ -5,23 +5,6 @@
  */
 
 /**
- * 回归测试：单目标 CDP 通道的会话路由契约。
- *
- * 覆盖两个互相独立、但都会让「立刻失败」变成「挂死到超时」的缺陷：
- *
- *  1. attachedToTarget 重复宣布（真正根因）。setAutoAttach 与 attachToTarget 都补发这个
- *     事件，而 puppeteer 收到时无条件 `#sessions.set(id, new CdpCDPSession(...))`，
- *     不检查是否已存在 —— 第二次宣布把会话对象换成带空 CallbackRegistry 的新对象，
- *     调用方手里的 handle 随即成为孤儿。
- *
- *  2. 回包漏掉 sessionId。puppeteer 按 sessionId 路由回包：漏掉就投给 Connection 级
- *     registry，而页面级命令的 callback 只登记在 session 级 registry 里。
- *
- * 两者的终局一样：CallbackRegistry 查不到 id 就静默 return，Promise 永不 settle，
- * 最后以「Network.enable timed out. Increase the 'protocolTimeout' setting」浮现 ——
- * 一条指向超时设置的假线索，真实原因被完全吞掉。所以必须用测试钉住，人工 review
- * 很难发现：成功路径与 catch 路径都是对的，漏的只是这两处细节。
- *
  * Regression tests for the single-target CDP bridge's session-routing contract, covering two
  * independent defects that both turn an immediate failure into a hang:
  *
@@ -63,9 +46,6 @@ describe('cdpTargetProtocol — session routing contract', () => {
 
   it('backfills attachedToTarget only for browser-level setAutoAttach', () => {
     /**
-     * 带 sessionId 的那次必须只回空 ack：puppeteer 收到 attachedToTarget 后会为新 session
-     * 再发一次 setAutoAttach，如果每次都补发就会无限递归，连接永远初始化不完。
-     *
      * The call carrying a sessionId must be a bare ack: puppeteer re-issues setAutoAttach on
      * each new session, so backfilling every time recurses forever and initialisation hangs.
      */
@@ -93,9 +73,6 @@ describe('cdpTargetProtocol — session routing contract', () => {
 
   it('refuses commands it cannot honour instead of pretending they worked', () => {
     /**
-     * createTarget 假装成功会让 Agent 以为开了新页面，实际还在原页面上操作 ——
-     * 比直接失败更难查。
-     *
      * Faking createTarget success would leave the agent driving the old page while believing
      * it had a new one — harder to diagnose than an explicit failure.
      */
@@ -127,14 +104,6 @@ describe('cdpTargetProtocol — session routing contract', () => {
 });
 
 /**
- * 复刻 handleSocketMessage 的事件外发逻辑，钉住「同一 sessionId 只宣布一次」。
- *
- * 这是本次故障的真正根因：setAutoAttach 与 attachToTarget 都会补发 attachedToTarget，
- * 而 puppeteer 收到该事件时无条件 `#sessions.set(sessionId, new CdpCDPSession(...))`，
- * 不检查是否已存在。于是第二次宣布把会话对象换成一个带空 CallbackRegistry 的新对象，
- * 调用方手里的旧 handle 就成了孤儿 —— 它发出的命令 id 登记在旧 registry，回包按
- * sessionId 路由进新 registry，查无此 id，静默丢弃，Promise 永不 settle。
- *
  * Pins "announce each sessionId at most once" — the actual root cause. Both setAutoAttach and
  * attachToTarget backfill attachedToTarget, and puppeteer unconditionally does
  * `#sessions.set(sessionId, new CdpCDPSession(...))` without checking for an existing entry. The
@@ -182,9 +151,6 @@ describe('cdpBridge attachedToTarget — announce once per session', () => {
 
   it('still announces on a fresh connection, which has its own empty set', () => {
     /**
-     * 新连接的 puppeteer 手上没有任何会话对象，必须收到 attachedToTarget 才能建立；
-     * 所以这个集合必须是每连接一份，不能跨连接共享。
-     *
      * A newly connected puppeteer holds no session objects and needs the event to build them,
      * so the set must be per-connection rather than shared.
      */
@@ -197,11 +163,6 @@ describe('cdpBridge attachedToTarget — announce once per session', () => {
 });
 
 /**
- * 复刻 cdpBridge.handleSocketMessage 的回包组装，验证 sessionId 一定被回填。
- *
- * 不直接 import cdpBridge：它顶层就 import electron 和 ws，在单测环境里拉不起来。
- * 这里镜像那段序列化逻辑，断言的是「回包形状」这个契约本身。
- *
  * Mirrors cdpBridge.handleSocketMessage's reply assembly to assert the sessionId is echoed.
  * cdpBridge itself is not imported: it pulls in electron and ws at module scope, which will
  * not load under the unit-test environment. The contract under test is the reply shape.
@@ -217,9 +178,6 @@ describe('cdpBridge reply shape — sessionId must be echoed', () => {
 
   it('omits sessionId for browser-level commands', () => {
     /**
-     * 浏览器级命令本来就不该带 sessionId：带上会让 puppeteer 去找一个不存在的 session。
-     * JSON.stringify 会丢掉 undefined 字段，正好得到期望的形状。
-     *
      * Browser-level commands must not carry one, or puppeteer would look up a session that
      * does not exist. JSON.stringify drops undefined fields, giving exactly that shape.
      */

@@ -65,7 +65,7 @@ test.describe('Assistant Settings Skills / MCP', () => {
     await fillAssistantName(page, `MCP Options ${Date.now()}`);
 
     await openSelect(page, 'select-assistant-default-mcp');
-    await expect(page.getByRole('button', { name: /Remember last used automatically|自动记住上次/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Remember last used automatically/i })).toBeVisible();
     await page.keyboard.press('Escape');
 
     await closeAssistantEditor(page);
@@ -77,7 +77,7 @@ test.describe('Assistant Settings Skills / MCP', () => {
     let builtinId: string | null = null;
     for (const id of await getVisibleAssistantIds(page)) {
       const cardText = await page.locator(`[data-testid="assistant-card-${id}"]`).textContent();
-      if (cardText?.match(/Official|官方/)) {
+      if (cardText?.match(/Official/)) {
         builtinId = id;
         break;
       }
@@ -92,8 +92,8 @@ test.describe('Assistant Settings Skills / MCP', () => {
 
     await expect(page.locator('[data-testid="select-assistant-default-skills"]')).toHaveCount(0);
     await expect(page.locator('[data-testid="select-assistant-default-mcp"]')).toHaveCount(0);
-    await expect(page.locator('[data-testid="assistant-card-defaults"]')).toContainText(/Default Skills|默认技能/);
-    await expect(page.locator('[data-testid="assistant-card-defaults"]')).toContainText(/Default MCP|默认 MCP/);
+    await expect(page.locator('[data-testid="assistant-card-defaults"]')).toContainText(/Default Skills/);
+    await expect(page.locator('[data-testid="assistant-card-defaults"]')).toContainText(/Default MCP/);
 
     await closeAssistantEditor(page);
   });
@@ -119,7 +119,7 @@ test.describe('Assistant Settings Skills / MCP', () => {
     const selectedSummary = (
       (await page.locator('[data-testid="select-assistant-default-skills"]').textContent()) ?? ''
     ).trim();
-    expect(selectedSummary).not.toMatch(/Not configured|暂不设置/i);
+    expect(selectedSummary).not.toMatch(/Not configured/i);
     expect(selectedSummary).not.toBe(firstOptionText);
 
     await saveAssistant(page);
