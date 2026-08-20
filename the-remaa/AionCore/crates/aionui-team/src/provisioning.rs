@@ -30,6 +30,19 @@ pub struct TeamAgentProvisioner {
     capability_port: Arc<dyn TeamToolCapabilityPort>,
 }
 
+/// The backend the team's lead agent runs on, if the team has one.
+///
+/// Used as the substitute backend for a teammate whose own backend cannot run
+/// (see `TeamAgentProvisioner::resolve_runnable_backend`). The lead is the
+/// right choice because it is already running: whatever it needs — an
+/// installed CLI, valid auth — is demonstrably present for this user.
+fn lead_backend(team: &Team) -> Option<String> {
+    team.agents
+        .iter()
+        .find(|agent| agent.role == TeammateRole::Lead)
+        .map(|agent| agent.backend.clone())
+}
+
 pub(crate) struct InitialProvisioningResult {
     pub agents: Vec<TeamAgent>,
     pub lead_agent_id: Option<String>,
@@ -39,6 +52,15 @@ pub(crate) struct InitialProvisioningResult {
 struct ProvisionedConversation {
     conversation_id: String,
     workspace: Option<String>,
+    /// The backend the conversation was actually created on.
+    ///
+    /// Not always the requested one: `resolve_runnable_backend` substitutes the
+    /// leader's backend when the requested one needs an unconfigured model
+    /// provider. The caller must record THIS on the `TeamAgent` row, because
+    /// `attach_agent_process` resolves the tool transport from `agent.backend`
+    /// — a row that disagreed with its conversation would pick the wrong
+    /// transport on every later attach.
+    backend: String,
 }
 
 struct NewAgentProvisioning {
@@ -52,6 +74,9 @@ struct NewAgentProvisioning {
     assistant_id: Option<String>,
     workspace: Option<String>,
     session_mode: Option<String>,
+    /// The team leader's backend, used when this teammate's own backend needs a
+    /// model provider that is not configured. See `resolve_runnable_backend`.
+    fallback_backend: Option<String>,
 }
 
 pub(crate) struct PersistSpawnedAgentRequest {
@@ -286,6 +311,9 @@ impl TeamAgentProvisioner {
                 shared_workspace,
                 None,
                 Some(&leader_mcp_selection),
+                // The leader has no fallback: it defines the backend the
+                // teammates fall back TO.
+                None,
             )
             .await?;
 
@@ -308,7 +336,7 @@ impl TeamAgentProvisioner {
             name: leader_input.name.clone(),
             role: leader_role,
             conversation_id: leader_conversation.conversation_id,
-            backend: leader_backend,
+            backend: leader_conversation.backend,
             model: leader_input.model.clone(),
             assistant_id: leader_assistant_id,
             status: None,
@@ -342,6 +370,7 @@ impl TeamAgentProvisioner {
                     Some(&team_workspace),
                     None,
                     Some(&mcp_selection),
+                    Some(leader_backend.as_str()),
                 )
                 .await?;
             agents.push(TeamAgent {
@@ -349,7 +378,7 @@ impl TeamAgentProvisioner {
                 name: input.name.clone(),
                 role: *role,
                 conversation_id: conversation.conversation_id,
-                backend,
+                backend: conversation.backend,
                 model: input.model.clone(),
                 assistant_id,
                 status: None,
@@ -412,6 +441,7 @@ impl TeamAgentProvisioner {
                     assistant_id,
                     workspace: Some(workspace),
                     session_mode: row.session_mode.clone(),
+                    fallback_backend: lead_backend(team),
                 },
                 Some(&mcp_selection),
             )
@@ -472,6 +502,7 @@ impl TeamAgentProvisioner {
                     assistant_id: req.assistant_id,
                     workspace: Some(workspace),
                     session_mode: row.session_mode.clone(),
+                    fallback_backend: lead_backend(&team),
                 },
                 Some(&mcp_selection),
             )
@@ -714,6 +745,7 @@ impl TeamAgentProvisioner {
                 input.workspace.as_deref(),
                 input.session_mode.as_deref(),
                 mcp_selection,
+                input.fallback_backend.as_deref(),
             )
             .await?;
         Ok(TeamAgent {
@@ -721,7 +753,7 @@ impl TeamAgentProvisioner {
             name: input.name,
             role: input.role,
             conversation_id: conversation.conversation_id,
-            backend: input.backend,
+            backend: conversation.backend,
             model: input.model,
             assistant_id: input.assistant_id,
             status: None,
@@ -744,7 +776,14 @@ impl TeamAgentProvisioner {
         workspace: Option<&str>,
         session_mode: Option<&str>,
         mcp_selection: Option<&TeamMcpSelection>,
+        fallback_backend: Option<&str>,
     ) -> Result<ProvisionedConversation, TeamError> {
+        // Resolve first: everything below (agent_type, extra, provider_id) is
+        // derived from the backend, so substituting it afterwards would leave
+        // the conversation internally inconsistent.
+        let backend = &self
+            .resolve_runnable_backend(user_id, backend, model, fallback_backend, slot_id)
+            .await?;
         let cli_metadata = cli_backend_metadata(&self.agent_metadata_repo, user_id, backend).await?;
         let agent_type = agent_type_for_backend(cli_metadata.as_ref(), backend)?;
         let extra = self.build_team_extra(
@@ -761,9 +800,16 @@ impl TeamAgentProvisioner {
             mcp_selection,
         );
         let provider_id = if agent_type == AgentType::Aionrs {
-            self.resolve_provider_for_model(user_id, model)
-                .await
-                .unwrap_or_else(|| backend.to_owned())
+            // `resolve_runnable_backend` above already established that a
+            // provider serves this model, so a miss here means the providers
+            // table changed underneath us. Fail loudly instead of falling back
+            // to the backend slug: that slug is not a provider id, and storing
+            // it is what produced `Provider 'aionrs' not found`.
+            self.resolve_provider_for_model(user_id, model).await.ok_or_else(|| {
+                TeamError::InvalidRequest(format!(
+                    "No enabled model provider serves '{model}'. Add one in Settings > Models."
+                ))
+            })?
         } else {
             backend.to_owned()
         };
@@ -795,6 +841,7 @@ impl TeamAgentProvisioner {
             .await?;
         let conv_id = created.conversation_id;
         let resolved_workspace = created.workspace;
+        let effective_backend = backend.clone();
         info!(
             team_id,
             slot_id,
@@ -805,6 +852,7 @@ impl TeamAgentProvisioner {
         Ok(ProvisionedConversation {
             conversation_id: conv_id,
             workspace: Some(resolved_workspace),
+            backend: effective_backend,
         })
     }
 
@@ -943,6 +991,88 @@ impl TeamAgentProvisioner {
             }
         }
         None
+    }
+
+    /// The backend this agent can actually run on.
+    ///
+    /// An `aionrs` agent talks to a model provider over HTTP, so it is only
+    /// runnable when some enabled provider lists its model. A CLI backend
+    /// (`codex`, `claude`, …) never consults the providers table at all.
+    ///
+    /// Previously an unresolvable provider was papered over: the caller stored
+    /// the backend slug itself as `provider_id`, so `find_by_id(user,
+    /// "aionrs")` failed at every warm-up with `Provider 'aionrs' not found`.
+    /// The member was created, looked normal, and could never start — the UI
+    /// showed only "This assistant failed to start", and Retry re-read the same
+    /// frozen row, so it failed identically forever.
+    ///
+    /// The same vendor-label mistake is already guarded on the conversation
+    /// side; see `interactive_and_cron_paths_agree_on_provider_id` in
+    /// `aionui-conversation/src/task_options.rs`, whose comment names this
+    /// exact error string. The Team path simply was not covered by it.
+    ///
+    /// `fallback_backend` is the team leader's backend. It is a safe substitute
+    /// precisely because the leader is already running on it, so it is known to
+    /// exist and to be usable by this user on this machine.
+    async fn resolve_runnable_backend(
+        &self,
+        user_id: &str,
+        backend: &str,
+        model: &str,
+        fallback_backend: Option<&str>,
+        slot_id: &str,
+    ) -> Result<String, TeamError> {
+        let cli_metadata = cli_backend_metadata(&self.agent_metadata_repo, user_id, backend).await?;
+        if agent_type_for_backend(cli_metadata.as_ref(), backend)? != AgentType::Aionrs {
+            return Ok(backend.to_owned());
+        }
+        if self.resolve_provider_for_model(user_id, model).await.is_some() {
+            return Ok(backend.to_owned());
+        }
+
+        // No provider serves this model. Move the agent onto the leader's
+        // backend rather than persisting an agent that cannot start.
+        if let Some(fallback) = fallback_backend
+            .map(str::trim)
+            .filter(|value| !value.is_empty() && *value != backend)
+        {
+            // Deliberately not `?`. `agent_type_for_backend` rejects a
+            // deprecated slug that has no `agent_metadata` row, and a fallback
+            // we cannot type is simply a fallback we cannot use — it must not
+            // abort the whole resolution and mask the real, actionable error
+            // below.
+            let fallback_metadata = cli_backend_metadata(&self.agent_metadata_repo, user_id, fallback)
+                .await
+                .unwrap_or(None);
+            match agent_type_for_backend(fallback_metadata.as_ref(), fallback) {
+                Ok(fallback_type) if fallback_type != AgentType::Aionrs => {
+                    warn!(
+                        slot_id,
+                        requested_backend = backend,
+                        fallback_backend = fallback,
+                        model,
+                        "no enabled provider serves this model; running the teammate on the team leader's backend"
+                    );
+                    return Ok(fallback.to_owned());
+                }
+                Ok(_) => {
+                    // An aionrs fallback has the same unmet requirement.
+                }
+                Err(error) => {
+                    warn!(
+                        slot_id,
+                        fallback_backend = fallback,
+                        %error,
+                        "team leader's backend is not usable as a fallback"
+                    );
+                }
+            }
+        }
+
+        Err(TeamError::InvalidRequest(format!(
+            "No model provider is configured for '{model}', and no CLI agent is available to run this teammate on. \
+             Add a provider in Settings > Models, or choose a teammate assistant backed by an installed CLI agent."
+        )))
     }
 }
 
@@ -1199,7 +1329,61 @@ mod tests {
         }
     }
 
-    struct UnusedAgentMetadataRepo;
+    /// Agent-metadata double.
+    ///
+    /// Empty by default. Seed it when a test needs a backend to be typed the
+    /// way an installed CLI actually is: `codex` and `gemini` are deprecated
+    /// `AgentType` slugs, so with no row `agent_type_for_backend` refuses them
+    /// outright — which is correct, and is why the fallback path must tolerate
+    /// that refusal rather than propagate it.
+    #[derive(Default)]
+    struct UnusedAgentMetadataRepo {
+        rows: Vec<AgentMetadataRow>,
+    }
+
+    /// The row shape an installed ACP CLI has: backend slug, filed as `acp`.
+    fn cli_metadata_row(backend: &str) -> AgentMetadataRow {
+        AgentMetadataRow {
+            id: format!("agent-{backend}"),
+            user_id: None,
+            icon: None,
+            name: format!("{backend} agent"),
+            name_i18n: None,
+            description: None,
+            description_i18n: None,
+            backend: Some(backend.to_owned()),
+            agent_type: AgentType::Acp.serde_name().to_owned(),
+            agent_source: "builtin".to_owned(),
+            agent_source_info: None,
+            enabled: true,
+            command: None,
+            args: None,
+            env: None,
+            native_skills_dirs: None,
+            behavior_policy: None,
+            yolo_id: None,
+            agent_capabilities: None,
+            auth_methods: None,
+            config_options: None,
+            available_modes: None,
+            available_models: None,
+            available_commands: None,
+            sort_order: 0,
+            last_check_status: None,
+            last_check_kind: None,
+            last_check_error_code: None,
+            last_check_error_message: None,
+            last_check_guidance: None,
+            last_check_latency_ms: None,
+            last_check_at: None,
+            last_success_at: None,
+            last_failure_at: None,
+            command_override: None,
+            env_override: None,
+            created_at: 0,
+            updated_at: 0,
+        }
+    }
 
     struct EmptyTeamAssistantCatalog;
 
@@ -1216,7 +1400,7 @@ mod tests {
     #[async_trait]
     impl IAgentMetadataRepository for UnusedAgentMetadataRepo {
         async fn list_all(&self) -> Result<Vec<AgentMetadataRow>, DbError> {
-            Ok(Vec::new())
+            Ok(self.rows.clone())
         }
         async fn list_all_for_user(&self, _user_id: &str) -> Result<Vec<AgentMetadataRow>, DbError> {
             self.list_all().await
@@ -1412,7 +1596,7 @@ mod tests {
     ) -> TeamAgentProvisioner {
         TeamAgentProvisioner::new(
             Arc::new(crate::test_utils::MockTeamRepo::new()),
-            Arc::new(UnusedAgentMetadataRepo),
+            Arc::new(UnusedAgentMetadataRepo::default()),
             Arc::new(EmptyTeamAssistantCatalog),
             Arc::new(EmptyProviderRepo),
             Arc::new(RecordingProvisioningPort {
@@ -1871,5 +2055,133 @@ mod tests {
         assert_eq!(patch["mcp_servers"], serde_json::json!([]));
         assert_eq!(patch["mcp_statuses"], serde_json::json!([]));
         assert_eq!(patch["assistant_mcp_fingerprint"], "[]");
+    }
+
+    // ── The vendor-label regression ──────────────────────────────────────────
+    //
+    // An `aionrs` agent resolves its model over HTTP against the providers
+    // table. When no enabled provider served the model, this module used to
+    // persist the backend slug itself as `provider_id`, so every warm-up died
+    // with `Provider 'aionrs' not found` — 90 times in one session on the
+    // report that prompted these tests. The member existed, looked normal, and
+    // could never start; Retry re-read the same frozen row and failed
+    // identically.
+    //
+    // `interactive_and_cron_paths_agree_on_provider_id` in
+    // aionui-conversation/src/task_options.rs guards the same mistake on the
+    // conversation side and names this exact error string. The Team path was
+    // never covered by it. These are that guard, for this path.
+
+    /// A provisioner whose agent-metadata table knows about the given CLI
+    /// backends, the way it does once those CLIs are installed.
+    fn test_provisioner_with_cli_backends(backends: &[&str]) -> TeamAgentProvisioner {
+        TeamAgentProvisioner::new(
+            Arc::new(crate::test_utils::MockTeamRepo::new()),
+            Arc::new(UnusedAgentMetadataRepo {
+                rows: backends.iter().map(|backend| cli_metadata_row(backend)).collect(),
+            }),
+            Arc::new(EmptyTeamAssistantCatalog),
+            Arc::new(EmptyProviderRepo),
+            Arc::new(RecordingProvisioningPort {
+                events: Arc::new(Mutex::new(Vec::new())),
+                patches: Arc::new(Mutex::new(Vec::new())),
+                mcp_snapshot: None,
+                mcp_error: None,
+                persisted_extra: Arc::new(Mutex::new(serde_json::json!({}))),
+            }),
+            Arc::new(TestCapabilityPort),
+        )
+    }
+
+    #[tokio::test]
+    async fn aionrs_teammate_without_a_provider_falls_back_to_the_leader_backend() {
+        // The exact reported shape: a codex leader, an aionrs teammate carrying
+        // the leader's codex model, and an empty providers table.
+        let provisioner = test_provisioner_with_cli_backends(&["codex"]);
+
+        let resolved = provisioner
+            .resolve_runnable_backend("user-test", "aionrs", "gpt-5.3-codex-spark", Some("codex"), "slot-1")
+            .await
+            .expect("a teammate must be runnable when the leader's backend is available");
+
+        assert_eq!(
+            resolved, "codex",
+            "an aionrs teammate with no provider must move onto the leader's CLI backend"
+        );
+        assert_ne!(
+            resolved, "aionrs",
+            "the vendor label must never survive as the runnable backend"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_fallback_backend_with_no_metadata_row_does_not_mask_the_real_error() {
+        // `codex` is a deprecated AgentType slug, so with no agent_metadata row
+        // `agent_type_for_backend` refuses it. That refusal must not escape as
+        // the user-facing error — it means "this fallback is unusable", and the
+        // actionable provider message is what the user needs to see.
+        let provisioner = test_provisioner(Arc::new(Mutex::new(Vec::new())));
+
+        let error = provisioner
+            .resolve_runnable_backend("user-test", "aionrs", "gpt-5.3-codex-spark", Some("codex"), "slot-1")
+            .await
+            .expect_err("no provider and no usable fallback must fail");
+
+        let message = error.to_string();
+        assert!(
+            message.contains("No model provider is configured"),
+            "expected the actionable provider error, got: {message}"
+        );
+        assert!(
+            !message.contains("no longer supported"),
+            "the fallback's typing failure must not surface to the user: {message}"
+        );
+    }
+
+    #[tokio::test]
+    async fn aionrs_teammate_without_a_provider_or_fallback_is_refused_at_creation() {
+        let provisioner = test_provisioner(Arc::new(Mutex::new(Vec::new())));
+
+        let error = provisioner
+            .resolve_runnable_backend("user-test", "aionrs", "gpt-5.3-codex-spark", None, "slot-1")
+            .await
+            .expect_err("creating an agent that cannot start must fail, not succeed silently");
+
+        // Refusing at creation is the whole point: the alternative is a member
+        // that exists, reports "failed to start", and never recovers.
+        let message = error.to_string();
+        assert!(
+            message.contains("Settings > Models"),
+            "the error must tell the user how to fix it, got: {message}"
+        );
+    }
+
+    #[tokio::test]
+    async fn an_aionrs_fallback_is_not_accepted_as_a_substitute() {
+        let provisioner = test_provisioner(Arc::new(Mutex::new(Vec::new())));
+
+        // A leader that is itself aionrs cannot rescue an aionrs teammate —
+        // it has the same unmet provider requirement.
+        let error = provisioner
+            .resolve_runnable_backend("user-test", "aionrs", "some-model", Some("aionrs"), "slot-1")
+            .await
+            .expect_err("an aionrs fallback does not make the teammate runnable");
+
+        assert!(error.to_string().contains("No model provider is configured"));
+    }
+
+    #[tokio::test]
+    async fn a_cli_backend_never_consults_the_providers_table() {
+        let provisioner = test_provisioner_with_cli_backends(&["codex", "claude"]);
+
+        // codex talks to a local CLI; an empty providers table is irrelevant to
+        // it, and it must not be diverted or refused because of one.
+        for backend in ["codex", "claude"] {
+            let resolved = provisioner
+                .resolve_runnable_backend("user-test", backend, "any-model", Some("codex"), "slot-1")
+                .await
+                .unwrap_or_else(|e| panic!("{backend} must resolve unchanged, got: {e}"));
+            assert_eq!(resolved, backend);
+        }
     }
 }

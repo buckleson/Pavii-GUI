@@ -1644,16 +1644,47 @@ pub(crate) mod workspace_harness {
         }
     }
 
+    /// Provider repo for the team test harness.
+    ///
+    /// Deliberately NOT empty. An `aionrs` agent resolves its model against
+    /// this table, so with no rows it is not creatable at all — provisioning
+    /// now refuses rather than persisting the backend slug as a provider id,
+    /// which is what produced `Provider 'aionrs' not found` at every warm-up.
+    /// The fixtures that build aionrs teammates therefore need a provider that
+    /// serves their models, exactly as a real installation does.
     struct EmptyProviderRepo;
+
+    fn fixture_provider() -> aionui_db::models::Provider {
+        aionui_db::models::Provider {
+            id: "provider-test".to_owned(),
+            user_id: "user-test".to_owned(),
+            platform: "openai".to_owned(),
+            name: "Test Provider".to_owned(),
+            base_url: "https://example.invalid/v1".to_owned(),
+            api_key_encrypted: String::new(),
+            models: serde_json::json!(["claude", "claude-sonnet"]).to_string(),
+            enabled: true,
+            capabilities: "{}".to_owned(),
+            context_limit: None,
+            model_protocols: None,
+            model_enabled: None,
+            model_health: None,
+            model_settings: "{}".to_owned(),
+            bedrock_config: None,
+            is_full_url: false,
+            created_at: 0,
+            updated_at: 0,
+        }
+    }
 
     #[async_trait]
     impl IProviderRepository for EmptyProviderRepo {
         async fn list(&self, _user_id: &str) -> Result<Vec<aionui_db::models::Provider>, DbError> {
-            Ok(vec![])
+            Ok(vec![fixture_provider()])
         }
 
-        async fn find_by_id(&self, _user_id: &str, _id: &str) -> Result<Option<aionui_db::models::Provider>, DbError> {
-            Ok(None)
+        async fn find_by_id(&self, _user_id: &str, id: &str) -> Result<Option<aionui_db::models::Provider>, DbError> {
+            Ok((id == "provider-test").then(fixture_provider))
         }
 
         async fn create(
