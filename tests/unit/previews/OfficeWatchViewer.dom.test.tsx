@@ -17,41 +17,48 @@
  * is recorded in N4c-final.md Deviations.
  */
 
-import { afterEach, beforeEach, describe, it, expect } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, it, expect } from 'vitest';
 
-// The first import of this viewer resolves a large dependency graph. In
-// isolation it takes a couple of seconds; under the full concurrent suite that
-// cold resolve has exceeded the default 10s timeout and failed the run. The
-// later tests reuse the module cache, so only this first one needs headroom.
-const IMPORT_TIMEOUT_MS = 30000;
+/**
+ * This viewer resolves a large dependency graph, and importing it is exactly
+ * what these assertions check, so the cost cannot be mocked away.
+ *
+ * It is paid once in the hook below rather than inside each test. In isolation
+ * the file runs in about 10s; under the full concurrent suite the cold resolve
+ * has repeatedly blown a 30s per-test budget while passing alone in seconds.
+ */
+const IMPORT_TIMEOUT_MS = 120000;
+
+type OfficeWatchViewerModule = {
+  default: (...args: unknown[]) => unknown;
+  OFFICECLI_INSTALL_URL: string;
+};
+
+let viewer: OfficeWatchViewerModule;
+
+beforeAll(async () => {
+  viewer =
+    (await import('@/renderer/pages/conversation/Preview/components/viewers/OfficeWatchViewer')) as unknown as OfficeWatchViewerModule;
+}, IMPORT_TIMEOUT_MS);
 
 describe('OfficeWatchViewer module shape', () => {
-  it(
-    'module loads and exposes a default export',
-    async () => {
-      const mod = await import('@/renderer/pages/conversation/Preview/components/viewers/OfficeWatchViewer');
-      expect(mod).toBeDefined();
-      expect(mod.default).toBeDefined();
-    },
-    IMPORT_TIMEOUT_MS
-  );
-
-  it('default export is a function (React component)', async () => {
-    const mod = await import('@/renderer/pages/conversation/Preview/components/viewers/OfficeWatchViewer');
-    expect(typeof mod.default).toBe('function');
+  it('module loads and exposes a default export', () => {
+    expect(viewer).toBeDefined();
+    expect(viewer.default).toBeDefined();
   });
 
-  it('module exports object has no thrown side effects during import', async () => {
-    // Importing the module a second time should use the cached copy and not throw.
-    const mod = await import('@/renderer/pages/conversation/Preview/components/viewers/OfficeWatchViewer');
-    expect(mod.default).toBeDefined();
+  it('default export is a function (React component)', () => {
+    expect(typeof viewer.default).toBe('function');
+  });
+
+  it('module exports object has no thrown side effects during import', () => {
+    expect(viewer.default).toBeDefined();
     // Component functions in React typically have at most one required argument (props).
-    expect((mod.default as { length: number }).length).toBeLessThanOrEqual(2);
+    expect((viewer.default as unknown as { length: number }).length).toBeLessThanOrEqual(2);
   });
 
-  it('uses official iOfficeAI OfficeCLI releases page', async () => {
-    const mod = await import('@/renderer/pages/conversation/Preview/components/viewers/OfficeWatchViewer');
-    expect(mod.OFFICECLI_INSTALL_URL).toBe('https://github.com/iOfficeAI/OfficeCLI/releases');
+  it('uses official iOfficeAI OfficeCLI releases page', () => {
+    expect(viewer.OFFICECLI_INSTALL_URL).toBe('https://github.com/iOfficeAI/OfficeCLI/releases');
   });
 });
 
