@@ -136,6 +136,11 @@ build/
 out/
 out-fast-builds/
 
+# out/ backups taken by tests/unit/bootstrap/buildWithBuilder.test.ts. A run that
+# dies before its restore step leaves one behind, and it is large enough (GBs of
+# bundled JS) to swamp lint with errors from minified vendor code.
+/.tmp-out-backup-*/
+
 # Keep extension example dist (pre-built distributable assets)
 !examples/**/dist/
 .webpack/
@@ -206,11 +211,6 @@ resources/bundled-bun
 resources/bundled-paviicore
 resources/hub
 /resources/windows/support/_sentry-dsn.generated.nsh
-
-# out/ backups taken by tests/unit/bootstrap/buildWithBuilder.test.ts. A run that
-# dies before its restore step leaves one behind, and it is large enough (GBs of
-# bundled JS) to swamp lint with errors from minified vendor code.
-/.tmp-out-backup-*/
 
 # Server build output
 dist-server/
