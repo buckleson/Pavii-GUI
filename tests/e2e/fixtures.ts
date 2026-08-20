@@ -37,6 +37,34 @@ const e2eStateFile = path.join(e2eStateSandboxDir, 'extension-states.json');
 // touching the developer's real database (a shared DB that fails migration
 // blocks the whole app from booting). Consumed by configureChromium.ts.
 const e2eUserDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aionui-e2e-userdata-'));
+
+/**
+ * Seed a signed-in account into the disposable profile.
+ *
+ * `PaviiSignInGate` renders a full-screen `fixed inset-0 z-1000` overlay for as
+ * long as the stored session is absent. Playwright still reports the elements
+ * underneath as visible — occlusion is not invisibility — so assertion-only
+ * tests pass while every test that clicks fails with "intercepts pointer
+ * events", which reads as a broken feature rather than a missing login.
+ *
+ * `readStoredSession` (packages/desktop/src/process/services/paviiAuth.ts) takes
+ * any `pavii-account.json` with a non-empty uid, and `getConfigPath()` resolves
+ * to `<userData>/config`, which E2E has already pointed at this sandbox. Writing
+ * the file exercises the real signed-in path rather than special-casing the gate
+ * for tests.
+ */
+function seedSignedInSession(userDataDir: string): void {
+  const configDir = path.join(userDataDir, 'config');
+  fs.mkdirSync(configDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(configDir, 'pavii-account.json'),
+    JSON.stringify({ uid: 'e2e-user', email: 'e2e@pavii.test', name: 'E2E User', signedInAt: 0 }, null, 2),
+    'utf-8'
+  );
+}
+
+seedSignedInSession(e2eUserDataDir);
+
 const rendererDiagnostics = new WeakMap<Page, RendererDiagnostic[]>();
 
 function isDevToolsWindow(page: Page): boolean {
