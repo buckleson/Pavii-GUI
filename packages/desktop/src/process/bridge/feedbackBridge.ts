@@ -12,6 +12,7 @@
 import { ipcMain, app, BrowserWindow } from 'electron';
 import * as path from 'path';
 import { collectFeedbackLogAttachment } from '../feedback/logs';
+import { collectIssueEnvironment, deliverIssueReport, type IssueAttachment } from '../feedback/issueDelivery';
 
 type RendererFeedbackLogPayload = {
   details?: unknown;
@@ -96,3 +97,22 @@ ipcMain.handle('feedback:capture-screenshot', async (event) => {
     return null;
   }
 });
+
+ipcMain.handle('feedback:issue-environment', () => collectIssueEnvironment());
+
+ipcMain.handle(
+  'feedback:submit-issue',
+  async (_event, payload: { attachments?: IssueAttachment[]; body?: unknown; title?: unknown }) => {
+    const title = typeof payload?.title === 'string' ? payload.title : '';
+    const body = typeof payload?.body === 'string' ? payload.body : '';
+    if (!title || !body) {
+      throw new Error('Issue report requires a title and a body');
+    }
+
+    return deliverIssueReport({
+      title,
+      body,
+      attachments: Array.isArray(payload?.attachments) ? payload.attachments : [],
+    });
+  }
+);

@@ -1,9 +1,9 @@
 import type { FeedbackDiagnosticsContextInput } from '@/common/types/feedbackDiagnostics';
 import { httpRequest } from '@/common/adapter/httpBridge';
+import type { IssueReportResult } from '@/common/types/platform/electron';
+import { logFeedbackReport } from './feedbackLog';
+import { submitIssueReport } from './submitIssueReport';
 
-const SUMMARY_PREVIEW_LENGTH = 60;
-const LOG_PREFIX = '[FeedbackReport]';
-type FeedbackLogLevel = 'info' | 'warn' | 'error';
 type FeedbackLogAttachmentStatus = 'collected' | 'empty' | 'failed' | 'skipped' | 'unavailable';
 type FeedbackDbDiagnosticsAttachmentStatus = 'collected' | 'empty' | 'failed' | 'skipped' | 'unavailable';
 type FeedbackDiagnosticsAttachmentPayload = {
@@ -81,39 +81,6 @@ function summarizeDbDiagnosticsAttachment(
     filename: attachment.filename,
     size: attachment.data.byteLength,
   };
-}
-
-function normalizeLogDetails(details: unknown): unknown {
-  if (details instanceof Error) {
-    return {
-      name: details.name,
-      message: details.message,
-      stack: details.stack,
-    };
-  }
-  return details;
-}
-
-export function logFeedbackReport(level: FeedbackLogLevel, message: string, details?: unknown): void {
-  const normalizedDetails = normalizeLogDetails(details);
-  const consoleMessage = `${LOG_PREFIX} ${message}`;
-  if (level === 'error') {
-    console.error(consoleMessage, normalizedDetails);
-  } else if (level === 'warn') {
-    console.warn(consoleMessage, normalizedDetails);
-  } else {
-    console.info(consoleMessage, normalizedDetails);
-  }
-
-  try {
-    window.electronAPI?.logFeedbackEvent?.({
-      level,
-      message,
-      details: normalizedDetails,
-    });
-  } catch {
-    // Renderer console logging above is the fallback.
-  }
 }
 
 async function collectLogAttachment(): Promise<{
@@ -228,17 +195,9 @@ function normalizeDescription(description: string): string {
   return description.trim().replace(/\s+/g, ' ');
 }
 
-function buildSummary(moduleLabel: string, description: string): string {
-  const summaryPreview =
-    description.length > SUMMARY_PREVIEW_LENGTH
-      ? `${description.slice(0, SUMMARY_PREVIEW_LENGTH).trimEnd()}...`
-      : description;
-  return `${moduleLabel}: ${summaryPreview}`;
-}
-
-export async function submitFeedbackReport(input: SubmitFeedbackReportInput): Promise<void> {
+export async function submitFeedbackReport(input: SubmitFeedbackReportInput): Promise<IssueReportResult> {
   const attachments = [...(input.attachments ?? [])];
-  let eventId: string | undefined;
+  let result: IssueReportResult;
   let logAttachmentStatus: FeedbackLogAttachmentStatus = input.collectLogs ? 'empty' : 'skipped';
   let logAttachment: FeedbackAttachment | null = null;
   let dbDiagnosticsAttachmentStatus: FeedbackDbDiagnosticsAttachmentStatus = input.collectDbDiagnostics
@@ -266,66 +225,46 @@ export async function submitFeedbackReport(input: SubmitFeedbackReportInput): Pr
     }
 
     const normalizedDescription = normalizeDescription(input.description);
-    const eventSummary = buildSummary(input.moduleLabel, normalizedDescription);
-    const Sentry = await import('@sentry/electron/renderer');
+    const extraLines = Object.entries({ ...input.tags, ...input.extra })
+      .filter(([, value]) => value !== undefined && value !== null && String(value).trim())
+      .map(([key, value]) => `- **${key}**: ${String(value)}`);
+    const description = extraLines.length
+      ? `${normalizedDescription}\n\n<details><summary>Context</summary>\n\n${extraLines.join('\n')}\n\n</details>`
+      : normalizedDescription;
 
-    Sentry.withScope((scope) => {
-      scope.setTag('type', 'user-feedback');
-      scope.setTag('module', input.module);
-      Object.entries(input.tags ?? {}).forEach(([key, value]) => {
-        if (value.trim()) {
-          scope.setTag(key, value);
-        }
-      });
-
-      eventId = Sentry.captureEvent(
-        {
-          level: 'info',
-          message: eventSummary,
-          extra: {
-            description: normalizedDescription,
-            ...input.extra,
-          },
-        },
-        { attachments }
-      );
+    result = await submitIssueReport({
+      attachments,
+      description,
+      module: input.module,
+      moduleLabel: input.moduleLabel,
     });
-
-    if (input.flushTimeoutMs !== undefined) {
-      const client = Sentry.getClient();
-      if (!client) {
-        throw new Error(`Failed to flush feedback report${eventId ? ` (${eventId})` : ''}: Sentry is not initialized`);
-      }
-
-      const flushed = await client.flush(input.flushTimeoutMs);
-      if (!flushed) {
-        throw new Error(`Failed to flush feedback report${eventId ? ` (${eventId})` : ''}`);
-      }
-    }
 
     logFeedbackReport('info', 'submitted', {
       module: input.module,
-      eventId,
+      mode: result.mode,
+      issueUrl: result.issueUrl,
+      bundleDir: result.bundleDir,
       collectLogs: Boolean(input.collectLogs),
       logAttachment: summarizeLogAttachment(logAttachmentStatus, logAttachment),
       dbDiagnosticsAttachment: summarizeDbDiagnosticsAttachment(dbDiagnosticsAttachmentStatus, dbDiagnosticsAttachment),
       attachmentCount: attachments.length,
       attachments: summarizeAttachments(attachments),
-      flushTimeoutMs: input.flushTimeoutMs,
       tagKeys: Object.keys(input.tags ?? {}),
     });
+
+    return result;
   } catch (error) {
     logFeedbackReport('error', 'failed', {
       module: input.module,
-      eventId,
       collectLogs: Boolean(input.collectLogs),
       logAttachment: summarizeLogAttachment(logAttachmentStatus, logAttachment),
       dbDiagnosticsAttachment: summarizeDbDiagnosticsAttachment(dbDiagnosticsAttachmentStatus, dbDiagnosticsAttachment),
       attachmentCount: attachments.length,
       attachments: summarizeAttachments(attachments),
-      flushTimeoutMs: input.flushTimeoutMs,
       error,
     });
     throw error;
   }
 }
+
+export { logFeedbackReport } from './feedbackLog';
