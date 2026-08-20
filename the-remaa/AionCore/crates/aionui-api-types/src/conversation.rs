@@ -372,6 +372,18 @@ pub struct ActiveCountResponse {
     pub count: usize,
 }
 
+/// Response for `POST /api/conversations/cancel-all`.
+///
+/// `cancelled` counts conversations whose active turn accepted a cancel;
+/// `failed` counts those whose cancel errored (each is logged with its id).
+/// The sum can be less than the active count when turns finished on their own
+/// between listing and cancelling.
+#[derive(Debug, Serialize)]
+pub struct CancelAllConversationsResponse {
+    pub cancelled: usize,
+    pub failed: usize,
+}
+
 /// Artifact kind discriminant for conversation-bound UI artifacts.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]

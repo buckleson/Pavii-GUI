@@ -300,12 +300,17 @@ const Layout: React.FC<{
       void navigate('/settings/about');
     };
 
-    // Handle pause all tasks request from tray / 托盘请求暂停所有任务
+    // Tray asked to pause all tasks: cancel every owned conversation's active
+    // turn through the engine, then surface the result where task status lives.
     const handlePauseAllTasks = async () => {
-      const result = await ipcBridge.task.stopAll.invoke();
-      if (result?.success) {
-        // Navigate to settings page to show task status
+      try {
+        const result = await ipcBridge.task.stopAll.invoke();
+        console.log(`[tray] pause-all: cancelled=${result.cancelled} failed=${result.failed}`);
         void navigate('/settings/system');
+      } catch (error) {
+        // The request itself failed (engine down, network): nothing was
+        // cancelled, so do not navigate as if something happened.
+        console.error('[tray] pause-all request failed:', error);
       }
     };
 

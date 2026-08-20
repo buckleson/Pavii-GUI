@@ -7,7 +7,8 @@ use axum::http::StatusCode;
 use axum::routing::{get, patch, post};
 
 use aionui_api_types::{
-    ActiveCountResponse, ApiResponse, ApprovalCheckQuery, ApprovalCheckResponse, CancelConversationRequest,
+    ActiveCountResponse, ApiResponse, ApprovalCheckQuery, ApprovalCheckResponse, CancelAllConversationsResponse,
+    CancelConversationRequest,
     CancelConversationResponse, CloneConversationRequest, ConfirmRequest, ConfirmationListResponse,
     ConversationArtifactListResponse, ConversationArtifactResponse, ConversationListResponse, ConversationResponse,
     CreateConversationRequest, EnsureConversationRuntimeResponse, ForkConversationRequest, ListConversationsQuery,
@@ -139,6 +140,7 @@ pub fn conversation_routes(state: ConversationRouterState) -> Router {
         .route("/api/conversations/{id}/asks/{requestId}/answer", post(answer_ask))
         .route("/api/conversations/{id}/approvals/check", get(check_approval))
         .route("/api/conversations/active-count", get(active_count))
+        .route("/api/conversations/cancel-all", post(cancel_all))
         .route("/api/conversations/clone", post(clone))
         .route("/api/messages/search", get(search_messages))
         .with_state(state)
@@ -528,6 +530,19 @@ async fn active_count(
 ) -> Result<Json<ApiResponse<ActiveCountResponse>>, ApiError> {
     let count = state.service.active_count_for_user(&user.id).await?;
     Ok(Json(ApiResponse::ok(ActiveCountResponse { count })))
+}
+
+/// Cancel the active turn of every conversation the user owns (tray "Pause All").
+async fn cancel_all(
+    State(state): State<ConversationRouterState>,
+    Extension(user): Extension<CurrentUser>,
+) -> Result<Json<ApiResponse<CancelAllConversationsResponse>>, ApiError> {
+    let response = state
+        .service
+        .cancel_all_for_user(&user.id, &state.task_manager)
+        .await
+        .map_err(ApiError::from)?;
+    Ok(Json(ApiResponse::ok(response)))
 }
 
 #[cfg(test)]

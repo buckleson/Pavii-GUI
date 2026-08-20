@@ -4536,6 +4536,112 @@ async fn active_count_for_user_counts_only_owned_active_tasks() {
 }
 
 #[tokio::test]
+async fn cancel_all_cancels_only_owned_active_turns() {
+    let task_mgr = Arc::new(MockTaskManager::new());
+    let task_mgr_dyn: Arc<dyn IWorkerTaskManager> = task_mgr.clone();
+    let (svc, _broadcaster, _repo) = make_service_with_mock_task_manager(task_mgr.clone());
+
+    let user_1_conv = svc.create("user_1", make_create_req()).await.unwrap();
+    let user_2_conv = svc.create("user_2", make_create_req()).await.unwrap();
+    let agent_1 = Arc::new(BlockingCancelAgent::new(&user_1_conv.id));
+    let agent_2 = Arc::new(BlockingCancelAgent::new(&user_2_conv.id));
+    task_mgr.insert_agent(&user_1_conv.id, AgentInstance::Mock(agent_1.clone()));
+    task_mgr.insert_agent(&user_2_conv.id, AgentInstance::Mock(agent_2.clone()));
+
+    svc.send_message("user_1", &user_1_conv.id, make_send_req(), &task_mgr_dyn)
+        .await
+        .unwrap();
+    agent_1.wait_until_send_started().await;
+    svc.send_message("user_2", &user_2_conv.id, make_send_req(), &task_mgr_dyn)
+        .await
+        .unwrap();
+    agent_2.wait_until_send_started().await;
+
+    let response = svc.cancel_all_for_user("user_1", &task_mgr_dyn).await.unwrap();
+
+    assert_eq!(response.cancelled, 1);
+    assert_eq!(response.failed, 0);
+    // Only user_1's conversation entered the cancelling flow.
+    assert!(svc.runtime_state().is_cancelling(&user_1_conv.id));
+    assert!(!svc.runtime_state().is_cancelling(&user_2_conv.id));
+    assert!(svc.runtime_state().is_claimed(&user_2_conv.id));
+
+    agent_1.release_finish();
+    agent_2.release_finish();
+    wait_for_turn_released(&svc, &user_1_conv.id).await;
+    wait_for_turn_released(&svc, &user_2_conv.id).await;
+}
+
+#[tokio::test]
+async fn cancel_all_with_no_active_conversations_reports_zero() {
+    let task_mgr = Arc::new(MockTaskManager::new());
+    let task_mgr_dyn: Arc<dyn IWorkerTaskManager> = task_mgr.clone();
+    let (svc, _broadcaster, _repo) = make_service_with_mock_task_manager(task_mgr.clone());
+
+    let _conv = svc.create("user_1", make_create_req()).await.unwrap();
+
+    let response = svc.cancel_all_for_user("user_1", &task_mgr_dyn).await.unwrap();
+
+    assert_eq!(response.cancelled, 0);
+    assert_eq!(response.failed, 0);
+}
+
+#[tokio::test]
+async fn cancel_all_skips_active_task_without_live_turn() {
+    let task_mgr = Arc::new(MockTaskManager::new());
+    let task_mgr_dyn: Arc<dyn IWorkerTaskManager> = task_mgr.clone();
+    let (svc, _broadcaster, _repo) = make_service_with_mock_task_manager(task_mgr.clone());
+
+    // Agent registered (task is "active") but no message sent, so no turn is
+    // claimed. There is nothing to cancel and nothing to invent.
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    task_mgr.insert_agent(&conv.id, AgentInstance::Mock(Arc::new(MockAgent::new(&conv.id))));
+
+    let response = svc.cancel_all_for_user("user_1", &task_mgr_dyn).await.unwrap();
+
+    assert_eq!(response.cancelled, 0);
+    assert_eq!(response.failed, 0);
+    assert!(!svc.runtime_state().is_cancelling(&conv.id));
+}
+
+#[tokio::test]
+async fn cancel_all_continues_past_a_failing_cancel() {
+    let task_mgr = Arc::new(MockTaskManager::new());
+    let task_mgr_dyn: Arc<dyn IWorkerTaskManager> = task_mgr.clone();
+    let (svc, _broadcaster, _repo) = make_service_with_mock_task_manager(task_mgr.clone());
+
+    let conv_ok = svc.create("user_1", make_create_req()).await.unwrap();
+    let conv_bad = svc.create("user_1", make_create_req()).await.unwrap();
+    let agent_ok = Arc::new(BlockingCancelAgent::new(&conv_ok.id));
+    let agent_bad = Arc::new(BlockingCancelAgent::new_with_cancel_error(&conv_bad.id));
+    task_mgr.insert_agent(&conv_ok.id, AgentInstance::Mock(agent_ok.clone()));
+    task_mgr.insert_agent(&conv_bad.id, AgentInstance::Mock(agent_bad.clone()));
+
+    svc.send_message("user_1", &conv_ok.id, make_send_req(), &task_mgr_dyn)
+        .await
+        .unwrap();
+    agent_ok.wait_until_send_started().await;
+    svc.send_message("user_1", &conv_bad.id, make_send_req(), &task_mgr_dyn)
+        .await
+        .unwrap();
+    agent_bad.wait_until_send_started().await;
+
+    let response = svc.cancel_all_for_user("user_1", &task_mgr_dyn).await.unwrap();
+
+    // One wedged agent is counted as failed and must not stop the other.
+    assert_eq!(response.cancelled, 1);
+    assert_eq!(response.failed, 1);
+    assert!(svc.runtime_state().is_cancelling(&conv_ok.id));
+    // The failing cancel's cancelling flag is rolled back by cancel() itself.
+    assert!(!svc.runtime_state().is_cancelling(&conv_bad.id));
+
+    agent_ok.release_finish();
+    agent_bad.release_finish();
+    wait_for_turn_released(&svc, &conv_ok.id).await;
+    wait_for_turn_released(&svc, &conv_bad.id).await;
+}
+
+#[tokio::test]
 async fn terminate_runtime_for_user_kills_only_owned_active_tasks() {
     let task_mgr = Arc::new(MockTaskManager::new());
     let (svc, _broadcaster, _repo) = make_service_with_mock_task_manager(task_mgr.clone());

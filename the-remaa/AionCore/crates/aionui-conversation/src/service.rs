@@ -17,7 +17,8 @@ use crate::runtime_state::ConversationRuntimeStateService;
 use aionui_api_types::ChatFileRef;
 use aionui_api_types::{
     ASSISTANT_MCP_BINDING_CHANGED_EVENT, ApprovalCheckResponse, AssistantConversationOverridesRequest,
-    AssistantMcpBindingChanged, CancelConversationResponse, CloneConversationRequest, ConfirmRequest,
+    AssistantMcpBindingChanged, CancelAllConversationsResponse, CancelConversationResponse, CloneConversationRequest,
+    ConfirmRequest,
     ConfirmationListResponse, ConversationArtifactKind, ConversationArtifactListResponse, ConversationArtifactResponse,
     ConversationArtifactStatus, ConversationListResponse, ConversationMcpStatus, ConversationMcpStatusKind,
     ConversationNameUpdatedPayload, ConversationResponse, ConversationRuntimeSummary, CreateConversationRequest,
@@ -796,6 +797,60 @@ impl ConversationService {
             }
         }
         Ok(count)
+    }
+
+    /// Cancel the active turn of every conversation the user owns.
+    ///
+    /// Backs the tray's "Pause All". Each conversation goes through the same
+    /// graceful [`Self::cancel`] flow as a per-conversation stop — including
+    /// the deferred-cancel path for agents still building and the cancel
+    /// watchdog — NOT [`Self::terminate_runtime_for_user`]'s hard
+    /// `kill_and_wait`, which exists for session revocation and would strand
+    /// mid-turn state.
+    ///
+    /// One wedged agent must not stop the rest from cancelling, so per-
+    /// conversation errors are logged and counted in `failed` rather than
+    /// short-circuiting. A conversation whose turn ended between listing and
+    /// cancelling counts as cancelled: `cancel` treats a stale turn id as a
+    /// no-op success, which is exactly what "pause everything" wants.
+    pub async fn cancel_all_for_user(
+        &self,
+        user_id: &str,
+        task_manager: &Arc<dyn IWorkerTaskManager>,
+    ) -> Result<CancelAllConversationsResponse, ConversationError> {
+        let mut cancelled = 0;
+        let mut failed = 0;
+        for conversation_id in self.task_manager.active_conversation_ids() {
+            let belongs_to_user = self
+                .conversation_repo
+                .get(user_id, &conversation_id)
+                .await
+                .map_err(|e| ConversationError::internal(format!("Failed to load conversation: {e}")))?
+                .is_some();
+            if !belongs_to_user {
+                continue;
+            }
+
+            // No live turn: the task is active (e.g. still starting up) but has
+            // nothing to cancel yet. Skip rather than invent a turn id.
+            let Some(turn_id) = self.runtime_state.active_turn_id_for(&conversation_id) else {
+                continue;
+            };
+
+            match self.cancel(user_id, &conversation_id, &turn_id, task_manager).await {
+                Ok(_) => cancelled += 1,
+                Err(error) => {
+                    failed += 1;
+                    warn!(
+                        conversation_id,
+                        turn_id,
+                        error = %error,
+                        "cancel-all: conversation failed to cancel; continuing with the rest"
+                    );
+                }
+            }
+        }
+        Ok(CancelAllConversationsResponse { cancelled, failed })
     }
 
     pub async fn terminate_runtime_for_user(&self, user_id: &str) -> Result<usize, ConversationError> {

@@ -215,15 +215,12 @@ describe('stubbed bridge calls', () => {
    *   list (`useModelProviderList.ts`). Unreachable rather than wrong.
    * - `task.getRunningCount` has no callers. The tray's count comes from
    *   `conversation.activeCount`, which is a real endpoint.
-   * - `task.stopAll` IS reached from the UI: the tray's "Pause All" item sends
-   *   `tray:pause-all-tasks`, `Layout.tsx` invokes this, and the stub answers
-   *   `{ success: true, count: 0 }` — so the app navigates to settings as if it
-   *   worked while every task keeps running. Stopping for real needs a turn_id
-   *   per conversation (`POST /api/conversations/{id}/cancel`) and the engine
-   *   exposes only `active-count`, not a list, so this needs a decision rather
-   *   than a quiet patch.
+   *
+   * `task.stopAll` used to be here — a stub reporting success from the tray's
+   * "Pause All" while cancelling nothing. It is now a real call to
+   * `POST /api/conversations/cancel-all`, enforced by the route check above.
    */
-  const KNOWN_STUBS = ['googleAuth.status', 'task.getRunningCount', 'task.stopAll'];
+  const KNOWN_STUBS = ['googleAuth.status', 'task.getRunningCount'];
 
   it('only the recorded calls are stubbed', () => {
     const text = readFileSync(bridgePath, 'utf-8');

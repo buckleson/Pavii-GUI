@@ -1485,7 +1485,12 @@ export const notification = {
 // ---------------------------------------------------------------------------
 
 export const task = {
-  stopAll: stubProvider<{ success: boolean; count: number }, void>('task.stopAll', { success: true, count: 0 }),
+  /**
+   * Cancel the active turn of every conversation the user owns (tray "Pause
+   * All"). Each conversation goes through the engine's graceful cancel flow;
+   * `failed` counts conversations whose cancel errored, logged engine-side.
+   */
+  stopAll: httpPost<{ cancelled: number; failed: number }, void>('/api/conversations/cancel-all'),
   getRunningCount: stubProvider<{ success: boolean; count: number }, void>('task.getRunningCount', {
     success: true,
     count: 0,
