@@ -39,6 +39,22 @@
 - Affects: `packages/desktop/src/common/adapter/ipcBridge.ts`
 - Evidence: `packages/desktop/src/common/utils/assistantBranding.ts`, `tests/unit/common/assistantBranding.test.ts`
 
+### Automatic third-party tool installs are removed, not gated
+
+- Status: accepted
+- Decision: Opening an Office document no longer installs `officecli`. The engine's installer and its version-check-then-reinstall path are deleted, `OfficeError::OfficecliNotFound` propagates to the UI, and the eleven builtin `SKILL.md` files that told the agent to run the vendor install script now tell it to hand the command to the user instead. Displayed commands point at the project repository, never `d.officecli.ai`.
+- Rationale: The upstream flow ran `irm https://d.officecli.ai/install.ps1 | iex` unprompted, which is third-party remote code execution triggered by opening a file, and disclosed install IP/timing/version to the vendor CDN. Fixing only the Rust path would have left the skill instructions as an equivalent route through the model.
+- Affects: `the-remaa/AionCore/crates/aionui-office/src/officecli_runtime.rs`
+- Evidence: `docs/agent-context/privacy-audit.md`, `the-remaa/AionCore/crates/aionui-office/tests/watch_manager_integration.rs`
+
+### CJK punctuation is inside the language gate
+
+- Status: accepted
+- Decision: `scripts/check-language.js` covers U+3000-U+303F (CJK Symbols and Punctuation) alongside the ideograph and kana blocks, and runs as a blocking step in the justfile `check`/`push` recipes and in CI.
+- Rationale: The range table began at U+3040, so the ideographic comma and full stop were never checked. Three list joins shipped U+3001 into English tooltips and several comment fragments truncated at a full-width full stop went unreported, because a string reads as English right up to its separator.
+- Affects: `scripts/check-language.js`
+- Evidence: `tests/unit/scripts/checkLanguage.test.ts`
+
 ### Chinese-ecosystem channels removed from the UI; backend rows filtered
 
 - Status: accepted
@@ -78,6 +94,14 @@
 - Rationale: Product requirement that every install ships OpenCode; the engine discovers agents via the inherited PATH.
 - Affects: `packages/desktop/src/index.ts`
 - Evidence: `packages/desktop/src/process/startup/ensureOpencode.ts`, `tests/unit/process/startup/ensureOpencode.test.ts`
+
+### Issue reports leave through the reporter, not the app
+
+- Status: accepted
+- Decision: Report Issue opens a prefilled GitHub issue form in the user's own browser. `PAVII_ISSUE_PROXY_URL` may point at the Cloudflare Worker in `services/issue-proxy/` for reporters without a GitHub account; it is unset by default, and no token ships in the app.
+- Rationale: The previous path called `Sentry.captureEvent`, and Sentry builds with an empty DSN, so every report was discarded or threw at the flush while the button looked functional. Routing through the browser means nothing leaves the machine without the user seeing it; a token embedded in a public desktop build would be extractable.
+- Affects: `packages/desktop/src/process/feedback/issueDelivery.ts`
+- Evidence: `tests/unit/feedback/issueReport.test.ts`
 
 ### Palette light on Violet Bloom, dark on Vercel
 
@@ -182,6 +206,14 @@
 - Rationale: Identity must hold for every process the OS surfaces separately; the engine is a top-level process, not an Electron child, so packaging metadata never reaches it.
 - Affects: `packages/desktop/electron-builder.yml`
 - Evidence: `tests/unit/bootstrap/osIdentityConfig.test.ts`, `tests/unit/process/startup/windowsAppUserModelId.test.ts`
+
+### The hub catalog is branded on the way to the screen
+
+- Status: accepted
+- Decision: `useHubAgents` runs `scrubBrandText` over each hub extension's `description` and `author` before the UI renders them. `name`, `engines.aionui` and `contributes` are install-time contracts and stay raw.
+- Rationale: `resources/hub/index.json` is re-downloaded from the upstream hub by `scripts/prepareHubResources.js` on every build, so editing the checked-in copy would not survive. Every entry ships an author of "Aionui Official" and a description ending "... as an ACP adapter in AionUi.", and `AgentHubModal` renders the description verbatim. The scrub rule was also widened from `AionU[iI]` to `Aion[Uu][iI]`, which is what had let the lowercase-u spelling through; the leading capital stays deliberate because all-lowercase `aionui` is the identifier form.
+- Affects: `packages/desktop/src/renderer/hooks/agent/useHubAgents.ts`, `packages/desktop/src/common/utils/assistantBranding.ts`
+- Evidence: `tests/unit/renderer/hubAgentBranding.test.ts`
 
 ### The locally built engine is pinned against upstream re-download
 
