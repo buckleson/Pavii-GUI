@@ -25,7 +25,6 @@ Requires a Cloudflare account and the `wrangler` CLI (`npm i -g wrangler`).
 
    github.com → Settings → Developer settings → Personal access tokens →
    Fine-grained tokens → Generate new token.
-
    - Repository access: **only** `buckleson/Pavii-Gui-Releases`
    - Permissions: `Issues` → **Read and write**. Nothing else.
    - Set an expiry you will actually remember to rotate.
@@ -74,13 +73,13 @@ A `201` with an `html_url` means it works. Close the issue afterwards.
 
 ## What it enforces
 
-| Guard | Value |
-| ----- | ----- |
+| Guard      | Value                                                                  |
+| ---------- | ---------------------------------------------------------------------- |
 | Repository | Hardcoded to `buckleson/Pavii-Gui-Releases`; other values are rejected |
-| Rate limit | 5 reports per IP per 10 minutes |
-| Title cap | 200 characters |
-| Body cap | 30,000 characters |
-| Label | Every issue gets `in-app report` |
+| Rate limit | 5 reports per IP per 10 minutes                                        |
+| Title cap  | 200 characters                                                         |
+| Body cap   | 30,000 characters                                                      |
+| Label      | Every issue gets `in-app report`                                       |
 
 ## Operating it
 

@@ -51,8 +51,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Feedback: describe the host so the issue body carries version and OS
   getIssueEnvironment: () => ipcRenderer.invoke('feedback:issue-environment'),
   // Feedback: file the report as a GitHub issue (proxy, else prefilled browser form)
-  submitIssueReport: (payload: { attachments?: Array<{ data: number[]; filename: string }>; body: string; title: string }) =>
-    ipcRenderer.invoke('feedback:submit-issue', payload),
+  submitIssueReport: (payload: {
+    attachments?: Array<{ data: number[]; filename: string }>;
+    body: string;
+    title: string;
+  }) => ipcRenderer.invoke('feedback:submit-issue', payload),
   recoverCorruptedDatabase: () => ipcRenderer.invoke('backend:recover-corrupted-database'),
 });
 

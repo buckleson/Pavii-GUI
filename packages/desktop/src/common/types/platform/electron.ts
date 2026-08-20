@@ -38,9 +38,9 @@ export interface ElectronBridgeAPI {
   captureFeedbackScreenshot?: () => Promise<{ filename: string; data: number[] } | null>;
   // Forward feedback diagnostics logs to the main process console
   logFeedbackEvent?: (payload: { details?: unknown; level: 'info' | 'warn' | 'error'; message: string }) => void;
-  // Host details for the issue body / 获取主机信息
+  // Host details for the issue body
   getIssueEnvironment?: () => Promise<IssueEnvironment>;
-  // File the feedback report as a GitHub issue / 提交为 GitHub issue
+  // File the feedback report as a GitHub issue
   submitIssueReport?: (payload: {
     attachments?: Array<{ data: number[]; filename: string }>;
     body: string;

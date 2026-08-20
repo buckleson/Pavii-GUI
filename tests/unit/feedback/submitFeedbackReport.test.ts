@@ -25,7 +25,10 @@ const baseInput = {
 };
 
 function stubElectronAPI(overrides: Record<string, unknown> = {}) {
-  const submitIssueReport = vi.fn(async () => ({ mode: 'browser' as const, issueUrl: 'https://github.example/issue/1' }));
+  const submitIssueReport = vi.fn(async () => ({
+    mode: 'browser' as const,
+    issueUrl: 'https://github.example/issue/1',
+  }));
   const logFeedbackEvent = vi.fn();
   const getIssueEnvironment = vi.fn(async () => ({ appVersion: '2.1.52', arch: 'x64', platform: 'win32' }));
 

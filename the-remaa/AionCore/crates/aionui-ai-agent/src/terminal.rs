@@ -494,16 +494,31 @@ mod tests {
         let reg = TerminalRegistry::new("conv-t", Some(dir.path().to_path_buf()));
         let id = reg.create(params("pwd", &[])).await.unwrap();
         reg.wait_for_exit(&id).await.unwrap();
-        // `pwd` prints the resolved path (on macOS temp_dir lives under
-        // /var -> /private/var), so compare against the canonicalized full path
-        // rather than only the trailing directory name.
-        let canonical = std::fs::canonicalize(dir.path()).unwrap();
-        let expected = canonical.to_str().unwrap();
-        let snap = wait_for_output_contains(&reg, &id, expected).await;
-        assert_eq!(
-            snap.output.trim(),
-            expected,
-            "pwd should report the default cwd; output: {}",
+
+        // Compare the trailing component, not the whole path.
+        //
+        // `pwd` is a POSIX command. On Windows it resolves to the Git Bash
+        // build, which prints a POSIX path (`/tmp/.tmpAbC123`), while
+        // `canonicalize` returns the extended form
+        // (`\\?\D:\Temp\.tmpAbC123`) -- the same directory spelled two ways,
+        // so a full-string equality can never hold there.
+        //
+        // The trailing component is still a strict assertion: TempDir names it
+        // randomly, so matching it proves the configured cwd was applied rather
+        // than inherited. That also sidesteps the reason the full path was used
+        // here originally -- on macOS temp_dir lives under /var, which `pwd`
+        // reports as /private/var -- because only the prefix differs there.
+        let dir_name = dir
+            .path()
+            .file_name()
+            .and_then(|n| n.to_str())
+            .expect("temp dir must have a final component");
+
+        let snap = wait_for_output_contains(&reg, &id, dir_name).await;
+        let reported = snap.output.trim().replace('\\', "/");
+        assert!(
+            reported.ends_with(&format!("/{dir_name}")),
+            "pwd should report the default cwd ending in {dir_name}; output: {}",
             snap.output
         );
     }

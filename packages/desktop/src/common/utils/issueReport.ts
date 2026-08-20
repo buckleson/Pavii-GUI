@@ -47,7 +47,8 @@ function collapseWhitespace(value: string): string {
 
 export function buildIssueTitle(moduleLabel: string, description: string): string {
   const summary = collapseWhitespace(description);
-  const preview = summary.length > TITLE_PREVIEW_LENGTH ? `${summary.slice(0, TITLE_PREVIEW_LENGTH).trimEnd()}...` : summary;
+  const preview =
+    summary.length > TITLE_PREVIEW_LENGTH ? `${summary.slice(0, TITLE_PREVIEW_LENGTH).trimEnd()}...` : summary;
   return `[${moduleLabel}] ${preview || 'Issue report'}`;
 }
 

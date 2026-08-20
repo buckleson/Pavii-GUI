@@ -4,7 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { describe, expect, it } from 'vitest';
-import { buildIssueBody, buildIssueTitle, buildPrefilledIssueUrl, type IssueEnvironment } from '@/common/utils/issueReport';
+import {
+  buildIssueBody,
+  buildIssueTitle,
+  buildPrefilledIssueUrl,
+  type IssueEnvironment,
+} from '@/common/utils/issueReport';
 
 const environment: IssueEnvironment = {
   appVersion: '2.1.52',
@@ -17,7 +22,9 @@ const environment: IssueEnvironment = {
 
 describe('buildIssueTitle', () => {
   it('prefixes the module and keeps a short description intact', () => {
-    expect(buildIssueTitle('Skills', 'Token Optimizer will not enable')).toBe('[Skills] Token Optimizer will not enable');
+    expect(buildIssueTitle('Skills', 'Token Optimizer will not enable')).toBe(
+      '[Skills] Token Optimizer will not enable'
+    );
   });
 
   it('truncates a long description so the title stays readable', () => {

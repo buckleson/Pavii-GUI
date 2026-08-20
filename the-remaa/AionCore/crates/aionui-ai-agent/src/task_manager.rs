@@ -559,10 +559,25 @@ mod tests {
         WorkerTaskManagerImpl::new(factory)
     }
 
+    /// Serializes the five log-capturing tests in this module.
+    ///
+    /// `with_default` installs a thread-local subscriber, but tracing also
+    /// keeps a process-wide max-level hint as a fast path: an `info!` whose
+    /// level exceeds that hint is skipped before any subscriber sees it. Two of
+    /// these tests running concurrently therefore drop each other's events, and
+    /// `kill_and_wait_logs_idle_task_removed_with_agent_type` failed on a
+    /// missing line that its own code had emitted -- while passing whenever it
+    /// was run alone.
+    static LOG_CAPTURE: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     fn capture_logs(max_level: tracing::Level, f: impl FnOnce()) -> String {
         use std::io::Write;
         use std::sync::{Arc, Mutex};
         use tracing_subscriber::fmt;
+
+        // Poisoning only means some earlier capture test panicked; the lock
+        // guards ordering, not data, so the guard is still good to use.
+        let _serialized = LOG_CAPTURE.lock().unwrap_or_else(|e| e.into_inner());
 
         #[derive(Clone)]
         struct SharedBuf(Arc<Mutex<Vec<u8>>>);
