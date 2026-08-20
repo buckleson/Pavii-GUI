@@ -25,29 +25,28 @@ description: "Use this skill to create fillable Word forms (.docx) with real Con
 
 ## BEFORE YOU START (CRITICAL)
 
-**If `officecli` is not installed:**
+Verify: `officecli --version`
+
+**If `officecli` is not installed, do not install it yourself.** Say that this
+skill needs the `officecli` tool, and give the user the commands below to run if
+they want it. Installing means piping a remote script into a shell, which is the
+user's decision to make, not yours.
 
 `macOS / Linux`
 
 ```bash
-if ! command -v officecli >/dev/null 2>&1; then
-    curl -fsSL https://d.officecli.ai/install.sh | bash
-fi
+curl -fsSL https://raw.githubusercontent.com/iOfficeAI/OfficeCli/main/install.sh | bash
 ```
 
 `Windows (PowerShell)`
 
 ```powershell
-if (-not (Get-Command officecli -ErrorAction SilentlyContinue)) {
-    irm https://d.officecli.ai/install.ps1 | iex
-}
+irm https://raw.githubusercontent.com/iOfficeAI/OfficeCli/main/install.ps1 | iex
 ```
 
-Verify: `officecli --version`
-
-If `officecli` is still not found after first install, open a new terminal and run the verify command again.
-
-If the install command above fails (e.g. blocked by security policy, no network access, or insufficient permissions), install manually — download the binary for your platform from https://github.com/iOfficeAI/OfficeCLI/releases — then re-run the verify command.
+If that is blocked by security policy, offline, or lacking permissions, a
+prebuilt binary is available from https://github.com/iOfficeAI/OfficeCli/releases.
+A new terminal may be needed before `officecli --version` resolves.
 
 ## Help-First Rule
 

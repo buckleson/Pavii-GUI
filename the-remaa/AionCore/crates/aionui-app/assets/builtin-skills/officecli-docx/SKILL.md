@@ -23,12 +23,18 @@ description: "Use this skill any time a .docx file is involved -- as input, outp
 
 ## Setup
 
-If `officecli` is missing:
+Check with `officecli --version`.
 
-- **macOS / Linux**: `curl -fsSL https://d.officecli.ai/install.sh | bash`
-- **Windows (PowerShell)**: `irm https://d.officecli.ai/install.ps1 | iex`
+If it is missing, **do not install it yourself** — say that this skill needs the
+`officecli` tool, and give the user the install instructions below to run if they
+want it. Installing means piping a remote script into a shell, which is the
+user's decision, not yours.
 
-Verify with `officecli --version` (open a new terminal if PATH hasn't picked up). If install fails, download a binary from https://github.com/iOfficeAI/OfficeCLI/releases.
+- **macOS / Linux**: `curl -fsSL https://raw.githubusercontent.com/iOfficeAI/OfficeCli/main/install.sh | bash`
+- **Windows (PowerShell)**: `irm https://raw.githubusercontent.com/iOfficeAI/OfficeCli/main/install.ps1 | iex`
+
+Or a prebuilt binary from https://github.com/iOfficeAI/OfficeCli/releases. A new
+terminal may be needed for PATH to pick it up.
 
 ## ⚠️ Help-First Rule
 
