@@ -9,7 +9,7 @@ use dashmap::DashMap;
 use tokio::sync::Mutex;
 
 use crate::error::OfficeError;
-use crate::officecli_runtime::{OFFICECLI_LATEST_RELEASE_URL, install_command, resolve_officecli_path};
+use crate::officecli_runtime::resolve_officecli_path;
 use crate::port::{allocate_port, is_port_listening};
 use crate::types::DocType;
 
@@ -31,8 +31,6 @@ pub trait ProcessSpawner: Send + Sync {
         port: u16,
         doc_type: DocType,
     ) -> Result<Box<dyn ProcessHandle>, OfficeError>;
-
-    async fn install_officecli(&self) -> Result<(), OfficeError>;
 
     async fn is_officecli_installed(&self) -> bool;
 
@@ -187,22 +185,20 @@ impl OfficecliWatchManager {
         ))
     }
 
+    /// A missing officecli is reported, never silently installed.
+    ///
+    /// This used to fall through to the vendor's install script on the first
+    /// Word or Excel file a user opened. `OfficecliNotFound` now propagates to
+    /// the UI, which renders the install command for the user to run
+    /// themselves.
     async fn spawn_officecli_with_install(
         &self,
-        user_id: &str,
+        _user_id: &str,
         resolved: &str,
         port: u16,
         doc_type: DocType,
     ) -> Result<Box<dyn ProcessHandle>, OfficeError> {
-        match self.spawner.spawn_officecli(resolved, port, doc_type).await {
-            Ok(process) => Ok(process),
-            Err(OfficeError::OfficecliNotFound) => {
-                self.broadcast_status_for_user(user_id, doc_type, PreviewState::Installing, None);
-                self.spawner.install_officecli().await?;
-                self.spawner.spawn_officecli(resolved, port, doc_type).await
-            }
-            Err(error) => Err(error),
-        }
+        self.spawner.spawn_officecli(resolved, port, doc_type).await
     }
 
     async fn poll_port_ready(&self, port: u16, file_path: &str) -> Result<(), OfficeError> {
@@ -435,30 +431,6 @@ impl ProcessSpawner for DefaultProcessSpawner {
         }))
     }
 
-    async fn install_officecli(&self) -> Result<(), OfficeError> {
-        let command = install_command();
-        tracing::info!(
-            platform = std::env::consts::OS,
-            "installing officecli via official iOfficeAI/OfficeCli installer"
-        );
-
-        let mut builder = CmdBuilder::clean_cli(&command.program);
-        builder.args(command.args.iter());
-        let output = builder
-            .output()
-            .await
-            .map_err(|e| OfficeError::InstallFailed(e.to_string()))?;
-
-        if !output.status.success() {
-            tracing::warn!(
-                status = ?output.status.code(),
-                "officecli official installer failed"
-            );
-            return Err(OfficeError::InstallFailed("official OfficeCLI installer failed".into()));
-        }
-        Ok(())
-    }
-
     async fn is_officecli_installed(&self) -> bool {
         let Some(officecli) = resolve_officecli_path() else {
             return false;
@@ -467,43 +439,16 @@ impl ProcessSpawner for DefaultProcessSpawner {
         officecli_supports_watch(&officecli).await
     }
 
+    /// Verifies the local officecli can watch. It does not check for updates.
+    ///
+    /// Upstream queried the vendor's GitHub releases page here and, on any
+    /// version difference, re-ran the install script unprompted. Both the query
+    /// and the install are gone: keeping officecli current belongs to whoever
+    /// installed it.
     async fn check_update(&self, _doc_type: DocType) -> Result<(), OfficeError> {
         let officecli = resolve_officecli_path().ok_or(OfficeError::OfficecliNotFound)?;
         if !officecli_supports_watch(&officecli).await {
             return Err(OfficeError::OfficecliNotFound);
-        }
-
-        let mut builder = CmdBuilder::clean_cli(&officecli);
-        builder.arg("--version");
-        let output = builder
-            .output()
-            .await
-            .map_err(|e| OfficeError::StartFailed(e.to_string()))?;
-
-        if !output.status.success() {
-            return Ok(());
-        }
-
-        let local_version = normalize_officecli_version(&String::from_utf8_lossy(&output.stdout));
-        let response = reqwest::Client::new()
-            .get(OFFICECLI_LATEST_RELEASE_URL)
-            .send()
-            .await
-            .map_err(|e| OfficeError::StartFailed(e.to_string()))?;
-        let remote_version = response
-            .url()
-            .path_segments()
-            .and_then(|mut segments| segments.next_back())
-            .map(normalize_officecli_version)
-            .unwrap_or_default();
-
-        if !remote_version.is_empty() && remote_version != local_version {
-            tracing::info!(
-                local_version = %local_version,
-                remote_version = %remote_version,
-                "officecli update available, installing via official installer"
-            );
-            self.install_officecli().await?;
         }
 
         Ok(())
@@ -605,7 +550,6 @@ mod tests {
     struct MockSpawner {
         installed: AtomicBool,
         spawn_count: AtomicU32,
-        install_count: AtomicU32,
         update_count: AtomicU32,
         fail_spawn: AtomicBool,
         fail_with_address_in_use_once: AtomicBool,
@@ -617,7 +561,6 @@ mod tests {
             Self {
                 installed: AtomicBool::new(true),
                 spawn_count: AtomicU32::new(0),
-                install_count: AtomicU32::new(0),
                 update_count: AtomicU32::new(0),
                 fail_spawn: AtomicBool::new(false),
                 fail_with_address_in_use_once: AtomicBool::new(false),
@@ -655,12 +598,6 @@ mod tests {
             }
 
             Ok(Box::new(MockProcessHandle::new()))
-        }
-
-        async fn install_officecli(&self) -> Result<(), OfficeError> {
-            self.install_count.fetch_add(1, Ordering::SeqCst);
-            self.installed.store(true, Ordering::SeqCst);
-            Ok(())
         }
 
         async fn is_officecli_installed(&self) -> bool {
@@ -975,8 +912,12 @@ mod tests {
         assert!(!mgr.is_active_watch_port(12345));
     }
 
+    // Replaces an `auto_install_when_not_found` test that asserted the opposite.
+    // Upstream ran the vendor's install script here -- unprompted remote code
+    // execution triggered by opening a document. A missing officecli is now
+    // reported to the user, who decides whether to install it.
     #[tokio::test]
-    async fn auto_install_when_not_found() {
+    async fn missing_officecli_is_reported_and_never_installed() {
         let spawner = Arc::new(MockSpawner::new());
         spawner.installed.store(false, Ordering::SeqCst);
         let broadcaster = Arc::new(RecordingBroadcaster::new());
@@ -986,11 +927,17 @@ mod tests {
         let file = dir.path().join("test.docx");
         std::fs::write(&file, b"test").unwrap();
 
-        let port = mgr.start(file.to_str().unwrap(), DocType::Word).await.unwrap();
-        assert!(port > 0);
-        assert_eq!(spawner.install_count.load(Ordering::SeqCst), 1);
-        // First spawn fails (not installed), then install, then second spawn succeeds
-        assert_eq!(spawner.spawn_count.load(Ordering::SeqCst), 2);
+        let error = mgr.start(file.to_str().unwrap(), DocType::Word).await.unwrap_err();
+
+        assert!(matches!(error, OfficeError::OfficecliNotFound), "got {error:?}");
+        // Exactly one attempt: no retry, because there is no install between them.
+        assert_eq!(spawner.spawn_count.load(Ordering::SeqCst), 1);
+
+        // The user is told, rather than left watching a silent install.
+        let events = broadcaster.events();
+        let states: Vec<&str> = events.iter().filter_map(|e| e.data["state"].as_str()).collect();
+        assert!(states.contains(&"error"), "states: {states:?}");
+        assert!(!states.contains(&"installing"), "states: {states:?}");
     }
 
     #[tokio::test]
@@ -1013,10 +960,13 @@ mod tests {
         assert_eq!(events[1].data["state"], "ready");
     }
 
+    // `PreviewState::Installing` is no longer reachable: it existed only to
+    // cover the unprompted vendor install. A present officecli goes straight
+    // from starting to ready; a missing one is covered by
+    // `missing_officecli_is_reported_and_never_installed` above.
     #[tokio::test]
-    async fn broadcasts_installing_on_auto_install() {
+    async fn never_broadcasts_installing() {
         let spawner = Arc::new(MockSpawner::new());
-        spawner.installed.store(false, Ordering::SeqCst);
         let broadcaster = Arc::new(RecordingBroadcaster::new());
         let mgr = make_manager(Arc::clone(&spawner), Arc::clone(&broadcaster));
 
@@ -1029,8 +979,8 @@ mod tests {
         let events = broadcaster.events();
         let states: Vec<&str> = events.iter().filter_map(|e| e.data["state"].as_str()).collect();
         assert!(states.contains(&"starting"));
-        assert!(states.contains(&"installing"));
         assert!(states.contains(&"ready"));
+        assert!(!states.contains(&"installing"), "states: {states:?}");
     }
 
     #[tokio::test]

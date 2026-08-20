@@ -35,7 +35,6 @@ impl ProcessHandle for MockHandle {
 struct TestSpawner {
     installed: AtomicBool,
     spawn_count: AtomicU32,
-    install_count: AtomicU32,
 }
 
 impl TestSpawner {
@@ -43,7 +42,6 @@ impl TestSpawner {
         Self {
             installed: AtomicBool::new(installed),
             spawn_count: AtomicU32::new(0),
-            install_count: AtomicU32::new(0),
         }
     }
 }
@@ -67,12 +65,6 @@ impl ProcessSpawner for TestSpawner {
         std::mem::forget(listener);
 
         Ok(Box::new(MockHandle::new()))
-    }
-
-    async fn install_officecli(&self) -> Result<(), OfficeError> {
-        self.install_count.fetch_add(1, Ordering::SeqCst);
-        self.installed.store(true, Ordering::SeqCst);
-        Ok(())
     }
 
     async fn is_officecli_installed(&self) -> bool {
@@ -167,11 +159,15 @@ async fn wp3_stop_terminates_session() {
 }
 
 // ---------------------------------------------------------------------------
-// WP-4: Auto-install when officecli not found
+// WP-4: a missing officecli is reported, never installed
 // ---------------------------------------------------------------------------
 
+// Was `wp4_auto_install_on_not_found`, which asserted that opening a Word file
+// with no officecli present ran the vendor's install script. That was
+// unprompted remote code execution against d.officecli.ai; the user is now told
+// instead, and decides for themselves.
 #[tokio::test]
-async fn wp4_auto_install_on_not_found() {
+async fn wp4_missing_officecli_reports_rather_than_installs() {
     let spawner = Arc::new(TestSpawner::new(false));
     let broadcaster = Arc::new(TestBroadcaster::new());
     let mgr = OfficecliWatchManager::new(spawner.clone(), broadcaster.clone());
@@ -179,14 +175,14 @@ async fn wp4_auto_install_on_not_found() {
     let dir = tempfile::tempdir().unwrap();
     let path = create_temp_file(&dir, "doc.docx");
 
-    let port = mgr.start(&path, DocType::Word).await.unwrap();
-    assert!(port > 0);
-    assert_eq!(spawner.install_count.load(Ordering::SeqCst), 1);
+    let error = mgr.start(&path, DocType::Word).await.unwrap_err();
+
+    assert!(matches!(error, OfficeError::OfficecliNotFound), "got {error:?}");
 
     let states = broadcaster.event_states();
-    assert!(states.contains(&"starting".to_string()));
-    assert!(states.contains(&"installing".to_string()));
-    assert!(states.contains(&"ready".to_string()));
+    assert!(states.contains(&"starting".to_string()), "states: {states:?}");
+    assert!(states.contains(&"error".to_string()), "states: {states:?}");
+    assert!(!states.contains(&"installing".to_string()), "states: {states:?}");
 }
 
 // ---------------------------------------------------------------------------

@@ -66,10 +66,6 @@ impl ProcessSpawner for HttpMockSpawner {
         Ok(Box::new(MockProcessHandle::new()))
     }
 
-    async fn install_officecli(&self) -> Result<(), OfficeError> {
-        Ok(())
-    }
-
     async fn is_officecli_installed(&self) -> bool {
         true
     }
@@ -93,10 +89,6 @@ impl ProcessSpawner for TcpOnlySpawner {
             .map_err(|e| OfficeError::StartFailed(e.to_string()))?;
         std::mem::forget(listener);
         Ok(Box::new(MockProcessHandle::new()))
-    }
-
-    async fn install_officecli(&self) -> Result<(), OfficeError> {
-        Ok(())
     }
 
     async fn is_officecli_installed(&self) -> bool {
