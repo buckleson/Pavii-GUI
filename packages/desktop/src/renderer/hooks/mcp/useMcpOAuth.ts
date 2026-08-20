@@ -10,8 +10,8 @@ export interface McpOAuthStatus {
 }
 
 /**
- * MCP OAuth 管理 Hook
- * 处理 MCP 服务器的 OAuth 认证状态检查和登录流程
+ * MCP OAuth hook
+ * Checks MCP server OAuth status and drives the sign-in flow
  */
 export const useMcpOAuth = () => {
   const [oauthStatus, setOAuthStatus] = useState<Record<string, McpOAuthStatus>>({});
@@ -28,7 +28,7 @@ export const useMcpOAuth = () => {
     return null;
   }, []);
 
-  // 检查 OAuth 状态
+  // Check the OAuth status
   const checkOAuthStatus = useCallback(
     async (server: IMcpServer) => {
       const serverUrl = getOAuthServerUrl(server);
@@ -73,7 +73,7 @@ export const useMcpOAuth = () => {
     [getOAuthServerUrl]
   );
 
-  // 执行 OAuth 登录
+  // Run the OAuth sign-in
   const login = useCallback(
     async (server: IMcpServer): Promise<{ success: boolean; error?: string }> => {
       const serverUrl = getOAuthServerUrl(server);
@@ -90,7 +90,7 @@ export const useMcpOAuth = () => {
         const result = await mcpService.loginMcpOAuth.invoke({ server_url: serverUrl });
 
         if (result.success) {
-          // 登录成功，更新状态
+          // Signed in: update the status
           setOAuthStatus((prev) => ({
             ...prev,
             [server.id]: {
@@ -118,7 +118,7 @@ export const useMcpOAuth = () => {
     [getOAuthServerUrl]
   );
 
-  // 登出
+  // Sign out
   const logout = useCallback(
     async (server: IMcpServer): Promise<{ success: boolean; error?: string }> => {
       const serverUrl = getOAuthServerUrl(server);
@@ -132,7 +132,7 @@ export const useMcpOAuth = () => {
       try {
         await mcpService.logoutMcpOAuth.invoke({ server_url: serverUrl });
 
-        // 登出成功，更新状态
+        // Signed out: update the status
         setOAuthStatus((prev) => ({
           ...prev,
           [server.id]: {
@@ -152,7 +152,7 @@ export const useMcpOAuth = () => {
     [getOAuthServerUrl]
   );
 
-  // 批量检查多个服务器的 OAuth 状态
+  // Check OAuth status across several servers at once
   const checkMultipleServers = useCallback(
     async (servers: IMcpServer[]) => {
       const httpServers = servers.filter((s) => getOAuthServerUrl(s));

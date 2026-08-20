@@ -121,7 +121,7 @@ export const usePreviewLauncher = () => {
 
             openPreview(payload.content, contentType, {
               ...metadata,
-              // 超限文件只读：没有内容可编辑，也没有半截内容可被写回。
+              // Oversized files are read-only: there is no content to edit and no partial content to write back.
               // Oversized files are read-only: no content to edit, and no partial
               // content that could be written back over the full file.
               editable: payload.oversized ? false : editable,

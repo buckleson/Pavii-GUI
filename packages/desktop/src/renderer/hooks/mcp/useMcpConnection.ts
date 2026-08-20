@@ -122,8 +122,8 @@ const formatThrownMcpErrorMessage = (t: TFunction, error: unknown): string => {
 };
 
 /**
- * MCP连接测试管理Hook
- * 处理MCP服务器的连接测试和状态更新
+ * MCP connection-test hook
+ * Runs MCP server connection tests and updates their status
  */
 export const useMcpConnection = (
   setMcpServers: React.Dispatch<React.SetStateAction<IMcpServer[]>>,
@@ -138,13 +138,13 @@ export const useMcpConnection = (
     notify?: boolean;
   };
 
-  // 连接测试函数
+  // Connection test
   const handleTestMcpConnection = useCallback(
     async (server: IMcpServer, options?: TestOptions) => {
       const notify = options?.notify ?? true;
       setTestingServers((prev) => ({ ...prev, [server.id]: true }));
 
-      // 更新服务器状态 - 使用统一的保存函数，避免竞态条件
+      // Update server status through the shared save function, avoiding a race
       const updateServerStatus = async (
         last_test_status: IMcpServer['last_test_status'],
         additionalData?: Partial<IMcpServer>
@@ -162,7 +162,7 @@ export const useMcpConnection = (
         const result = await mcpService.testMcpConnection.invoke({ ...server, runtime_scope_id: server.id });
         const needsAuth = result.needsAuth ?? result.needs_auth;
 
-        // 检查是否需要认证
+        // Check whether authentication is required
         if (needsAuth) {
           await updateServerStatus('disconnected');
           if (notify) {
@@ -175,7 +175,7 @@ export const useMcpConnection = (
             });
           }
 
-          // 触发认证回调
+          // Fire the authentication callback
           if (onAuthRequired) {
             onAuthRequired(server);
           }
@@ -207,7 +207,7 @@ export const useMcpConnection = (
             });
           }
 
-          // 连接测试成功，不执行额外操作
+          // Connection test passed; nothing further to do
         } else {
           // Record the latest failed availability test in local UI state.
           await updateServerStatus('error');

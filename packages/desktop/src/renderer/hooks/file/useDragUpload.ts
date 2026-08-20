@@ -21,7 +21,7 @@ export const useDragUpload = ({ supportedExts = [], onFilesAdded, conversation_i
   const { t } = useTranslation();
   const [isFileDragging, setIsFileDragging] = useState(false);
 
-  // 拖拽计数器，防止状态闪烁
+  // Drag counter, preventing state flicker
   const dragCounter = useRef(0);
 
   const handleDragOver = useCallback(
@@ -62,7 +62,7 @@ export const useDragUpload = ({ supportedExts = [], onFilesAdded, conversation_i
       e.preventDefault();
       e.stopPropagation();
 
-      // 重置状态
+      // Reset the state
       dragCounter.current = 0;
       setIsFileDragging(false);
 
@@ -71,7 +71,7 @@ export const useDragUpload = ({ supportedExts = [], onFilesAdded, conversation_i
       try {
         const droppedFiles = e.nativeEvent.dataTransfer!.files;
 
-        // 第一步：先校验文件类型，筛选出支持的文件
+        // Step 1: validate types and keep the supported files
         const validFiles: File[] = [];
 
         for (let i = 0; i < droppedFiles.length; i++) {
@@ -79,12 +79,12 @@ export const useDragUpload = ({ supportedExts = [], onFilesAdded, conversation_i
           if (supportedExts.length === 0 || isSupportedFile(file.name, supportedExts)) {
             validFiles.push(file);
           }
-          // 注意：不支持的文件会被静默过滤，与原逻辑保持一致
+          // Note: unsupported files are filtered silently, matching the original behaviour
         }
 
-        // 第二步：只处理校验通过的文件
+        // Step 2: process only the files that passed
         if (validFiles.length > 0) {
-          // 创建 FileList 对象给 processDroppedFiles
+          // Build a FileList for processDroppedFiles
           const validFileList = Object.assign(validFiles, {
             length: validFiles.length,
             item: (index: number) => validFiles[index] || null,

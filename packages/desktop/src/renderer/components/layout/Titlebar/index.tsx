@@ -131,7 +131,7 @@ const Titlebar: React.FC<TitlebarProps> = ({ workspaceAvailable }) => {
 
   const isDesktopRuntime = isElectronDesktop();
   const isMacRuntime = isDesktopRuntime && isMacOS();
-  // Windows/Linux 显示自定义窗口按钮；macOS 在标题栏给工作区一个切换入口
+  // Windows/Linux show custom window buttons; macOS puts a workspace toggle in the titlebar
   const showWindowControls = isDesktopRuntime && !isMacRuntime;
   // Keep the workspace entry in the titlebar on every platform.
   const showWorkspaceButton = workspaceAvailable;

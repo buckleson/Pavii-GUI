@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 interface UseTypingAnimationOptions {
   content: string; // Original content
   enabled?: boolean; // Whether to enable animation
-  speed?: number; // 打字速度（字符/秒）/ Typing speed (characters per second)
+  speed?: number; // Typing speed (characters per second)
 }
 
 /**
@@ -22,7 +22,7 @@ interface UseTypingAnimationOptions {
  * const { displayedContent, isAnimating } = useTypingAnimation({
  *   content: streamingText,
  *   enabled: viewMode === 'preview',
- *   speed: 50, // 50 字符/秒
+ *   speed: 50, // 50 characters per second
  * });
  * ```
  */
@@ -57,7 +57,7 @@ export const useTypingAnimation = ({ content, enabled = true, speed = 50 }: UseT
     // Calculate content change amount
     const contentDiff = content.length - displayedContent.length;
 
-    // 如果内容变短了（删除）或一次性增加了很多内容（超过1000字符），说明不是流式更新
+    // Shorter content (a deletion) or a jump of over 1000 characters is not a streaming update
     // If content got shorter or increased by a lot (>1000 chars), show immediately
     // Only trigger typing animation for incremental updates
     if (contentDiff < 0 || contentDiff > 1000) {

@@ -16,9 +16,9 @@ const useConfigModelListWithImage = () => {
         return name.includes('image') || name.includes('imagine');
       });
 
-      // 根据不同平台确保有对应的图像模型
+      // Ensure each platform has a matching image model
       if (nextPlatform.platform === 'gemini' && (!nextPlatform.base_url || nextPlatform.base_url.trim() === '')) {
-        // 原生 Google Gemini 平台（base_url 为空）至少要有 gemini-2.5-flash-image-preview
+        // The native Google Gemini platform (empty base_url) needs at least gemini-2.5-flash-image-preview
         const hasGeminiImage = nextPlatform.models.some(
           (m) => m.includes('gemini') && (m.includes('image') || m.includes('imagine'))
         );
@@ -30,7 +30,7 @@ const useConfigModelListWithImage = () => {
         nextPlatform.base_url &&
         nextPlatform.base_url.includes('openrouter.ai')
       ) {
-        // 官方 OpenRouter 平台（base_url 包含 openrouter.ai）至少要有免费图像模型
+        // The official OpenRouter platform (base_url containing openrouter.ai) needs at least the free image model
         const hasOpenRouterImage = nextPlatform.models.some((m) => m.includes('image') || m.includes('imagine'));
         if (!hasOpenRouterImage) {
           nextPlatform.models = nextPlatform.models.concat(['google/gemini-2.5-flash-image-preview']);

@@ -1,17 +1,17 @@
 import { ipcBridge } from '@/common';
 import useSWR from 'swr';
 
-// Gemini 模型排序函数：Pro 优先，版本号降序
+// Gemini model ordering: Pro first, then version descending
 const sortGeminiModels = (models: { label: string; value: string }[]) => {
   return models.toSorted((a, b) => {
     const aPro = a.value.toLowerCase().includes('pro');
     const bPro = b.value.toLowerCase().includes('pro');
 
-    // Pro 模型排在前面
+    // Pro models come first
     if (aPro && !bPro) return -1;
     if (!aPro && bPro) return 1;
 
-    // 提取版本号进行比较
+    // Extract version numbers to compare
     const extractVersion = (name: string) => {
       const match = name.match(/(\d+\.?\d*)/);
       return match ? parseFloat(match[1]) : 0;
@@ -20,12 +20,12 @@ const sortGeminiModels = (models: { label: string; value: string }[]) => {
     const aVersion = extractVersion(a.value);
     const bVersion = extractVersion(b.value);
 
-    // 版本号大的排在前面
+    // Higher versions come first
     if (aVersion !== bVersion) {
       return bVersion - aVersion;
     }
 
-    // 版本号相同时按字母顺序排序
+    // Equal versions fall back to alphabetical order
     return a.value.localeCompare(b.value);
   });
 };
@@ -70,12 +70,12 @@ const useModeModeList = (
           }
         });
 
-        // 如果是 Gemini 平台，优化排序
+        // Apply the tuned ordering on Gemini platforms
         if (platform?.includes('gemini')) {
           modelList = sortGeminiModels(modelList);
         }
 
-        // 如果返回了修复的 base_url，将其添加到结果中
+        // Include the corrected base_url in the result when one is returned
         if (res.fixed_base_url) {
           return {
             models: modelList,
@@ -86,7 +86,7 @@ const useModeModeList = (
         return { models: modelList };
       }
 
-      // 既没有 API key 也没有 base_url 也没有 bedrock_config 时，返回空列表
+      // With no API key, base_url or bedrock_config, return an empty list
       return { models: [] };
     }
   );

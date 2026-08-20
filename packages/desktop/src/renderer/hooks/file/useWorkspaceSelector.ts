@@ -16,7 +16,7 @@ export type WorkspaceEventPrefix = 'acp' | 'codex';
 
 /**
  * Hook to select a new workspace directory for the current conversation.
- * 选择会话新的工作空间目录的 Hook。
+ * Hook for choosing a new workspace directory for a conversation.
  */
 export const useWorkspaceSelector = (conversation_id: string, eventPrefix: WorkspaceEventPrefix) => {
   const { mutate } = useSWRConfig();

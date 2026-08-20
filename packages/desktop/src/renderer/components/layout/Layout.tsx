@@ -234,7 +234,7 @@ const Layout: React.FC<{
     startWidth: DEFAULT_SIDER_WIDTH,
   });
 
-  // 检测移动端并响应窗口大小变化
+  // Detect mobile and react to window resizes
   useEffect(() => {
     const checkMobile = () => {
       const mobile = detectMobileViewportOrTouch();
@@ -242,10 +242,10 @@ const Layout: React.FC<{
       setViewportWidth(window.innerWidth);
     };
 
-    // 初始检测
+    // Initial check
     checkMobile();
 
-    // 监听窗口大小变化
+    // Watch for window resizes
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
@@ -258,7 +258,7 @@ const Layout: React.FC<{
     setCollapsed(true);
   }, [isMobile]);
 
-  // 清理侧栏 Tooltip 残留节点，避免移动端路由切换后浮层卡在左上角
+  // Clear leftover sidebar tooltip nodes, so a mobile route change cannot strand a popover in the top-left
   useEffect(() => {
     cleanupSiderTooltips();
   }, [isMobile, collapsed, location.pathname, location.search, location.hash]);
@@ -279,23 +279,23 @@ const Layout: React.FC<{
     return () => unsubscribe();
   }, []);
 
-  // Handle tray events from main process / 处理来自主进程的托盘事件
+  // Handle tray events from the main process
   useEffect(() => {
     if (!isElectronDesktop()) return;
 
-    // Navigate to guid page when requested from tray / 托盘请求导航到 guid 页面
+    // Navigate to the guid page when the tray asks
     const handleNavigateToGuid = () => {
       void navigate('/guid');
     };
 
-    // Navigate to conversation when requested from tray / 托盘请求导航到对话页面
+    // Navigate to a conversation when the tray asks
     const handleNavigateToConversation = (event: CustomEvent<{ conversation_id: string }>) => {
       void navigate(`/conversation/${event.detail.conversation_id}`);
     };
 
-    // Open about dialog when requested from tray / 托盘请求打开关于对话框
+    // Open the about dialog when the tray asks
     const handleOpenAbout = () => {
-      // Navigate to settings/about page / 导航到设置/关于页面
+      // Navigate to the settings/about page
       void navigate('/settings/about');
     };
 
@@ -313,12 +313,12 @@ const Layout: React.FC<{
       }
     };
 
-    // Handle check update request from tray / 托盘请求检查更新
+    // Handle a check-for-updates request from the tray
     const handleCheckUpdate = () => {
       window.dispatchEvent(new CustomEvent('aionui-open-update-modal', { detail: { source: 'tray' } }));
     };
 
-    // Listen for tray events / 监听托盘事件
+    // Listen for tray events
     window.addEventListener('tray:navigate-to-guid', handleNavigateToGuid as EventListener);
     window.addEventListener('tray:navigate-to-conversation', handleNavigateToConversation as EventListener);
     window.addEventListener('tray:open-about', handleOpenAbout as EventListener);
@@ -413,7 +413,7 @@ const Layout: React.FC<{
         <div className='app-shell flex flex-col size-full min-h-0'>
           <PaviiSignInGate />
           <Titlebar workspaceAvailable={workspaceAvailable} />
-          {/* 移动端左侧边栏蒙板 / Mobile left sider backdrop */}
+          {/* Mobile left sider backdrop */}
           {isMobile && !collapsed && (
             <div className='fixed inset-0 bg-black/30 z-90' onClick={() => setCollapsed(true)} aria-hidden='true' />
           )}
@@ -477,7 +477,7 @@ const Layout: React.FC<{
                     <SidebarIcon size={18} strokeWidth={2.5} />
                   </button>
                 )}
-                {/* 侧栏折叠改由标题栏统一控制 / Sidebar folding handled by Titlebar toggle */}
+                {/* Sidebar folding is handled by the titlebar toggle */}
               </ArcoLayout.Header>
               <ArcoLayout.Content className='pt-0 px-8px pb-0 layout-sider-content'>
                 {React.isValidElement(sider)
@@ -539,8 +539,8 @@ const Layout: React.FC<{
                     width: `${Math.round(previewWidthPx)}px`,
                     flexGrow: 0,
                     flexShrink: 0,
-                    // 只保留左边框作为与会话区的分界；上/右/下不留边距，
-                    // 否则窗口底色会从缝隙里透出来（深色模式下尤其突兀）。
+                    // Only the left border divides this from the conversation area; no margin top, right or
+                    // bottom, or the window background shows through the gap - jarring in dark mode especially.
                     // Left border only, as the divider from the chat area. No outer
                     // margins: any gap would expose the window's own background,
                     // which is jarring in dark mode.

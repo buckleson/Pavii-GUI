@@ -19,7 +19,7 @@ export const useNotificationClick = () => {
     (payload: { conversation_id?: string }) => {
       console.log('[useNotificationClick] Received notification click:', payload);
       if (payload.conversation_id) {
-        // Navigate to the conversation page / 导航到会话页面
+        // Navigate to the conversation page
         console.log('[useNotificationClick] Navigating to conversation:', payload.conversation_id);
         void navigate(`/conversation/${payload.conversation_id}`);
       } else {

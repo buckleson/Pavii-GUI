@@ -26,7 +26,7 @@ interface UseAutoScrollOptions {
  *   containerRef,
  *   content: streamingText,
  *   enabled: true,
- *   threshold: 200, // 距离底部 200px 以内时跟随
+ *   threshold: 200, // Follow while within 200px of the bottom
  * });
  * ```
  */

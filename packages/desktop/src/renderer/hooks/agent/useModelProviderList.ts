@@ -42,13 +42,13 @@ export const useModelProviderList = (): ModelProviderListResult => {
   // Mutable cache for available-model filtering
   const available_modelsCacheRef = useRef(new Map<string, string[]>());
 
-  // 当 modelConfig 变化时清除缓存
+  // Clear the cache when modelConfig changes
   useEffect(() => {
     available_modelsCacheRef.current.clear();
   }, [modelConfig]);
 
   const getAvailableModels = useCallback((provider: IProvider): string[] => {
-    // 包含 model_enabled 状态到缓存 key 中
+    // Include the model_enabled state in the cache key
     const model_enabledKey = provider.model_enabled ? JSON.stringify(provider.model_enabled) : 'all-enabled';
     const cacheKey = `${provider.id}-${(provider.models || []).join(',')}-${model_enabledKey}`;
     const cache = available_modelsCacheRef.current;
@@ -57,7 +57,7 @@ export const useModelProviderList = (): ModelProviderListResult => {
     }
     const result: string[] = [];
     for (const modelName of provider.models || []) {
-      // 检查模型是否被禁用（默认为启用）
+      // Check whether the model is disabled (enabled by default)
       const isModelEnabled = provider.model_enabled?.[modelName] !== false;
       if (!isModelEnabled) continue;
 
@@ -73,7 +73,7 @@ export const useModelProviderList = (): ModelProviderListResult => {
 
   const providers = useMemo(() => {
     let list: IProvider[] = Array.isArray(modelConfig) ? modelConfig : [];
-    // 过滤掉被禁用的 provider（默认为启用）
+    // Filter out disabled providers (enabled by default)
     list = list.filter((p) => p.enabled !== false);
 
     if (isGoogleAuth) {
@@ -85,11 +85,11 @@ export const useModelProviderList = (): ModelProviderListResult => {
         api_key: '',
         model: [],
         capabilities: [{ type: 'text' }, { type: 'vision' }, { type: 'function_calling' }],
-        enabled: true, // Google Auth provider 始终启用
+        enabled: true, // The Google Auth provider is always enabled
       } as unknown as IProvider;
       list = [googleProvider, ...list];
     }
-    // 过滤掉没有可用模型的 provider
+    // Filter out providers with no usable models
     return list.filter((p) => getAvailableModels(p).length > 0);
   }, [getAvailableModels, isGoogleAuth, modelConfig]);
 

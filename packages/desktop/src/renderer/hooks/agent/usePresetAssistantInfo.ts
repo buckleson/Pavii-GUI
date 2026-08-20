@@ -26,10 +26,10 @@ export interface PresetAssistantInfo {
 /**
  * Resolve preset assistant ID from conversation extra
  *
- * 处理向后兼容：
- * - preset_assistant_id: 新格式 'builtin-xxx'
- * - custom_agent_id: ACP 会话的旧格式
- * - enabled_skills: Gemini Cowork 会话的旧格式
+ * Backwards compatibility:
+ * - preset_assistant_id: the new 'builtin-xxx' format
+ * - custom_agent_id: the old format for ACP conversations
+ * - enabled_skills: the old format for Gemini Cowork conversations
  */
 /**
  * Resolve the explicit assistant identity stored on a conversation.

@@ -8,12 +8,12 @@
  * Records addresses WebviewHost navigated to itself, so the url prop's echo can be recognised.
  *
  * Background: a browser tab feeds the current address back as the url prop, so every internal
- * 导航都会形成回环（内部导航 → onUrlChange → 父组件更新 prop → 重置）。如果无条件
- * 重置，每次导航后都会被当成「换了预览目标」而重新加载，页面状态全丢。
+ * navigation closes a loop (internal navigation -> onUrlChange -> parent updates the prop ->
+ * reset). Resetting unconditionally would treat every navigation as a new preview target, reloading the page and losing all its state.
  *
- * 为什么要记「一组」而不是「最后一个」：重定向链会连续触发多次 did-navigate，
- * A→B 之后只记得 B，此时 A 的回声才姗姗来迟，就会被误判成外部换址而把地址设回 A，
- * 于是 A→B→A 无限跳转，直到渲染进程崩溃。
+ * Why a set rather than just the last address: a redirect chain fires did-navigate repeatedly.
+ * After A->B, remembering only B means A's late-arriving echo reads as an external change and
+ * sets the address back to A, giving A->B->A forever until the renderer crashes.
  *
  * Remembers addresses recently navigated to from inside WebviewHost so the `url`
  * prop's echo can be recognised.
@@ -44,7 +44,7 @@ export class InternalNavTracker {
   }
 
   /**
-   * 这个 url prop 是内部导航的回声吗？是则消耗掉该记录并返回 true。
+   * Is this url prop the echo of an internal navigation? If so, consume the record and return true.
    *
    * Is this `url` prop the echo of an internal navigation? Consumes the entry and
    * returns true when so.
@@ -56,14 +56,14 @@ export class InternalNavTracker {
     return true;
   }
 
-  /** 外部换址（换 tab / 换预览文件）后清空 / clear after an external address change */
+  /** Cleared after an external address change (switching tabs or preview files) */
   clear(): void {
     this.recent.length = 0;
   }
 }
 
 /**
- * 判断 url prop 的变化是否应该清空自管的前进/后退历史。
+ * Decide whether a url prop change should clear the self-managed back/forward history.
  *
  * Decide whether a change to the `url` prop should clear the self-managed
  * back/forward history.

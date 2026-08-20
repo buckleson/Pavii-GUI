@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// context/ThemeContext.tsx - Unified Theme Management Context 统一主题管理上下文
+// context/ThemeContext.tsx - Unified theme management context
 import type { PropsWithChildren } from 'react';
 import React, { createContext, useCallback, useContext } from 'react';
 import type { Theme, ThemeAppearance } from '@/common/theme/types';

@@ -75,7 +75,7 @@ const getApiKeyCount = (api_key: string): number => {
  */
 const getProviderState = (platform: IProvider): { checked: boolean; indeterminate: boolean } => {
   if (!platform.model_enabled) {
-    // 没有 model_enabled 记录，默认全部启用
+    // With no model_enabled record, everything is enabled by default
     return { checked: true, indeterminate: false };
   }
 
@@ -84,11 +84,11 @@ const getProviderState = (platform: IProvider): { checked: boolean; indeterminat
   const totalCount = models.length;
 
   if (enabledCount === 0) {
-    return { checked: false, indeterminate: false }; // 全不选
+    return { checked: false, indeterminate: false }; // None selected
   } else if (enabledCount === totalCount) {
-    return { checked: true, indeterminate: false }; // 全选
+    return { checked: true, indeterminate: false }; // All selected
   } else {
-    return { checked: true, indeterminate: true }; // 半选（有模型开启，显示为开启状态）
+    return { checked: true, indeterminate: true }; // Some selected; shown as on
   }
 };
 
@@ -96,7 +96,7 @@ const getProviderState = (platform: IProvider): { checked: boolean; indeterminat
  * Check if model is enabled
  */
 const isModelEnabled = (platform: IProvider, model: string): boolean => {
-  if (!platform.model_enabled) return true; // 默认启用
+  if (!platform.model_enabled) return true; // Enabled by default
   return platform.model_enabled[model] !== false;
 };
 
@@ -165,12 +165,12 @@ const ModelModalContent: React.FC = () => {
       });
   };
 
-  // 切换供应商启用状态（全选 ↔ 全不选）
+  // Toggle the provider between all and none
   const toggleProviderEnabled = (platform: IProvider) => {
     const { checked } = getProviderState(platform);
-    const newState = !checked; // 切换状态
+    const newState = !checked; // Flip the state
 
-    // 批量更新所有模型状态
+    // Update every model state at once
     const model_enabled: Record<string, boolean> = {};
     (platform.models ?? []).forEach((model) => {
       model_enabled[model] = newState;
@@ -183,7 +183,7 @@ const ModelModalContent: React.FC = () => {
     updatePlatform(updated, () => {});
   };
 
-  // 切换模型启用状态
+  // Toggle a model on or off
   const toggleModelEnabled = (platform: IProvider, model: string, enabled: boolean) => {
     const model_enabled = { ...platform.model_enabled };
     model_enabled[model] = enabled;
@@ -213,7 +213,7 @@ const ModelModalContent: React.FC = () => {
       const errorMessage = result.message || t('common.unknownError');
 
       try {
-        // 先获取最新的数据，确保不会覆盖其他并发的更新
+        // Read the latest data first, so a concurrent update is not overwritten
         const latestData = await ipcBridge.mode.listProviders.invoke();
         const latestPlatform = (latestData || []).find((item) => item.id === platform.id);
         const model_health = { ...latestPlatform?.model_health };
@@ -253,7 +253,7 @@ const ModelModalContent: React.FC = () => {
       });
 
       try {
-        // 先获取最新的数据，确保不会覆盖其他并发的更新
+        // Read the latest data first, so a concurrent update is not overwritten
         const latestData = await ipcBridge.mode.listProviders.invoke();
         const latestPlatform = (latestData || []).find((item) => item.id === platform.id);
         const model_health = { ...latestPlatform?.model_health };
@@ -471,7 +471,7 @@ const ModelModalContent: React.FC = () => {
                           <span className='text-12px text-t-secondary whitespace-nowrap md:hidden'>
                             {(platform.models ?? []).length} / {getApiKeyCount(platform.api_key)}
                           </span>
-                          {/* 供应商启用开关 / Provider enable switch */}
+                          {/* Provider enable switch */}
                           <Switch
                             size='small'
                             checked={getProviderState(platform).checked}
@@ -518,7 +518,7 @@ const ModelModalContent: React.FC = () => {
                         <div key={model}>
                           <div className='flex items-center justify-between gap-8px px-8px py-12px transition-colors hover:bg-[var(--fill-0)]'>
                             <div className='flex min-w-0 flex-1 items-center gap-8px'>
-                              {/* 健康状态指示器 / Health status indicator */}
+                              {/* Health status indicator */}
                               {healthStatus !== 'unknown' && (
                                 <Tooltip
                                   content={
@@ -553,7 +553,7 @@ const ModelModalContent: React.FC = () => {
 
                               <span className='min-w-0 flex-1 truncate text-14px text-t-primary'>{model}</span>
 
-                              {/* New API 协议标签（点击循环切换）/ New API protocol badge (click to cycle) */}
+                              {/* New API protocol badge (click to cycle) */}
                               {isNewApiProvider && (
                                 <Tag
                                   size='small'
@@ -602,7 +602,7 @@ const ModelModalContent: React.FC = () => {
                                 </Tag>
                               )}
 
-                              {/* 模型启用开关 / Model enable switch */}
+                              {/* Model enable switch */}
                               <Switch
                                 className='shrink-0'
                                 size='small'
@@ -621,7 +621,7 @@ const ModelModalContent: React.FC = () => {
                                 />
                               </Tooltip>
 
-                              {/* 心跳检测按钮 / Health check button */}
+                              {/* Health check button */}
                               <Tooltip content={t('settings.healthCheck')}>
                                 <Button
                                   size='mini'

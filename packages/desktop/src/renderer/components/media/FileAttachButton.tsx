@@ -272,7 +272,7 @@ const FileAttachButton: React.FC<FileAttachButtonProps> = ({
         </>
       )}
 
-      {/* 文件操作最常用，在最下（离 + 最近） */}
+      {/* File actions are the most used, so they sit lowest, nearest the + */}
       <div className='px-6px'>
         {!isDesktop && (
           <MenuItem

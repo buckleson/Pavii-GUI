@@ -4,8 +4,8 @@ import { getCleanFileNames } from '@/renderer/services/FileService';
 import type { FileOrFolderItem } from '@/renderer/utils/file/fileTypes';
 
 /**
- * 创建通用的setUploadFile函数
- * 支持函数式更新，避免闭包陷阱
+ * Build the shared setUploadFile function
+ * Supports functional updates, avoiding the closure trap
  */
 export const createSetUploadFile = (
   mutate: (fn: (prev: Record<string, unknown> | undefined) => Record<string, unknown>) => void,
@@ -29,8 +29,8 @@ const formatFileRef = (file_name: string): string => {
   // Remove @ prefix if present (normalize)
   // @ prefix is an internal implementation detail for ACP agents
   // It will be added by the backend when needed
-  // 移除 @ 前缀（如果存在）
-  // @ 前缀是 ACP agent 的内部实现细节，由后端按需添加
+  // Strip the @ prefix when present
+  // The @ prefix is an ACP agent implementation detail the backend adds when needed
   const normalized = trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
   return normalized;
 };
@@ -55,15 +55,15 @@ export const formatFilesForMessage = (files: string[]): string => {
 };
 
 /**
- * 共享的SendBox文件处理逻辑
- * 消除ACP、Gemini、GUID三个组件间的代码重复
+ * Shared SendBox file handling
+ * Removes the duplication between the ACP, Gemini and GUID components
  */
 export const useSendBoxFiles = ({ atPath, uploadFile, setAtPath, setUploadFile }: UseSendBoxFilesProps) => {
-  // 处理拖拽或粘贴的文件
+  // Handle dropped or pasted files
   const handleFilesAdded = useCallback(
     (files: FileMetadata[]) => {
       const file_paths = files.map((file) => file.path);
-      // 使用函数式更新，基于最新状态而不是闭包中的状态
+      // Functional update, so it reads the latest state rather than the closure
       setUploadFile((prevUploadFile) => [...prevUploadFile, ...file_paths]);
     },
     [setUploadFile]
@@ -90,7 +90,7 @@ export const useSendBoxFiles = ({ atPath, uploadFile, setAtPath, setUploadFile }
     [atPath, uploadFile]
   );
 
-  // 清理文件状态
+  // Clear the file state
   const clearFiles = useCallback(() => {
     setAtPath([]);
     setUploadFile([]);

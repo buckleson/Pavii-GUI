@@ -156,7 +156,7 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({
 
   useEffect(() => {
     if (visible) {
-      // 重置状态
+      // Reset the state
       setCurrentStep(1);
       setSelectedAgent(IMPORTABLE_AGENTS[0].backend);
       setFetchedServers([]);

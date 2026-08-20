@@ -94,7 +94,7 @@ interface SubModalProps {
  *
  * @example
  * ```tsx
- * <SubModal visible={showModal} onCancel={handleClose} title="详情">
+ * <SubModal visible={showModal} onCancel={handleClose} title="Details">
  * div>
  * </SubModal>
  * ```
@@ -182,7 +182,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onCancel, defaul
   }, [extensionTabs]);
 
   // Menu items configuration
-  // Modal 模式下内置 Tab 子集（不含 display、agent）
+  // The built-in tab subset for modal mode (display and agent excluded)
   const menuItems = useMemo((): Array<{ key: SettingTab; label: string; icon: React.ReactNode }> => {
     type MenuItem = { key: string; label: string; icon: React.ReactNode };
 

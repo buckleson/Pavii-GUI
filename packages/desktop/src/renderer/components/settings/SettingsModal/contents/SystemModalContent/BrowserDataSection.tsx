@@ -15,12 +15,12 @@ import PreferenceRow from './PreferenceRow';
 /**
  * In-app browser settings.
  *
- * 这一节值得独立存在，而不是塞进开发者设置：
- * - 登录态是全局共享的（所有 tab、所有项目共用），用户需要一个明确的地方知道
- *   「我的登录信息存在哪、怎么清掉」；
- * - 「允许 Agent 操作浏览器」是安全开关，必须在正式版可见。开发者设置整节在打包版本里
- *   return null，把开关放那儿等于正式版用户根本没有开关可关，而这个能力默认是开着的
- *   —— 那就不叫「可选」了。
+ * This section earns its own place rather than living under developer settings:
+ * - the browser session is shared globally across every tab and project, and the user needs one
+ *   obvious place to learn where it lives and how to clear it;
+ * - "let the agent drive the browser" is a security switch and must be visible in release builds.
+ *   The whole developer section returns null when packaged, so putting it there would leave
+ *   release users no switch at all for a capability that defaults to on - which is not optional in any meaningful sense.
  *
  * This section stands on its own rather than living under developer settings:
  * - sign-in state is global (shared across every tab and project), so the user needs
@@ -39,7 +39,7 @@ const BrowserDataSection: React.FC = () => {
   const status = cdpStatus?.data;
 
   /**
-   * 开关写的是配置，真正生效要等下次启动 —— 通道随进程创建。两者不一致时提示重启。
+   * The switch writes config; it only takes effect next launch, since the channel is created with the process. A mismatch prompts for a restart.
    * The switch writes config; it takes effect on the next launch because the bridge is
    * created with the process. Prompt for a restart while the two disagree.
    */

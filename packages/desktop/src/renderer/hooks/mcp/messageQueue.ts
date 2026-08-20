@@ -12,7 +12,7 @@ class MessageQueue {
   private static instance: MessageQueue;
   private queue: Array<() => void> = [];
   private isProcessing = false;
-  private readonly delay = 100; // 每条消息间隔 100ms，确保 Arco Design 有足够时间渲染 / 100ms delay between messages to ensure Arco Design has enough time to render
+  private readonly delay = 100; // 100ms between messages, so Arco Design has time to render
   private readonly maxQueueSize = 50; // Maximum queue size to prevent memory overflow
 
   private constructor() {}
@@ -28,7 +28,7 @@ class MessageQueue {
   }
 
   /**
-   * 将消息添加到队列并触发处理
+   * Add a message to the queue and start processing
    * Add a message to the queue and trigger processing
    * @param showMessageFn Function to display the message
    */

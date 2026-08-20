@@ -24,7 +24,7 @@ const isImageFile = (path: string): boolean => {
   return IMAGE_EXTS.has(ext);
 };
 
-// 格式化文件大小
+// Format the file size
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0B';
   if (bytes < 1024) return `${bytes}B`;
@@ -56,7 +56,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({ path, onRemove, readonly = fa
   const [fileSize, setFileSize] = useState<string>('');
 
   useEffect(() => {
-    // 获取文件大小
+    // Get the file size
     ipcBridge.fs.getFileMetadata
       .invoke({ path })
       .then((metadata) => {
@@ -66,7 +66,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({ path, onRemove, readonly = fa
         console.error('[FilePreview] Failed to get file metadata:', { path, error });
       });
 
-    // 如果是图片，获取图片的base64
+    // For images, read the base64 data
     // Retry when the file is not found yet (race condition: display message rendered
     // before the backend finishes copying the pasted image to the workspace).
     if (isImage) {

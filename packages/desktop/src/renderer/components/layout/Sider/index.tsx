@@ -142,7 +142,7 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
       await logout();
     } catch (error) {
       console.error('Logout failed:', error);
-      return; // logout 失败时不执行后续操作
+      return; // A failed logout stops here
     }
     // Discard this account's tabs from memory.
     //

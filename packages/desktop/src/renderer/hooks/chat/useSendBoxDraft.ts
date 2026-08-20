@@ -24,7 +24,7 @@ type Draft =
     };
 
 /**
- * 当前支持的对话类型以及对应的草稿对象
+ * Supported conversation types and their draft objects
  */
 type DraftConversationType = Draft['_type'];
 type SendBoxDraftStore = {
@@ -166,7 +166,7 @@ const getDraft = <K extends DraftConversationType>(
 };
 
 /**
- * 获得一种类型下的会话草稿操作的 React Hook
+ * React hook for draft operations on one conversation type
  */
 export const getSendBoxDraftHook = <K extends DraftConversationType>(
   type: K,

@@ -44,8 +44,8 @@ interface UseProtocolDetectionResult {
  * Used to auto-detect the protocol type used by an API endpoint
  *
  * @param base_url - Base URL
- * @param api_key - API Key（可以是逗号或换行分隔的多个 Key）
- * @param options - 配置选项
+ * @param api_key - API key, or several separated by commas or newlines
+ * @param options - Options
  */
 export function useProtocolDetection(
   base_url: string,
@@ -58,9 +58,9 @@ export function useProtocolDetection(
   const [result, setResult] = useState<ProtocolDetectionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // 防抖定时器
+  // Debounce timer
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  // 请求版本号（用于取消过期请求）
+  // Request version, used to discard stale responses
   const requestVersionRef = useRef(0);
 
   /**
@@ -68,20 +68,20 @@ export function useProtocolDetection(
    */
   const detect = useCallback(
     async (url: string, key: string) => {
-      // 清除之前的定时器
+      // Clear the previous timer
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
       }
 
-      // 验证输入
+      // Validate the input
       if (!url || !key) {
         setResult(null);
         setError(null);
         return;
       }
 
-      // 增加请求版本号
+      // Bump the request version
       const currentVersion = ++requestVersionRef.current;
 
       setIsDetecting(true);
@@ -142,7 +142,7 @@ export function useProtocolDetection(
       return;
     }
 
-    // 清除之前的定时器
+    // Clear the previous timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }

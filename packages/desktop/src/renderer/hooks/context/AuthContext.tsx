@@ -51,7 +51,7 @@ const AUTH_USER_ENDPOINT = '/api/auth/user';
 const isDesktopRuntime = typeof window !== 'undefined' && Boolean(window.electronAPI);
 
 // Clear expired auth cache including cookies and localStorage
-// 清除过期的认证缓存，包括 Cookie 和 localStorage
+// Clear stale auth caches, cookies and localStorage included
 function clearAuthCache(): void {
   if (typeof window === 'undefined') return;
 
@@ -263,7 +263,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     try {
       await fetch('/logout', {
         method: 'POST',
-        // Logout also needs CSRF token / 登出同样需要 CSRF Token
+        // Logout also needs the CSRF token
         headers: {
           'Content-Type': 'application/json',
         },

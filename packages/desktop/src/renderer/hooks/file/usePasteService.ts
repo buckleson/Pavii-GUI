@@ -17,8 +17,8 @@ interface UsePasteServiceProps {
 }
 
 /**
- * 通用的PasteService集成hook
- * 为所有组件提供统一的粘贴处理功能
+ * Shared PasteService integration hook
+ * Gives every component the same paste handling
  */
 export const usePasteService = ({
   supportedExts,
@@ -30,8 +30,8 @@ export const usePasteService = ({
   const { t } = useTranslation();
   const componentId = useRef('paste-service-' + uuid(4)).current;
 
-  // 跨 handlePaste 调用保持的粘贴图片序号。生命周期 = hook 实例 = SendBox mount，
-  // 每个 SendBox 独立一个计数器；组件卸载 -> 重建时归零，符合“关闭后归零可接受”。
+  // Pasted-image counter kept across handlePaste calls. Its lifetime is the hook instance, i.e.
+  // one SendBox mount, so each SendBox counts independently and a remount resets to zero, which is acceptable.
   const pastedImageCounter = useRef(0);
   const imageCounter = useMemo<ImageCounter>(
     () => ({
@@ -40,10 +40,10 @@ export const usePasteService = ({
     []
   );
 
-  // 统一的粘贴事件处理
+  // Shared paste event handling
   const handlePaste = useCallback(
     async (event: React.ClipboardEvent) => {
-      // 检查是否有文件，如果有文件立即阻止默认行为
+      // Files present: prevent the default immediately
       const files = event.clipboardData?.files;
       if (files && files.length > 0) {
         event.preventDefault();
@@ -61,7 +61,7 @@ export const usePasteService = ({
           imageCounter
         );
         if (handled && (!files || files.length === 0)) {
-          // 如果不是文件粘贴但被处理了（比如纯文本粘贴），也阻止默认行为
+          // Also prevent the default when a non-file paste was handled (plain text, say)
           event.preventDefault();
           event.stopPropagation();
         }
@@ -74,12 +74,12 @@ export const usePasteService = ({
     [conversation_id, source, supportedExts, onFilesAdded, onTextPaste, imageCounter, t]
   );
 
-  // 焦点处理
+  // Focus handling
   const handleFocus = useCallback(() => {
     PasteService.setLastFocusedComponent(componentId);
   }, [componentId]);
 
-  // 注册粘贴处理器
+  // Register the paste handler
   useEffect(() => {
     PasteService.init();
     PasteService.registerHandler(componentId, handlePaste);
