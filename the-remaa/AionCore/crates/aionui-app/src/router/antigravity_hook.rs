@@ -48,7 +48,7 @@ async fn handle_hook(
         // should learn nothing about the session.
         tracing::warn!("antigravity hook: rejected a callback with an invalid token");
         return Json(AntigravityHookOutput::deny(
-            "aionui rejected an unauthenticated hook callback",
+            "Pavii.Ai rejected an unauthenticated hook callback",
         ));
     }
 
@@ -67,7 +67,7 @@ async fn handle_hook(
             "antigravity hook: no live session to ask; denying"
         );
         return Json(AntigravityHookOutput::deny(
-            "aionui has no live session for this conversation",
+            "Pavii.Ai has no live session for this conversation",
         ));
     };
 

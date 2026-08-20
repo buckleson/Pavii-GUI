@@ -3,7 +3,12 @@ use serde::Deserialize;
 
 use crate::error::SystemError;
 
-const DEFAULT_REPO: &str = "iOfficeAI/AionUi";
+// Pavii releases, not the vendor's. This backs POST /api/system/check-update,
+// which the desktop app does not call -- it uses electron-updater against the
+// feed in packages/desktop/src/process/services/updateFeed.ts. But any other
+// client hitting this route would have been offered upstream AionUi builds as
+// updates, which is exactly what updateFeed.ts says must never happen.
+const DEFAULT_REPO: &str = "buckleson/Pavii-GUI";
 const GITHUB_API_BASE: &str = "https://api.github.com";
 
 /// Service that checks GitHub Releases for available updates.

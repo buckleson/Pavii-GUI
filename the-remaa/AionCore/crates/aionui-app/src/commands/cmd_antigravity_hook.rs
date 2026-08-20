@@ -24,7 +24,7 @@ pub(crate) async fn run_antigravity_hook() -> ExitCode {
     let body = serde_json::to_string(&decision).unwrap_or_else(|_| {
         // Serializing our own type cannot realistically fail, but agy MUST get
         // parseable JSON or it will treat the hook as broken.
-        r#"{"decision":"deny","reason":"aionui hook could not serialize its answer"}"#.to_owned()
+        r#"{"decision":"deny","reason":"Pavii.Ai hook could not serialize its answer"}"#.to_owned()
     });
     let mut stdout = tokio::io::stdout();
     let _ = stdout.write_all(body.as_bytes()).await;

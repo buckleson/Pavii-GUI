@@ -51,6 +51,17 @@ const BRAND_SCRUB_RULES: ReadonlyArray<readonly [RegExp, string]> = [
   // prefixes) and rewriting it inside a path shown to a user would make that
   // path wrong.
   [/Aion[Uu][iI]/g, 'Pavii.Ai'],
+  // The builtin assistant catalog describes four assistants as working "with
+  // officecli" (assistants.json, the Word/PPT/Excel/Morph entries), and that
+  // description is rendered verbatim on the assistant cards. skillBranding has
+  // carried an officecli rule since the rebrand, but it only ever runs on skill
+  // rows, so the assistant copy went out unbranded.
+  //
+  // Capitalized display form here, deliberately unlike skillBranding's
+  // lowercase `pavii-cli`: that one rewrites skill *names*, which are matched
+  // as identifiers, while this is prose a user reads.
+  [/\bofficecli\b/gi, 'Pavii CLI'],
+  [/iOfficeAI/g, 'Pavii'],
   // The internal agent identifier. It stays `aionrs` everywhere it is
   // stored (conversations.type, .aionrs/ directories, the aionrs.config
   // settings key) because that is a backend contract; it is only ever

@@ -170,12 +170,12 @@ Add the following testids first (they cover 95% of interaction scenarios):
 
 ### 6.2 Mapping to E2E Tests
 
-| Requirements section       | E2E test cases                                |
-| -------------------------- | --------------------------------------------- |
-| 2.1 Skill list display     | Verify each section renders with correct data |
-| 2.2-2.4 Core operations    | Verify the import/export/delete flows         |
-| 2.5 Search and filtering   | Verify search result accuracy                 |
-| 5. Edge cases and errors   | Verify error messages and boundary input      |
+| Requirements section     | E2E test cases                                |
+| ------------------------ | --------------------------------------------- |
+| 2.1 Skill list display   | Verify each section renders with correct data |
+| 2.2-2.4 Core operations  | Verify the import/export/delete flows         |
+| 2.5 Search and filtering | Verify search result accuracy                 |
+| 5. Edge cases and errors | Verify error messages and boundary input      |
 
 ---
 
@@ -619,16 +619,16 @@ Section 7 correctly identifies this problem and lists the missing testids. **Ver
 
 **Clarification by scenario** (verification strategy per operation):
 
-| Operation             | UI interaction                    | Bridge setup                              | UI assertion                          | Bridge assertion                              |
-| --------------------- | --------------------------------- | ----------------------------------------- | ------------------------------------- | --------------------------------------------- |
-| Import external skill | Click the card / Import button    | ❌                                        | Success message appears               | `listAvailableSkills` contains the new skill  |
-| Delete custom skill   | Click delete + confirm the Modal  | ❌                                        | The card disappears                   | `listAvailableSkills` no longer has the skill |
-| Search skills         | Type in the search box            | ❌                                        | Matching cards visible, others hidden | ❌ not needed                                 |
-| Add custom path       | Fill in the Modal + confirm       | ❌                                        | New Tab appears, Modal closes         | `detectAndCountExternalSkills` has the source |
-| Export skill          | Pick an option in Export dropdown | ✅ seed an external source (addCustomExternalPath) | Success message appears      | ❌ E2E does not verify target directory files |
-| Import from folder    | Click the button (mock dialog)    | ✅ create a temp skill directory          | Same as "import external skill"       | Same as above                                 |
-| Bulk import           | Click Import All                  | ❌                                        | Success count message                 | `listAvailableSkills` has every imported skill |
-| Refresh the list      | Click the refresh button          | ✅ modify the external source dir on the fly | Loading state toggles              | The new skill appears in the list             |
+| Operation             | UI interaction                    | Bridge setup                                       | UI assertion                          | Bridge assertion                               |
+| --------------------- | --------------------------------- | -------------------------------------------------- | ------------------------------------- | ---------------------------------------------- |
+| Import external skill | Click the card / Import button    | ❌                                                 | Success message appears               | `listAvailableSkills` contains the new skill   |
+| Delete custom skill   | Click delete + confirm the Modal  | ❌                                                 | The card disappears                   | `listAvailableSkills` no longer has the skill  |
+| Search skills         | Type in the search box            | ❌                                                 | Matching cards visible, others hidden | ❌ not needed                                  |
+| Add custom path       | Fill in the Modal + confirm       | ❌                                                 | New Tab appears, Modal closes         | `detectAndCountExternalSkills` has the source  |
+| Export skill          | Pick an option in Export dropdown | ✅ seed an external source (addCustomExternalPath) | Success message appears               | ❌ E2E does not verify target directory files  |
+| Import from folder    | Click the button (mock dialog)    | ✅ create a temp skill directory                   | Same as "import external skill"       | Same as above                                  |
+| Bulk import           | Click Import All                  | ❌                                                 | Success count message                 | `listAvailableSkills` has every imported skill |
+| Refresh the list      | Click the refresh button          | ✅ modify the external source dir on the fly       | Loading state toggles                 | The new skill appears in the list              |
 
 **Alternative to file content verification** (responding to my preliminary notes):
 
@@ -999,16 +999,16 @@ await page.locator('[data-testid="manual-import-button"]').click();
 
 **Contents table**:
 
-| Requirement                | Reason                                       | E2E alternative                                              | Unit test |
-| -------------------------- | -------------------------------------------- | ------------------------------------------------------------ | --------- |
-| File picker interaction    | Native OS dialog                             | Mock `dialog.showOpen`, or skip the UI click and seed via bridge | ✅        |
-| Symlink target check       | E2E does not read the filesystem             | Only assert the UI plus a bridge `success: true`, not the target file | ✅        |
-| Target dir files on export | E2E does not read external paths             | Only assert the success message and that My Skills is unchanged | ✅        |
-| Export timeout (8 s)       | Hard to reproduce reliably                   | Skip; unit tests mock it with `Promise.race`                  | ✅        |
-| Path traversal attack      | Security testing, not functional testing     | Skip; unit tests cover the `fsBridge.ts:1686-1691` logic       | ✅        |
-| Symlink cycles             | Low-level filesystem behavior                | Skip; unit tests cover the scan logic                          | ✅        |
-| Large lists (100+ skills)  | Performance testing, expensive in E2E        | Test only the 50-skill case; 100+ is covered by load testing   | ⚠️        |
-| Bulk import progress       | Not implemented in the UI (see designer review 9.2.3) | Skip; mark it as a known limitation                   | N/A       |
+| Requirement                | Reason                                                | E2E alternative                                                       | Unit test |
+| -------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------- | --------- |
+| File picker interaction    | Native OS dialog                                      | Mock `dialog.showOpen`, or skip the UI click and seed via bridge      | ✅        |
+| Symlink target check       | E2E does not read the filesystem                      | Only assert the UI plus a bridge `success: true`, not the target file | ✅        |
+| Target dir files on export | E2E does not read external paths                      | Only assert the success message and that My Skills is unchanged       | ✅        |
+| Export timeout (8 s)       | Hard to reproduce reliably                            | Skip; unit tests mock it with `Promise.race`                          | ✅        |
+| Path traversal attack      | Security testing, not functional testing              | Skip; unit tests cover the `fsBridge.ts:1686-1691` logic              | ✅        |
+| Symlink cycles             | Low-level filesystem behavior                         | Skip; unit tests cover the scan logic                                 | ✅        |
+| Large lists (100+ skills)  | Performance testing, expensive in E2E                 | Test only the 50-skill case; 100+ is covered by load testing          | ⚠️        |
+| Bulk import progress       | Not implemented in the UI (see designer review 9.2.3) | Skip; mark it as a known limitation                                   | N/A       |
 
 ---
 
@@ -1111,18 +1111,18 @@ The 10 P0 testids listed in test-strategy.zh.md section 5.2 match my requirement
 
 The P1 block in test-strategy.zh.md section 5.2 lists 10 testids covering the search, refresh, and Modal scenarios in my test cases:
 
-| My test case requirement       | Provided by test-strategy            | Status |
-| ------------------------------ | ------------------------------------ | ------ |
-| TC-S-02: search skills (My Skills) | `input-search-my-skills` (line 410)  | ✅   |
-| TC-S-11: search external skills    | `input-search-external` (line 411)   | ✅   |
-| TC-S-04: refresh My Skills         | `btn-refresh-my-skills` (line 412)   | ✅   |
-| TC-S-12: refresh external skills   | `btn-refresh-external` (line 413)    | ✅   |
-| TC-S-17: add a custom path         | `modal-add-custom-path` (line 414)   | ✅   |
-| TC-S-17: custom path form          | `input-custom-path-name` (line 415)  | ✅   |
-| TC-S-17: custom path form          | `input-custom-path-value` (line 416) | ✅   |
-| TC-S-17: browse button             | `btn-browse-custom-path` (line 417)  | ✅   |
-| TC-S-05: delete confirmation Modal | `modal-delete-skill` (line 418)      | ✅   |
-| TC-S-05: delete confirm button     | `btn-confirm-delete` (line 419)      | ✅   |
+| My test case requirement           | Provided by test-strategy            | Status |
+| ---------------------------------- | ------------------------------------ | ------ |
+| TC-S-02: search skills (My Skills) | `input-search-my-skills` (line 410)  | ✅     |
+| TC-S-11: search external skills    | `input-search-external` (line 411)   | ✅     |
+| TC-S-04: refresh My Skills         | `btn-refresh-my-skills` (line 412)   | ✅     |
+| TC-S-12: refresh external skills   | `btn-refresh-external` (line 413)    | ✅     |
+| TC-S-17: add a custom path         | `modal-add-custom-path` (line 414)   | ✅     |
+| TC-S-17: custom path form          | `input-custom-path-name` (line 415)  | ✅     |
+| TC-S-17: custom path form          | `input-custom-path-value` (line 416) | ✅     |
+| TC-S-17: browse button             | `btn-browse-custom-path` (line 417)  | ✅     |
+| TC-S-05: delete confirmation Modal | `modal-delete-skill` (line 418)      | ✅     |
+| TC-S-05: delete confirm button     | `btn-confirm-delete` (line 419)      | ✅     |
 
 **Conclusion**: the P1 testids cover every key interaction path, so test stability is assured.
 
@@ -1130,16 +1130,16 @@ The P1 block in test-strategy.zh.md section 5.2 lists 10 testids covering the se
 
 The P2 block in test-strategy.zh.md section 5.2 lists 8 testids covering Tab switching, empty states, and the Extension/Auto sections:
 
-| Purpose                        | Provided by test-strategy                  | My test case dependency                                    |
-| ------------------------------ | ------------------------------------------ | ---------------------------------------------------------- |
+| Purpose                             | Provided by test-strategy                  | My test case dependency                                   |
+| ----------------------------------- | ------------------------------------------ | --------------------------------------------------------- |
 | TC-S-08: switch external source Tab | `external-source-tab-${source}` (line 425) | ✅ (`.filter({hasText})` works, but a testid is steadier) |
-| TC-S-17: add custom source button   | `btn-add-custom-source` (line 426)         | ✅                                                    |
-| TC-S-14: Extension Skills section   | `extension-skills-section` (line 427)      | ✅                                                    |
-| TC-S-14: Extension skill card       | `extension-skill-card-${name}` (line 428)  | ✅                                                    |
-| TC-S-15: Auto Skills section        | `auto-skills-section` (line 429)           | ✅                                                    |
-| TC-S-15: Auto skill card            | `auto-skill-card-${name}` (line 430)       | ✅                                                    |
-| TC-S-03: My Skills empty state      | `my-skills-empty-state` (line 431)         | ✅                                                    |
-| TC-S-13: external search no results | `external-skills-no-results` (line 432)    | ✅                                                    |
+| TC-S-17: add custom source button   | `btn-add-custom-source` (line 426)         | ✅                                                        |
+| TC-S-14: Extension Skills section   | `extension-skills-section` (line 427)      | ✅                                                        |
+| TC-S-14: Extension skill card       | `extension-skill-card-${name}` (line 428)  | ✅                                                        |
+| TC-S-15: Auto Skills section        | `auto-skills-section` (line 429)           | ✅                                                        |
+| TC-S-15: Auto skill card            | `auto-skill-card-${name}` (line 430)       | ✅                                                        |
+| TC-S-03: My Skills empty state      | `my-skills-empty-state` (line 431)         | ✅                                                        |
+| TC-S-13: external search no results | `external-skills-no-results` (line 432)    | ✅                                                        |
 
 **Conclusion**: the P2 testids are optional, but strongly recommended for maintainability.
 
@@ -1160,12 +1160,12 @@ export async function goToSkillsHub(page: Page): Promise<void>;
 
 The 4 bridge query functions map directly onto the backend state verification my test cases need:
 
-| Helper function            | My test case dependency                                         |
-| -------------------------- | --------------------------------------------------------------- |
-| `getMySkills(page)`        | TC-S-01, TC-S-02, TC-S-03, TC-S-04, TC-S-05, TC-S-06 (6 cases)  |
-| `getExternalSources(page)` | TC-S-07, TC-S-08, TC-S-17, TC-S-18, TC-S-19 (5 cases)           |
-| `getAutoSkills(page)`      | TC-S-15                                                         |
-| `getSkillPaths(page)`      | TC-S-17 (verify the config after a custom path is added)        |
+| Helper function            | My test case dependency                                        |
+| -------------------------- | -------------------------------------------------------------- |
+| `getMySkills(page)`        | TC-S-01, TC-S-02, TC-S-03, TC-S-04, TC-S-05, TC-S-06 (6 cases) |
+| `getExternalSources(page)` | TC-S-07, TC-S-08, TC-S-17, TC-S-18, TC-S-19 (5 cases)          |
+| `getAutoSkills(page)`      | TC-S-15                                                        |
+| `getSkillPaths(page)`      | TC-S-17 (verify the config after a custom path is added)       |
 
 **Conclusion**: the bridge assertion functions are comprehensive and their signatures are clear.
 
@@ -1173,11 +1173,11 @@ The 4 bridge query functions map directly onto the backend state verification my
 
 The 4 bridge data construction functions support test data isolation and Setup/Cleanup:
 
-| Helper function            | My test case Setup dependency                        | My test case Cleanup dependency |
-| -------------------------- | ---------------------------------------------------- | ------------------------------- |
-| `importSkillViaBridge`     | TC-S-02, TC-S-03, TC-S-04, TC-S-05, TC-S-06          | -                               |
-| `deleteSkillViaBridge`     | -                                                    | afterEach of all 26 cases       |
-| `addCustomExternalPath`    | TC-S-08, TC-S-09, TC-S-10, TC-S-11, TC-S-12, TC-S-13 | -                               |
+| Helper function            | My test case Setup dependency                        | My test case Cleanup dependency       |
+| -------------------------- | ---------------------------------------------------- | ------------------------------------- |
+| `importSkillViaBridge`     | TC-S-02, TC-S-03, TC-S-04, TC-S-05, TC-S-06          | -                                     |
+| `deleteSkillViaBridge`     | -                                                    | afterEach of all 26 cases             |
+| `addCustomExternalPath`    | TC-S-08, TC-S-09, TC-S-10, TC-S-11, TC-S-12, TC-S-13 | -                                     |
 | `removeCustomExternalPath` | -                                                    | cleanup of every external-source case |
 
 **Conclusion**: the data construction functions fully support the E2E-Test-\* isolation strategy.
@@ -1186,17 +1186,17 @@ The 4 bridge data construction functions support test data isolation and Setup/C
 
 The 8 UI operation functions map directly onto the Trigger steps of my test cases:
 
-| Helper function         | My test case dependency | Notes                                     |
-| ----------------------- | ----------------------- | ----------------------------------------- |
+| Helper function         | My test case dependency | Notes                                                 |
+| ----------------------- | ----------------------- | ----------------------------------------------------- |
 | `searchMySkills`        | TC-S-02, TC-S-03        | ✅ the 100ms wait fits the no-debounce implementation |
 | `searchExternalSkills`  | TC-S-11, TC-S-13        | ✅ the 100ms wait fits the no-debounce implementation |
-| `refreshMySkills`       | TC-S-04                 | ✅ the 500ms wait is conservative         |
-| `refreshExternalSkills` | TC-S-12                 | ✅ the 500ms wait is conservative         |
-| `importSkillViaUI`      | TC-S-09 (single import) | ✅ waiting on `.arco-message-success` is right |
-| `deleteSkillViaUI`      | TC-S-05                 | ✅ includes the Modal confirmation step   |
-| `exportSkillViaUI`      | TC-S-06                 | ✅ supports picking among several dropdown targets |
-| `importAllSkills`       | TC-S-10 (bulk import)   | ✅ the 10-second wait suits a bulk operation |
-| `addCustomPathViaUI`    | TC-S-17                 | ✅ the Modal form handling is complete    |
+| `refreshMySkills`       | TC-S-04                 | ✅ the 500ms wait is conservative                     |
+| `refreshExternalSkills` | TC-S-12                 | ✅ the 500ms wait is conservative                     |
+| `importSkillViaUI`      | TC-S-09 (single import) | ✅ waiting on `.arco-message-success` is right        |
+| `deleteSkillViaUI`      | TC-S-05                 | ✅ includes the Modal confirmation step               |
+| `exportSkillViaUI`      | TC-S-06                 | ✅ supports picking among several dropdown targets    |
+| `importAllSkills`       | TC-S-10 (bulk import)   | ✅ the 10-second wait suits a bulk operation          |
+| `addCustomPathViaUI`    | TC-S-17                 | ✅ the Modal form handling is complete                |
 
 **Conclusion**: the UI operation functions sit at a sensible abstraction level, and the wait strategy matches how the feature is currently built.
 
@@ -1217,13 +1217,13 @@ export async function cleanupTestSkills(page: Page): Promise<void>;
 
 The 5 scenario examples in section 4 correctly express the Setup/Assert/Cleanup pattern:
 
-| test-strategy scenario         | My matching test case          | Pattern fit                                     |
-| ------------------------------ | ------------------------------ | ----------------------------------------------- |
-| § 4.3 scenario 1: render list  | TC-S-01 (render My Skills list) | ✅ mixed assertions (UI + Bridge)              |
-| § 4.3 scenario 2: delete skill | TC-S-05 (delete a skill)       | ✅ Setup Bridge → Trigger UI → Assert Bridge    |
-| § 4.3 scenario 3: search       | TC-S-02 (search skills)        | ✅ Setup Bridge → Trigger UI → Assert UI        |
-| § 4.3 scenario 4: import skill | TC-S-09 (single import)        | ✅ Setup external source → Trigger UI → Assert Bridge |
-| § 4.3 scenario 5: export skill | TC-S-06 (export a skill)       | ✅ Setup My Skills → Trigger UI → Assert target source |
+| test-strategy scenario         | My matching test case           | Pattern fit                                            |
+| ------------------------------ | ------------------------------- | ------------------------------------------------------ |
+| § 4.3 scenario 1: render list  | TC-S-01 (render My Skills list) | ✅ mixed assertions (UI + Bridge)                      |
+| § 4.3 scenario 2: delete skill | TC-S-05 (delete a skill)        | ✅ Setup Bridge → Trigger UI → Assert Bridge           |
+| § 4.3 scenario 3: search       | TC-S-02 (search skills)         | ✅ Setup Bridge → Trigger UI → Assert UI               |
+| § 4.3 scenario 4: import skill | TC-S-09 (single import)         | ✅ Setup external source → Trigger UI → Assert Bridge  |
+| § 4.3 scenario 5: export skill | TC-S-06 (export a skill)        | ✅ Setup My Skills → Trigger UI → Assert target source |
 
 **Conclusion**: the bridge assertion strategy matches my test case design exactly; no adjustment needed.
 
@@ -1273,11 +1273,11 @@ The `cleanupTestSkills` function in test-strategy § 7.1 matches the cleanup ste
 
 The alternatives test-strategy proposes match my test case design:
 
-| Untestable item                  | test-strategy approach                     | Adopted in my test cases |
-| -------------------------------- | ------------------------------------------ | ------------------------ |
-| Verify the symlink was created   | Bridge assertion: the list contains the skill | ✅ TC-S-09, TC-S-10   |
-| Verify the symlink after export  | UI assertion: the success message          | ✅ TC-S-06               |
-| Verify delete leaves the source alone | UI assertion: card gone + Bridge assertion: not in list | ✅ TC-S-05 |
+| Untestable item                       | test-strategy approach                                  | Adopted in my test cases |
+| ------------------------------------- | ------------------------------------------------------- | ------------------------ |
+| Verify the symlink was created        | Bridge assertion: the list contains the skill           | ✅ TC-S-09, TC-S-10      |
+| Verify the symlink after export       | UI assertion: the success message                       | ✅ TC-S-06               |
+| Verify delete leaves the source alone | UI assertion: card gone + Bridge assertion: not in list | ✅ TC-S-05               |
 
 **Conclusion**: the alternatives for filesystem-related untestable items are acceptable and already adopted in my test cases.
 
@@ -1307,13 +1307,13 @@ await electronApp.evaluate(async ({ dialog }, targetPath) => {
 
 The skip decisions test-strategy proposes match my test case design:
 
-| Untestable item      | test-strategy decision | My test case coverage             |
-| -------------------- | ---------------------- | --------------------------------- |
-| 8-second export timeout | Skip in E2E         | ❌ not covered (consistent)       |
-| Large list of 100+   | Test only 50           | ✅ TC-S-23 tests 50 (consistent)  |
-| Search debounce      | Note as a known limit  | ✅ noted in test-cases § 6.3 (consistent) |
-| Path traversal attack | Skip in E2E           | ❌ not covered (consistent)       |
-| YAML parse tolerance | Optional in E2E        | ❌ not covered (consistent, not a core feature) |
+| Untestable item         | test-strategy decision | My test case coverage                           |
+| ----------------------- | ---------------------- | ----------------------------------------------- |
+| 8-second export timeout | Skip in E2E            | ❌ not covered (consistent)                     |
+| Large list of 100+      | Test only 50           | ✅ TC-S-23 tests 50 (consistent)                |
+| Search debounce         | Note as a known limit  | ✅ noted in test-cases § 6.3 (consistent)       |
+| Path traversal attack   | Skip in E2E            | ❌ not covered (consistent)                     |
+| YAML parse tolerance    | Optional in E2E        | ❌ not covered (consistent, not a core feature) |
 
 **Conclusion**: the performance and boundary skip decisions match my test scope exactly.
 
@@ -2205,21 +2205,21 @@ Checking that all 4 skill sections' testid inventories are labelled P0/P1/P2:
 
 #### 15.2.1 Functional requirement coverage (requirements § 2)
 
-| Requirements section        | Coverage status     | Matching cases    | Coverage |
-| --------------------------- | ------------------- | ----------------- | -------- |
-| 2.1.1 My Skills             | ✅ covered          | TC-S-01~07        | 100%     |
-| 2.1.2 Discovered external   | ✅ covered          | TC-S-08~15        | 95%      |
-| 2.1.3 Extension Skills      | ❌ not covered      | -                 | 0%       |
-| 2.1.4 Auto-injected Skills  | ❌ not covered      | -                 | 0%       |
-| 2.2.1 Import from folder    | ❌ not covered      | -                 | 0%       |
-| 2.2.2 Symlink import        | ✅ covered          | TC-S-10           | 100%     |
-| 2.2.3 Bulk import           | ✅ covered          | TC-S-11           | 80%      |
-| 2.3.1 Export to external    | ✅ covered          | TC-S-19~21        | 100%     |
-| 2.4.1 Delete a skill        | ✅ covered          | TC-S-05~06        | 100%     |
-| 2.5 Search and filtering    | ✅ covered          | TC-S-02~03, 12~13 | 100%     |
-| 2.6 Skill scanning          | ✅ covered indirectly | TC-S-08, 14     | 70%      |
-| 2.7 Path management         | ✅ covered          | TC-S-16~18        | 100%     |
-| 2.8 URL highlight           | ✅ covered          | TC-S-22~23        | 100%     |
+| Requirements section       | Coverage status       | Matching cases    | Coverage |
+| -------------------------- | --------------------- | ----------------- | -------- |
+| 2.1.1 My Skills            | ✅ covered            | TC-S-01~07        | 100%     |
+| 2.1.2 Discovered external  | ✅ covered            | TC-S-08~15        | 95%      |
+| 2.1.3 Extension Skills     | ❌ not covered        | -                 | 0%       |
+| 2.1.4 Auto-injected Skills | ❌ not covered        | -                 | 0%       |
+| 2.2.1 Import from folder   | ❌ not covered        | -                 | 0%       |
+| 2.2.2 Symlink import       | ✅ covered            | TC-S-10           | 100%     |
+| 2.2.3 Bulk import          | ✅ covered            | TC-S-11           | 80%      |
+| 2.3.1 Export to external   | ✅ covered            | TC-S-19~21        | 100%     |
+| 2.4.1 Delete a skill       | ✅ covered            | TC-S-05~06        | 100%     |
+| 2.5 Search and filtering   | ✅ covered            | TC-S-02~03, 12~13 | 100%     |
+| 2.6 Skill scanning         | ✅ covered indirectly | TC-S-08, 14       | 70%      |
+| 2.7 Path management        | ✅ covered            | TC-S-16~18        | 100%     |
+| 2.8 URL highlight          | ✅ covered            | TC-S-22~23        | 100%     |
 
 **Overall coverage**: 80% (10 of 12.5 main feature points)
 
@@ -2227,12 +2227,12 @@ Checking that all 4 skill sections' testid inventories are labelled P0/P1/P2:
 
 #### 15.2.2 Edge case and error handling coverage (requirements § 5)
 
-| Requirements section          | Coverage status      | Matching cases                    |
-| ----------------------------- | -------------------- | --------------------------------- |
-| 5.1.4 Special characters      | ✅ covered           | TC-S-24                           |
-| 5.4.1 Rapid repeated refresh  | ✅ covered           | TC-S-26                           |
-| 5.5.1 Large lists             | ✅ covered           | TC-S-25                           |
-| 5.5.2 Bulk import blocking    | ⚠️ partially covered | TC-S-11 (UI blocking not asserted) |
+| Requirements section         | Coverage status      | Matching cases                     |
+| ---------------------------- | -------------------- | ---------------------------------- |
+| 5.1.4 Special characters     | ✅ covered           | TC-S-24                            |
+| 5.4.1 Rapid repeated refresh | ✅ covered           | TC-S-26                            |
+| 5.5.1 Large lists            | ✅ covered           | TC-S-25                            |
+| 5.5.2 Bulk import blocking   | ⚠️ partially covered | TC-S-11 (UI blocking not asserted) |
 
 **Edge case coverage**: 85%
 
@@ -2565,14 +2565,14 @@ await electronApp.evaluate(async ({ dialog }, targetPath) => {
 
 #### 16.2.2 Coverage improvement
 
-| Feature area                  | v1.0 coverage | v1.1 coverage          | Change      |
-| ----------------------------- | ------------- | ---------------------- | ----------- |
-| My Skills section             | ✅ 6 cases    | ✅ 7 cases (+TC-S-29)  | Complete    |
-| External Skills section       | ✅ 7 cases    | ✅ 7 cases             | Complete    |
-| **Extension Skills section**  | ❌ not covered | ✅ 1 case (TC-S-27)   | **P1 added** |
-| **Auto-injected Skills section** | ❌ not covered | ✅ 1 case (TC-S-28) | **P1 added** |
-| Custom path management        | ✅ 3 cases    | ✅ 3 cases             | Complete    |
-| Edge cases                    | ✅ 7 cases    | ✅ 7 cases             | Complete    |
+| Feature area                     | v1.0 coverage  | v1.1 coverage         | Change       |
+| -------------------------------- | -------------- | --------------------- | ------------ |
+| My Skills section                | ✅ 6 cases     | ✅ 7 cases (+TC-S-29) | Complete     |
+| External Skills section          | ✅ 7 cases     | ✅ 7 cases            | Complete     |
+| **Extension Skills section**     | ❌ not covered | ✅ 1 case (TC-S-27)   | **P1 added** |
+| **Auto-injected Skills section** | ❌ not covered | ✅ 1 case (TC-S-28)   | **P1 added** |
+| Custom path management           | ✅ 3 cases     | ✅ 3 cases            | Complete     |
+| Edge cases                       | ✅ 7 cases     | ✅ 7 cases            | Complete     |
 
 **v1.1 coverage**: ✅ **100%** (all 4 skill sections now have test cases)
 
@@ -2582,13 +2582,13 @@ await electronApp.evaluate(async ({ dialog }, targetPath) => {
 
 Extra testids introduced by the 3 new test cases:
 
-| testid                         | Priority | Purpose                       | Case    |
-| ------------------------------ | -------- | ----------------------------- | ------- |
+| testid                         | Priority | Purpose                            | Case    |
+| ------------------------------ | -------- | ---------------------------------- | ------- |
 | `extension-skills-section`     | P2       | Extension skills section container | TC-S-27 |
-| `extension-skill-card-${name}` | P2       | Extension skill card          | TC-S-27 |
-| `auto-skills-section`          | P2       | Auto-injected section container | TC-S-28 |
-| `auto-skill-card-${name}`      | P2       | Auto-injected skill card      | TC-S-28 |
-| `btn-manual-import`            | P0       | Import-from-folder button     | TC-S-29 |
+| `extension-skill-card-${name}` | P2       | Extension skill card               | TC-S-27 |
+| `auto-skills-section`          | P2       | Auto-injected section container    | TC-S-28 |
+| `auto-skill-card-${name}`      | P2       | Auto-injected skill card           | TC-S-28 |
+| `btn-manual-import`            | P0       | Import-from-folder button          | TC-S-29 |
 
 **Notes**:
 
@@ -2778,12 +2778,12 @@ Against the 4-file split in test-strategy.zh.md § 9.1:
 
 #### 17.2.1 Updated feature coverage
 
-| Dimension            | v1.0          | v1.1                 | Change |
-| -------------------- | ------------- | -------------------- | ------ |
-| Test case count      | 26            | 29                   | +3     |
+| Dimension              | v1.0          | v1.1                 | Change |
+| ---------------------- | ------------- | -------------------- | ------ |
+| Test case count        | 26            | 29                   | +3     |
 | Feature point coverage | 80% (10/12.5) | **100%** (12.5/12.5) | +20%   |
-| Edge case coverage   | 85%           | 85%                  | -      |
-| Overall completeness | 75%           | **100%**             | +25%   |
+| Edge case coverage     | 85%           | 85%                  | -      |
+| Overall completeness   | 75%           | **100%**             | +25%   |
 
 #### 17.2.2 Gaps closed
 
@@ -2893,14 +2893,14 @@ Per the executability review from skills-engineer-2 (§ 2.1), the testid naming 
 
 Every testid now follows these prefix conventions (identical to test-strategy):
 
-| Prefix                  | Purpose             | Example                                            |
-| ----------------------- | ------------------- | -------------------------------------------------- |
-| `btn-*`                 | Button elements     | `btn-refresh-my-skills`, `btn-import-all`          |
-| `input-*`               | Input elements      | `input-search-my-skills`, `input-custom-path-name` |
-| `modal-*`               | Modal containers    | `modal-add-custom-path`, `modal-delete-skill`      |
-| `my-skill-card-*`       | My Skills cards     | `my-skill-card-E2E-Test-Skill-1`                   |
+| Prefix                  | Purpose              | Example                                            |
+| ----------------------- | -------------------- | -------------------------------------------------- |
+| `btn-*`                 | Button elements      | `btn-refresh-my-skills`, `btn-import-all`          |
+| `input-*`               | Input elements       | `input-search-my-skills`, `input-custom-path-name` |
+| `modal-*`               | Modal containers     | `modal-add-custom-path`, `modal-delete-skill`      |
+| `my-skill-card-*`       | My Skills cards      | `my-skill-card-E2E-Test-Skill-1`                   |
 | `external-skill-card-*` | External skill cards | `external-skill-card-test-external`                |
-| `*-section`             | Section containers  | `my-skills-section`, `external-skills-section`     |
+| `*-section`             | Section containers   | `my-skills-section`, `external-skills-section`     |
 
 ---
 
@@ -2908,11 +2908,11 @@ Every testid now follows these prefix conventions (identical to test-strategy):
 
 #### 17.3.1 testid consistency verification
 
-| Document                  | testid source                   | v1.2 status                        |
-| ------------------------- | ------------------------------- | ---------------------------------- |
-| test-cases.zh.md          | testids used in the case steps  | ✅ identical to test-strategy      |
-| test-strategy.zh.md § 5.2 | the 28-testid inventory (P0/P1/P2) | ✅ the baseline                 |
-| test-strategy.zh.md § 7.1 | testids used in the helpers     | ✅ identical to test-cases         |
+| Document                  | testid source                      | v1.2 status                   |
+| ------------------------- | ---------------------------------- | ----------------------------- |
+| test-cases.zh.md          | testids used in the case steps     | ✅ identical to test-strategy |
+| test-strategy.zh.md § 5.2 | the 28-testid inventory (P0/P1/P2) | ✅ the baseline               |
+| test-strategy.zh.md § 7.1 | testids used in the helpers        | ✅ identical to test-cases    |
 
 **Conclusion**: v1.2 achieves fully unified testid naming across all three documents
 
@@ -2955,11 +2955,11 @@ The engineer review raised confirming the `getCustomExternalPaths` bridge key, w
 
 #### 17.5.2 Revision history
 
-| Version | Cases | Main changes                                                          |
-| ------- | ----- | --------------------------------------------------------------------- |
-| v1.0    | 26    | First draft, covering the My Skills + External Skills sections        |
-| v1.1    | 29    | Added 3 P1 cases (Extension/Auto/import from folder), 75% → 100%      |
-| v1.2    | 29    | Unified testid naming (14 cases), fully matching test-strategy        |
+| Version | Cases | Main changes                                                     |
+| ------- | ----- | ---------------------------------------------------------------- |
+| v1.0    | 26    | First draft, covering the My Skills + External Skills sections   |
+| v1.1    | 29    | Added 3 P1 cases (Extension/Auto/import from folder), 75% → 100% |
+| v1.2    | 29    | Unified testid naming (14 cases), fully matching test-strategy   |
 
 #### 17.5.3 Next steps
 
@@ -3469,12 +3469,12 @@ After reading the source:
 
 #### 18.5.1 Test coverage
 
-| Section              | v1.2 coverage             | v1.3 coverage                 | Note      |
-| -------------------- | ------------------------- | ----------------------------- | --------- |
-| My Skills            | ✅ 7 cases                | ✅ 7 cases                    | Unchanged |
-| External Skills      | ✅ 10 cases               | ✅ 10 cases                   | Unchanged |
-| Extension Skills     | ⚠️ 1 case (may skip)      | ✅ 1 case (runs unconditionally) | **Fixed** |
-| Auto-injected Skills | ⚠️ 1 case (may skip)      | ✅ 1 case (runs unconditionally) | **Fixed** |
+| Section              | v1.2 coverage        | v1.3 coverage                    | Note      |
+| -------------------- | -------------------- | -------------------------------- | --------- |
+| My Skills            | ✅ 7 cases           | ✅ 7 cases                       | Unchanged |
+| External Skills      | ✅ 10 cases          | ✅ 10 cases                      | Unchanged |
+| Extension Skills     | ⚠️ 1 case (may skip) | ✅ 1 case (runs unconditionally) | **Fixed** |
+| Auto-injected Skills | ⚠️ 1 case (may skip) | ✅ 1 case (runs unconditionally) | **Fixed** |
 
 **v1.3 improvements**:
 
@@ -3486,10 +3486,10 @@ After reading the source:
 
 #### 18.5.2 Assertion type adjustments
 
-| Case    | v1.2 assertion            | v1.3 assertion                        | Change                            |
-| ------- | ------------------------- | ------------------------------------- | --------------------------------- |
-| TC-S-27 | At least 1 card required  | Section container exists, cards optional | Relaxed, empty state allowed    |
-| TC-S-28 | At least 1 card required  | Section container exists, cards optional | Relaxed, empty state allowed    |
+| Case    | v1.2 assertion           | v1.3 assertion                           | Change                       |
+| ------- | ------------------------ | ---------------------------------------- | ---------------------------- |
+| TC-S-27 | At least 1 card required | Section container exists, cards optional | Relaxed, empty state allowed |
+| TC-S-28 | At least 1 card required | Section container exists, cards optional | Relaxed, empty state allowed |
 
 **Notes**:
 
@@ -3597,13 +3597,13 @@ After reading the source:
 
 #### 18.1.4 Final coverage confirmation
 
-| Dimension              | v1.0 | v1.3     | Status |
-| ---------------------- | ---- | -------- | ------ |
-| Test case count        | 26   | 29       | ✅     |
-| Feature point coverage | 80%  | **100%** | ✅     |
-| The 4 skill sections   | 2/4  | **4/4**  | ✅     |
-| Conditionally skipped cases | 0 | 0       | ✅     |
-| testid naming unified  | Partly | **Fully** | ✅   |
+| Dimension                   | v1.0   | v1.3      | Status |
+| --------------------------- | ------ | --------- | ------ |
+| Test case count             | 26     | 29        | ✅     |
+| Feature point coverage      | 80%    | **100%**  | ✅     |
+| The 4 skill sections        | 2/4    | **4/4**   | ✅     |
+| Conditionally skipped cases | 0      | 0         | ✅     |
+| testid naming unified       | Partly | **Fully** | ✅     |
 
 **Coverage status of every feature point**:
 
@@ -3783,23 +3783,23 @@ analyst-2's review found two places in v1.2 still violating the "no test.skip" r
 
 #### 19.4.1 Full revision history
 
-| Version | Cases | Main changes                          | Violation status                       |
-| ------- | ----- | ------------------------------------- | -------------------------------------- |
-| v1.0    | 26    | First draft                           | -                                      |
-| v1.1    | 29    | Added 3 P1 cases (TC-S-27~29)         | ⚠️ said "skip if there is no data"     |
-| v1.2    | 29    | Unified 14 testid names               | ⚠️ still had "if ... then ..." wording |
-| v1.3    | 29    | Removed every skip/limitation phrase  | ✅ no violations                       |
+| Version | Cases | Main changes                         | Violation status                       |
+| ------- | ----- | ------------------------------------ | -------------------------------------- |
+| v1.0    | 26    | First draft                          | -                                      |
+| v1.1    | 29    | Added 3 P1 cases (TC-S-27~29)        | ⚠️ said "skip if there is no data"     |
+| v1.2    | 29    | Unified 14 testid names              | ⚠️ still had "if ... then ..." wording |
+| v1.3    | 29    | Removed every skip/limitation phrase | ✅ no violations                       |
 
 ---
 
 #### 19.4.2 v1.3 compliance verification
 
-| Case            | Runs unconditionally | Contains "skip" wording | Contains "if ... then ..." | Status       |
-| --------------- | -------------------- | ----------------------- | -------------------------- | ------------ |
-| TC-S-27         | ✅ yes               | ❌ no                   | ❌ no                      | ✅ compliant |
-| TC-S-28         | ✅ yes               | ❌ no                   | ❌ no                      | ✅ compliant |
-| TC-S-29         | ✅ yes               | ❌ no                   | ❌ no                      | ✅ compliant |
-| The other 26 cases | ✅ yes            | ❌ no                   | ❌ no                      | ✅ compliant |
+| Case               | Runs unconditionally | Contains "skip" wording | Contains "if ... then ..." | Status       |
+| ------------------ | -------------------- | ----------------------- | -------------------------- | ------------ |
+| TC-S-27            | ✅ yes               | ❌ no                   | ❌ no                      | ✅ compliant |
+| TC-S-28            | ✅ yes               | ❌ no                   | ❌ no                      | ✅ compliant |
+| TC-S-29            | ✅ yes               | ❌ no                   | ❌ no                      | ✅ compliant |
+| The other 26 cases | ✅ yes               | ❌ no                   | ❌ no                      | ✅ compliant |
 
 **Conclusion**: all 29 cases in v1.3 run unconditionally, with no skip, limitation, or conditional wording
 
@@ -3807,11 +3807,11 @@ analyst-2's review found two places in v1.2 still violating the "no test.skip" r
 
 #### 19.4.3 Test strategy, stated plainly
 
-| Case    | Test strategy                                                | Data dependency                    |
-| ------- | ------------------------------------------------------------ | ---------------------------------- |
-| TC-S-27 | Unconditionally assert the `extension-skills-section` container exists | No dependency on real extension data |
-| TC-S-28 | Unconditionally assert the `auto-skills-section` container exists | No dependency on `_builtin/` contents |
-| TC-S-29 | The `dialog.showOpenDialog` mock must be implemented         | No "skip if impractical" allowed    |
+| Case    | Test strategy                                                          | Data dependency                       |
+| ------- | ---------------------------------------------------------------------- | ------------------------------------- |
+| TC-S-27 | Unconditionally assert the `extension-skills-section` container exists | No dependency on real extension data  |
+| TC-S-28 | Unconditionally assert the `auto-skills-section` container exists      | No dependency on `_builtin/` contents |
+| TC-S-29 | The `dialog.showOpenDialog` mock must be implemented                   | No "skip if impractical" allowed      |
 
 ---
 
@@ -3848,15 +3848,15 @@ analyst-2's review found two places in v1.2 still violating the "no test.skip" r
 
 #### 20.2.1 Mapping check
 
-| Case    | Implementation         | Correspondence      | Notes                                                     |
-| ------- | ---------------------- | ------------------- | --------------------------------------------------------- |
-| TC-S-01 | core-ui.e2e.ts:54-120  | ✅ correct          | 2 test skills, card rendering, and Bridge assertions all present |
-| TC-S-05 | core-ui.e2e.ts:125-201 | ✅ correct          | Delete flow, Modal, and Bridge assertions all present     |
-| TC-S-06 | core-ui.e2e.ts:206-256 | ⚠️ incomplete assertion | `deleteButtonCount` is checked but never `expect()`ed  |
-| TC-S-08 | core-ui.e2e.ts:262-323 | ✅ correct          | Custom path, Tab, and Bridge assertions all present       |
-| TC-S-10 | core-ui.e2e.ts:329-384 | ✅ correct          | Import flow and Bridge assertions all present             |
-| TC-S-16 | core-ui.e2e.ts:402-508 | ⚠️ flow deviation   | Uses the dialog to pick a path; test-cases expects direct typing |
-| TC-S-19 | core-ui.e2e.ts:514-581 | ⚠️ flow deviation   | Mocks the dialog and skips the dropdown; test-cases expects a dropdown selection |
+| Case    | Implementation         | Correspondence          | Notes                                                                            |
+| ------- | ---------------------- | ----------------------- | -------------------------------------------------------------------------------- |
+| TC-S-01 | core-ui.e2e.ts:54-120  | ✅ correct              | 2 test skills, card rendering, and Bridge assertions all present                 |
+| TC-S-05 | core-ui.e2e.ts:125-201 | ✅ correct              | Delete flow, Modal, and Bridge assertions all present                            |
+| TC-S-06 | core-ui.e2e.ts:206-256 | ⚠️ incomplete assertion | `deleteButtonCount` is checked but never `expect()`ed                            |
+| TC-S-08 | core-ui.e2e.ts:262-323 | ✅ correct              | Custom path, Tab, and Bridge assertions all present                              |
+| TC-S-10 | core-ui.e2e.ts:329-384 | ✅ correct              | Import flow and Bridge assertions all present                                    |
+| TC-S-16 | core-ui.e2e.ts:402-508 | ⚠️ flow deviation       | Uses the dialog to pick a path; test-cases expects direct typing                 |
+| TC-S-19 | core-ui.e2e.ts:514-581 | ⚠️ flow deviation       | Mocks the dialog and skips the dropdown; test-cases expects a dropdown selection |
 
 #### 20.2.2 Testid addition check
 

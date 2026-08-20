@@ -77,6 +77,28 @@ which contain the Windows user name.
 `tests/unit/bootstrap/noVendorUpdateEndpoint.test.ts` fails the build if a
 fallback to `static.aionui.com` or iOfficeAI reappears.
 
+## Runtime, on every launch
+
+### The update check (this document previously missed it)
+
+Three seconds after the main window appears, `index.ts` calls
+`autoUpdaterService.checkForUpdatesAndNotify()`, and
+`autoUpdaterService.ts:143-149` has already called
+`setFeedURL(buildGithubFeedOptions())` unconditionally when no CDN override is
+set. So **every launch queries the GitHub releases API** for
+`buckleson/Pavii-GUI`, disclosing install IP, app version and launch timing.
+`restoreDownloadedUpdateIfAvailable()` checks a second time when the renderer
+mounts.
+
+An earlier revision of this file omitted that, and a comment in `index.ts`
+asserted the call was "a no-op unless a Pavii-owned update feed is configured",
+which was not what the code did. Both are corrected.
+
+It is the project's own repository rather than the vendor's, and a desktop app
+that checks for its own updates is ordinary — but it is a third-party host
+(GitHub) contacted without user action, so it belongs in this table rather than
+being discovered later by someone reading a packet capture.
+
 ## Kept deliberately
 
 | Destination                                                                             | Trigger                                       | Why it stays                                                                                                                                                                 |

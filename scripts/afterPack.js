@@ -13,6 +13,82 @@ const {
 } = require('../packages/shared-scripts/src/verify-bundled-paviicore-resources');
 
 /**
+ * Turn off the Electron escape hatches before the app is signed.
+ *
+ * `@electron/fuses` has been a devDependency all along but was never called, so
+ * every shipped build kept `RunAsNode` enabled -- meaning
+ * `ELECTRON_RUN_AS_NODE=1 PaviiAi.exe evil.js` runs arbitrary code under the
+ * app's identity, and under its code signature once one exists. The inspector
+ * and NODE_OPTIONS fuses are the same class of hole.
+ *
+ * Safe for this app specifically: helper processes go through
+ * `utilityProcess.fork()` (ElectronPlatformServices.ts:46), which is an Electron
+ * API and does not depend on the RunAsNode fuse, and nothing reads NODE_OPTIONS
+ * at runtime.
+ *
+ * `EnableEmbeddedAsarIntegrityValidation` is deliberately NOT set here. It needs
+ * the asar header hash embedded by the packager; flipping the fuse without that
+ * stops the app launching at all. Enabling it is a separate change that has to
+ * be verified by actually starting the packaged build.
+ *
+ * Must run in afterPack, not afterSign: mutating the binary after signing
+ * invalidates the signature.
+ */
+async function hardenElectronFuses(context) {
+  const { electronPlatformName, appOutDir, packager } = context;
+  const { flipFuses, FuseVersion, FuseV1Options } = require('@electron/fuses');
+
+  const productName = packager?.appInfo?.productFilename || 'Pavii.Ai';
+
+  // `executableName` from electron-builder.yml ("PaviiAi"), NOT
+  // appInfo.sanitizedName -- that is the kebab-case npm-style name
+  // ("pavii-ai") and no such file is produced, so using it made this throw on
+  // every Windows build.
+  const executableName =
+    packager?.platformSpecificBuildOptions?.executableName || packager?.executableName || productName;
+
+  let electronBinary;
+  if (electronPlatformName === 'darwin') {
+    electronBinary = path.join(appOutDir, `${productName}.app`);
+  } else if (electronPlatformName === 'win32') {
+    electronBinary = path.join(appOutDir, `${executableName}.exe`);
+  } else {
+    electronBinary = path.join(appOutDir, executableName);
+  }
+
+  if (!fs.existsSync(electronBinary)) {
+    // Fall back to whatever single top-level executable was produced, so a
+    // future rename of executableName cannot silently disable hardening.
+    const candidates = fs
+      .readdirSync(appOutDir)
+      .filter((f) => (electronPlatformName === 'win32' ? f.toLowerCase().endsWith('.exe') : !path.extname(f)))
+      .filter((f) => !/^(elevate|squirrel)/i.test(f));
+    if (candidates.length === 1) {
+      electronBinary = path.join(appOutDir, candidates[0]);
+      console.warn(`   ⚠️  Expected binary name not found; hardening ${candidates[0]} instead`);
+    } else {
+      throw new Error(
+        `Cannot harden fuses: no Electron binary at ${electronBinary}, and ${candidates.length} candidates in ${appOutDir}`
+      );
+    }
+  }
+
+  await flipFuses(electronBinary, {
+    version: FuseVersion.V1,
+    resetAdHocDarwinSignature: electronPlatformName === 'darwin',
+    [FuseV1Options.RunAsNode]: false,
+    [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
+    [FuseV1Options.EnableNodeCliInspectArguments]: false,
+    [FuseV1Options.EnableCookieEncryption]: true,
+    [FuseV1Options.OnlyLoadAppFromAsar]: true,
+  });
+
+  console.log(
+    `   ✓ Fuses hardened on ${path.basename(electronBinary)} (RunAsNode/inspect/NODE_OPTIONS off, asar-only on)`
+  );
+}
+
+/**
  * afterPack hook for electron-builder
  * Rebuilds native modules for cross-architecture builds
  */
@@ -78,6 +154,12 @@ module.exports = async function afterPack(context) {
   } else {
     throw new Error(`resources directory not found: ${resourcesDir}`);
   }
+
+  // Before the rebuild short-circuit below, not after it: that `return` fires
+  // for every same-architecture non-Windows build, which is exactly the macOS
+  // and Linux release path. Hardening at the end of the function would silently
+  // skip the platforms most likely to be attacked through it.
+  await hardenElectronFuses(context);
 
   if (!isCrossCompile && !needsSameArchRebuild && !forceRebuild) {
     console.log(`   ✓ Same architecture, rebuild skipped (set FORCE_NATIVE_REBUILD=true to override)\n`);

@@ -13,7 +13,7 @@ import { captureBackendStartupFailure, initSentry, scheduleStartupLogReport, set
 initSentry();
 
 import './process/utils/configureConsoleLog';
-import { app, BrowserWindow, ipcMain, nativeImage, powerMonitor } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeImage, powerMonitor, shell } from 'electron';
 import fixPath from 'fix-path';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -493,6 +493,67 @@ function applyDebugBackendStartupFailure(failure: BackendStartupFailureInfo): vo
   (globalThis as typeof globalThis & { __backendStartupFailed?: boolean }).__backendStartupFailed = true;
 }
 
+/**
+ * Main-process guards on what renderer and webview content may do.
+ *
+ * The app renders agent-generated markdown and HTML previews and enables
+ * `webviewTag`, so the renderer is not a trusted surface. WebviewHost already
+ * sets `contextIsolation=yes, nodeIntegration=no, allowpopups=false` on each
+ * guest, but those are attributes on a tag inside the page — the page is
+ * exactly what an injection would control. `will-attach-webview` is the
+ * authoritative check, because the main process gets the final say.
+ *
+ * Before this, none of the three handlers existed anywhere in the codebase.
+ */
+function applyWebContentsGuards(window: BrowserWindow): void {
+  const devRendererUrl = process.env['ELECTRON_RENDERER_URL'];
+
+  const isInternalUrl = (target: string): boolean => {
+    if (target.startsWith('file://')) return true;
+    if (devRendererUrl && target.startsWith(devRendererUrl)) return true;
+    return false;
+  };
+
+  // Strip anything that would give a guest page privileges, whatever the tag says.
+  window.webContents.on('will-attach-webview', (_event, webPreferences, params) => {
+    delete webPreferences.preload;
+    webPreferences.nodeIntegration = false;
+    webPreferences.nodeIntegrationInSubFrames = false;
+    webPreferences.contextIsolation = true;
+    webPreferences.sandbox = true;
+    if (params.src && !/^https?:|^file:|^about:blank$/i.test(params.src)) {
+      console.warn(`[AionUi] blocked webview with unsupported scheme: ${params.src}`);
+      params.src = 'about:blank';
+    }
+  });
+
+  // Electron's default for window.open is to spawn a full BrowserWindow with no
+  // chrome. Hand http(s) to the user's browser instead and refuse the rest.
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) {
+      void shell.openExternal(url).catch((error: unknown) => {
+        console.error('[AionUi] openExternal failed:', error);
+      });
+    } else {
+      console.warn(`[AionUi] blocked window.open for non-http scheme: ${url}`);
+    }
+    return { action: 'deny' };
+  });
+
+  // Keep the main window on its own origin. Routing is hash-based, so ordinary
+  // in-app navigation never reaches this handler.
+  window.webContents.on('will-navigate', (event, url) => {
+    if (isInternalUrl(url)) return;
+    event.preventDefault();
+    console.warn(`[AionUi] blocked main-window navigation to ${url}`);
+    if (/^https?:\/\//i.test(url)) {
+      void shell.openExternal(url).catch((error: unknown) => {
+        console.error('[AionUi] openExternal failed:', error);
+      });
+    }
+  });
+}
+
 const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): void => {
   console.log('[AionUi] Creating main window...');
   const { x: windowX, y: windowY, width: windowWidth, height: windowHeight } = resolveInitialBounds();
@@ -544,6 +605,8 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
     },
   });
   console.log(`[AionUi] Main window created (id=${mainWindow.id})`);
+
+  applyWebContentsGuards(mainWindow);
 
   scheduleStartupLogReport(mainWindow);
 
@@ -597,14 +660,20 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
         autoUpdaterService.setBeforeQuitAndInstall(async () => {
           await backendManager.stop();
         });
-        // Check for updates after 3 seconds delay. Skipped in the discontinued
-        // build: the app's final version guides users to the website instead of
-        // auto-checking, so startup stays silent. The flag is a compile-time
-        // literal, so this branch is tree-shaken out of non-discontinued builds.
-        // Check for updates after 3s. Update-frozen builds start silently and never check in-app.
-        // checkForUpdatesAndNotify() is itself a no-op unless a Pavii-owned
-        // update feed is configured (see process/services/updateFeed.ts), so no
-        // launch-time request ever reaches a third party by default.
+        // Check for updates 3 seconds after launch. Skipped in the discontinued
+        // build: its final version guides users to the website instead, and the
+        // flag is a compile-time literal so the branch is tree-shaken out of
+        // ordinary builds.
+        //
+        // This DOES make a network request on every launch. A previous comment
+        // here claimed the opposite -- that the call is a no-op unless a
+        // Pavii-owned feed is configured -- which is wrong:
+        // autoUpdaterService.ts falls back to `buildGithubFeedOptions()` and
+        // calls `setFeedURL` unconditionally, so with no CDN override the check
+        // goes to the GitHub releases API for the Pavii repo. That is the
+        // intended destination, but it is a launch-time request disclosing IP,
+        // version and launch timing, and it is recorded as such in
+        // docs/agent-context/privacy-audit.md.
         if (!process.env.IS_DISCONTINUED_BUILD) {
           setTimeout(() => {
             void autoUpdaterService.checkForUpdatesAndNotify();

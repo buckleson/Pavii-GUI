@@ -1415,7 +1415,7 @@ async fn request_json(
         ConfigError::new(
             ConfigErrorCode::HttpRequestFailed,
             command,
-            "failed to call AionUi backend",
+            "failed to call the Pavii Engine",
         )
         .field("path", path)
     })?;
@@ -1425,7 +1425,7 @@ async fn request_json(
         ConfigError::new(
             ConfigErrorCode::ResponseReadFailed,
             command,
-            "failed to read AionUi backend response",
+            "failed to read the Pavii Engine response",
         )
         .field("path", path)
     })?;
