@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* 下拉列表专用搜索框 —— 样式基准取自首页 Project 选择下拉曾用的搜索框：
-   浅灰填充、无边框、8px 圆角，柔和紧凑。 */
+/* Search box used inside dropdowns. The styling baseline comes from the search box the
+   home Project selector dropdown used to carry: light grey fill, no border, 8px radius - soft and compact. */
 
 .searchbar {
   box-sizing: border-box;

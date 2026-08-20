@@ -20,26 +20,26 @@
   --aou-10: #150c37;
 
   /* Background Colors - Light Mode */
-  --bg-base: #fdfdfd; /* bg-0 - 主背景 */
-  --bg-1: #f5f8fb; /* 次级背景 (sidebar) */
-  --bg-2: #f5f5f5; /* 三级背景 (muted) */
-  --bg-3: #e7e7ee; /* 边框/分隔 (border) */
+  --bg-base: #fdfdfd; /* bg-0 - primary background */
+  --bg-1: #f5f8fb; /* secondary background (sidebar) */
+  --bg-2: #f5f5f5; /* tertiary background (muted) */
+  --bg-3: #e7e7ee; /* border and divider */
   --bg-4: #c9cdd4;
   --bg-5: #adb4c1;
-  --bg-6: #86909c; /* 禁用/次要文字 */
+  --bg-6: #86909c; /* disabled and secondary text */
   --bg-8: #4e5969;
   --bg-9: #1d2129;
   --bg-10: #0c0e12;
 
   /* Interactive State Colors - Light Mode */
-  --bg-hover: #f1f1f6; /* 悬停背景 */
-  --bg-active: #e7e7ee; /* 激活/按下背景 */
+  --bg-hover: #f1f1f6; /* hover background */
+  --bg-active: #e7e7ee; /* active and pressed background */
 
   /* Text Colors - Light Mode */
-  --text-primary: #000000; /* 主要文字 */
-  --color-text-1: #000000; /* Arco 主文字 — 与 --text-primary 对齐 */
-  --text-secondary: #525252; /* 次要文字 (muted-foreground) */
-  --text-disabled: #c9cdd4; /* 禁用文字 */
+  --text-primary: #000000; /* primary text */
+  --color-text-1: #000000; /* Arco primary text - kept in step with --text-primary */
+  --text-secondary: #525252; /* secondary text (muted-foreground) */
+  --text-disabled: #c9cdd4; /* disabled text */
 
   /* Semantic Colors - Light Mode */
   --primary: #7033ff;
@@ -49,31 +49,31 @@
   --info: #1e69dc;
 
   /* Border Colors - Light Mode */
-  --border-base: #e7e7ee; /* 基础边框 */
-  --border-light: #edf0f4; /* 浅色边框 (secondary) */
+  --border-base: #e7e7ee; /* base border */
+  --border-light: #edf0f4; /* light border (secondary) */
 
   /* Brand Colors - Light Mode */
-  --brand: #7033ff; /* 品牌色 */
-  --brand-light: #f2f2ff; /* 品牌浅色背景 */
-  --brand-hover: #886cff; /* 品牌色悬停 */
+  --brand: #7033ff; /* brand */
+  --brand-light: #f2f2ff; /* light brand background */
+  --brand-hover: #886cff; /* brand hover */
 
   /* Message & UI Component Colors - Light Mode */
-  --message-user-bg: #eeeeff; /* 用户消息背景（浅紫） */
-  --message-tips-bg: #eef3ff; /* 提示信息背景（浅蓝紫） */
-  --workspace-btn-bg: #f1f1f6; /* 工作区按钮背景 */
+  --message-user-bg: #eeeeff; /* user message background (pale purple) */
+  --message-tips-bg: #eef3ff; /* hint background (pale blue-purple) */
+  --workspace-btn-bg: #f1f1f6; /* workspace button background */
 
   /* Special Colors - Light Mode */
-  --fill: #f5f5f5; /* 填充色 */
-  --inverse: #ffffff; /* 反色（黑白切换）*/
+  --fill: #f5f5f5; /* fill */
+  --inverse: #ffffff; /* inverse, for black/white swaps */
 
   /* Custom Colors - Light Mode */
-  --dialog-fill-0: #ffffff; /* 对话框填充色 */
-  --text-0: #000000; /* 纯黑文字色 */
-  --text-white: #ffffff; /* 纯白文字色 */
-  --fill-0: #ffffff; /* 填充色 0 */
-  --fill-white-to-black: #ffffff; /* 白到黑填充色 */
-  --border-special: var(--bg-3); /* 特殊边框色 */
-  --color-guid-agent-bar: #e2ebff; /* 首页 Agent 选择条背景 - 亮色 (accent) */
+  --dialog-fill-0: #ffffff; /* dialog fill */
+  --text-0: #000000; /* pure black text */
+  --text-white: #ffffff; /* pure white text */
+  --fill-0: #ffffff; /* fill 0 */
+  --fill-white-to-black: #ffffff; /* white-to-black fill */
+  --border-special: var(--bg-3); /* special border */
+  --color-guid-agent-bar: #e2ebff; /* home agent selector bar background - light (accent) */
 
   /* Arco palette bridge (RGB triplets) — components using rgb(var(--primary-6)) follow the violet brand */
   --primary-1: 242, 242, 255;
@@ -90,7 +90,7 @@
   /* Brand ramp (inverted monochrome) - Dark Mode */
   --aou-1: #1d1d1d;
   --aou-2: #222222;
-  --color-guid-agent-bar: var(--aou-2); /* 首页 Agent 选择条背景 - 暗色沿用 aou-2 */
+  --color-guid-agent-bar: var(--aou-2); /* home agent selector bar background - dark reuses aou-2 */
   --aou-3: #333333;
   --aou-4: #424242;
   --aou-5: #525252;
@@ -101,26 +101,26 @@
   --aou-10: #f5f5f5;
 
   /* Background Colors - Dark Mode */
-  --bg-base: #000000; /* 主背景 */
-  --bg-1: #111111; /* 次级背景 (card) */
-  --bg-2: #1d1d1d; /* 三级背景 (muted) */
-  --bg-3: #2a2a2a; /* 边框/分隔 */
+  --bg-base: #000000; /* primary background */
+  --bg-1: #111111; /* secondary background (card) */
+  --bg-2: #1d1d1d; /* tertiary background (muted) */
+  --bg-3: #2a2a2a; /* border and divider */
   --bg-4: #333333; /* input/accent */
   --bg-5: #424242;
-  --bg-6: #525252; /* 禁用/次要文字 */
+  --bg-6: #525252; /* disabled and secondary text */
   --bg-8: #747474;
   --bg-9: #a4a4a4;
   --bg-10: #e4e4e4;
 
   /* Interactive State Colors - Dark Mode */
-  --bg-hover: #161616; /* 悬停背景 */
-  --bg-active: #222222; /* 激活/按下背景 (secondary) */
+  --bg-hover: #161616; /* hover background */
+  --bg-active: #222222; /* active and pressed background (secondary) */
 
   /* Text Colors - Dark Mode */
-  --text-primary: #ffffff; /* 主要文字 */
-  --color-text-1: #ffffff; /* Arco 主文字 — 与 --text-primary 对齐 */
-  --text-secondary: #a4a4a4; /* 次要文字 (muted-foreground) */
-  --text-disabled: #525252; /* 禁用文字 */
+  --text-primary: #ffffff; /* primary text */
+  --color-text-1: #ffffff; /* Arco primary text - kept in step with --text-primary */
+  --text-secondary: #a4a4a4; /* secondary text (muted-foreground) */
+  --text-disabled: #525252; /* disabled text */
 
   /* Semantic Colors - Dark Mode */
   --primary: #5895ff;
@@ -130,30 +130,30 @@
   --info: #5895ff;
 
   /* Border Colors - Dark Mode */
-  --border-base: #2a2a2a; /* 基础边框 */
-  --border-light: #1d1d1d; /* 浅色边框 */
+  --border-base: #2a2a2a; /* base border */
+  --border-light: #1d1d1d; /* light border */
 
   /* Brand Colors - Dark Mode */
-  --brand: #e4e4e4; /* 品牌色（Vercel 单色风格） */
-  --brand-light: #222222; /* 品牌深色背景 */
-  --brand-hover: #424242; /* 品牌色悬停 */
+  --brand: #e4e4e4; /* brand, in a monochrome Vercel style */
+  --brand-light: #222222; /* dark brand background */
+  --brand-hover: #424242; /* brand hover */
 
   /* Message & UI Component Colors - Dark Mode */
-  --message-user-bg: #1d1d1d; /* 用户消息背景（中性深灰） */
-  --message-tips-bg: #161616; /* 提示信息背景 */
-  --workspace-btn-bg: #161616; /* 工作区按钮背景 */
+  --message-user-bg: #1d1d1d; /* user message background (neutral dark grey) */
+  --message-tips-bg: #161616; /* hint background */
+  --workspace-btn-bg: #161616; /* workspace button background */
 
   /* Special Colors - Dark Mode */
-  --fill: #111111; /* 填充色 */
-  --inverse: #ffffff; /* 反色（黑白切换）*/
+  --fill: #111111; /* fill */
+  --inverse: #ffffff; /* inverse, for black/white swaps */
 
   /* Custom Colors - Dark Mode */
-  --dialog-fill-0: #1d1d1d; /* 对话框填充色 */
-  --text-0: #ffffff; /* 纯黑文字色（暗色模式下为白色） */
-  --text-white: #ffffff; /* 纯白文字色 */
-  --fill-0: rgba(255, 255, 255, 0.08); /* 填充色 0 - 暗色模式下为半透明白色 */
-  --fill-white-to-black: #000000; /* 白到黑填充色（暗色模式下为黑色） */
-  --border-special: #3a3a3a; /* 特殊边框色 */
+  --dialog-fill-0: #1d1d1d; /* dialog fill */
+  --text-0: #ffffff; /* the "pure black" text token, white in dark mode */
+  --text-white: #ffffff; /* pure white text */
+  --fill-0: rgba(255, 255, 255, 0.08); /* fill 0 - translucent white in dark mode */
+  --fill-white-to-black: #000000; /* white-to-black fill, black in dark mode */
+  --border-special: #3a3a3a; /* special border */
 
   /* Arco palette bridge (RGB triplets) — accessible blue accent on the Vercel monochrome base */
   --primary-1: 20, 30, 54;

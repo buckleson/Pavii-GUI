@@ -18,9 +18,9 @@ body,
 }
 
 /*
- * icon-park 图标修正：其外层 `span.i-icon` 默认为 inline，SVG 按文字基线排布、
- * 底部留基线间隙，导致图标视觉整体偏上（尤其在 flex 容器里与文字/其它元素并排时）。
- * 统一改为居中的 inline-flex，让图标真正垂直居中，不再上飘。全局一处修，治本。
+ * icon-park fix: the wrapping `span.i-icon` is inline by default, so the SVG sits on the text
+ * baseline and leaves a gap beneath it, making the icon look high - most visibly beside text or
+ * other elements in a flex container. Switching to centred inline-flex centres it properly. Fixed once, globally.
  */
 .i-icon {
   display: inline-flex;
@@ -78,7 +78,7 @@ body,
   }
 }
 
-/* 团队 warmup 进度条：无确定进度时来回扫动 */
+/* Team warm-up progress bar: sweeps back and forth while progress is indeterminate */
 @keyframes team-warmup-sweep {
   0% {
     width: 20%;
@@ -98,7 +98,7 @@ body,
   animation: team-warmup-sweep 1.4s ease-in-out infinite;
 }
 
-/* 团队 warmup 头像「唤醒中」：pending 成员轻柔呼吸 */
+/* Team warm-up avatar, "waking": pending members breathe gently */
 @keyframes team-warmup-breathe {
   0%,
   100% {

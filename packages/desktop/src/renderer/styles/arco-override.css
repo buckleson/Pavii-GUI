@@ -1,29 +1,30 @@
 /* Arco Design custom overrides - non-theme related */
 
 /*
- * Arco Spin 垂直居中修正。
+ * Vertical centring fix for Arco Spin.
  *
- * 现象：「思考过程」「执行步骤」这类标题栏，加载中显示 <Spin size={12} />，完成后换成
- * icon-park 的静态图标。实测加载中的转圈圈比相邻文字、以及完成后的静态图标低 3.5px，
- * 看起来整体偏下、切换状态时还会跳一下。
+ * Symptom: header bars such as "Thinking" and "Steps" show <Spin size={12} /> while loading and
+ * swap to a static icon-park icon when done. Measured, the spinner sits 3.5px lower than the
+ * adjacent text and than the static icon, so it looks low and jumps as the state changes.
  *
- * 成因有三层叠加（数值均为 Chromium 实测）：
- *   1. Arco 给所有 `.arco-icon` 设了 `vertical-align: -2px`，SVG 被强行下移；
- *   2. `.arco-spin-icon` 是 inline-block，SVG 按文字基线排布，行盒被撑到 23px
- *      （只为容纳 12px 的图标），底部留下大段基线间隙；
- *   3. `.arco-spin` 自身也是 inline-block，行盒 13.58px 容纳 12px 图标，再贡献 0.78px。
+ * Three causes stack up (all figures measured in Chromium):
+ *   1. Arco sets `vertical-align: -2px` on every `.arco-icon`, pushing the SVG down;
+ *   2. `.arco-spin-icon` is inline-block, so the SVG sits on the text baseline and the line box
+ *      stretches to 23px just to hold a 12px icon, leaving a wide baseline gap beneath it;
+ *   3. `.arco-spin` is itself inline-block: a 13.58px line box around a 12px icon adds 0.78px more.
  *
- * 修正：让这两层都变成居中的 inline-flex 并清掉基线偏移 —— 与 base.css 里的 `.i-icon`
- * 修正同一思路。实测偏移由 3.5px 精确归零，与静态图标像素级对齐。
+ * Fix: make both layers centred inline-flex and clear the baseline offset - the same approach as
+ * the `.i-icon` fix in base.css. Measured, the 3.5px offset goes to exactly zero and the spinner
+ * lines up with the static icon to the pixel.
  *
- * 为何改 `.arco-spin` 是安全的（已实测验证）：
- *   - 包裹式用法 `<Spin loading>内容</Spin>`：display 由 inline-block 变 inline-flex，
- *     但被包裹内容尺寸、遮罩层圈圈的居中、后续兄弟元素位置均零变化（`.arco-spin-children`
- *     是唯一的流内子元素，遮罩层为绝对定位）。
- *   - 传了自定义 flex 类的用法（如 `<Spin loading className='flex flex-1 …'/>`）：
- *     行内/工具类 display 优先级更高，不受影响。
- *   - 图标只匹配 `.arco-spin` 的直接子级，包裹式用法的图标嵌在
- *     `.arco-spin-loading-layer-inner` 内，不会被这条规则命中。
+ * Why touching `.arco-spin` is safe (verified by test):
+ *   - Wrapping usage `<Spin loading>content</Spin>`: display goes from inline-block to inline-flex,
+ *     but the wrapped content size, the centring of the overlay spinner, and the position of later
+ *     siblings are all unchanged (`.arco-spin-children` is the only in-flow child; the overlay is absolute).
+ *   - Usage that passes its own flex classes (e.g. `<Spin loading className='flex flex-1 ...'/>`):
+ *     the inline or utility display wins, so nothing changes.
+ *   - The icon rule only matches direct children of `.arco-spin`; in wrapping usage the icon is nested
+ *     inside `.arco-spin-loading-layer-inner`, so this rule never reaches it.
  */
 .arco-spin,
 .arco-spin > .arco-spin-icon {
@@ -39,9 +40,7 @@
 }
 
 /* Centralized font tokens. --font-mono is inherited (custom properties cross
-   the shadow DOM boundary), so Markdown rendered in shadow roots can reference it.
-   集中的字体 token。--font-mono 会被继承（自定义属性可穿透 Shadow DOM 边界），
-   因此 Shadow DOM 内渲染的 Markdown 也能引用它。 */
+   the shadow DOM boundary), so Markdown rendered in shadow roots can reference it. */
 :root {
   --font-mono:
     ui-monospace, 'SF Mono', SFMono-Regular, Menlo, 'Cascadia Code', 'Roboto Mono', Consolas, 'Liberation Mono',
@@ -68,9 +67,7 @@ body {
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'PingFang SC',
     'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  /* 根元素必须自己铺底色。Electron 窗口底色是固定的白色，html/body 若保持透明，
-     任何布局缝隙都会漏出白色 —— 深色模式下就是刺眼的白边。
-     The root must paint its own background. The Electron window's own background
+  /* The root must paint its own background. The Electron window's own background
      is a fixed white, so if html/body stay transparent any layout gap leaks white
      through — glaringly so in dark mode. */
   background-color: var(--bg-1);
@@ -113,7 +110,6 @@ html body .arco-popconfirm-arrow.arco-trigger-arrow {
 }
 
 /* Override Arco Design component backgrounds to white in light mode */
-/* 覆盖 Arco Design 组件背景色为白色（浅色模式） */
 /* .arco-input,
 .arco-textarea,
 .arco-select-view,
@@ -157,7 +153,6 @@ html body .arco-popconfirm-arrow.arco-trigger-arrow {
 }
 
 /* Arco Tag dark mode styles - enhance contrast with semi-transparent backgrounds */
-/* Arco Tag 深色模式样式 - 使用半透明背景增强对比度 */
 body[arco-theme='dark'] .arco-tag-checked.arco-tag-blue {
   background-color: rgba(59, 130, 246, 0.2) !important;
   color: rgb(96, 165, 250) !important;
@@ -206,28 +201,28 @@ body[arco-theme='dark'] .arco-tag-checked.arco-tag-gray {
   border-radius: 16px !important;
 }
 
-/* standard 变体：清除 Arco content 默认内边距，让三段（标题/内容/按钮）铺满到弹窗边框，
-   分隔线得以贯穿全宽，三段背景统一、无“盒子”割裂感。
-   注意：内边距清零后不能在此处 overflow:hidden —— Select/下拉等 popup 会挂在
-   .arco-modal-content 下（在内层 wrapper 之外），一旦这里裁剪就会遮住下拉。
-   圆角裁剪改到内层 .aionui-modal-wrapper 上（见下），popup 作为其兄弟节点不受影响。 */
+/* The standard variant clears Arco's default content padding so the three bands (title, content,
+   buttons) reach the modal edge: dividers run full width and the bands share one background instead
+   of reading as separate boxes. Note: with the padding zeroed, do NOT set overflow:hidden here -
+   Select and other popups mount under .arco-modal-content, outside the inner wrapper, and clipping
+   here would cut them off. The corner clipping moves to .aionui-modal-wrapper below, where popups are siblings and unaffected. */
 .aionui-modal-standard .arco-modal-content {
   padding: 0 !important;
 }
 
-/* 圆角裁剪落在内层 wrapper：只裁三段（标题/内容/按钮），让它们的直角贴合弹窗圆角；
-   下拉 popup 挂在 wrapper 之外，因此不会被裁掉、能正常浮出弹窗。
-   同时给内层 wrapper 设视口上限并裁掉溢出：内容过多时，标题区/按钮区固定，
-   中间内容区（flex-1 + overflow-y:auto）自动缩短并滚动，整窗不会超出屏幕。
-   弹窗自身不设固定高度时按内容自适应，因此短内容不会留白、长内容会滚动。 */
+/* Corner clipping lives on the inner wrapper so only the three bands are clipped and their square
+   corners follow the modal radius; dropdown popups hang outside the wrapper, so they still escape the modal.
+   The wrapper also gets a viewport cap with overflow clipped: when content is long the title and button
+   bands stay put while the middle (flex-1 + overflow-y:auto) shrinks and scrolls, so the modal never
+   outgrows the screen. With no fixed height it sizes to content, so short content leaves no gap and long content scrolls. */
 .aionui-modal-standard .aionui-modal-wrapper {
   overflow: hidden !important;
   border-radius: 16px !important;
   max-height: calc(100vh - 64px);
 }
 
-/* 三段只保留一条分隔线：标题区仅下边线、按钮区仅上边线，其余边框一律清零，
-   避免外部样式给这些容器叠加多余边框而形成“盒子”。 */
+/* One divider per seam: the title band keeps only its bottom edge, the button band only its top, and
+   every other border is zeroed, so outside styles cannot stack extra borders into a boxed look. */
 .aionui-modal-standard .aionui-modal-wrapper > * {
   border: 0 !important;
 }
@@ -425,10 +420,10 @@ body[arco-theme='dark'] .arco-message-error {
   transition: background-color 0.12s ease;
 }
 
-/* 对齐基准线（与 ExplorerContainer.tsx / SearchPanel.tsx 保持一致）：
-   节点行外框从 12px 起，行内首个元素（展开箭头）从 20px 起。
-   arco 把所有层级的节点都渲染成 .arco-tree 的直接子元素，靠行内的缩进块表示层级，
-   所以这 8px 对每一层是同一个常量偏移，不会随深度累加。
+/* Alignment baseline, matching ExplorerContainer.tsx and SearchPanel.tsx:
+   the node row starts at 12px and its first element, the expand arrow, at 20px.
+   Arco renders nodes at every depth as direct children of .arco-tree and shows depth with in-row indent
+   blocks, so this 8px is a constant offset at every level rather than something that accumulates.
 
    Alignment baseline (kept in sync with ExplorerContainer.tsx / SearchPanel.tsx):
    the node row's outer box starts at 12px and its first inner element (the expand
@@ -462,10 +457,8 @@ body[arco-theme='dark'] .arco-message-error {
 }
 
 /* Alert styles - content is now displayed below the Alert card, so these rules are no longer needed */
-/* Alert 样式 - 内容现在显示在 Alert 卡片下方，因此不再需要这些规则 */
 
 /* Settings modal mobile tabs styles */
-/* 设置弹窗移动端 Tabs 样式 */
 .settings-mobile-tabs {
   .arco-tabs-nav {
     border-bottom: 1px solid var(--color-border-2);

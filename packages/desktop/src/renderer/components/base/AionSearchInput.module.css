@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* 统一搜索框样式 —— 基准取自会话标题搜索面板 (ConversationTitleMinimap) */
+/* Shared search box styling, baselined on the conversation title search panel (ConversationTitleMinimap) */
 
 .searchbar {
   box-sizing: border-box;

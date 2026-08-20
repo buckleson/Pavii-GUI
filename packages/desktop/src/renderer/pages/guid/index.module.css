@@ -66,7 +66,7 @@
   margin-right: 0;
 }
 
-/* 方案E：模型 + 权限各自独立 tb-btn，中间有竖线分隔 */
+/* Option E: model and permission each get their own tb-btn, split by a vertical rule */
 .actionConfigGroup {
   display: inline-flex;
   align-items: center;
@@ -75,7 +75,7 @@
   flex: 0 1 auto;
 }
 
-/* 首页输入框右下「模型 / 模式」按钮：与对话框 .sendbox-tools/.sendbox-actions 同款 */
+/* The "model / mode" buttons at the bottom right of the home input, matching the conversation .sendbox-tools/.sendbox-actions */
 .actionSubmit :global(.sendbox-model-btn),
 .actionSubmit :global(.sendbox-model-btn:hover),
 .actionSubmit :global(.sendbox-model-btn:active),
@@ -164,7 +164,7 @@
   background: var(--color-fill-3);
 }
 
-/* 选中态：和空状态同色系，不做颜色跳变 */
+/* Selected state stays in the same colour family as the empty state, so nothing jumps */
 .workspacePill {
   display: inline-flex;
   align-items: center;
@@ -354,12 +354,12 @@
   border-radius: 100px;
 }
 
-/* 移动端优化 */
+/* Mobile tuning */
 @media (max-width: 768px) {
   .guidLayout {
     width: clamp(var(--app-min-width, 360px), calc(100% - 24px), 100%);
     padding: 0 12px;
-    padding-bottom: 100px; /* 为底部快捷按钮留出空间 */
+    padding-bottom: 100px; /* leave room for the shortcut buttons along the bottom */
     box-sizing: border-box;
   }
 
@@ -414,7 +414,7 @@
   }
 }
 
-/* 小屏手机再收窄一点安全边距，提升可操作面积 */
+/* Narrow the safe margins further on small phones to win back tappable area */
 @media (max-width: 420px) {
   .guidLayout {
     width: clamp(var(--app-min-width, 360px), calc(100% - 20px), 100%);
@@ -422,7 +422,7 @@
   }
 }
 
-/* 移动端容器滚动支持 */
+/* Container scrolling on mobile */
 .guidContainer {
   height: 100%;
   display: flex;
@@ -433,12 +433,12 @@
   position: relative;
 }
 
-/* 整体内容块略往上移，减轻「重心偏下」的感觉 */
+/* Nudge the whole block upward so it stops feeling bottom-heavy */
 .guidContainer .guidLayout {
   margin-top: -5vh;
 }
 
-/* Agent 选中时：先放大再回落至略大（pop 动效） */
+/* Selecting an agent: scale up, then settle slightly larger - a pop */
 @keyframes agentSelectPop {
   0% {
     transform: scale(1);
@@ -459,7 +459,7 @@
   animation: agentSelectPop 0.4s ease-out forwards;
 }
 
-/* 更多 Agent 面板：细微且快速的下滑淡入 */
+/* More-agents panel: a small, quick slide-down fade-in */
 @keyframes assistantOverflowPanelIn {
   from {
     opacity: 0;
@@ -481,7 +481,7 @@
   color: var(--aou-9) !important;
 }
 
-/* 底部快捷按钮：基础间距 + 安全区 */
+/* Bottom shortcut buttons: base spacing plus the safe area */
 .guidQuickActions {
   bottom: calc(32px + env(safe-area-inset-bottom, 0px));
 }
@@ -500,13 +500,13 @@
   }
 }
 
-/* 浅色占位符 */
+/* Light placeholder */
 .lightPlaceholder :global(textarea::placeholder) {
   color: #b4b5bc !important;
   opacity: 1 !important;
 }
 
-/* 助手卡片网格（首页 list view） */
+/* Assistant card grid (home list view) */
 .assistantCardScrollWrap {
   position: relative;
   max-height: 200px;
@@ -653,7 +653,7 @@
   }
 }
 
-/* iPhone专门优化 */
+/* iPhone-specific tuning */
 @supports (-webkit-touch-callout: none) {
   .actionRow {
     flex-wrap: nowrap !important;
