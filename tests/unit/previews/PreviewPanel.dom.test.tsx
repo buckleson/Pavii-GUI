@@ -21,8 +21,14 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  vi.resetModules();
   delete window.__backendPort;
+  // Deliberately no `vi.resetModules()`. Every test below asserts only the
+  // module's static shape, so none of them needs a fresh instance — but the
+  // reset threw away the module cache between tests, making all three pay the
+  // full cold import of a graph that pulls in mermaid, katex and highlight.
+  // Under the concurrent suite that repeatedly blew even a 30s timeout while
+  // passing in seconds in isolation. Keeping the cache means one cold import
+  // per file instead of three.
 });
 
 // PreviewPanel pulls in a large dependency graph; under the full concurrent

@@ -78,10 +78,20 @@ function recoverLeakedOutBackups(outDir: string): void {
     }
 
     const backupDir = resolve(repoRoot, entry.name);
-    if (existsSync(outDir)) {
-      rmSync(backupDir, { recursive: true, force: true });
-    } else {
-      renameSync(backupDir, outDir);
+    // Recovering someone else's leak is opportunistic: a file inside it can be
+    // held open by an unrelated process, and on Windows `rmSync` throws EBUSY
+    // for that even with `force` (which only forgives a missing path). Letting
+    // that escape would fail every test that claims `out/` on account of a
+    // directory this run did not create, so a stubborn backup is left in place
+    // instead. `.gitignore` keeps it out of git and the lint gate meanwhile.
+    try {
+      if (existsSync(outDir)) {
+        rmSync(backupDir, { recursive: true, force: true });
+      } else {
+        renameSync(backupDir, outDir);
+      }
+    } catch {
+      continue;
     }
   }
 }

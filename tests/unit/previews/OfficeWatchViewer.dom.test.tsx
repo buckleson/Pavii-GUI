@@ -19,12 +19,22 @@
 
 import { afterEach, beforeEach, describe, it, expect } from 'vitest';
 
+// The first import of this viewer resolves a large dependency graph. In
+// isolation it takes a couple of seconds; under the full concurrent suite that
+// cold resolve has exceeded the default 10s timeout and failed the run. The
+// later tests reuse the module cache, so only this first one needs headroom.
+const IMPORT_TIMEOUT_MS = 30000;
+
 describe('OfficeWatchViewer module shape', () => {
-  it('module loads and exposes a default export', async () => {
-    const mod = await import('@/renderer/pages/conversation/Preview/components/viewers/OfficeWatchViewer');
-    expect(mod).toBeDefined();
-    expect(mod.default).toBeDefined();
-  });
+  it(
+    'module loads and exposes a default export',
+    async () => {
+      const mod = await import('@/renderer/pages/conversation/Preview/components/viewers/OfficeWatchViewer');
+      expect(mod).toBeDefined();
+      expect(mod.default).toBeDefined();
+    },
+    IMPORT_TIMEOUT_MS
+  );
 
   it('default export is a function (React component)', async () => {
     const mod = await import('@/renderer/pages/conversation/Preview/components/viewers/OfficeWatchViewer');
