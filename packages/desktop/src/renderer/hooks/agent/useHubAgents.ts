@@ -1,7 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { IHubAgentItem } from '@/common/types/agent/hub';
 import { ipcBridge } from '@/common';
+import { scrubBrandText } from '@/common/utils/assistantBranding';
 import { refreshManagedAgentCatalogAndAssistants } from './useManagedAgents';
+
+/**
+ * Strip upstream branding from the two hub fields the UI renders as prose.
+ *
+ * `resources/hub/index.json` is authored by the upstream hub and re-downloaded
+ * by scripts/prepareHubResources.js on every build, so editing the checked-in
+ * copy would not survive. Every entry carries an author of "Aionui Official"
+ * and a description ending "... as an ACP adapter in AionUi.", and
+ * AgentHubModal renders the description verbatim.
+ *
+ * `name`, `engines.aionui` and `contributes` are install-time contracts and are
+ * deliberately left alone.
+ */
+const brandExtension = (ext: IHubAgentItem): IHubAgentItem => ({
+  ...ext,
+  description: ext.description ? scrubBrandText(ext.description) : ext.description,
+  author: ext.author ? scrubBrandText(ext.author) : ext.author,
+});
 
 export function useHubAgents() {
   const [agents, setAgents] = useState<IHubAgentItem[]>([]);
@@ -15,7 +34,9 @@ export function useHubAgents() {
       const extensionList = await ipcBridge.hub.getExtensionList.invoke();
       if (extensionList) {
         // Filter agents
-        const agentExtensions = extensionList.filter((ext: IHubAgentItem) => ext.hubs?.includes('acpAdapters'));
+        const agentExtensions = extensionList
+          .filter((ext: IHubAgentItem) => ext.hubs?.includes('acpAdapters'))
+          .map(brandExtension);
         setAgents(agentExtensions);
       }
     } catch (err) {

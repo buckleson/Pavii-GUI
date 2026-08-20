@@ -42,7 +42,15 @@ const BRAND_SCRUB_RULES: ReadonlyArray<readonly [RegExp, string]> = [
   [/Aion ?CLI/g, BUILTIN_AGENT_DISPLAY_NAME],
   [/AionCore/g, 'Pavii Engine'],
   [/AionHub/g, 'Pavii Hub'],
-  [/AionU[iI]/g, 'Pavii.Ai'],
+  // Covers AionUi / AionUI / Aionui / AionuI. The upstream hub catalog writes
+  // its author as "Aionui Official" with a lowercase u, which the previous
+  // `AionU[iI]` missed, so it reached the hub modal unbranded.
+  //
+  // The leading capital is deliberate: all-lowercase `aionui` is the identifier
+  // form (the `.aionui` data directory, the `engines.aionui` range, CSS class
+  // prefixes) and rewriting it inside a path shown to a user would make that
+  // path wrong.
+  [/Aion[Uu][iI]/g, 'Pavii.Ai'],
   // The internal agent identifier. It stays `aionrs` everywhere it is
   // stored (conversations.type, .aionrs/ directories, the aionrs.config
   // settings key) because that is a backend contract; it is only ever
