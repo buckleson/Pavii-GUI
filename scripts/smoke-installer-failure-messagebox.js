@@ -12,6 +12,7 @@ const {
 } = require('node:fs');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
+const { nsisQuote } = require('../packages/shared-scripts/src/nsis-quote');
 const { spawnSync } = require('node:child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
@@ -116,10 +117,6 @@ const INSTALLER_ERROR_SCENARIOS = [
     diagnostics: 'scenario=invalid-install-path phase=path-validation installPath=invalid',
   },
 ];
-
-function nsisQuote(value) {
-  return String(value).replace(/\\/g, '\\\\').replace(/"/g, '$\\"').replace(/\$/g, '$$');
-}
 
 function findMakensis() {
   if (process.env.MAKENSIS && existsSync(process.env.MAKENSIS)) {

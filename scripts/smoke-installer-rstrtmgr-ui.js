@@ -4,12 +4,9 @@ const { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync 
 const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
+const { nsisQuote } = require('../packages/shared-scripts/src/nsis-quote');
 
 const repoRoot = path.resolve(__dirname, '..');
-
-function nsisQuote(value) {
-  return String(value).replace(/\\/g, '\\\\').replace(/"/g, '$\\"').replace(/\$/g, '$$');
-}
 
 function findMakensis() {
   if (process.env.MAKENSIS && existsSync(process.env.MAKENSIS)) {
