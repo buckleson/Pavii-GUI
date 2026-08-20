@@ -36,9 +36,19 @@ const fs = require('fs');
 const path = require('path');
 
 const projectRoot = path.resolve(__dirname, '..');
-const DEFAULT_SCAN_ROOT = path.join(projectRoot, 'packages', 'desktop', 'src');
 
-const SCANNED_EXTENSIONS = /\.(tsx?|jsx?|css|json)$/i;
+/**
+ * Default scan roots. `resources/windows` is included because the installer's
+ * MessageBoxes and LangStrings are user-facing text too — 35 Chinese strings
+ * shipped there unnoticed precisely because this gate only watched the app
+ * source.
+ */
+const DEFAULT_SCAN_ROOTS = [
+  path.join(projectRoot, 'packages', 'desktop', 'src'),
+  path.join(projectRoot, 'resources', 'windows'),
+];
+
+const SCANNED_EXTENSIONS = /\.(tsx?|jsx?|css|json|nsh|ps1)$/i;
 
 /**
  * Paths permitted to contain CJK. Every entry must carry a reason, and the
@@ -115,7 +125,11 @@ function walkDirectory(dir, out) {
 }
 
 function collectTargets(args) {
-  if (args.length === 0) return walkDirectory(DEFAULT_SCAN_ROOT, []);
+  if (args.length === 0) {
+    const out = [];
+    for (const root of DEFAULT_SCAN_ROOTS) walkDirectory(root, out);
+    return out;
+  }
   const out = [];
   for (const arg of args) {
     const abs = path.resolve(projectRoot, arg);

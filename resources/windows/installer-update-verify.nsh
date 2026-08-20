@@ -93,8 +93,10 @@ Var /GLOBAL AionUiActiveMarkerResult
 
 !macro AIONUI_OVERRIDE_APP_CANNOT_BE_CLOSED_MESSAGE
   !pragma warning disable 6030
-  LangString appCannotBeClosed 1033 "${AIONUI_MSG_APP_CANNOT_BE_CLOSED_ZH}$\r$\n$\r$\n${AIONUI_MSG_BLOCK_SEPARATOR}$\r$\n$\r$\n${AIONUI_MSG_APP_CANNOT_BE_CLOSED_EN}"
-  LangString appCannotBeClosed 2052 "${AIONUI_MSG_APP_CANNOT_BE_CLOSED_ZH}$\r$\n$\r$\n${AIONUI_MSG_BLOCK_SEPARATOR}$\r$\n$\r$\n${AIONUI_MSG_APP_CANNOT_BE_CLOSED_EN}"
+  LangString appCannotBeClosed 1033 "${AIONUI_MSG_APP_CANNOT_BE_CLOSED_EN}"
+  ; The app ships English-only; the zh-CN locale registration stays valid but
+  ; shows the same English text.
+  LangString appCannotBeClosed 2052 "${AIONUI_MSG_APP_CANNOT_BE_CLOSED_EN}"
   !pragma warning default 6030
 !macroend
 
@@ -135,8 +137,6 @@ Var /GLOBAL AionUiActiveMarkerResult
     StrCpy $AionUiActiveMarkerExecResult ""
     StrCpy $AionUiActiveMarkerResult ""
     StrCpy $AionUiStopResult ""
-    StrCpy $AionUiLockerListZh ""
-    StrCpy $AionUiLockerListEn ""
   !else
     !insertmacro AIONUI_RELEASE_INSTALL_DIR_OUTDIR
     !insertmacro AIONUI_SESSION_BEGIN
@@ -157,11 +157,8 @@ Var /GLOBAL AionUiActiveMarkerResult
     !insertmacro AIONUI_FAIL_UX \
       "${AIONUI_E_CORE_APP_FILES_INCOMPLETE}" \
       "verify-required-file missing label=${_LABEL} path=${_PATH}" \
-      "${AIONUI_MSG_VERIFY_REQUIRED_FILE_ZH} ${_LABEL}" \
       "${AIONUI_MSG_VERIFY_REQUIRED_FILE_EN} ${_LABEL}" \
-      "${AIONUI_MSG_VERIFY_REQUIRED_FILE_ACTION_ZH}" \
       "${AIONUI_MSG_VERIFY_REQUIRED_FILE_ACTION_EN}" \
-      "verify-required-file missing label=${_LABEL} path=${_PATH}" \
       "verify-required-file missing label=${_LABEL} path=${_PATH}"
   ${Else}
     !insertmacro AIONUI_LOG_EVENT "verify-required-file ok label=${_LABEL} path=${_PATH}"
@@ -192,11 +189,8 @@ Var /GLOBAL AionUiActiveMarkerResult
     !insertmacro AIONUI_FAIL_UX \
       "${AIONUI_E_BUNDLED_AIONCORE_INCOMPLETE}" \
       "event=session-end result=fail code=${AIONUI_E_BUNDLED_AIONCORE_INCOMPLETE} detail=bundled-paviicore-incomplete runtime=${_RUNTIME_KEY} result=$AionUiVerifyResourceResult" \
-      "${AIONUI_MSG_BUNDLED_AIONCORE_INCOMPLETE_ZH}" \
       "${AIONUI_MSG_BUNDLED_AIONCORE_INCOMPLETE_EN}" \
-      "${AIONUI_MSG_BUNDLED_AIONCORE_INCOMPLETE_ACTION_ZH}" \
       "${AIONUI_MSG_BUNDLED_AIONCORE_INCOMPLETE_ACTION_EN}" \
-      "bundled-paviicore-incomplete runtime=${_RUNTIME_KEY} result=$AionUiVerifyResourceResult instDir=$INSTDIR" \
       "bundled-paviicore-incomplete runtime=${_RUNTIME_KEY} result=$AionUiVerifyResourceResult instDir=$INSTDIR"
   ${EndIf}
 !macroend

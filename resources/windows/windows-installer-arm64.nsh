@@ -31,11 +31,8 @@
     !insertmacro AIONUI_FAIL_UX \
       "${AIONUI_E_ARCH_MISMATCH}" \
       "target=arm64 actual=$AionUiActualArch" \
-      "${AIONUI_MSG_ARCH_MISMATCH_ZH}" \
       "${AIONUI_MSG_ARCH_MISMATCH_EN}" \
-      "${AIONUI_MSG_ARCH_MISMATCH_ACTION_ZH}" \
       "${AIONUI_MSG_ARCH_MISMATCH_ACTION_EN}" \
-      "target=arm64 actual=$AionUiActualArch" \
       "target=arm64 actual=$AionUiActualArch"
   ${EndIf}
 !macroend

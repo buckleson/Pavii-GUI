@@ -32,22 +32,16 @@
     !insertmacro AIONUI_FAIL_UX \
       "${AIONUI_E_ARCH_MISMATCH}" \
       "target=x64 actual=$AionUiActualArch" \
-      "${AIONUI_MSG_ARCH_MISMATCH_ZH}" \
       "${AIONUI_MSG_ARCH_MISMATCH_EN}" \
-      "${AIONUI_MSG_ARCH_MISMATCH_ACTION_ZH}" \
       "${AIONUI_MSG_ARCH_MISMATCH_ACTION_EN}" \
-      "target=x64 actual=$AionUiActualArch" \
       "target=x64 actual=$AionUiActualArch"
   ${ElseIfNot} ${RunningX64}
     !insertmacro AIONUI_DETECT_NATIVE_ARCH $AionUiActualArch
     !insertmacro AIONUI_FAIL_UX \
       "${AIONUI_E_ARCH_MISMATCH}" \
       "target=x64 actual=$AionUiActualArch" \
-      "${AIONUI_MSG_ARCH_MISMATCH_ZH}" \
       "${AIONUI_MSG_ARCH_MISMATCH_EN}" \
-      "${AIONUI_MSG_ARCH_MISMATCH_ACTION_ZH}" \
       "${AIONUI_MSG_ARCH_MISMATCH_ACTION_EN}" \
-      "target=x64 actual=$AionUiActualArch" \
       "target=x64 actual=$AionUiActualArch"
   ${EndIf}
 !macroend

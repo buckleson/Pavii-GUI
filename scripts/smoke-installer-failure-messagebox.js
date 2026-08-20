@@ -406,10 +406,7 @@ Section
     "${nsisQuote(scenario.code)}" \
     "${nsisQuote(detail)}" \
     "${nsisQuote(scenario.message)}" \
-    "${nsisQuote(scenario.message)}" \
     "${nsisQuote(scenario.action)}" \
-    "${nsisQuote(scenario.action)}" \
-    "${nsisQuote(detail)}" \
     "${nsisQuote(detail)}"
 SectionEnd
 `;

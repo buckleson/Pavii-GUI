@@ -110,11 +110,8 @@ Var /GLOBAL AionUiSessionLogPath
     !insertmacro AIONUI_FAIL_UX \
       "${AIONUI_E_EXTRACT_FAILED}" \
       "event=extract result=fail method=${_METHOD} missing=PaviiAi.exe" \
-      "${AIONUI_MSG_EXTRACT_FAILED_ZH}" \
       "${AIONUI_MSG_EXTRACT_FAILED_EN}" \
-      "${AIONUI_MSG_EXTRACT_FAILED_ACTION_ZH}" \
       "${AIONUI_MSG_EXTRACT_FAILED_ACTION_EN}" \
-      "extract result=fail method=${_METHOD} missing=PaviiAi.exe instDir=$INSTDIR" \
       "extract result=fail method=${_METHOD} missing=PaviiAi.exe instDir=$INSTDIR"
   ${Else}
     !insertmacro AIONUI_SLOG "event=extract result=ok method=${_METHOD} detail=customFiles_${AIONUI_TARGET_ARCH}"
