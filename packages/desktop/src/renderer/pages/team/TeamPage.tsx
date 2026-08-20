@@ -117,16 +117,16 @@ const AssistantChatSlot: React.FC<{
   assistant: TeamAssistant;
   team_id: string;
   isLeader: boolean;
-  /** 成员身份色（列头名字 / 列身淡底）。 */
+  /** Member identity colour, used for the column header name and a faint column background. */
   color: string;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
   teamRunView: TeamRunViewState;
   onTeamRunAck: ReturnType<typeof useTeamRunView>['applyAck'];
   onRunStateStale: ReturnType<typeof useTeamRunView>['reconcile'];
-  /** teammate 的真实 warmup 运行态；缺省视为 'dormant'。单聊不传。 */
+  /** A teammate's real warmup state; absent means 'dormant'. Not passed in single-chat view. */
   warmupStatus?: AcpWarmupStatus;
-  /** 整队 warming 期间为 true —— 此时不下发手动触发器。 */
+  /** True while the whole team is warming, during which manual triggers are withheld. */
   warmupDisabled?: boolean;
 }> = ({
   assistant,
@@ -162,8 +162,8 @@ const AssistantChatSlot: React.FC<{
     }),
     [warmupStatus, warmupDisabled, team_id, assistant.slot_id]
   );
-  // 抬头不叠身份色底（避免压低彩色名字的可读性）；成员身份仅由抬头里的“彩色名字”承担。
-  // 列身体保留极淡身份色底作弱提示，不影响气泡阅读。
+  // The header takes no identity-colour background, which would dull the coloured name; identity there rests on the name alone.
+  // The column body keeps a very faint identity tint as a weak cue, without affecting bubble readability.
   return (
     <div className='flex flex-col h-full' style={{ background: `color-mix(in srgb, ${color} 4%, var(--bg-base))` }}>
       <div className='flex items-center justify-between gap-8px px-12px h-40px shrink-0 border-b border-solid border-[color:var(--border-base)] relative z-10 bg-1'>
@@ -201,7 +201,7 @@ const AssistantChatSlot: React.FC<{
               />
             </div>
           )}
-          {/* 移除入口统一到顶部胶囊（team-tab-remove-*），抬头这里不再重复放 X。 */}
+          {/* Removal lives on the top pills (team-tab-remove-*); the header no longer repeats an X. */}
           <div
             className='shrink-0 flex items-center justify-center leading-none cursor-pointer hover:bg-[var(--fill-3)] p-4px rd-4px text-[color:var(--color-text-3)] hover:text-[color:var(--color-text-1)] transition-colors'
             onClick={() => onToggleFullscreen?.()}
@@ -251,7 +251,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   const assistantRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
-  // 视图模式（并行/单聊），按团队记忆。单聊 = 全屏当前选中成员。
+  // View mode (parallel or single chat), remembered per team. Single chat fills the screen with the selected member.
   const [viewMode, setViewMode] = useTeamViewMode(team.id);
   const isSingleView = viewMode === 'single';
 
@@ -259,9 +259,9 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   const leadAssistant = assistants.find((assistant) => assistant.role === 'leader');
   const teamRun = useTeamRunView(team.id);
 
-  // 进团队 warmup：以团队会话整体就绪为闸门（ensureSession resolve = 全员成功）。遮罩覆盖对话区。
-  // runtimeStatus 是各成员逐个的真实唤醒信号，用于遮罩头像的「唤醒中→点亮」及失败态定位。
-  // 仅在「唤醒进行中」禁用改成员；失败态（error/timeout）要放开，让用户能移除失败成员来自救。
+  // Entering a team warms it up, gated on the whole team session being ready (ensureSession resolving means everyone succeeded). The overlay covers the conversation area.
+  // runtimeStatus carries the real per-member wake signals, driving the overlay avatars from waking to lit and locating failures.
+  // Membership edits are disabled only while waking; on error or timeout they reopen so the user can remove the failed member and recover.
   const isWarmingUp = warmupPhase === 'warming';
 
   const leaderConversationId = leadAssistant?.conversation_id ?? '';
@@ -381,7 +381,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   const handleTabClick = useCallback(
     (slot_id: string) => {
       switchTab(slot_id);
-      // 单聊视图只显示选中成员，无需滚动定位/闪动；并行视图滚动到对应列并闪一下。
+      // Single chat shows only the selected member, so no scrolling or flash is needed; parallel scrolls to the column and flashes it.
       if (isSingleView) return;
       requestAnimationFrame(() => {
         const el = assistantRefs.current[slot_id];
@@ -441,8 +441,8 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
     }
   }, []); // empty deps = only on mount
 
-  // 并行视图下：当 activeSlotId 因程序化切换而变化（如「告诉 Leader」切到 Leader），
-  // 把对应列滚动到可视区，避免选中的成员列不在画面中。
+  // In parallel view, when activeSlotId changes programmatically ("tell the leader" switching to
+  // the leader, say), scroll that column into view so the selected member is not off-screen.
   useEffect(() => {
     if (isSingleView || !activeSlotId) return;
     const el = assistantRefs.current[activeSlotId];
@@ -463,7 +463,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
     return map;
   }, [assistants, pendingCounts]);
 
-  // warmup 失败的成员 slot 集合：胶囊头像标红。仅在失败态计算（进行中/就绪都无需标红）。
+  // Slots whose warmup failed, marking their pill avatars red. Computed only in the failed state, since running and ready need no marking.
   const warmupFailedSlotIds = useMemo(() => {
     if (warmupPhase !== 'error') return undefined;
     const ids = new Set<string>();
@@ -523,12 +523,12 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
               onRetry={onRetryWarmup}
             />
             {viewMode === 'board' ? (
-              // 看板视图：只读展现全队 mailbox 与 task-board。
+              // Board view: a read-only rendering of the team's mailbox and task board.
               <div className='flex-1 h-full min-w-0'>
                 <TeamActivityView team={team} />
               </div>
             ) : isSingleView ? (
-              // 单聊视图：全屏显示当前选中成员（activeSlotId），找不到时回退到 Leader。
+              // Single-chat view fills the screen with activeSlotId, falling back to the leader when it cannot be found.
               (() => {
                 const assistant =
                   assistants.find((candidate) => candidate.slot_id === activeSlotId) ?? leadAssistant ?? assistants[0];
@@ -585,7 +585,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                         }}
                         data-slot-id={assistant.slot_id}
                         data-role={isLeaderSlot ? 'leader' : 'member'}
-                        // 列间灰色隔离线：除最后一列外，右侧加一条分隔线，避免多列浅底粘连看不清边界。
+                        // A grey divider on the right of every column but the last, so several pale columns do not blur together.
                         className={`relative h-full ${isLastColumn ? '' : 'border-r border-solid border-[color:var(--border-base)]'}`}
                         style={{
                           // Always flex-grow to fill available space; each slot starts at 400px
@@ -661,7 +661,7 @@ const TeamPage: React.FC<Props> = ({ team }) => {
           Message.error(String(error));
         }
       };
-      // 移除成员一律二次确认；成员正在工作中时用更强的措辞提示会打断其工作。
+      // Removing a member always confirms, with stronger wording when that member is mid-task and would be interrupted.
       const status = statusMap.get(slot_id)?.status;
       const isActive = status === 'active';
       Modal.confirm({

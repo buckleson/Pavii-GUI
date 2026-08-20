@@ -27,7 +27,7 @@ export const localSelectionItems = (paths: string[]): FileOrFolderItem[] =>
     }));
 
 /**
- * 剥离 Windows 扩展长度路径前缀（`\\?\C:\DEV` → `C:\DEV`，`\\?\UNC\srv\share` → `\\srv\share`）
+ * Strip the Windows extended-length path prefix (`\\?\C:\DEV` -> `C:\DEV`, `\\?\UNC\srv\share` -> `\\srv\share`)
  * Strip the Windows extended-length (verbatim) prefix. Older backend builds
  * canonicalized picker paths into this form, which breaks agent spawning and
  * splits one directory into two project-list entries (issue #3191).

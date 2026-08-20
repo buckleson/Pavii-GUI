@@ -5,22 +5,22 @@
  */
 
 /**
- * 自定义 CSS 处理工具
- * 统一处理自定义 CSS 的 !important 添加和格式化
+ * Custom CSS processing helpers
+ * Adds !important to custom CSS and formats it, in one place
  */
 
 import { parse } from 'postcss';
 
 /**
- * 自动为所有 CSS 声明添加 !important
+ * Add !important to every CSS declaration
  *
- * 使用 PostCSS 进行真实的 CSS 解析（AST），只给声明（declaration）追加
- * !important，绝不触碰选择器。这样可以正确处理伪类 / 伪元素选择器
- * （如 `.btn:hover`、`::before`、`:not()`、`::-webkit-scrollbar-thumb:hover`），
- * 也能覆盖块内最后一条没有结尾分号的声明。已带 !important 的声明保持不变。
+ * Parses with PostCSS into a real AST and appends !important to declarations only, never
+ * touching selectors. That handles pseudo-class and pseudo-element selectors correctly
+ * (`.btn:hover`, `::before`, `:not()`, `::-webkit-scrollbar-thumb:hover`) and also covers
+ * the last declaration in a block when it has no trailing semicolon. Declarations that already carry !important are left alone.
  *
- * @param css - 原始 CSS 字符串
- * @returns 处理后的 CSS 字符串（所有声明都带 !important）
+ * @param css - The original CSS
+ * @returns The processed CSS, with !important on every declaration
  */
 export const addImportantToAll = (css: string): string => {
   if (!css || !css.trim()) {
@@ -36,16 +36,16 @@ export const addImportantToAll = (css: string): string => {
     });
     return root.toString();
   } catch {
-    // CSS 语法非法时（PostCSS 抛 CssSyntaxError），原样返回输入，
-    // 避免因解析失败而中断主题应用。
+    // On invalid CSS (PostCSS throws CssSyntaxError) the input is returned unchanged, so a parse
+    // failure never interrupts applying the theme.
     return css;
   }
 };
 
 /**
- * 包装自定义 CSS，添加注释说明
- * @param css - 处理后的 CSS 字符串
- * @returns 带注释的 CSS 字符串
+ * Wrap custom CSS with an explanatory comment
+ * @param css - The processed CSS
+ * @returns The CSS with its comment header
  */
 export const wrapCustomCss = (css: string): string => {
   if (!css || !css.trim()) {
@@ -53,16 +53,16 @@ export const wrapCustomCss = (css: string): string => {
   }
 
   return `
-/* 用户自定义样式 - 自动添加 !important 提升优先级 */
+/* User custom styles - !important added automatically to raise specificity */
 /* User Custom Styles - Auto !important for highest priority */
 ${css}
   `.trim();
 };
 
 /**
- * 完整处理自定义 CSS
- * @param css - 原始 CSS 字符串
- * @returns 处理后并包装的 CSS 字符串
+ * Process custom CSS end to end
+ * @param css - The original CSS
+ * @returns The processed and wrapped CSS
  */
 export const processCustomCss = (css: string): string => {
   const processed = addImportantToAll(css);
@@ -70,9 +70,9 @@ export const processCustomCss = (css: string): string => {
 };
 
 /**
- * 验证 CSS 语法（简单验证）
- * @param css - CSS 字符串
- * @returns 是否为有效的 CSS
+ * Validate CSS syntax (a simple check)
+ * @param css - The CSS
+ * @returns Whether the CSS is valid
  */
 export const validateCss = (css: string): { valid: boolean; error?: string } => {
   if (!css || !css.trim()) {
@@ -80,7 +80,7 @@ export const validateCss = (css: string): { valid: boolean; error?: string } => 
   }
 
   try {
-    // 简单验证：检查大括号是否配对
+    // Simple check: are the braces balanced
     const openBraces = (css.match(/\{/g) || []).length;
     const closeBraces = (css.match(/\}/g) || []).length;
 
@@ -91,7 +91,7 @@ export const validateCss = (css: string): { valid: boolean; error?: string } => 
       };
     }
 
-    // 检查是否有基本的 CSS 结构
+    // Check for the basic shape of CSS
     if (openBraces > 0 && !css.includes(':')) {
       return {
         valid: false,

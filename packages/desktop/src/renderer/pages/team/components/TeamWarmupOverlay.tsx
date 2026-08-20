@@ -14,38 +14,38 @@ import TeamAgentIdentity from './TeamAgentIdentity';
 type Props = {
   phase: TeamWarmupPhase;
   assistants: TeamAssistant[];
-  /** slot_id → 运行时状态（来自 useTeamWarmup，逐个成员的真实唤醒信号 + 失败原因）。 */
+  /** slot_id -> runtime state (from useTeamWarmup: the real per-member wake signal and any failure reason). */
   runtimeStatus: Map<string, TeamWarmupMemberState>;
   colorOf: (slot_id: string | undefined) => string;
   onRetry?: () => void;
 };
 
 /**
- * 团队 warmup 遮罩 —— 磨砂玻璃覆盖对话区，但**从列抬头下方开始**（top-40px），
- * 让每列抬头的模型选择器始终可点：切换模型是 teammate / leader 通用的失败自救手段。
+ * Team warmup overlay: frosted glass over the conversation area, starting below the column
+ * headers (top-40px) so each header's model selector stays clickable - switching model is how both teammates and the leader recover from failure.
  *
- * 头像用**真实的逐个 runtime 信号**（后端 Leader 优先、错开 3s 逐个发 pending）驱动：
- *   未开始 → 暗淡；pending → 身份色呼吸微光「唤醒中」；ready → 点亮定色；failed → 灰化标红。
- * 撤除以整体闸门 `phase` 为准（成功是全员一次性 ready）。
+ * Avatars follow the real per-member runtime signals (the backend wakes the leader first, then
+ *   staggers pending by 3s): not started is dim, pending breathes in the identity colour for "waking", ready lights solid, failed greys out in red.
+ * Dismissal follows the overall `phase` gate; success means everyone becomes ready at once.
  *
- * 失败态（error）遮罩内容换成失败卡：定位失败成员 + 原因 + 引导。
- *   teammate 失败 → 可切模型 或 从顶部胶囊移除后重试；leader 失败 → 仅可切模型后重试（不可移除）。
+ * On error the overlay becomes a failure card naming the member, the reason and what to do.
+ *   A failed teammate can switch model or be removed from the pills and retried; a failed leader can only switch model, never be removed.
  */
-// 列抬头 h-40px + 底部 1px border-b；遮罩从 41 起，正好露出抬头那条 1px 下边框线，
-// 抬头与遮罩内容区的分隔更清晰（44 会多盖住这条线）。
+// Column headers are h-40px with a 1px bottom border; starting the overlay at 41 leaves that
+// 1px line visible, separating header from overlay content more clearly (44 would cover it).
 const COLUMN_HEADER_HEIGHT = 41;
 
 /**
- * 后端错误层层包裹（`Invalid request: failed to warm up rebuilt agent <uuid>: Invalid request:
- * Bad request: Provider 'aionrs' not found`），只有末尾一段对用户有意义。剥掉重建噪声 + 通用前缀，
- * 留下真正的原因。取不到就回退原文。
+ * Backend errors arrive wrapped in layers (`Invalid request: failed to warm up rebuilt agent
+ * <uuid>: Invalid request: Bad request: Provider 'aionrs' not found`), and only the tail means
+ * anything to the user. Strip the rebuild noise and generic prefixes to leave the real cause, falling back to the original text when nothing can be extracted.
  */
 export function simplifyWarmupError(raw: string | undefined): string | undefined {
   if (!raw) return raw;
   let s = raw.trim();
-  // 去掉「failed to warm up rebuilt agent <uuid>:」这段中间噪声
+  // Drop the "failed to warm up rebuilt agent <uuid>:" noise in the middle
   s = s.replace(/failed to warm up rebuilt agent \S+:\s*/gi, '');
-  // 折叠重复的通用包裹前缀
+  // Collapse the repeated generic wrapper prefixes
   s = s.replace(/\b(invalid request|bad request|internal error):\s*/gi, '');
   s = s.trim();
   return s || raw.trim();
@@ -57,12 +57,12 @@ const TeamWarmupOverlay: React.FC<Props> = ({ phase, assistants, runtimeStatus, 
 
   const isFailure = phase === 'error';
 
-  // 收集**所有**失败成员（后端并发重建可能同时报多个 failed，各带自己的 error）。
-  // 按 assistants 顺序（Leader 在前）稳定排序，便于逐行展示。
+  // Collect every failed member: a concurrent backend rebuild can report several at once, each with its own error.
+  // Sorted stably in assistants order (leader first) so the rows read predictably.
   const failedMembers = assistants
     .filter((a) => runtimeStatus.get(a.slot_id)?.status === 'failed')
     .map((a) => ({ assistant: a, error: runtimeStatus.get(a.slot_id)?.error }));
-  // 取不到任何 failed 时，回退到 Leader 作为单个失败对象。
+  // With no failed member available, fall back to the leader as the single failure.
   const fallbackLeader = assistants.find((a) => a.role === 'leader');
   if (failedMembers.length === 0 && fallbackLeader) {
     failedMembers.push({ assistant: fallbackLeader, error: undefined });
@@ -70,7 +70,7 @@ const TeamWarmupOverlay: React.FC<Props> = ({ phase, assistants, runtimeStatus, 
   const isMulti = failedMembers.length > 1;
   const single = failedMembers[0];
   const singleIsLeader = single?.assistant.role === 'leader';
-  // 引导：任一失败成员是可移除的 teammate 时，才提「移除」这条路（Leader 不可移除）。
+  // Only offer the "remove" route when at least one failed member is a removable teammate; the leader cannot be removed.
   const anyRemovable = failedMembers.some((m) => m.assistant.role !== 'leader');
 
   return (
@@ -85,7 +85,7 @@ const TeamWarmupOverlay: React.FC<Props> = ({ phase, assistants, runtimeStatus, 
       }}
     >
       <div className='flex flex-col items-center gap-14px px-40px py-28px max-w-420px'>
-        {/* 成员头像：跟随各自 runtime 状态。Leader 先亮（后端优先重建它）。 */}
+        {/* Member avatars follow their own runtime state. The leader lights first, since the backend rebuilds it first. */}
         <div className='flex items-center gap-10px'>
           {assistants.slice(0, 6).map((a) => {
             const status = runtimeStatus.get(a.slot_id)?.status;
@@ -93,7 +93,7 @@ const TeamWarmupOverlay: React.FC<Props> = ({ phase, assistants, runtimeStatus, 
             const isReady = status === 'ready';
             const isPending = status === 'pending';
             const isFailed = status === 'failed';
-            // 未开始/失败 → 暗；pending → 半亮 + 呼吸；ready → 全亮定色；failed → 红环 + 灰化。
+            // Not started or failed is dim; pending is half-lit and breathing; ready is fully lit in colour; failed adds a red ring and greys out.
             const opacity = isReady || isFailed ? 1 : isPending ? 0.75 : 0.35;
             const boxShadow = isFailed
               ? '0 0 0 2px var(--danger)'
@@ -154,7 +154,7 @@ const TeamWarmupOverlay: React.FC<Props> = ({ phase, assistants, runtimeStatus, 
                   : t('team.warmup.genericFailedTitle', { defaultValue: 'The team could not start' })}
             </div>
             {isMulti ? (
-              // 多个失败：逐行列出「名字 + 精简原因」，限高滚动。
+              // Several failures list one row each with the name and trimmed reason, scrolling within a capped height.
               <div
                 data-testid='team-warmup-error'
                 className='w-320px max-h-120px overflow-y-auto flex flex-col gap-4px rounded-6px px-10px py-8px'
@@ -215,7 +215,7 @@ const TeamWarmupOverlay: React.FC<Props> = ({ phase, assistants, runtimeStatus, 
             <div className='text-12px text-t-tertiary'>
               {t('team.warmup.subtitle', { defaultValue: 'Getting members ready' })}
             </div>
-            {/* 品牌色进度条（不确定进度，来回扫动） */}
+            {/* Brand-coloured progress bar, indeterminate and sweeping back and forth */}
             <div className='w-180px h-4px rounded-2px overflow-hidden' style={{ background: 'var(--bg-3)' }}>
               <div
                 className='h-full rounded-2px team-warmup-sweep'

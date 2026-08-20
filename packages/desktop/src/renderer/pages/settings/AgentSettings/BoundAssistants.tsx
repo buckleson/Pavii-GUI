@@ -53,7 +53,7 @@ export const BoundAssistantStack: React.FC<{ assistants: Assistant[]; max?: numb
 
   return (
     <Tooltip
-      content={t('settings.agentManagement.boundAssistantsCount', { count: assistants.length }) + '：' + tooltip}
+      content={t('settings.agentManagement.boundAssistantsCount', { count: assistants.length }) + ': ' + tooltip}
     >
       <div className='flex items-center' data-testid='agent-bound-stack'>
         {shown.map((assistant, index) => (

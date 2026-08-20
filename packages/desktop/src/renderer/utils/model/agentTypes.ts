@@ -250,7 +250,7 @@ export function formatManagedAgentDiagnosticMessage(t: TFunction, agent: Managed
       });
       const versions = agent.last_check_error_message?.trim();
       if (!explanation) return versions || fallback;
-      return versions ? `${explanation}（${versions}）` : explanation;
+      return versions ? `${explanation} (${versions})` : explanation;
     }
     default:
       return fallback;

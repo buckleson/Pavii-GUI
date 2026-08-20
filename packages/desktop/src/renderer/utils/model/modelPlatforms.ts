@@ -42,11 +42,11 @@ export interface PlatformConfig {
 /**
  * Model Platform options list
  *
- * 顺序：
- * 1. 自定义（需要用户输入 base url）
- * 2. Moonshot/Kimi（战略合作，置顶展示）
- * 3. New API / Gemini 官方平台
- * 4+ 预设供应商
+ * Order:
+ * 1. Custom (the user supplies a base url)
+ * 2. Moonshot/Kimi (a strategic partner, pinned to the top)
+ * 3. New API / the official Gemini platform
+ * 4+ preset providers
  */
 export const MODEL_PLATFORMS: PlatformConfig[] = [
   // Custom option (requires user to input base url)
@@ -77,7 +77,7 @@ export const MODEL_PLATFORMS: PlatformConfig[] = [
     i18nKey: 'settings.platformNewApi',
   },
 
-  // 官方 Gemini 平台
+  // The official Gemini platform
   {
     name: 'Gemini',
     value: 'gemini',
@@ -92,7 +92,7 @@ export const MODEL_PLATFORMS: PlatformConfig[] = [
     platform: 'gemini-vertex-ai',
   },
 
-  // 预设供应商（按字母顺序排列）
+  // Preset providers, in alphabetical order
   {
     name: 'OpenAI',
     value: 'OpenAI',

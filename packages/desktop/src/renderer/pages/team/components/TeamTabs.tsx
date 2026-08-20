@@ -105,10 +105,10 @@ const TeamTabView: React.FC<TeamTabViewProps> = ({
 
   // The pill background stays light grey through hover and selection, so it never dulls the coloured name;
   // selection shows as a border in the member's own identity colour, echoing the name - clear without muddying it. The identity colour touches only the name and the border.
-  // 拖拽走 dnd-kit sortable：hover 时手柄内联出现在头像前（同改名/移除按钮的「hover 增宽」语言，
-  // 不遮头像和状态点），拖动时兄弟胶囊实时让位（transform 平移），松手原位落地。
-  // dragActive 期间冻结其他胶囊的 hover 增宽（拖动经过时布局不能跳）；正被拖动的胶囊则保持
-  // 手柄和按钮可见，宽度全程恒定。
+  // Dragging uses dnd-kit sortable: on hover the handle appears inline before the avatar (the same
+  // "widen on hover" language as the rename and remove buttons, covering neither avatar nor status dot); siblings shift aside live via transform, and the pill lands where it is dropped.
+  // While dragActive, the other pills stop widening on hover so the layout cannot jump as the drag
+  // passes over them; the dragged pill keeps its handle and buttons visible at a constant width.
   const showDragHandle = !isLeader && !editing && ((hovered && !dragActive) || isDragging);
   const showHoverActions = !editing && ((hovered && !dragActive) || isDragging);
   return (
@@ -195,7 +195,7 @@ const TeamTabView: React.FC<TeamTabViewProps> = ({
           />
         </div>
       )}
-      {/* hover 时胶囊变宽、露出操作按钮；失焦则收起（胶囊变窄，只剩头像+文字）。拖拽期间冻结，避免布局跳动。 */}
+      {/* Hover widens the pill to reveal its actions and blur collapses it back to avatar and text. Frozen during a drag so the layout cannot jump. */}
       {showHoverActions && onRename && (
         <span
           data-testid={`team-tab-edit-${slot_id}`}
@@ -225,9 +225,9 @@ type TeamTabsProps = {
   onTabClick?: (slot_id: string) => void;
   /** Pending permission confirmation counts per assistant slot ID */
   pendingCounts?: Map<string, number>;
-  /** 团队 warmup 进行中：禁用改成员（添加/移除/重命名）——PRD 第 7 节要求。 */
+  /** While team warmup runs, membership edits (add, remove, rename) are disabled - required by PRD section 7. */
   warmingUp?: boolean;
-  /** warmup 失败的成员 slot：胶囊头像标红提示，引导用户移除/换模型自救。 */
+  /** Slots whose warmup failed: the pill avatar turns red, pointing the user at removing the member or changing its model. */
   failedSlotIds?: Set<string>;
 };
 
@@ -248,15 +248,15 @@ const TeamTabs: React.FC<TeamTabsProps> = ({ onTabClick, pendingCounts, warmingU
     addAssistant,
     colorOf,
   } = useTeamTabs();
-  // 胶囊操作（增/删/改名）只在「warmup 进行中」禁用。warmup 一旦结束——无论成功还是失败——
-  // 就全部放开。后端对增删改成员本身有并发锁保证串行，前端不需要再叠一层忙碌禁用
-  // （否则删完一个成员，后端重建剩余成员时又会把胶囊锁住，出现「删一个卡一下」的怪体验）。
+  // Pill actions are disabled only while warmup is running. Once it ends - succeeded or failed -
+  // they all reopen. The backend already serializes membership changes with its own lock, so the
+  // frontend need not add a second busy-disable (which would lock the pills again while the backend rebuilt the rest, making every removal stutter).
   const memberOpsDisabled = warmingUp;
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftFade, setShowLeftFade] = useState(false);
   const [showRightFade, setShowRightFade] = useState(false);
-  // 拖拽进行中：冻结所有胶囊的 hover 增宽（改名/移除按钮），否则拖动经过时
-  // 目标胶囊变宽→布局跳→hover 丢失→又变窄，形成闪烁循环。
+  // During a drag, freeze hover-widening on every pill (the rename and remove buttons); otherwise
+  // the pill under the cursor widens, the layout jumps, hover is lost, it narrows again - a flicker loop.
   const [dragActive, setDragActive] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   // Only teammates are sortable; the leader pill is rendered outside the sortable id list.
@@ -311,7 +311,7 @@ const TeamTabs: React.FC<TeamTabsProps> = ({ onTabClick, pendingCounts, warmingU
       className='relative shrink-0 bg-1 border-t border-x border-b border-solid border-[color:var(--border-base)]'
     >
       <div className='relative flex items-stretch min-h-48px'>
-        {/* 可横向滚动的成员胶囊列表 */}
+        {/* Horizontally scrollable list of member pills */}
         <div
           ref={tabsContainerRef}
           className='flex items-center gap-6px flex-1 min-w-0 overflow-x-auto overflow-y-hidden py-8px px-12px [scrollbar-width:none]'
@@ -356,7 +356,7 @@ const TeamTabs: React.FC<TeamTabsProps> = ({ onTabClick, pendingCounts, warmingU
             </SortableContext>
           </DndContext>
         </div>
-        {/* 两侧渐隐提示「还有更多」，只覆盖滚动区、不盖固定的添加入口 */}
+        {/* Fades at both edges hint at more, covering only the scroll area and never the fixed add button */}
         {showLeftFade && (
           <div
             className='pointer-events-none absolute left-0 top-0 bottom-0 w-28px z-10'
@@ -372,7 +372,7 @@ const TeamTabs: React.FC<TeamTabsProps> = ({ onTabClick, pendingCounts, warmingU
             }}
           />
         )}
-        {/* 固定在最右、不随列表滚动的「添加成员」；左侧一根分隔线与成员列表隔开，按钮本身无边框。 */}
+        {/* "Add member" is pinned right and does not scroll with the list; a divider separates it, and the button itself is borderless. */}
         {addAssistant ? (
           <div className='flex items-center shrink-0 border-l border-solid border-[color:var(--border-base)] px-8px'>
             <TeamAddMemberPopover disabled={memberOpsDisabled}>
@@ -380,9 +380,9 @@ const TeamTabs: React.FC<TeamTabsProps> = ({ onTabClick, pendingCounts, warmingU
                 type='button'
                 disabled={memberOpsDisabled}
                 data-testid='team-tab-add-member'
-                // 禁用态：只把文字调浅，位置/尺寸/背景/边框都不变。
-                // 原生 <button>:disabled 会叠加浏览器默认灰底 + 收缩高度，className 的 appearance/bg
-                // 在禁用态下可能被 UA 样式盖过；这里用内联 style 强制关掉原生外观并锁定盒模型，保证两态一致。
+                // Disabled only dims the text: position, size, background and border stay put.
+                // A native <button>:disabled adds the browser grey and shrinks the height, and UA styles can
+                // beat the className's appearance/bg while disabled, so inline styles force the native look off and pin the box model, keeping both states identical.
                 style={{
                   appearance: 'none',
                   WebkitAppearance: 'none',

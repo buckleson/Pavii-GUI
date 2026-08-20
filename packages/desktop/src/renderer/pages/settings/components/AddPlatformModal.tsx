@@ -509,7 +509,7 @@ const AddPlatformModal = ModalHOC<{
               <span className='text-11px text-t-tertiary'>
                 {isFullUrl
                   ? t('settings.fullUrlHint', 'Use this address as-is, without appending a path')
-                  : t('settings.baseUrlHint', '系统会自动拼接请求路径')}
+                  : t('settings.baseUrlHint', 'The request path is appended automatically')}
               </span>
             </div>
           )}

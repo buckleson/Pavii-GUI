@@ -15,8 +15,8 @@ type Props = {
 };
 
 /**
- * 并行 / 单聊视图切换 —— 放在标题行右侧的分段控件。
- * 并行：所有成员并排；单聊：全屏当前选中成员。
+ * Parallel / single-chat view switch: a segmented control on the right of the title row.
+ * Parallel shows every member side by side; single chat fills the screen with the selected one.
  */
 const TeamViewToggle: React.FC<Props> = ({ value, onChange }) => {
   const { t } = useTranslation();

@@ -458,14 +458,14 @@ const ModelModalContent: React.FC = () => {
                               className='cursor-pointer hover:text-t-primary transition-colors'
                               onClick={() => setCollapseKey((prev) => ({ ...prev, [platform.id]: !isExpanded }))}
                             >
-                              {t('settings.modelCount')}（{(platform.models ?? []).length}）
+                              {t('settings.modelCount')} ({(platform.models ?? []).length})
                             </span>
                             <span className='mx-6px'>|</span>
                             <span
                               className='cursor-pointer hover:text-t-primary transition-colors'
                               onClick={() => editModalCtrl.open({ data: platform })}
                             >
-                              {t('settings.apiKeyCount')}（{getApiKeyCount(platform.api_key)}）
+                              {t('settings.apiKeyCount')} ({getApiKeyCount(platform.api_key)})
                             </span>
                           </span>
                           <span className='text-12px text-t-secondary whitespace-nowrap md:hidden'>

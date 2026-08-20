@@ -6,7 +6,7 @@
 
 /**
  * Workspace utility functions
- * 工作空间工具函数
+ * Workspace helpers
  */
 
 const splitPathSegments = (targetPath: string): string[] => targetPath.split(/[\\/]+/).filter(Boolean);
@@ -36,7 +36,7 @@ export const getWorkspaceDisplayName = (
 
 /**
  * Get the last directory name from a path
- * 从路径中获取最后一级目录名
+ * Last directory name in a path
  */
 export const getLastDirectoryName = (path: string): string => {
   const parts = splitPathSegments(path);

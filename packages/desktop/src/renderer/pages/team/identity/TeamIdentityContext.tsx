@@ -7,12 +7,12 @@
 import React, { createContext, useContext } from 'react';
 
 /**
- * 团队身份色的跨层读取通道。
+ * Cross-layer channel for reading team identity colours.
  *
- * 消息渲染链（AssistantChatSlot → TeamChatView → AcpChat → MessageList → MessageText）很深，
- * teammate 消息只携带 `senderConversationId`，需据此回到成员实例取身份色，用于气泡左色条 + 彩色发送者名。
- * 用一个可选 context 提供解析函数：团队页包裹时提供，非团队会话渲染 MessageText 时 context 为 null，
- * 消息按原样渲染（无色条），因此对非团队场景零影响。
+ * The message render chain (AssistantChatSlot -> TeamChatView -> AcpChat -> MessageList ->
+ * MessageText) is deep, and a teammate message carries only `senderConversationId`, from which the member instance and its colour must be recovered for the bubble bar and coloured sender name.
+ * An optional context supplies the resolver: the team page provides it, while a non-team
+ * conversation rendering MessageText sees null and renders plainly, so nothing outside teams is affected.
  */
 type TeamIdentityContextValue = {
   colorOfConversation: (conversation_id: string | undefined) => string;
@@ -28,7 +28,7 @@ export const TeamIdentityProvider: React.FC<{
   return <TeamIdentityContext.Provider value={value}>{children}</TeamIdentityContext.Provider>;
 };
 
-/** 取 teammate 消息发送者的身份色；非团队场景返回 undefined（不着色）。 */
+/** The sender's identity colour for a teammate message; undefined outside teams, meaning no colour. */
 export const useTeammateColor = (senderConversationId: string | undefined): string | undefined => {
   const ctx = useContext(TeamIdentityContext);
   if (!ctx || !senderConversationId) return undefined;

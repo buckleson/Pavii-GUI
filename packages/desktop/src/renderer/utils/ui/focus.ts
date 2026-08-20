@@ -1,5 +1,5 @@
 /**
- * 主动清理当前焦点，避免移动端在路由切换后保持输入态并持续唤起软键盘。
+ * Clear the current focus, so mobile does not stay in an input state after a route change and keep the soft keyboard up.
  */
 export const blurActiveElement = (): void => {
   if (typeof document === 'undefined') return;

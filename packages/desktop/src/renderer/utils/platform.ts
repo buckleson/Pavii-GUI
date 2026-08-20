@@ -6,14 +6,14 @@
 
 /**
  * Platform detection utilities
- * 平台检测工具函数
+ * Platform detection helpers
  */
 
 import { getBaseUrl } from '@/common/adapter/httpBridge';
 
 /**
  * Check if running in Electron desktop environment
- * 检测是否运行在 Electron 桌面环境
+ * Whether we are running in the Electron desktop app
  */
 export const isElectronDesktop = (): boolean => {
   return typeof window !== 'undefined' && Boolean(window.electronAPI);
@@ -21,7 +21,7 @@ export const isElectronDesktop = (): boolean => {
 
 /**
  * Check if running on macOS
- * 检测是否运行在 macOS
+ * Whether we are running on macOS
  */
 export const isMacOS = (): boolean => {
   return typeof navigator !== 'undefined' && /mac/i.test(navigator.userAgent);
@@ -29,7 +29,7 @@ export const isMacOS = (): boolean => {
 
 /**
  * Check if running on Windows
- * 检测是否运行在 Windows
+ * Whether we are running on Windows
  */
 export const isWindows = (): boolean => {
   return typeof navigator !== 'undefined' && /win/i.test(navigator.userAgent);
@@ -37,7 +37,7 @@ export const isWindows = (): boolean => {
 
 /**
  * Check if running on Linux
- * 检测是否运行在 Linux
+ * Whether we are running on Linux
  */
 export const isLinux = (): boolean => {
   return typeof navigator !== 'undefined' && /linux/i.test(navigator.userAgent);
@@ -67,7 +67,7 @@ export const resolveBackendAssetUrl = (url: string | undefined): string | undefi
  * helper resolves app-relative backend paths into absolute backend URLs when
  * the desktop renderer is not same-origin with the backend process.
  *
- * 将扩展资源 URL 转换为当前环境可用的地址
+ * Convert an extension resource URL into one usable in the current environment
  */
 export const resolveExtensionAssetUrl = (url: string | undefined): string | undefined => {
   return resolveBackendAssetUrl(url);
@@ -78,9 +78,9 @@ export const resolveExtensionAssetUrl = (url: string | undefined): string | unde
  * - Electron: uses shell.openExternal via IPC (opens on local machine)
  * - WebUI: uses window.open in client browser (opens on remote client)
  *
- * 在适当的环境中打开外部链接
- * - Electron: 通过 IPC 调用 shell.openExternal（在本地机器打开）
- * - WebUI: 使用 window.open 在客户端浏览器打开（在远程客户端打开）
+ * Open an external link in the right place for the environment
+ * - Electron: shell.openExternal over IPC, opening on the local machine
+ * - WebUI: window.open, opening in the client's own browser on the remote machine
  */
 export const openExternalUrl = async (url: string): Promise<void> => {
   if (!url) return;

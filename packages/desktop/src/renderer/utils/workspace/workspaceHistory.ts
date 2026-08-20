@@ -7,7 +7,7 @@
 const WORKSPACE_UPDATE_TIME_KEY = 'aionui_workspace_update_time';
 
 /**
- * 获取 workspace 的最后更新时间
+ * Last update time of a workspace
  */
 export const getWorkspaceUpdateTime = (workspace: string): number => {
   try {
@@ -23,8 +23,8 @@ export const getWorkspaceUpdateTime = (workspace: string): number => {
 };
 
 /**
- * 更新 workspace 的最后更新时间
- * 在创建新会话时调用此函数
+ * Update the last update time of a workspace
+ * Called when a new conversation is created
  */
 export const updateWorkspaceTime = (workspace: string): void => {
   try {

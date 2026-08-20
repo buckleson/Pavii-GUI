@@ -7,10 +7,10 @@
 import { useCallback, useState } from 'react';
 
 /**
- * 团队协作视图模式 —— 团队整体属性，按团队记忆（localStorage）。
- * - parallel：所有成员对话列并排（默认）。
- * - single：全屏显示当前选中的成员。
- * - board：只读的「消息 & 任务」看板视图。
+ * Team collaboration view mode: a team-wide property remembered per team in localStorage.
+ * - parallel: every member column side by side (the default).
+ * - single: the selected member fills the screen.
+ * - board: a read-only messages-and-tasks board.
  */
 export type TeamViewMode = 'parallel' | 'single' | 'board';
 
@@ -36,7 +36,7 @@ export function useTeamViewMode(team_id: string): [TeamViewMode, (mode: TeamView
       try {
         localStorage.setItem(storageKey(team_id), mode);
       } catch {
-        // storage unavailable — 视图仍在内存生效
+        // storage unavailable - the view still applies in memory
       }
     },
     [team_id]

@@ -42,7 +42,7 @@ const SkillUsedByStack: React.FC<{ assistants: Assistant[]; max?: number }> = ({
           count: assistants.length,
           defaultValue: `Used by ${assistants.length} assistant(s)`,
         }) +
-        '：' +
+        ': ' +
         names
       }
     >

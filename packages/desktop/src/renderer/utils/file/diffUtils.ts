@@ -7,32 +7,32 @@
 /**
  * Parse file path from diff content
  *
- * 支持多种 diff 格式：
+ * Supports several diff formats:
  * - Index: path/to/file.tsx
  * - --- a/path/to/file.tsx
  * - +++ b/path/to/file.tsx
  *
- * @param diffContent diff 内容
- * @returns 文件相对路径，如果无法解析则返回 null
+ * @param diffContent The diff content
+ * @returns The relative file path, or null when it cannot be parsed
  */
 export function parseFilePathFromDiff(diffContent: string): string | null {
   const lines = diffContent.split('\n');
 
-  // 尝试 Index: 格式（SVN 风格）
+  // Try the Index: form (SVN style)
   for (const line of lines) {
     if (line.startsWith('Index: ')) {
       return line.substring(7).trim();
     }
   }
 
-  // 尝试 git diff 格式 (+++ b/ 优先，因为它指向新文件)
+  // Try the git diff form, preferring +++ b/ because it names the new file
   for (const line of lines) {
     if (line.startsWith('+++ b/')) {
       return line.substring(6).trim();
     }
   }
 
-  // 回退到 --- a/ 格式
+  // Fall back to the --- a/ form
   for (const line of lines) {
     if (line.startsWith('--- a/')) {
       return line.substring(6).trim();
@@ -45,8 +45,8 @@ export function parseFilePathFromDiff(diffContent: string): string | null {
 /**
  * Extract actual file content from diff (remove metadata)
  *
- * @param diffContent diff 内容
- * @returns 提取后的纯净文件内容
+ * @param diffContent The diff content
+ * @returns The extracted file content, without diff markers
  */
 export function extractContentFromDiff(diffContent: string): string {
   const lines = diffContent.split('\n');

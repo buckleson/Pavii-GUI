@@ -5,11 +5,11 @@
  *
  * Unified Agent Logo utility
  *
- * Logo 真值由后端 `/api/agents/management` 提供（投影自 agent_metadata.icon/avatar）。
- * 前端不再维护任何 backend -> 资源路径的硬编码映射。
+ * Logos come from the backend `/api/agents/management`, projected from agent_metadata.icon/avatar.
+ * The frontend keeps no hardcoded backend -> asset path mapping any more.
  *
- * 使用方式：组件用 {@link useAgentLogos} 取得 `backend -> url` 映射，再用纯函数
- * {@link resolveAgentLogo} 解析。非组件的工具函数应把映射作为参数传入。
+ * Usage: components take the `backend -> url` map from {@link useAgentLogos} and resolve with
+ * the pure {@link resolveAgentLogo}. Non-component helpers should receive the map as an argument.
  *
  * Logo truth lives in the backend (`/api/agents/management`, projected from
  * `agent_metadata.icon/avatar`); the frontend owns no path map. Components read the
@@ -153,7 +153,7 @@ export function resolveAgentAvatar(
 
 /**
  * Check if a model value/label indicates it's a default/recommended model
- * 检查模型值/标签是否表示默认/推荐模型
+ * Whether a model value or label marks it as default or recommended
  */
 export const isDefaultModel = (value?: string | null, label?: string | null): boolean => {
   const text = `${value || ''} ${label || ''}`.toLowerCase();
@@ -162,7 +162,7 @@ export const isDefaultModel = (value?: string | null, label?: string | null): bo
 
 /**
  * Get display label for a model, with fallback handling
- * 获取模型的显示标签，带回退处理
+ * Display label for a model, with fallbacks
  */
 export const getModelDisplayLabel = ({
   selected_value: _selected_value,

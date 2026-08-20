@@ -291,7 +291,7 @@ const ScheduledTasksPage: React.FC = () => {
                     : t('cron.page.form.existingConversation');
                 const nextRun = job.state.next_run_at_ms ? formatNextRun(job.state.next_run_at_ms) : '-';
                 const errorHint = job.state.last_error
-                  ? `${t('cron.lastError')}：${job.state.last_error}`
+                  ? `${t('cron.lastError')}: ${job.state.last_error}`
                   : t('cron.status.error');
 
                 return (
@@ -327,11 +327,11 @@ const ScheduledTasksPage: React.FC = () => {
                         </div>
                         <div
                           className='mt-1px min-w-0 truncate text-12px leading-16px text-t-secondary'
-                          title={`${formatSchedule(job, t)} · ${t('cron.nextRun')}：${nextRun}`}
+                          title={`${formatSchedule(job, t)} · ${t('cron.nextRun')}: ${nextRun}`}
                         >
                           {formatSchedule(job, t)}
                           <span className='mx-6px text-t-secondary opacity-60'>·</span>
-                          {t('cron.nextRun')}：{nextRun}
+                          {t('cron.nextRun')}: {nextRun}
                         </div>
                       </div>
                     </div>

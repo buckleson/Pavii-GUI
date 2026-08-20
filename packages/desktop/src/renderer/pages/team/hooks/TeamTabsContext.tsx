@@ -25,9 +25,9 @@ export type TeamTabsContextValue = {
   addAssistant?: (assistant: TeamAssistantInput) => Promise<TeamAssistant>;
   membershipMutationBusy: boolean;
   reorderAssistants: (fromSlotId: string, toSlotId: string) => void;
-  /** 成员实例身份色（仅团队详情页展示用）。 */
+  /** Member-instance identity colour, for the team detail page only. */
   colorOf: (slot_id: string | undefined) => string;
-  /** 会话对应成员的身份色（消息侧按 conversation_id 取色）。 */
+  /** Identity colour of the conversation's member; the message side resolves it by conversation_id. */
   colorOfConversation: (conversation_id: string | undefined) => string;
 };
 

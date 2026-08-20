@@ -32,21 +32,21 @@ const shallowEqual = (a: Record<string, number>, b: Record<string, number>): boo
 };
 
 export type TeamMemberColorResolver = {
-  /** 取某成员实例（slot）的身份色 CSS 值。 */
+  /** CSS identity colour for one member instance (slot). */
   colorOf: (slot_id: string | undefined) => string;
-  /** 取某会话（消息侧只认 conversation_id）对应成员的身份色 CSS 值。 */
+  /** CSS identity colour for the member behind a conversation; the message side knows only conversation_id. */
   colorOfConversation: (conversation_id: string | undefined) => string;
 };
 
 /**
- * 团队成员身份色 —— 每团队一份 `slot_id -> 色号` 映射，随成员列表增量维护并持久化到
- * localStorage（key `team-member-colors-${team_id}`）。仅团队详情页使用，不落库。
+ * Team member identity colours: one `slot_id -> colour index` map per team, maintained
+ * incrementally with the member list and persisted to localStorage under `team-member-colors-${team_id}`. Used only by the team detail page and never stored server-side.
  */
 export function useTeamMemberColors(team_id: string, assistants: TeamAssistant[]): TeamMemberColorResolver {
   const key = storageKey(team_id);
   const [colorMap, setColorMap] = useState<Record<string, number>>(() => readColorMap(key));
 
-  // 成员列表变化时增量重算：新成员补色、被移除成员释放色，已有成员钉死不变。
+  // Recomputed incrementally as the list changes: new members take a colour, removed members release theirs, existing members keep theirs.
   useEffect(() => {
     setColorMap((prev) => {
       const next = assignMemberColors(prev, assistants);
@@ -54,13 +54,13 @@ export function useTeamMemberColors(team_id: string, assistants: TeamAssistant[]
       try {
         localStorage.setItem(key, JSON.stringify(next));
       } catch {
-        // storage full / unavailable — 颜色仍在内存生效，忽略持久化失败
+        // storage full or unavailable - colours still apply in memory, so the persistence failure is ignored
       }
       return next;
     });
   }, [assistants, key]);
 
-  // conversation_id -> slot_id 索引：消息只携带 senderConversationId，需借此回到成员实例取色。
+  // conversation_id -> slot_id index: messages carry only senderConversationId, so this maps back to the member instance for its colour.
   const conversationToSlot = useMemo(() => {
     const index: Record<string, string> = {};
     for (const a of assistants) {

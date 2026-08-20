@@ -71,6 +71,16 @@ const ALLOWLIST = [
     reason: 'Matches a Chinese "default" label coming from a model provider; removing it would break detection.',
   },
   {
+    prefix: 'packages/desktop/src/renderer/hooks/agent/usePresetAssistantInfo.ts',
+    reason:
+      'Matches the Chinese "你是 **name**" preamble an assistant rule can open with, to recover the name. Pattern only, never displayed.',
+  },
+  {
+    prefix: 'packages/desktop/src/renderer/hooks/system/useSpeechInput.ts',
+    reason:
+      'A CJK codepoint range used to decide whether joining two speech segments needs a space; CJK needs none. Detection only, never displayed.',
+  },
+  {
     prefix: 'packages/desktop/src/renderer/pages/conversation/components/ConversationTitleMinimap/minimapUtils.ts',
     reason: 'Builds Chinese search tokens so a user typing Chinese numerals can still find a turn. Never displayed.',
   },
