@@ -5,10 +5,10 @@
  */
 
 /**
- * 从工具调用流里识别「Agent 正在操作应用内浏览器」。
+ * Recognise "the agent is driving the in-app browser" from the tool-call stream.
  *
- * 纯函数、无副作用，因此可以单测 —— 这段判断的正确性很重要：判错了会导致
- * 角标常亮或者永不亮，而这正是用户理解"刚才发生了什么"的唯一线索。
+ * Pure and side-effect free so it can be unit-tested, which matters here: getting it wrong
+ * leaves the badge stuck on or never lit, and that badge is the only clue the user has about what just happened.
  *
  * Detects "the agent is driving the in-app browser" from the tool-call stream.
  * Kept pure and side-effect free so it can be unit tested: getting this wrong
@@ -17,8 +17,8 @@
  */
 
 /**
- * 内置浏览器 MCP 的注册名，定义在 common 以便主进程注册、渲染进程识别用同一份值。
- * 从这里重新导出，方便本目录内就近取用。
+ * Registration name of the built-in browser MCP, defined in common so the main process registers and the renderer recognises it by the same value.
+ * Re-exported here for convenient use within this directory.
  *
  * Registered name of the built-in browser MCP. Defined in common so the main
  * process (which registers it) and the renderer (which recognises it) share one
@@ -29,10 +29,10 @@ export { BUILTIN_BROWSER_MCP_NAME } from '@/common/config/constants';
 import { BUILTIN_BROWSER_MCP_NAME, LEGACY_BUILTIN_BROWSER_MCP_NAME } from '@/common/config/constants';
 
 /**
- * 工具执行中的状态。
+ * States that count as a tool still running.
  *
- * `Confirming` 也算"进行中"：此时 Agent 已经在等用户批准某个浏览器操作，
- * 用户更需要知道注意力该放哪儿。
+ * `Confirming` counts as running too: the agent is already waiting for approval of a browser
+ * action, which is exactly when the user needs to know where to look.
  *
  * Statuses that count as in-flight. `Confirming` is included: at that point the
  * agent is waiting for approval of a browser action, which is exactly when the
@@ -58,9 +58,9 @@ const isBrowserMcpEntry = (entry: ToolGroupEntry): boolean => {
   if (details?.type === 'mcp' && details.server_name && BROWSER_MCP_NAMES.includes(details.server_name)) return true;
 
   /**
-   * 兜底按工具名前缀匹配：不同引擎对 MCP 工具的命名方式不一致，有的会带
-   * `<server>__<tool>` 前缀而不填 confirmationDetails。少认一次比误认一次好，
-   * 但这两条覆盖了目前所有已知形态。
+   * Fallback matching on the tool-name prefix: engines name MCP tools differently, and some use
+   * a `<server>__<tool>` prefix without filling confirmationDetails. Missing one is better than
+   * claiming one falsely, and these two cover every shape seen so far.
    *
    * Fall back to the tool-name prefix: engines differ in how they name MCP tools,
    * and some emit `<server>__<tool>` without confirmationDetails. Under-detecting
@@ -85,10 +85,10 @@ export const isBrowserMcpActivity = (messageType: string, data: unknown): boolea
 };
 
 /**
- * 判断一条 tool_group 消息是否表示浏览器操作已经结束（成功或失败）。
+ * Whether a tool_group message means a browser action has finished, successfully or not.
  *
- * 单独判断"结束"而不是靠"不在进行中"取反：一条消息里可能同时有别的工具，
- * 取反会把无关消息误判成"浏览器操作结束"，角标就会提前熄灭。
+ * "Finished" is decided directly rather than by negating "running": one message can carry other
+ * tools too, and negation would read an unrelated message as the browser finishing, putting the badge out early.
  *
  * Whether a tool_group message means a browser action has finished (either way).
  * Detected explicitly rather than as the negation of in-flight: a single message

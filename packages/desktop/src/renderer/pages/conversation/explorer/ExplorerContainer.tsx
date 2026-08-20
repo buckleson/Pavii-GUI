@@ -378,16 +378,16 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
 
   return (
     <div className='h-full flex flex-col min-h-0'>
-      {/* Host component-switcher tab bar: 文件 = explorer, 变更 = source control.
+      {/* Host component-switcher tab bar: Files = explorer, Changes = source control.
           Tabs are left-aligned and scroll horizontally when they overflow; the
           attach + open-externally cluster is pinned right (flex-shrink-0) with
           container padding, so it never scrolls with the tabs nor clips at narrow
           widths.
 
-          左内边距 12px 是本面板的对齐基准线，三处必须一致（见下方 SearchPanel 与
-          arco-override.css 的 .workspace-tree 规则）：外框一律从 12px 起，框内内容
-          （tab 文字 / 搜索图标 / 树箭头）一律从 20px 起。12px 不是随手取的——侧栏
-          的拖宽把手正好盖住最左 12px 且层级更高，任何落在其左侧的东西都点不到。
+          The 12px left padding is this panel's alignment baseline and must match in three places (see
+          SearchPanel below and the .workspace-tree rule in arco-override.css): outer frames start at
+          12px, content inside them (tab text, search icon, tree arrow) at 20px. 12px is not arbitrary:
+          the sidebar's resize handle covers exactly the leftmost 12px at a higher z-index, so anything left of that is unclickable.
 
           The 12px left padding is this panel's alignment baseline and must match in
           all three places (see SearchPanel below and the .workspace-tree rules in
@@ -401,9 +401,9 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
           {tabButton('changes', t('conversation.explorer.tabs.changes'))}
         </div>
         <div className='flex items-center gap-2px flex-shrink-0'>
-          {/* Tooltip 与右侧「打开工作区」按钮保持同一形态（mini），让相邻按钮的
-              悬浮提示观感一致。注意：Arco 的 Tooltip 不能包裹 Dropdown（会取到
-              非 DOM 节点而崩），这里包的是普通 Button，安全。
+          {/* The tooltip matches the "open workspace" button on the right (mini), so adjacent buttons
+              hover alike. Note: an Arco Tooltip cannot wrap a Dropdown (it would resolve a non-DOM node
+              and crash); what is wrapped here is a plain Button, which is safe.
               Same `mini` Tooltip as the neighboring workspace-open button so
               adjacent buttons feel consistent. Note: an Arco Tooltip must not wrap
               a Dropdown (it would resolve a non-DOM node and crash); wrapping a
@@ -428,9 +428,9 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
           subscriptions never thrash. SearchPanel owns the scroll region, so this
           container no longer sets overflow.
 
-          没有左内边距是刻意的：搜索框和文件树各自对齐到 12px 基准线（前者靠自身
-          padding，后者靠 arco-override.css 里的 .workspace-tree 规则），在这里再加
-          一层会把两者一起推离基准线。
+          The missing left padding is deliberate: the search box and the file tree each align to the 12px
+          baseline on their own (the former through its own padding, the latter through the
+          .workspace-tree rule in arco-override.css); another layer here would push both off it.
           Deliberately no left padding: the search box and the tree each align to
           the 12px baseline on their own (the former via its own padding, the latter
           via the .workspace-tree rules in arco-override.css). Adding a layer here

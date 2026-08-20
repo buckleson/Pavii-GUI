@@ -7,8 +7,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
- * `browser` 打开的是应用内浏览器（预览面板里的 tab），其余三个是拉起外部程序。
- * 两类行为不同，下拉里用分隔线区分。
+ * `browser` opens the in-app browser (a tab in the preview panel); the other three launch
+ * external programs. The two kinds differ, so a divider separates them in the dropdown.
  *
  * `browser` opens the in-app browser (a tab in the preview panel); the other three
  * launch external programs. The dropdown separates the two groups with a divider.
@@ -49,9 +49,9 @@ const isExternalTool = (tool: ToolType): tool is ExternalToolType => tool !== 'b
 const WorkspaceOpenButton: React.FC<WorkspaceOpenButtonProps> = ({ workspacePath, isTemporary }) => {
   const { t } = useTranslation();
   /**
-   * 预览上下文是可选的：本组件主要负责拉起外部程序，浏览器只是附带的一项。
-   * 拿不到上下文时（例如在没有 PreviewProvider 的场景里渲染文件树）就隐藏
-   * 「浏览器」菜单项，其余功能照常。
+   * The preview context is optional: this component mainly launches external programs and the
+   * browser is incidental. Without the context - a file tree rendered outside a PreviewProvider,
+   * say - the browser item is hidden and everything else still works.
    *
    * The preview context is optional: this component mainly launches external
    * programs and the browser is an extra. When it is unavailable (e.g. the file tree
@@ -174,7 +174,7 @@ const WorkspaceOpenButton: React.FC<WorkspaceOpenButtonProps> = ({ workspacePath
   // no visible feedback, and the in-app browser needs Electron's <webview>.
   if (!isElectronDesktop()) return null;
 
-  // 一个可用项都没有时不渲染（临时工作区 + 无预览上下文），否则会留下一个点了没反应的按钮
+  // Render nothing when no item is available (a temp workspace with no preview context), rather than leaving a button that does nothing when clicked
   // Nothing available (temp workspace with no preview context): render nothing rather
   // than a button that does nothing when clicked.
   if (availableOptions.length === 0) return null;
@@ -183,7 +183,7 @@ const WorkspaceOpenButton: React.FC<WorkspaceOpenButtonProps> = ({ workspacePath
     <div className='workspace-open-dropdown p-4px'>
       {availableOptions.map((option, index) => (
         <React.Fragment key={option.key}>
-          {/* 分隔线：应用内浏览器与"拉起外部程序"是两类行为
+          {/* Divider: the in-app browser and launching external programs are two different kinds of action
               Divider: the in-app browser behaves differently from launching external programs */}
           {option.key === 'browser' && index > 0 && <div className='my-4px mx-8px h-1px bg-[var(--color-border-2)]' />}
           <div

@@ -340,10 +340,10 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
         treeData={view.treeData as TreeProps['treeData']}
         expandedKeys={view.expanded}
         selectedKeys={view.selected ? [view.selected] : []}
-        /* 点一整行就展开/收起文件夹，不必精准点中前面那个小箭头（arco 默认只有
-           'select'，所以整行点击此前只会选中、不会展开）。arco 内部对同一次点击只
-           走一条展开路径（有 loadMore 且未展开时走 loadMore，否则走 onExpand），
-           所以不会重复切换；点箭头本身仍然照旧生效。
+        /* Clicking anywhere on a row expands or collapses the folder, with no need to hit the small
+           arrow exactly (arco ships only 'select', so a row click used to select without expanding).
+           arco follows a single expand path per click (loadMore when present and collapsed, otherwise
+           onExpand), so nothing toggles twice; clicking the arrow itself still behaves as before.
            Clicking anywhere on a folder row expands/collapses it, instead of
            requiring a precise hit on the small leading arrow (arco defaults to
            'select' alone, which is why a row click previously only selected).

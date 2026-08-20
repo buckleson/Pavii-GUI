@@ -29,10 +29,10 @@ export interface BrowserViewerProps {
 /**
  * In-app browser view.
  *
- * 与 URLViewer 的区别在三点，也正是它单独存在的理由：
- * 1. 使用共享的持久化 partition，登录态跨 tab / 跨项目保留；
- * 2. 地址栏支持「输入关键词直接搜索」，不只是补 https://；
- * 3. 把地址 / 标题 / 图标回写给 tab，使会话重启后能恢复。
+ * Three differences from URLViewer, which are also why it exists separately:
+ * 1. it uses the shared persistent partition, so sessions survive across tabs and projects;
+ * 2. the address bar searches on a plain keyword rather than only prefixing https://;
+ * 3. it writes address, title and icon back to the tab, so a restart can restore them.
  *
  * Differs from URLViewer in exactly the three ways that justify a separate
  * component: a shared persistent partition (sign-in survives), keyword search in

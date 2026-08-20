@@ -10,7 +10,7 @@
  * the backend-bounded hit set. Everything here is a pure function so it can be
  * unit-tested in isolation; the store wires it to the MonitorClient stream.
  *
- * Engine split (search.md §引擎): the backend filters while walking the tree and
+ * Engine split (search.md, "Engine"): the backend filters while walking the tree and
  * only pushes hits on the wire (traffic bounded by hit count, not tree size);
  * the front-end does only the final fuzzy ranking over that already-bounded set.
  */
@@ -22,7 +22,7 @@ import type { FileOrFolderItem } from '@/renderer/utils/file/fileTypes';
  * One filename-search hit as delivered by `fs/searchMatch` (protocol.md). It is
  * exactly the chat-ref `project` identity — a hit can go straight into a chat
  * message's `files` via `projectFileRef(pe_id, relative_path)` with no
- * conversion (search.md §身份与 chat-ref 相通).
+ * conversion (search.md, "Identity shared with chat-ref").
  */
 export type SearchHit = {
   pe_id: string;
@@ -34,8 +34,8 @@ export type SearchHit = {
  * Adapt a search hit to a send-box selection item carrying its `project`
  * chat-ref. This is the search→add-to-chat "zero conversion" bridge: the item's
  * `chatRef` is sent verbatim and the backend resolves `{pe_id, relative_path}`
- * at the edge — the front-end builds no absolute path (search.md §身份与
- * chat-ref 相通; see `messageFiles.collectChatFileRefs`). Pure — no absolute
+ * at the edge - the front-end builds no absolute path (search.md, "Identity shared
+ * with chat-ref"; see `messageFiles.collectChatFileRefs`). Pure - no absolute
  * path is known front-end side, so `path`/`relativePath` carry the relative path.
  */
 export const searchHitToMentionItem = (hit: SearchHit): FileOrFolderItem => ({

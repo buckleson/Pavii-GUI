@@ -94,8 +94,8 @@ const ChatConversationIndex: React.FC = () => {
     void syncTitleFromHistory(data.id);
   }, [data, defaultConversationTitle, syncTitleFromHistory]);
 
-  // 会话不存在（例如从历史栈回到已删除会话）时，提示并替换路由到首页，
-  // 避免渲染空骨架。每个 id 只触发一次。
+  // When the conversation does not exist (returning through history to a deleted one), notify and
+  // replace the route with the home page rather than rendering an empty skeleton. Fires once per id.
   // Conversation does not exist (e.g. navigating back to a deleted one via
   // browser history): show a toast and replace the route with home, so we
   // don't render an empty skeleton. Fire at most once per id.

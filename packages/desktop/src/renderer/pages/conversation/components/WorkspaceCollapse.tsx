@@ -9,28 +9,28 @@ import classNames from 'classnames';
 import React from 'react';
 
 interface WorkspaceCollapseProps {
-  /** 是否展开 */
+  /** Whether it is expanded */
   expanded: boolean;
-  /** 切换展开状态的回调 */
+  /** Called to toggle the expanded state */
   onToggle: () => void;
-  /** 折叠面板的标题 */
+  /** Panel title */
   header: React.ReactNode;
-  /** 折叠面板的内容 */
+  /** Panel content */
   children: React.ReactNode;
-  /** 额外的类名 */
+  /** Extra class name */
   className?: string;
-  /** 侧栏是否折叠 - 折叠时隐藏组标题并移除缩进 */
+  /** Whether the sidebar is collapsed; when it is, group titles hide and the indent is removed */
   siderCollapsed?: boolean;
-  /** 标题尾部插槽 - 例如 hover 显示的菜单按钮，点击不会触发 onToggle */
+  /** Slot at the end of the title - a hover menu button, say; clicking it does not fire onToggle */
   trailing?: React.ReactNode;
-  /** 让头部在滚动时吸顶常驻 - 用于会话过长的项目组，下滑时逐个切换项目标题 */
+  /** Keep the header pinned while scrolling - for long project groups, so the project title changes as you scroll */
   stickyHeader?: boolean;
-  /** 吸顶时距滚动容器顶部的偏移(px)，用于让位给上方常驻的分区标题 */
+  /** Offset in px from the top of the scroll container while pinned, leaving room for the section header above */
   stickyTop?: number;
 }
 
 /**
- * 工作空间折叠组件 - 简单的折叠面板，用于工作空间分组
+ * Workspace collapse: a simple collapsible panel for workspace groups
  */
 const WorkspaceCollapse: React.FC<WorkspaceCollapseProps> = ({
   expanded,
@@ -43,15 +43,15 @@ const WorkspaceCollapse: React.FC<WorkspaceCollapseProps> = ({
   stickyHeader = false,
   stickyTop,
 }) => {
-  // 侧栏折叠时，强制展开内容并隐藏头部
+  // With the sidebar collapsed, force the content open and hide the header
   const showContent = siderCollapsed || expanded;
-  // 仅在展开状态吸顶：折叠的项目头部无需常驻，避免多个折叠头堆叠在顶部
+  // Pin only while expanded: collapsed project headers need not persist, and pinning them would stack several at the top
   const stickyEnabled = stickyHeader && expanded && !siderCollapsed;
 
   return (
     <div className={classNames('workspace-collapse min-w-0', className)}>
-      {/* 折叠头部 - 侧栏折叠时隐藏。吸顶时外层用不透明 bg-2 作遮罩，
-          内层的半透明 hover 高亮叠在遮罩上而非透出下方滚动内容。 */}
+      {/* Collapse header, hidden when the sidebar is collapsed. While pinned the outer layer uses an opaque bg-2 as a mask, so
+          the inner translucent hover highlight sits on the mask rather than showing the scrolling content beneath. */}
       {!siderCollapsed && (
         <div
           className={classNames(stickyEnabled && 'sticky z-[9] bg-[var(--bg-2)]')}
@@ -69,10 +69,10 @@ const WorkspaceCollapse: React.FC<WorkspaceCollapseProps> = ({
               )}
             </span>
 
-            {/* 标题内容 — flex 容器让内部 header span 的 truncate 生效 */}
+            {/* Title content - the flex container is what makes the inner header span's truncate work */}
             <div className='flex-1 min-w-0 flex items-center overflow-hidden'>{header}</div>
 
-            {/* 尾部操作槽 — 固定宽度让文本提前截断；按钮 hover 才出现时允许左溢出到文本区覆盖最后 1-2 字 */}
+            {/* Trailing action slot - a fixed width truncates the text early; a hover-only button may overflow left over the last character or two */}
             {trailing && (
               <div className='shrink-0 flex items-center justify-end w-22px' onClick={(e) => e.stopPropagation()}>
                 {trailing}
@@ -82,7 +82,7 @@ const WorkspaceCollapse: React.FC<WorkspaceCollapseProps> = ({
         </div>
       )}
 
-      {/* 折叠内容 — row 保持全宽以便选中态 bg 填满整行；视觉缩进由 ConversationRow 的 dimIcon 分支自行处理 */}
+      {/* Collapsed content - rows stay full width so the selected background fills them; the visual indent is handled by ConversationRow's dimIcon branch */}
       {showContent && <div className='workspace-collapse-content min-w-0'>{children}</div>}
     </div>
   );

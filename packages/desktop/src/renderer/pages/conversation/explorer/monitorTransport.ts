@@ -33,7 +33,7 @@ import {
 const FS_EVENT = 'fs';
 const RECONNECT_EVENT = 'realtime.reconnected';
 
-/** Transport over the WS singleton: `fs` event族 in, `wsSend('fs', …)` out. */
+/** Transport over the WS singleton: the `fs` event family in, `wsSend('fs', ...)` out. */
 export function createWsMonitorTransport(): MonitorTransport {
   return {
     send: (frame) => wsSend(FS_EVENT, frame),

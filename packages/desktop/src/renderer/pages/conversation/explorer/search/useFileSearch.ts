@@ -6,7 +6,7 @@
 
 /**
  * React binding for project filename search — the shared driver behind both UI
- * skins (the `@`-mention dropdown and the search result panel, search.md §结果
+ * skins (the `@`-mention dropdown and the search result panel, search.md,
  * UI). Debounces query changes into `fs/search` (the backend cheaply supersedes
  * the prior in-flight search on each new one) and exposes the streaming view.
  *
@@ -24,7 +24,7 @@ import type { DirRef } from '../explorerModel';
 import { initExplorerRuntime } from '../monitorTransport';
 import { cancelSearch, type SearchView, startSearch, useSearch } from './searchStore';
 
-/** Debounce for query→fs/search (search.md §触发: front-end debounce). */
+/** Debounce for query -> fs/search (search.md, "Triggering": front-end debounce). */
 export const FILE_SEARCH_DEBOUNCE_MS = 150;
 
 export type FileSearch = {

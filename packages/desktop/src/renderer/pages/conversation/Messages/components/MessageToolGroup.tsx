@@ -27,8 +27,8 @@ import type { ImageGenerationResult, WriteFileResult } from '../types';
 
 const CODE_STYLE = { marginTop: 4, marginBottom: 4 };
 
-// Alert 组件样式常量 Alert component style constant
-// 顶部对齐图标与内容，避免多行文本时图标垂直居中
+// Alert component style constant
+// Top-align the icon with the content, so multi-line text does not centre it vertically
 const ALERT_CLASSES =
   '!items-start !rd-8px !px-8px [&_.arco-alert-icon]:flex [&_.arco-alert-icon]:items-start [&_.arco-alert-content-wrapper]:flex [&_.arco-alert-content-wrapper]:items-start [&_.arco-alert-content-wrapper]:w-full [&_.arco-alert-content]:flex-1';
 
@@ -223,7 +223,7 @@ const ConfirmationDetails: React.FC<{
   );
 };
 
-// ImageDisplay: 图片生成结果展示组件 Image generation result display component
+// ImageDisplay: image generation result display component
 const ImageDisplay: React.FC<{
   imgUrl: string;
   relativePath?: string;
@@ -235,7 +235,7 @@ const ImageDisplay: React.FC<{
   const [error, setError] = useState(false);
   const { inPreviewGroup } = useContext(ImagePreviewContext);
 
-  // 如果是本地路径，需要加载为 base64 Load local paths as base64
+  // Load local paths as base64
   React.useEffect(() => {
     if (imgUrl.startsWith('data:') || imgUrl.startsWith('http')) {
       setImageUrl(imgUrl);
@@ -260,7 +260,7 @@ const ImageDisplay: React.FC<{
     }
   }, [imgUrl]);
 
-  // 获取图片 blob（复用逻辑）Get image blob (reusable logic)
+  // Get the image blob (shared logic)
   const getImageBlob = useCallback(async (): Promise<Blob> => {
     const response = await fetch(imageUrl);
     return await response.blob();
@@ -332,7 +332,7 @@ const ImageDisplay: React.FC<{
       const blob = await getImageBlob();
       const file_name = relativePath?.split(/[\\/]/).pop() || 'image.png';
 
-      // 创建下载链接 Create download link
+      // Create the download link
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -349,7 +349,7 @@ const ImageDisplay: React.FC<{
     }
   }, [getImageBlob, relativePath, t, messageApi]);
 
-  // 加载状态 Loading state
+  // Loading state
   if (loading) {
     return (
       <div className='flex items-center gap-8px my-8px'>
@@ -359,7 +359,7 @@ const ImageDisplay: React.FC<{
     );
   }
 
-  // 错误状态 Error state
+  // Error state
   if (error || !imageUrl) {
     return (
       <div className='flex items-center gap-8px my-8px text-t-secondary text-sm'>
@@ -368,7 +368,7 @@ const ImageDisplay: React.FC<{
     );
   }
 
-  // 图片元素 Image element
+  // Image element
   const imageElement = (
     <Image
       src={imageUrl}
@@ -387,9 +387,9 @@ const ImageDisplay: React.FC<{
     <>
       {messageContext}
       <div className='flex flex-col gap-8px my-8px' style={{ maxWidth: '197px' }}>
-        {/* 图片预览 Image preview - 如果已在 PreviewGroup 中则直接渲染，否则包裹 PreviewGroup */}
+        {/* Image preview - rendered directly when already inside a PreviewGroup, otherwise wrapped in one */}
         {inPreviewGroup ? imageElement : <Image.PreviewGroup>{imageElement}</Image.PreviewGroup>}
-        {/* 操作按钮 Action buttons */}
+        {/* Action buttons */}
         <div className='flex gap-8px'>
           <Tooltip content={t('common.copy', { defaultValue: 'Copy' })}>
             <Button
@@ -420,10 +420,10 @@ const ToolResultDisplay: React.FC<{
 }> = ({ content }) => {
   const { result_display, name } = content;
 
-  // 图片生成特殊处理 Special handling for image generation
+  // Special handling for image generation
   if (name === 'ImageGeneration' && typeof result_display === 'object') {
     const result = result_display as ImageGenerationResult;
-    // 如果有 img_url 才显示图片，否则显示错误信息
+    // Show the image only when img_url is present, otherwise the error
     if (result.img_url) {
       return (
         <LocalImageView
@@ -433,10 +433,10 @@ const ToolResultDisplay: React.FC<{
         />
       );
     }
-    // 如果是错误，继续走下面的 JSON 显示逻辑
+    // On error, fall through to the JSON display below
   }
 
-  // 将结果转换为字符串 Convert result to string
+  // Convert the result to a string
   const display = typeof result_display === 'string' ? result_display : JSON.stringify(result_display, null, 2);
 
   // Wrap long content with CollapsibleContent
@@ -525,7 +525,7 @@ const MessageToolGroup: React.FC<IMessageToolGroupProps> = ({ message }) => {
           }
         }
 
-        // ImageGeneration 特殊处理：单独展示图片，不用 Alert 包裹 Special handling for ImageGeneration: display image separately without Alert wrapper
+        // ImageGeneration is special-cased: the image is shown on its own, not wrapped in an Alert
         if (name === 'ImageGeneration' && typeof result_display === 'object') {
           const result = result_display as ImageGenerationResult;
           if (result.img_url) {
@@ -533,8 +533,8 @@ const MessageToolGroup: React.FC<IMessageToolGroupProps> = ({ message }) => {
           }
         }
 
-        // 通用工具调用展示 Generic tool call display
-        // 将可展开的长内容放在 Alert 下方，保持 Alert 仅展示头部信息
+        // Generic tool call display
+        // Expandable long content goes below the Alert, leaving the Alert showing only the header
         return (
           <div key={call_id}>
             <Alert
@@ -574,7 +574,7 @@ const MessageToolGroup: React.FC<IMessageToolGroupProps> = ({ message }) => {
                 )}
                 {result_display && (
                   <div>
-                    {/* 在 Alert 外展示完整结果 Display full result outside Alert */}
+                    {/* Display the full result outside the Alert */}
                     {/* ToolResultDisplay already contains a CollapsibleContent; do not nest another */}
                     {/* ToolResultDisplay already contains CollapsibleContent internally, avoid nesting */}
                     <ToolResultDisplay content={content} />

@@ -150,7 +150,7 @@ export function composeMessageWithIndex(
 
   const last = list[list.length - 1];
 
-  // 对于 tool_group 类型，使用原始的 composeMessage（因为涉及内部数组匹配）
+  // tool_group uses the original composeMessage, since it matches against inner arrays
   // For tool_group type, use original composeMessage (involves inner array matching)
   // After composeMessage, the returned list may have different length/ordering,
   // so we must invalidate the index to prevent stale lookups in subsequent calls.
@@ -179,7 +179,7 @@ export function composeMessageWithIndex(
         return newList;
       }
     }
-    // 未找到，添加新消息并更新索引
+    // Not found: append the message and update the index
     // A TERMINAL frame that finds no card to settle is suspicious: it means the
     // running card is somewhere else (or was never indexed), so the user is left
     // with a spinner that never stops plus a duplicate card. Codex's detached
@@ -233,7 +233,7 @@ export function composeMessageWithIndex(
         return newList;
       }
     }
-    // 未找到，添加新消息并更新索引
+    // Not found: append the message and update the index
     const newIdx = list.length;
     index.tool_call_idIndex.set(message.content.update.tool_call_id, newIdx);
     const msgIndexKey = getMessageIndexKey(message);
@@ -260,7 +260,7 @@ export function composeMessageWithIndex(
   }
 
   // text message: merge only with the latest contiguous streaming chunk.
-  // text 消息: 只与最后一条连续的流式片段合并，保留被工具/思考打断后的消息边界。
+  // text messages merge only with the last contiguous streamed fragment, preserving the boundary after a tool or thinking interruption.
   if (message.type === 'text' && message.msg_id) {
     const existingIdx = index.msgIdIndex.get(message.msg_id);
     if (existingIdx !== undefined && existingIdx < list.length) {
@@ -372,7 +372,7 @@ export function composeMessageWithIndex(
   }
 
   // Other types: fallback to last message check
-  // 其他类型: 回退到检查最后一条消息
+  // Other types fall back to checking the last message
   if (last.msg_id !== message.msg_id || last.type !== message.type) {
     // Add new message and update index
     const newIdx = list.length;

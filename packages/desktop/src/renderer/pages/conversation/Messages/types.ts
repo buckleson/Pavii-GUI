@@ -6,7 +6,7 @@
 
 /**
  * Type definitions for message tool results
- * 消息工具结果类型定义
+ * Message tool result type definitions
  */
 
 export interface ImageGenerationResult {

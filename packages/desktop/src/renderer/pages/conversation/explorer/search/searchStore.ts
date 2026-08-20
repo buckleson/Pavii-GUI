@@ -10,9 +10,9 @@
  * search, accumulate `fs/searchMatch` batches keyed by the request id, settle on
  * the terminal response. Both UI skins (the `@`-mention dropdown and the search
  * result panel) subscribe to this one store — "same stream, two skins"
- * (search.md §结果 UI).
+ * (search.md, "Results UI").
  *
- * Supersede (search.md §引擎 / protocol.md §取消两路): a new search on the same
+ * Supersede (search.md "Engine" / protocol.md "Two cancellation paths"): a new search on the same
  * connection auto-supersedes the previous in-flight one. We bump `activeSearchId`
  * so any late `fs/searchMatch` for the old id is discarded, and abandon the old
  * request locally (the backend sends no terminal for a superseded search). An
@@ -28,7 +28,7 @@ import type { DirRef } from '../explorerModel';
 import type { RpcId } from '../monitorClient';
 import { rankSearchHits, type SearchHit, searchHitKey } from './searchModel';
 
-/** `fs/search` request params (protocol.md §文件名搜索). */
+/** `fs/search` request params (protocol.md, "Filename search"). */
 export type SearchParams = {
   roots: DirRef[];
   query: string;

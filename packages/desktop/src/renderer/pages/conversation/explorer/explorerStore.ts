@@ -323,7 +323,7 @@ export const setExpandedKeys = (keys: PeKey[]): void => {
 /** Expand or collapse a directory. Collapse keeps descendant expanded marks. */
 export const setExpanded = (key: PeKey, isExpanded: boolean): void => {
   if (isExpanded) expanded.add(key);
-  else expanded.delete(key); // keep descendants' marks (VS Code手感; they fall out of want)
+  else expanded.delete(key); // keep descendants' marks (VS Code feel; they fall out of want)
   persistUi();
   commit();
   scheduleReconcile();

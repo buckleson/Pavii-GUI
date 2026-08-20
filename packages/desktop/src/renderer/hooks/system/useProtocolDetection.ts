@@ -95,7 +95,7 @@ export function useProtocolDetection(
           testAllKeys,
         });
 
-        // 检查是否是最新的请求
+        // Check this is still the newest request
         if (currentVersion !== requestVersionRef.current) {
           return;
         }
@@ -103,7 +103,7 @@ export function useProtocolDetection(
         setResult(detectionResult);
         setError(null);
       } catch (e: any) {
-        // 检查是否是最新的请求
+        // Check this is still the newest request
         if (currentVersion !== requestVersionRef.current) {
           return;
         }
@@ -111,7 +111,7 @@ export function useProtocolDetection(
         setResult(null);
         setError(e.message || String(e));
       } finally {
-        // 检查是否是最新的请求
+        // Check this is still the newest request
         if (currentVersion === requestVersionRef.current) {
           setIsDetecting(false);
         }
@@ -147,14 +147,14 @@ export function useProtocolDetection(
       clearTimeout(debounceTimerRef.current);
     }
 
-    // 如果没有有效输入，重置状态
+    // No valid input: reset the state
     if (!base_url || !api_key) {
       setResult(null);
       setError(null);
       return;
     }
 
-    // 设置防抖定时器
+    // Start the debounce timer
     debounceTimerRef.current = setTimeout(() => {
       void detect(base_url, api_key);
     }, debounceMs);
@@ -166,7 +166,7 @@ export function useProtocolDetection(
     };
   }, [base_url, api_key, autoDetect, debounceMs, detect]);
 
-  // 组件卸载时清理
+  // Clean up on unmount
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {

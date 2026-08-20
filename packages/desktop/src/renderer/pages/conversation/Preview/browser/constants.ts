@@ -9,8 +9,8 @@
  */
 
 /**
- * 从 common 重新导出，方便浏览器相关代码就近取用。
- * 定义在 common 是因为主进程清理登录态时也要用同一个值。
+ * Re-exported from common for convenient use by the browser code.
+ * It lives in common because the main process needs the same value when clearing sessions.
  *
  * Re-exported from common so browser code can reach it locally. It is defined in
  * common because the main process needs the same value when clearing sign-in state.
@@ -26,8 +26,8 @@ export const BROWSER_BLANK_URL = 'about:blank';
 export const BROWSER_TAB_FALLBACK_TITLE = 'New Tab';
 
 /**
- * 浏览器 tab 数量上限：超过则提示用户先关闭旧 tab，避免每个 tab 一个 webview
- * 进程把内存吃满。
+ * Browser tab limit: past it the user is asked to close old tabs, so one webview process per
+ * tab cannot exhaust memory.
  *
  * Cap on browser tabs: each tab is a separate webview process, so an unbounded
  * count would exhaust memory. Beyond this the user is asked to close old tabs.
@@ -57,11 +57,11 @@ const LOCALHOST_RE = /^localhost(?::\d+)?(?:[/?#].*)?$/i;
 const IPV4_RE = /^\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?(?:[/?#].*)?$/;
 
 /**
- * 把地址栏输入解析成可导航的 URL。
+ * Parse address-bar input into a navigable URL.
  *
- * 输入可能是完整 URL、裸域名，或一句要搜索的话 —— 这个函数决定去哪。
- * 含空格的输入一律当搜索词：`example.com/a b` 不是有效主机名，而
- * "如何配置 nginx" 明显是在搜东西。
+ * The input may be a full URL, a bare domain or a sentence to search for; this decides where to go.
+ * Anything containing a space is treated as a search: `example.com/a b` is not a valid host,
+ * while "how to configure nginx" is plainly a query.
  *
  * Resolve address-bar input into a navigable URL. Input may be a full URL, a
  * bare hostname, or a search phrase. Anything containing whitespace is treated
@@ -86,7 +86,7 @@ export const resolveAddressBarInput = (raw: string): string | null => {
 };
 
 /**
- * 供 tab 标题使用的紧凑标签，页面还没给出标题时用主机名兜底。
+ * Compact label for a tab title, falling back to the hostname until the page provides one.
  * Compact label for a tab title, falling back to the hostname before a real
  * page title arrives.
  */

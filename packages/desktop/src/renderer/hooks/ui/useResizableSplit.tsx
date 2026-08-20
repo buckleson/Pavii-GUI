@@ -23,15 +23,15 @@ const addWindowEventListener = <K extends keyof WindowEventMap>(
 };
 
 interface UseResizableSplitOptions {
-  /** 默认宽度。`unit: 'ratio'` 时为百分比 (0-100)，`unit: 'px'` 时为像素值 */
+  /** Default width: a percentage (0-100) when `unit: 'ratio'`, pixels when `unit: 'px'` */
   defaultWidth?: number;
-  /** 最小宽度（同 defaultWidth 的单位） */
+  /** Minimum width, in the same unit as defaultWidth */
   minWidth?: number;
-  /** 最大宽度（同 defaultWidth 的单位） */
+  /** Maximum width, in the same unit as defaultWidth */
   maxWidth?: number;
-  /** LocalStorage 存储键名（用于记录偏好） */
+  /** localStorage key the preference is stored under */
   storageKey?: string;
-  /** 单位：百分比或像素。默认 'ratio'（向后兼容） */
+  /** Unit: ratio or pixels. Defaults to 'ratio' for backwards compatibility */
   unit?: 'ratio' | 'px';
 }
 
@@ -107,7 +107,7 @@ export const useResizableSplit = (options: UseResizableSplitOptions = {}) => {
         const startX = event.clientX;
         const startRatio = splitRatio;
         const pointerId = event.pointerId;
-        // px 模式下拖动直接换算为像素差，不再除以容器宽度
+        // In px mode a drag converts straight to a pixel delta, with no division by the container width
         const computeRatio = (clientX: number): number => {
           const deltaX = reverse ? startX - clientX : clientX - startX;
           if (isPx) {

@@ -269,8 +269,8 @@ const ChatLayout: React.FC<{
               <div
                 className={classNames(
                   'preview-panel flex flex-col relative overflow-visible',
-                  // 移动端预览是覆盖层，保留内缩和圆角；桌面端不留边距，
-                  // 否则窗口底色会从缝隙透出（深色模式下尤其突兀）。
+                  // On mobile the preview is an overlay and keeps its inset and radius; on desktop there is no
+                  // margin, or the window background shows through the gap - jarring in dark mode especially.
                   // On mobile the preview is an overlay, so it keeps its inset and
                   // rounding. On desktop no margin: a gap would expose the window's
                   // own background, which is jarring in dark mode.

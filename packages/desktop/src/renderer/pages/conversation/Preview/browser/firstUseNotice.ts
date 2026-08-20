@@ -5,11 +5,11 @@
  */
 
 /**
- * Agent 首次操作应用内浏览器时的一次性提示。
+ * One-time notice shown the first time the agent drives the in-app browser.
  *
- * 设计约束（来自产品决策）：不阻断、不需要用户确认。用户第一次看到侧边浏览器
- * 自己动起来时会困惑"这是谁在操作"，所以要说一句；但这是预期行为，不该拿弹窗
- * 拦住 Agent 干活。
+ * Product constraint: non-blocking, no confirmation. The first time the side browser moves on
+ * its own the user wonders who is driving it, so it deserves a word - but this is expected
+ * behaviour and should not stop the agent with a dialog.
  *
  * One-time notice shown the first time the agent drives the in-app browser.
  * Product constraint: non-blocking and requiring no confirmation. The first time a
@@ -22,8 +22,8 @@ import { Notification } from '@arco-design/web-react';
 import i18next from 'i18next';
 
 /**
- * 提示是否已展示过。用 localStorage 而不是内存标记，是因为"首次"指的是
- * 这台机器上的首次，重启应用后不该再提示一遍。
+ * Whether the notice has been shown. localStorage rather than an in-memory flag, because
+ * "first time" means first on this machine, and a restart should not show it again.
  *
  * Whether the notice has been shown. Stored in localStorage rather than memory
  * because "first time" means first time on this machine — restarting the app must
@@ -32,8 +32,8 @@ import i18next from 'i18next';
 const FIRST_USE_STORAGE_KEY = 'aionui_agent_browser_first_use_notified';
 
 /**
- * 进程内标记，防止同一次会话里连续的工具调用重复弹提示。
- * localStorage 写入是同步的，但读取判断和写入之间仍可能连续触发多次。
+ * An in-process flag, so consecutive tool calls in one session cannot show it twice.
+ * localStorage writes are synchronous, but several calls can still land between the read and the write.
  *
  * In-process guard against duplicate notices from back-to-back tool calls within a
  * single session: localStorage writes are synchronous, but several events can still
@@ -68,8 +68,8 @@ export const maybeNotifyFirstAgentBrowserUse = (): void => {
   rememberNotified();
 
   Notification.info({
-    // 直接用 i18next 单例而非 @/renderer/services/i18n：后者在模块加载时就会
-    // 初始化 i18n 并订阅 IPC，把这些副作用拖进任何 import 本文件的模块里。
+    // The i18next singleton is used directly rather than @/renderer/services/i18n, which
+    // initializes i18n and subscribes to IPC at module load, dragging those side effects into anything that imports this file.
     // Use the i18next singleton rather than @/renderer/services/i18n: the latter
     // initializes i18n and subscribes to IPC at module load, dragging those side
     // effects into anything that imports this file.

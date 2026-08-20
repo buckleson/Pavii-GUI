@@ -155,7 +155,7 @@ const MessageText: React.FC<{
 }> = ({ message, showCopyRow = true, isLastMessage = false, hasForkAnchor = false }) => {
   const logos = useAgentLogos();
   // Filter think tags from content before rendering
-  // 在渲染前过滤 think 标签
+  // Strip think tags before rendering
   const contentToRender = useMemo(() => {
     let content = message.content.content;
     if (typeof content === 'string') {
@@ -191,7 +191,7 @@ const MessageText: React.FC<{
     [conversationContext?.workspace, files]
   );
 
-  // 过滤空内容，避免渲染空DOM
+  // Drop empty content so no empty DOM is rendered
   if (!message.content.content || (typeof message.content.content === 'string' && !message.content.content.trim())) {
     return null;
   }
@@ -247,7 +247,7 @@ const MessageText: React.FC<{
   const senderAgentType = message.content.senderAgentType;
   const senderConversationId = message.content.senderConversationId;
   const fallbackBackendLogo = senderAgentType ? resolveAgentLogo(logos, { backend: senderAgentType }) : null;
-  // 团队 teammate 消息：按发送者会话取身份色，做气泡左色条 + 彩色发送者名；非团队场景为 undefined。
+  // Team teammate messages: the sender's conversation picks the identity colour used for the bubble's left bar and the coloured sender name; undefined outside team contexts.
   const teammateColor = useTeammateColor(isTeammateMessage ? senderConversationId : undefined);
 
   return (

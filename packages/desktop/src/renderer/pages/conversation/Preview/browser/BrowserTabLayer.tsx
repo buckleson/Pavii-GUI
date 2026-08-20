@@ -20,13 +20,13 @@ export interface BrowserTabLayerProps {
 /**
  * Always-mounted browser layer.
  *
- * 预览面板原本只渲染当前激活的 tab，对文档没问题，但对浏览器是致命的：
- * 切走再切回会重新加载页面，滚动位置、表单内容、未提交的操作全部丢失，
- * Agent 正在进行的操作也会被打断。
+ * The preview panel used to render only the active tab. That is fine for documents and fatal
+ * for browsers: switching away and back reloads the page, losing scroll position, form
+ * contents and any uncommitted action, and interrupting whatever the agent was doing.
  *
- * 所以这一层把所有浏览器 tab 一直挂着，只切换可见性 —— webview 进程不销毁，
- * 页面状态完整保留。非激活的 tab 用 visibility 隐藏而不是 display:none，
- * 这样它们仍有真实尺寸，切回来时不需要重新布局。
+ * So this layer keeps every browser tab mounted and only toggles visibility: the webview
+ * process survives and page state is kept intact. Inactive tabs hide with visibility rather
+ * than display:none, so they keep real dimensions and need no relayout when you switch back.
  *
  * The preview panel renders only the active tab, which is fine for documents but
  * fatal for a browser: switching away and back would reload the page, losing

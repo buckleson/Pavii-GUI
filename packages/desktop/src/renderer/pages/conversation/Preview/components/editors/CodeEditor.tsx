@@ -34,8 +34,8 @@ const STREAMING_IDLE_MS = 1200;
 /**
  * Unified code editor (always editable)
  *
- * 基于 CodeMirror 6：语法高亮、行号、折叠、搜索（Cmd/Ctrl+F）、自动换行。
- * 主题/字体来自 Preview/theme 抽象层；大文件自动降级；流式写入自动滚动 + AI 写入角标。
+ * Built on CodeMirror 6: syntax highlighting, line numbers, folding, search (Cmd/Ctrl+F) and wrapping.
+ * Theme and font come from the Preview/theme layer; large files degrade automatically; streamed writes auto-scroll and show the AI-writing badge.
  */
 const CodeEditor: React.FC<CodeEditorProps> = ({
   value,
@@ -54,7 +54,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   const [languageExt, setLanguageExt] = useState<Extension[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
 
-  // 依赖父组件对 onChange 后的 value 做 1:1 同步回显来区分用户编辑与外部流式写入
+  // Distinguishing user edits from external streaming relies on the parent echoing value 1:1 synchronously after onChange
   // Relies on the parent echoing value 1:1 synchronously after onChange to tell
   // user edits apart from external (streaming) growth.
   const userEditRef = useRef(false); // Last value change came from a user edit
@@ -80,7 +80,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     };
   }, [language, fileName, disableHighlight]);
 
-  // 文件切换时重置流式追踪基线，避免复用实例时携带上一个文件的长度造成误判
+  // Reset the streaming baseline when the file changes, so a reused instance cannot carry the previous file's length and misjudge
   // Reset streaming baseline on file-identity change so a reused instance does not
   // carry a stale length and fire a false "AI writing" badge.
   useEffect(() => {
@@ -169,7 +169,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   );
 
   const extensions = useMemo<Extension[]>(() => {
-    // 字体/换行/缩进均来自统一配置层，未来设置面板改 config 即可生效
+    // Font, wrapping and indentation all come from the central config layer, so a future settings panel need only change config
     // Wrap/tab-size/font all come from the central config layer so a future
     // settings panel only needs to change the config.
     const cfg = getCodeEditorConfig();

@@ -300,7 +300,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
         </div>
       )}
 
-      {/* 移除项目确认弹窗 — 使用项目自家 AionModal + 圆角线框按钮（红色危险态） */}
+      {/* Remove-project confirmation - the project's own AionModal with rounded outline buttons in the danger colour */}
       <AionModal
         visible={removeProjectTarget !== null}
         style={{ width: '400px' }}
@@ -396,7 +396,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
           )}
         </DndContext>
 
-        {/* Slot 由父级（Sider）填入：例如 Team / CronJob sections，位于「置顶」之后、「项目」之前 */}
+        {/* Slot filled by the parent (Sider): Team / CronJob sections, sitting after Pinned and before Projects */}
         {afterPinnedContent}
 
         {/* L1: Projects section — workspace folders, peer to conversations */}
