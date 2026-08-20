@@ -1,4 +1,4 @@
-//! CLI argument definitions for the `aioncore` binary.
+//! CLI argument definitions for the `paviicore` binary.
 //!
 //! Kept separate from `main.rs` to isolate the clap surface (struct + enum +
 //! attribute soup) from the runtime entry point. Visibility is `pub(crate)`
@@ -625,7 +625,7 @@ mod tests {
 
     #[test]
     fn long_version_flag_uses_workspace_package_version() {
-        let result = Cli::try_parse_from(["aioncore", "--version"]);
+        let result = Cli::try_parse_from(["paviicore", "--version"]);
         let err = match result {
             Ok(_) => panic!("expected --version to exit through clap DisplayVersion"),
             Err(err) => err,
@@ -634,7 +634,7 @@ mod tests {
         assert_eq!(err.kind(), ErrorKind::DisplayVersion);
         let rendered = err.to_string();
         assert!(
-            rendered.contains("aioncore"),
+            rendered.contains("paviicore"),
             "version output should contain binary name, got: {rendered:?}"
         );
         assert!(
@@ -646,7 +646,7 @@ mod tests {
 
     #[test]
     fn short_version_flag_uses_workspace_package_version() {
-        let result = Cli::try_parse_from(["aioncore", "-V"]);
+        let result = Cli::try_parse_from(["paviicore", "-V"]);
         let err = match result {
             Ok(_) => panic!("expected -V to exit through clap DisplayVersion"),
             Err(err) => err,
@@ -655,7 +655,7 @@ mod tests {
         assert_eq!(err.kind(), ErrorKind::DisplayVersion);
         let rendered = err.to_string();
         assert!(
-            rendered.contains("aioncore"),
+            rendered.contains("paviicore"),
             "version output should contain binary name, got: {rendered:?}"
         );
         assert!(
@@ -668,15 +668,15 @@ mod tests {
     #[test]
     fn prepare_managed_resources_accepts_bundle_out() {
         let cli = Cli::parse_from([
-            "aioncore",
+            "paviicore",
             "prepare-managed-resources",
             "--bundle-out",
-            "/tmp/aioncore-bundle",
+            "/tmp/paviicore-bundle",
         ]);
 
         match cli.command {
             Some(Command::PrepareManagedResources(args)) => {
-                assert_eq!(args.bundle_out, std::path::Path::new("/tmp/aioncore-bundle"));
+                assert_eq!(args.bundle_out, std::path::Path::new("/tmp/paviicore-bundle"));
             }
             other => panic!("unexpected command parsed: {other:?}"),
         }
@@ -684,50 +684,50 @@ mod tests {
 
     #[test]
     fn managed_resources_mode_defaults_to_download() {
-        let cli = Cli::parse_from(["aioncore"]);
+        let cli = Cli::parse_from(["paviicore"]);
         assert_eq!(cli.managed_resources_mode, ManagedResourcesModeArg::Download);
     }
 
     #[test]
     fn managed_resources_mode_accepts_download() {
-        let cli = Cli::parse_from(["aioncore", "--managed-resources-mode", "download"]);
+        let cli = Cli::parse_from(["paviicore", "--managed-resources-mode", "download"]);
         assert_eq!(cli.managed_resources_mode, ManagedResourcesModeArg::Download);
     }
 
     #[test]
     fn parent_pid_accepts_positive_integer() {
-        let cli = Cli::parse_from(["aioncore", "--parent-pid", "4242"]);
+        let cli = Cli::parse_from(["paviicore", "--parent-pid", "4242"]);
         assert_eq!(cli.parent_pid, Some(4242));
     }
 
     #[test]
     fn dump_prompts_defaults_to_false() {
-        let cli = Cli::parse_from(["aioncore"]);
+        let cli = Cli::parse_from(["paviicore"]);
         assert!(!cli.dump_prompts);
     }
 
     #[test]
     fn dump_prompts_accepts_flag() {
-        let cli = Cli::parse_from(["aioncore", "--dump-prompts"]);
+        let cli = Cli::parse_from(["paviicore", "--dump-prompts"]);
         assert!(cli.dump_prompts);
     }
 
     #[test]
     fn recover_corrupted_database_flag_defaults_to_false() {
-        let cli = Cli::parse_from(["aioncore"]);
+        let cli = Cli::parse_from(["paviicore"]);
         assert!(!cli.recover_corrupted_database);
     }
 
     #[test]
     fn recover_corrupted_database_flag_is_accepted() {
-        let cli = Cli::parse_from(["aioncore", "--recover-corrupted-database"]);
+        let cli = Cli::parse_from(["paviicore", "--recover-corrupted-database"]);
         assert!(cli.recover_corrupted_database);
     }
 
     #[test]
     fn command_as_str_returns_clap_subcommand_names() {
         let prepare_args = PrepareManagedResourcesArgs {
-            bundle_out: PathBuf::from("/tmp/aioncore-bundle"),
+            bundle_out: PathBuf::from("/tmp/paviicore-bundle"),
         };
 
         let cases = [
@@ -754,75 +754,75 @@ mod tests {
     #[test]
     fn config_cli_accepts_agent_facing_design_command_paths() {
         let commands: &[&[&str]] = &[
-            &["aioncore", "config", "capabilities"],
-            &["aioncore", "config", "context"],
-            &["aioncore", "config", "conversation", "rename"],
-            &["aioncore", "config", "assistants", "list"],
-            &["aioncore", "config", "assistants", "get"],
-            &["aioncore", "config", "assistants", "create"],
-            &["aioncore", "config", "assistants", "update"],
-            &["aioncore", "config", "assistants", "delete"],
-            &["aioncore", "config", "assistants", "import"],
-            &["aioncore", "config", "assistants", "state"],
-            &["aioncore", "config", "assistants", "rule", "read"],
-            &["aioncore", "config", "assistants", "rule", "write"],
-            &["aioncore", "config", "assistants", "rule", "delete"],
-            &["aioncore", "config", "assistants", "skill", "read"],
-            &["aioncore", "config", "assistants", "skill", "write"],
-            &["aioncore", "config", "assistants", "skill", "delete"],
-            &["aioncore", "config", "skills", "list"],
-            &["aioncore", "config", "skills", "info"],
-            &["aioncore", "config", "skills", "paths"],
-            &["aioncore", "config", "skills", "import"],
-            &["aioncore", "config", "skills", "delete"],
-            &["aioncore", "config", "skills", "scan"],
-            &["aioncore", "config", "mcp", "servers", "list"],
-            &["aioncore", "config", "mcp", "servers", "get"],
-            &["aioncore", "config", "mcp", "servers", "create"],
-            &["aioncore", "config", "mcp", "servers", "update"],
-            &["aioncore", "config", "mcp", "servers", "delete"],
-            &["aioncore", "config", "mcp", "servers", "toggle"],
-            &["aioncore", "config", "mcp", "servers", "import"],
-            &["aioncore", "config", "mcp", "test-connection"],
-            &["aioncore", "config", "mcp", "agent-configs"],
-            &["aioncore", "config", "mcp", "oauth", "check-status"],
-            &["aioncore", "config", "mcp", "oauth", "login"],
-            &["aioncore", "config", "mcp", "oauth", "logout"],
-            &["aioncore", "config", "mcp", "oauth", "authenticated"],
-            &["aioncore", "config", "providers", "list"],
-            &["aioncore", "config", "providers", "create"],
-            &["aioncore", "config", "providers", "update"],
-            &["aioncore", "config", "providers", "delete"],
-            &["aioncore", "config", "providers", "detect-protocol"],
-            &["aioncore", "config", "providers", "fetch-models"],
-            &["aioncore", "config", "providers", "models", "fetch"],
-            &["aioncore", "config", "providers", "health-check"],
-            &["aioncore", "config", "settings", "get"],
-            &["aioncore", "config", "settings", "patch"],
-            &["aioncore", "config", "settings", "client", "get"],
-            &["aioncore", "config", "settings", "client", "put"],
-            &["aioncore", "config", "agents", "list"],
-            &["aioncore", "config", "agents", "enable"],
-            &["aioncore", "config", "agents", "overrides", "get"],
-            &["aioncore", "config", "agents", "overrides", "set"],
-            &["aioncore", "config", "agents", "custom", "create"],
-            &["aioncore", "config", "agents", "custom", "update"],
-            &["aioncore", "config", "agents", "custom", "delete"],
-            &["aioncore", "config", "agents", "custom", "try-connect"],
-            &["aioncore", "config", "cron", "jobs", "list"],
-            &["aioncore", "config", "cron", "jobs", "get"],
-            &["aioncore", "config", "cron", "jobs", "create"],
-            &["aioncore", "config", "cron", "jobs", "update"],
-            &["aioncore", "config", "cron", "jobs", "delete"],
-            &["aioncore", "config", "cron", "jobs", "run"],
-            &["aioncore", "config", "cron", "jobs", "skill", "get"],
-            &["aioncore", "config", "cron", "jobs", "skill", "save"],
-            &["aioncore", "config", "cron", "jobs", "skill", "delete"],
-            &["aioncore", "config", "skills", "external-paths", "list"],
-            &["aioncore", "config", "skills", "external-paths", "add"],
-            &["aioncore", "config", "skills", "external-paths", "remove"],
-            &["aioncore", "config", "skills", "market", "enable"],
-            &["aioncore", "config", "skills", "market", "disable"],
+            &["paviicore", "config", "capabilities"],
+            &["paviicore", "config", "context"],
+            &["paviicore", "config", "conversation", "rename"],
+            &["paviicore", "config", "assistants", "list"],
+            &["paviicore", "config", "assistants", "get"],
+            &["paviicore", "config", "assistants", "create"],
+            &["paviicore", "config", "assistants", "update"],
+            &["paviicore", "config", "assistants", "delete"],
+            &["paviicore", "config", "assistants", "import"],
+            &["paviicore", "config", "assistants", "state"],
+            &["paviicore", "config", "assistants", "rule", "read"],
+            &["paviicore", "config", "assistants", "rule", "write"],
+            &["paviicore", "config", "assistants", "rule", "delete"],
+            &["paviicore", "config", "assistants", "skill", "read"],
+            &["paviicore", "config", "assistants", "skill", "write"],
+            &["paviicore", "config", "assistants", "skill", "delete"],
+            &["paviicore", "config", "skills", "list"],
+            &["paviicore", "config", "skills", "info"],
+            &["paviicore", "config", "skills", "paths"],
+            &["paviicore", "config", "skills", "import"],
+            &["paviicore", "config", "skills", "delete"],
+            &["paviicore", "config", "skills", "scan"],
+            &["paviicore", "config", "mcp", "servers", "list"],
+            &["paviicore", "config", "mcp", "servers", "get"],
+            &["paviicore", "config", "mcp", "servers", "create"],
+            &["paviicore", "config", "mcp", "servers", "update"],
+            &["paviicore", "config", "mcp", "servers", "delete"],
+            &["paviicore", "config", "mcp", "servers", "toggle"],
+            &["paviicore", "config", "mcp", "servers", "import"],
+            &["paviicore", "config", "mcp", "test-connection"],
+            &["paviicore", "config", "mcp", "agent-configs"],
+            &["paviicore", "config", "mcp", "oauth", "check-status"],
+            &["paviicore", "config", "mcp", "oauth", "login"],
+            &["paviicore", "config", "mcp", "oauth", "logout"],
+            &["paviicore", "config", "mcp", "oauth", "authenticated"],
+            &["paviicore", "config", "providers", "list"],
+            &["paviicore", "config", "providers", "create"],
+            &["paviicore", "config", "providers", "update"],
+            &["paviicore", "config", "providers", "delete"],
+            &["paviicore", "config", "providers", "detect-protocol"],
+            &["paviicore", "config", "providers", "fetch-models"],
+            &["paviicore", "config", "providers", "models", "fetch"],
+            &["paviicore", "config", "providers", "health-check"],
+            &["paviicore", "config", "settings", "get"],
+            &["paviicore", "config", "settings", "patch"],
+            &["paviicore", "config", "settings", "client", "get"],
+            &["paviicore", "config", "settings", "client", "put"],
+            &["paviicore", "config", "agents", "list"],
+            &["paviicore", "config", "agents", "enable"],
+            &["paviicore", "config", "agents", "overrides", "get"],
+            &["paviicore", "config", "agents", "overrides", "set"],
+            &["paviicore", "config", "agents", "custom", "create"],
+            &["paviicore", "config", "agents", "custom", "update"],
+            &["paviicore", "config", "agents", "custom", "delete"],
+            &["paviicore", "config", "agents", "custom", "try-connect"],
+            &["paviicore", "config", "cron", "jobs", "list"],
+            &["paviicore", "config", "cron", "jobs", "get"],
+            &["paviicore", "config", "cron", "jobs", "create"],
+            &["paviicore", "config", "cron", "jobs", "update"],
+            &["paviicore", "config", "cron", "jobs", "delete"],
+            &["paviicore", "config", "cron", "jobs", "run"],
+            &["paviicore", "config", "cron", "jobs", "skill", "get"],
+            &["paviicore", "config", "cron", "jobs", "skill", "save"],
+            &["paviicore", "config", "cron", "jobs", "skill", "delete"],
+            &["paviicore", "config", "skills", "external-paths", "list"],
+            &["paviicore", "config", "skills", "external-paths", "add"],
+            &["paviicore", "config", "skills", "external-paths", "remove"],
+            &["paviicore", "config", "skills", "market", "enable"],
+            &["paviicore", "config", "skills", "market", "disable"],
         ];
 
         for command in commands {
@@ -857,7 +857,7 @@ mod tests {
     #[test]
     fn every_registry_tool_has_a_wired_team_cli_subcommand() {
         for tool in aionui_api_types::team_tool_descriptors() {
-            let mut argv = vec!["aioncore", "team"];
+            let mut argv = vec!["paviicore", "team"];
             argv.extend(tool.cli_command.iter().map(String::as_str));
             assert!(
                 parse_team_command(&argv).is_some(),
@@ -873,9 +873,9 @@ mod tests {
         // Registry-independent commands; the tool-backed paths are covered by
         // `every_registry_tool_has_a_wired_team_cli_subcommand`.
         let commands: &[&[&str]] = &[
-            &["aioncore", "team", "capabilities"],
-            &["aioncore", "team", "help"],
-            &["aioncore", "team", "context"],
+            &["paviicore", "team", "capabilities"],
+            &["paviicore", "team", "help"],
+            &["paviicore", "team", "context"],
         ];
 
         for command in commands {
@@ -889,14 +889,14 @@ mod tests {
     #[test]
     fn unwired_team_subcommand_is_reported_as_unknown() {
         assert!(
-            parse_team_command(&["aioncore", "team", "definitely-not-a-command"]).is_none(),
+            parse_team_command(&["paviicore", "team", "definitely-not-a-command"]).is_none(),
             "the guard above only works if an unwired path resolves to Unknown"
         );
     }
 
     #[test]
     fn prepare_managed_resources_requires_bundle_out() {
-        let err = match Cli::try_parse_from(["aioncore", "prepare-managed-resources"]) {
+        let err = match Cli::try_parse_from(["paviicore", "prepare-managed-resources"]) {
             Ok(_) => panic!("prepare-managed-resources should require --bundle-out"),
             Err(err) => err,
         };
