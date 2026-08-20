@@ -85,4 +85,19 @@ impl TeammateManager {
         debug!(team_id = %self.team_id, slot_id, model, "agent model updated");
         Ok(())
     }
+
+    /// Point a live slot at the backend its conversation was just moved onto.
+    ///
+    /// Without this a warm session keeps the pre-repair backend in memory, and
+    /// `resolve_team_tool_transport` picks the transport for a runtime the
+    /// conversation no longer uses.
+    pub async fn update_agent_backend(&self, slot_id: &str, backend: &str) -> Result<(), TeamError> {
+        let mut slots = self.slots.lock().await;
+        let slot = slots
+            .get_mut(slot_id)
+            .ok_or_else(|| TeamError::AgentNotFound(slot_id.to_owned()))?;
+        slot.agent.backend = backend.to_owned();
+        debug!(team_id = %self.team_id, slot_id, backend, "agent backend updated");
+        Ok(())
+    }
 }

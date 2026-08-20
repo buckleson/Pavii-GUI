@@ -2373,6 +2373,9 @@ impl ConversationService {
 
         let updates = ConversationRowUpdate {
             name: req.name,
+            // A conversation's runtime kind is fixed at creation. Only the team
+            // backend repair moves it, through its own dedicated path.
+            r#type: None,
             pinned: req.pinned,
             pinned_at,
             model: model_json,

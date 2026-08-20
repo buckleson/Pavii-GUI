@@ -116,6 +116,20 @@ pub struct TeamConversationModelFacts {
     pub runtime_seed_model_id: Option<String>,
 }
 
+/// The new runtime identity for a member conversation being moved onto a
+/// different backend.
+///
+/// Carries only what actually differs between backends. Everything else in the
+/// row — workspace, MCP snapshot, skills, assistant binding — is deliberately
+/// absent so the move preserves it rather than rebuilding it from defaults.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TeamConversationBackendMove {
+    pub agent_type: AgentType,
+    pub backend: String,
+    pub model: String,
+    pub session_mode: String,
+}
+
 #[async_trait]
 pub trait TeamConversationProvisioningPort: Send + Sync {
     async fn create_team_conversation(
@@ -138,6 +152,34 @@ pub trait TeamConversationProvisioningPort: Send + Sync {
 
     async fn conversation_model_facts(&self, _conversation_id: &str) -> Result<TeamConversationModelFacts, TeamError> {
         Ok(TeamConversationModelFacts::default())
+    }
+
+    /// Move one member conversation onto a different runtime backend, in place.
+    ///
+    /// Repairs a member that was provisioned onto a backend it cannot start on
+    /// — in practice an `aionrs` member whose model no provider serves, which
+    /// fails every attach with `Provider '<slug>' not found` and cannot be
+    /// fixed by Retry, because Retry re-reads the same frozen row.
+    ///
+    /// Implementations must rewrite the conversation's `type`, its
+    /// `extra.backend` / `extra.provider_id` / `extra.current_model_id` /
+    /// `extra.session_mode`, and clear the top-level provider `model` column
+    /// when the target is a CLI backend. They must NOT touch the workspace,
+    /// MCP snapshot, skills, or message history: this repairs how the member
+    /// runs, not what it has done.
+    ///
+    /// Defaults to refusing. A port that cannot write conversation rows must
+    /// say so rather than silently reporting a repair it did not perform —
+    /// a false success here would leave the member broken while the roster
+    /// claimed it had been moved.
+    async fn move_conversation_to_backend(
+        &self,
+        _conversation_id: &str,
+        _request: TeamConversationBackendMove,
+    ) -> Result<(), TeamError> {
+        Err(TeamError::InvalidRequest(
+            "team conversation backend migration is unavailable".to_owned(),
+        ))
     }
 
     async fn save_acp_runtime_mode(&self, conversation_id: &str, mode: &str) -> Result<(), TeamError>;
@@ -1014,6 +1056,62 @@ impl TeamAgentProvisioner {
     /// `fallback_backend` is the team leader's backend. It is a safe substitute
     /// precisely because the leader is already running on it, so it is known to
     /// exist and to be usable by this user on this machine.
+    /// Move a member that cannot start onto a backend that can, in place.
+    ///
+    /// `Ok(None)` means the member is already runnable and nothing was
+    /// written — the overwhelmingly common case, so this stays cheap on the
+    /// session-open path.
+    ///
+    /// Only the fields that differ between backends are rewritten; the
+    /// conversation keeps its workspace, MCP snapshot and history. See
+    /// `TeamConversationProvisioningPort::move_conversation_to_backend`.
+    ///
+    /// This exists because the resolution is frozen at creation time: a member
+    /// provisioned before that resolution was correct carries a `provider_id`
+    /// that never resolves, and re-reading the same row on Retry reproduces
+    /// the same failure forever. Creating the member correctly (see
+    /// `resolve_runnable_backend`) fixes new members only.
+    pub(crate) async fn repair_unrunnable_member(
+        &self,
+        user_id: &str,
+        team: &Team,
+        agent: &TeamAgent,
+    ) -> Result<Option<String>, TeamError> {
+        let fallback = lead_backend(team);
+        // The leader is not a candidate for substitution onto itself.
+        let fallback = fallback.as_deref().filter(|_| agent.role != TeammateRole::Lead);
+        let resolved = self
+            .resolve_runnable_backend(user_id, &agent.backend, &agent.model, fallback, &agent.slot_id)
+            .await?;
+        if resolved == agent.backend {
+            return Ok(None);
+        }
+
+        let cli_metadata = cli_backend_metadata(&self.agent_metadata_repo, user_id, &resolved).await?;
+        let agent_type = agent_type_for_backend(cli_metadata.as_ref(), &resolved)?;
+        let session_mode = session_mode_for_backend(&resolved, agent_type, cli_metadata.as_ref());
+        self.conversation_port
+            .move_conversation_to_backend(
+                &agent.conversation_id,
+                TeamConversationBackendMove {
+                    agent_type,
+                    backend: resolved.clone(),
+                    model: agent.model.clone(),
+                    session_mode,
+                },
+            )
+            .await?;
+        info!(
+            team_id = team.id,
+            slot_id = agent.slot_id,
+            conversation_id = agent.conversation_id,
+            previous_backend = agent.backend,
+            backend = resolved,
+            "repaired a team member that could not start on its stored backend"
+        );
+        Ok(Some(resolved))
+    }
+
     async fn resolve_runnable_backend(
         &self,
         user_id: &str,
@@ -1136,6 +1234,21 @@ mod tests {
         ) -> Result<TeamConversationCreateResult, TeamError> {
             self.events.lock().unwrap().push("create");
             Err(TeamError::InvalidRequest("unused".into()))
+        }
+
+        async fn move_conversation_to_backend(
+            &self,
+            conversation_id: &str,
+            request: TeamConversationBackendMove,
+        ) -> Result<(), TeamError> {
+            self.events.lock().unwrap().push("move_backend");
+            self.patches.lock().unwrap().push(serde_json::json!({
+                "conversation_id": conversation_id,
+                "backend": request.backend,
+                "model": request.model,
+                "session_mode": request.session_mode,
+            }));
+            Ok(())
         }
 
         async fn resolve_assistant_mcp_selection(
@@ -2168,6 +2281,158 @@ mod tests {
             .expect_err("an aionrs fallback does not make the teammate runnable");
 
         assert!(error.to_string().contains("No model provider is configured"));
+    }
+
+    /// Same fixture as `test_provisioner_with_cli_backends`, but hands back the
+    /// recorded port writes so a repair can be asserted rather than inferred.
+    fn repair_provisioner(backends: &[&str]) -> (TeamAgentProvisioner, Arc<Mutex<Vec<serde_json::Value>>>) {
+        let patches = Arc::new(Mutex::new(Vec::new()));
+        let provisioner = TeamAgentProvisioner::new(
+            Arc::new(crate::test_utils::MockTeamRepo::new()),
+            Arc::new(UnusedAgentMetadataRepo {
+                rows: backends.iter().map(|backend| cli_metadata_row(backend)).collect(),
+            }),
+            Arc::new(EmptyTeamAssistantCatalog),
+            Arc::new(EmptyProviderRepo),
+            Arc::new(RecordingProvisioningPort {
+                events: Arc::new(Mutex::new(Vec::new())),
+                patches: Arc::clone(&patches),
+                mcp_snapshot: None,
+                mcp_error: None,
+                persisted_extra: Arc::new(Mutex::new(serde_json::json!({}))),
+            }),
+            Arc::new(TestCapabilityPort),
+        );
+        (provisioner, patches)
+    }
+
+    fn repair_agent(slot_id: &str, role: TeammateRole, backend: &str, model: &str) -> TeamAgent {
+        TeamAgent {
+            slot_id: slot_id.to_owned(),
+            name: slot_id.to_owned(),
+            role,
+            conversation_id: format!("conv-{slot_id}"),
+            backend: backend.to_owned(),
+            model: model.to_owned(),
+            assistant_id: None,
+            status: None,
+            conversation_type: None,
+            cli_path: None,
+        }
+    }
+
+    fn repair_team(agents: Vec<TeamAgent>) -> Team {
+        Team {
+            id: "team-1".to_owned(),
+            name: "Team".to_owned(),
+            workspace: "/tmp/team".to_owned(),
+            agents,
+            lead_agent_id: Some("lead".to_owned()),
+            created_at: 0,
+            updated_at: 0,
+        }
+    }
+
+    #[tokio::test]
+    async fn a_stale_aionrs_member_is_moved_onto_the_leader_backend_in_place() {
+        // The user's reported shape, already persisted: a codex leader and a
+        // teammate frozen on `aionrs` with a model no provider serves. This is
+        // the case `resolve_runnable_backend` cannot help with, because that
+        // runs at creation and this member already exists.
+        let (provisioner, patches) = repair_provisioner(&["codex"]);
+        let team = repair_team(vec![
+            repair_agent("lead", TeammateRole::Lead, "codex", "gpt-5.3-codex-spark"),
+            repair_agent("member", TeammateRole::Teammate, "aionrs", "gpt-5.3-codex-spark"),
+        ]);
+
+        let repaired = provisioner
+            .repair_unrunnable_member("user-test", &team, &team.agents[1])
+            .await
+            .expect("repairing a stale member must not fail when the leader is runnable");
+
+        assert_eq!(
+            repaired.as_deref(),
+            Some("codex"),
+            "the stale member must be moved onto the leader's backend"
+        );
+        let written = patches.lock().unwrap().clone();
+        assert_eq!(written.len(), 1, "exactly one conversation must be rewritten");
+        assert_eq!(written[0]["conversation_id"], "conv-member");
+        assert_eq!(written[0]["backend"], "codex");
+        assert_eq!(
+            written[0]["model"], "gpt-5.3-codex-spark",
+            "the member keeps its model; only the backend that runs it changes"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_runnable_member_is_left_completely_alone() {
+        // Every session open calls this for every member. A member that already
+        // works must cost nothing and, above all, must not be rewritten.
+        let (provisioner, patches) = repair_provisioner(&["codex", "claude"]);
+        let team = repair_team(vec![
+            repair_agent("lead", TeammateRole::Lead, "codex", "gpt-5.3-codex-spark"),
+            repair_agent("member", TeammateRole::Teammate, "claude", "claude-sonnet"),
+        ]);
+
+        let repaired = provisioner
+            .repair_unrunnable_member("user-test", &team, &team.agents[1])
+            .await
+            .expect("a healthy member must not error");
+
+        assert_eq!(repaired, None, "a runnable member must report no repair");
+        assert!(
+            patches.lock().unwrap().is_empty(),
+            "a runnable member's conversation must never be rewritten"
+        );
+    }
+
+    #[tokio::test]
+    async fn an_unrepairable_member_reports_the_actionable_error_and_writes_nothing() {
+        // No providers AND no usable CLI. There is nothing to move the member
+        // onto, so the repair must surface the actionable cause rather than
+        // half-writing a row into another broken state.
+        let (provisioner, patches) = repair_provisioner(&[]);
+        let team = repair_team(vec![
+            repair_agent("lead", TeammateRole::Lead, "aionrs", "some-model"),
+            repair_agent("member", TeammateRole::Teammate, "aionrs", "some-model"),
+        ]);
+
+        let error = provisioner
+            .repair_unrunnable_member("user-test", &team, &team.agents[1])
+            .await
+            .expect_err("a member with nowhere to go must not report success");
+
+        assert!(
+            error.to_string().contains("Settings > Models"),
+            "expected the actionable provider error, got: {error}"
+        );
+        assert!(
+            patches.lock().unwrap().is_empty(),
+            "a failed repair must leave the conversation untouched"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_leader_is_never_substituted_onto_itself() {
+        // `lead_backend` would hand the leader its own backend as the fallback,
+        // which is not a substitution at all. A broken leader must surface its
+        // real error instead of silently "repairing" to what it already is.
+        let (provisioner, patches) = repair_provisioner(&["codex"]);
+        let team = repair_team(vec![repair_agent(
+            "lead",
+            TeammateRole::Lead,
+            "aionrs",
+            "gpt-5.3-codex-spark",
+        )]);
+
+        let error = provisioner
+            .repair_unrunnable_member("user-test", &team, &team.agents[0])
+            .await
+            .expect_err("an unrunnable leader has no fallback and must say so");
+
+        assert!(error.to_string().contains("No model provider is configured"));
+        assert!(patches.lock().unwrap().is_empty());
     }
 
     #[tokio::test]

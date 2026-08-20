@@ -357,6 +357,10 @@ impl IConversationRepository for SqliteConversationRepository {
             set_parts.push("pinned_at = ?".to_string());
             binds.push(BindValue::OptI64(*pinned_at));
         }
+        if let Some(ref agent_type) = updates.r#type {
+            set_parts.push("type = ?".to_string());
+            binds.push(BindValue::Str(agent_type.clone()));
+        }
         if let Some(ref model) = updates.model {
             set_parts.push("model = ?".to_string());
             binds.push(BindValue::OptStr(model.clone()));
@@ -1618,6 +1622,64 @@ mod tests {
         let found = repo.get(&conv.user_id, &conv.id).await.unwrap().unwrap();
         assert_eq!(found.name, "Updated Name");
         assert!(found.updated_at >= conv.updated_at);
+    }
+
+    #[tokio::test]
+    async fn update_migrates_type_and_clears_the_provider_model_together() {
+        // The team backend repair moves a member off a runtime it cannot start
+        // on. Both halves must land in the same statement: a row left with the
+        // new `type` but the old provider `model` still populated would hand
+        // the CLI factory the unresolvable provider id the repair exists to
+        // remove.
+        let (repo, _db) = setup().await;
+        let mut conv = sample_conversation(SYSTEM_USER_ID);
+        conv.r#type = "aionrs".to_string();
+        conv.model = Some(r#"{"provider_id":"aionrs","model":"gpt-5.3-codex-spark"}"#.to_string());
+        repo.create(&conv).await.unwrap();
+
+        repo.update(
+            &conv.user_id,
+            &conv.id,
+            &ConversationRowUpdate {
+                r#type: Some("acp".to_string()),
+                model: Some(None),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+        let found = repo.get(&conv.user_id, &conv.id).await.unwrap().unwrap();
+        assert_eq!(found.r#type, "acp", "the runtime kind must actually persist");
+        assert_eq!(
+            found.model, None,
+            "the aionrs provider model must be cleared, not carried onto the CLI backend"
+        );
+    }
+
+    #[tokio::test]
+    async fn update_leaves_type_untouched_when_not_requested() {
+        // Every ordinary conversation update passes `r#type: None`. A rename
+        // must never be able to change what runtime a conversation is.
+        let (repo, _db) = setup().await;
+        let mut conv = sample_conversation(SYSTEM_USER_ID);
+        conv.r#type = "aionrs".to_string();
+        repo.create(&conv).await.unwrap();
+
+        repo.update(
+            &conv.user_id,
+            &conv.id,
+            &ConversationRowUpdate {
+                name: Some("Renamed".to_string()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+        let found = repo.get(&conv.user_id, &conv.id).await.unwrap().unwrap();
+        assert_eq!(found.name, "Renamed");
+        assert_eq!(found.r#type, "aionrs");
     }
 
     #[tokio::test]

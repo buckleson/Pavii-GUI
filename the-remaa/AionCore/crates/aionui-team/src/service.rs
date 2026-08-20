@@ -1332,6 +1332,77 @@ impl TeamSessionService {
         Ok(())
     }
 
+    /// Move members that cannot start onto a backend that can.
+    ///
+    /// A member provisioned before backend resolution was correct carries a
+    /// `provider_id` that no provider row matches. Every attach fails with
+    /// `Provider '<slug>' not found`, and Retry cannot help because it re-reads
+    /// the same frozen row. Provisioning new members correctly does nothing for
+    /// members that already exist, so they are repaired here, once, when the
+    /// session is opened.
+    ///
+    /// A member that cannot be repaired is left exactly as it was. Opening a
+    /// team must not fail because one slot is unfixable — the user still needs
+    /// the leader and the working members, and the unrepaired slot keeps
+    /// reporting its own actionable reason.
+    async fn reconcile_unrunnable_member_backends(
+        &self,
+        user_id: &str,
+        team_id: &str,
+        team: &mut Team,
+    ) -> Result<(), TeamError> {
+        let provisioner = self.provisioner();
+        let snapshot = team.clone();
+        let mut repaired = Vec::new();
+
+        for agent in &mut team.agents {
+            match provisioner.repair_unrunnable_member(user_id, &snapshot, agent).await {
+                Ok(None) => {}
+                Ok(Some(backend)) => {
+                    agent.backend.clone_from(&backend);
+                    repaired.push((agent.slot_id.clone(), backend));
+                }
+                Err(error) => {
+                    warn!(
+                        team_id,
+                        slot_id = agent.slot_id,
+                        backend = agent.backend,
+                        %error,
+                        "could not repair a team member that cannot start; leaving it unchanged"
+                    );
+                }
+            }
+        }
+
+        if repaired.is_empty() {
+            return Ok(());
+        }
+        self.repo
+            .update_team(
+                user_id,
+                team_id,
+                &UpdateTeamParams {
+                    agents: Some(serde_json::to_string(&team.agents)?),
+                    ..Default::default()
+                },
+            )
+            .await?;
+        // A warm session holds its own copy of the roster. Left stale, it would
+        // keep resolving the tool transport for the backend the conversation no
+        // longer runs on.
+        if let Some(session) = self.sessions.get(team_id).map(|entry| Arc::clone(&entry.session)) {
+            for (slot_id, backend) in &repaired {
+                session.update_agent_backend(slot_id, backend).await?;
+            }
+        }
+        info!(
+            team_id,
+            repaired_agent_count = repaired.len(),
+            "moved team members onto a runnable backend"
+        );
+        Ok(())
+    }
+
     /// Start the team's MCP server and rebuild every agent process so it
     /// carries a fresh `team_mcp_stdio_config` pointing at the new server.
     ///
@@ -1393,6 +1464,10 @@ impl TeamSessionService {
         let user_id = row.user_id.clone();
         let mut team = Team::from_row(&row)?;
         self.reconcile_legacy_team_models(&user_id, team_id, &mut team).await?;
+        // Before any attach: a member whose stored backend cannot start would
+        // otherwise fail every attach below, forever.
+        self.reconcile_unrunnable_member_backends(&user_id, team_id, &mut team)
+            .await?;
         let agents_snapshot: Vec<TeamAgent> = team.agents.clone();
 
         if let Some(session) = self.sessions.get(team_id).map(|entry| Arc::clone(&entry.session)) {

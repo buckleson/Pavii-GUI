@@ -1081,6 +1081,7 @@ pub(crate) mod workspace_harness {
                     conversation_id,
                     &ConversationRowUpdate {
                         name: None,
+                        r#type: None,
                         model: None,
                         pinned: None,
                         pinned_at: None,

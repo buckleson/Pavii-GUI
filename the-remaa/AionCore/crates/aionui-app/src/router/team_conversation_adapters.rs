@@ -11,13 +11,13 @@ use aionui_conversation::{
     ConversationService,
 };
 use aionui_db::models::{AgentMetadataRow, MessageRow};
-use aionui_db::{IAgentMetadataRepository, IConversationRepository};
+use aionui_db::{ConversationRowUpdate, IAgentMetadataRepository, IConversationRepository};
 use aionui_team::{
     AgentTurnCancellationPort, AgentTurnExecutionError, AgentTurnExecutionPort, AgentTurnOutcome, AgentTurnRequest,
     AgentTurnStarted, AgentTurnStatus, NativeSlashCommandPort, SlashCatalogSource, SlashCommandRecognition,
-    TeamConversationBindingLookup, TeamConversationCreateRequest, TeamConversationCreateResult,
-    TeamConversationLookupPort, TeamConversationModelFacts, TeamConversationProvisioningPort, TeamError,
-    TeamMcpSnapshotResolution, TeamProjectionMessageStore,
+    TeamConversationBackendMove, TeamConversationBindingLookup, TeamConversationCreateRequest,
+    TeamConversationCreateResult, TeamConversationLookupPort, TeamConversationModelFacts,
+    TeamConversationProvisioningPort, TeamError, TeamMcpSnapshotResolution, TeamProjectionMessageStore,
 };
 use async_trait::async_trait;
 use tracing::{debug, info, warn};
@@ -588,6 +588,65 @@ impl TeamConversationProvisioningPort for TeamConversationAdapters {
             )
             .await
             .map_err(map_conversation_update_error)
+    }
+
+    async fn move_conversation_to_backend(
+        &self,
+        conversation_id: &str,
+        request: TeamConversationBackendMove,
+    ) -> Result<(), TeamError> {
+        let user_id = self.require_owner_user_id(conversation_id).await?;
+        let Some(row) = self.conversation_repo.get(&user_id, conversation_id).await? else {
+            return Err(TeamError::AgentNotFound(conversation_id.to_owned()));
+        };
+        let agent_type = serde_json::to_value(request.agent_type)
+            .ok()
+            .and_then(|value| value.as_str().map(str::to_owned))
+            .ok_or_else(|| TeamError::InvalidRequest("unserializable agent type".to_owned()))?;
+
+        // Patch, never rebuild. The row's workspace, MCP snapshot, skills and
+        // assistant binding are the user's, and a member that has been sitting
+        // broken may still have had them edited; only the fields that decide
+        // how it starts are ours to overwrite.
+        let mut extra: serde_json::Value = serde_json::from_str(&row.extra).unwrap_or_else(|_| serde_json::json!({}));
+        if !extra.is_object() {
+            extra = serde_json::json!({});
+        }
+        extra["backend"] = serde_json::Value::String(request.backend.clone());
+        extra["session_mode"] = serde_json::Value::String(request.session_mode);
+        // A CLI backend reads its model from `extra`; the top-level provider
+        // column is the aionrs shape and must not survive the move, or
+        // `provider_model_from_conversation_row` keeps handing the factory the
+        // unresolvable provider id this repair exists to remove.
+        // `None` leaves the column alone; `Some(None)` clears it.
+        let top_level_model = if request.agent_type == AgentType::Aionrs {
+            None
+        } else {
+            extra["provider_id"] = serde_json::Value::String(request.backend.clone());
+            extra["current_model_id"] = serde_json::Value::String(request.model.clone());
+            Some(None)
+        };
+
+        self.conversation_repo
+            .update(
+                &user_id,
+                conversation_id,
+                &ConversationRowUpdate {
+                    r#type: Some(agent_type),
+                    extra: Some(serde_json::to_string(&extra).map_err(|e| {
+                        TeamError::InvalidRequest(format!("could not serialize repaired conversation extra: {e}"))
+                    })?),
+                    model: top_level_model,
+                    ..Default::default()
+                },
+            )
+            .await?;
+        info!(
+            conversation_id,
+            backend = request.backend,
+            "moved a team member conversation onto a runnable backend"
+        );
+        Ok(())
     }
 
     async fn persist_confirmed_model(&self, conversation_id: &str, model: &str) -> Result<(), TeamError> {

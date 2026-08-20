@@ -639,6 +639,7 @@ impl TeamConversationProvisioningPort for FakeConversationPorts {
                 conversation_id,
                 &ConversationRowUpdate {
                     name: None,
+                    r#type: None,
                     model: None,
                     pinned: None,
                     pinned_at: None,
@@ -648,6 +649,52 @@ impl TeamConversationProvisioningPort for FakeConversationPorts {
                     project_id: None,
                     folder_id: None,
                     name_source: None,
+                },
+            )
+            .await?;
+        Ok(())
+    }
+
+    /// Mirrors the real adapter: rewrite only the fields that decide how the
+    /// member starts, and clear the aionrs provider column on the way to a CLI
+    /// backend.
+    async fn move_conversation_to_backend(
+        &self,
+        conversation_id: &str,
+        request: aionui_team::TeamConversationBackendMove,
+    ) -> Result<(), aionui_team::TeamError> {
+        let user_id = self
+            .repo
+            .owner_user_id(conversation_id)
+            .await?
+            .ok_or_else(|| aionui_team::TeamError::AgentNotFound(conversation_id.to_owned()))?;
+        let mut extra = self
+            .repo
+            .get_extra(conversation_id)
+            .unwrap_or_else(|| serde_json::json!({}));
+        extra["backend"] = serde_json::json!(request.backend);
+        extra["session_mode"] = serde_json::json!(request.session_mode);
+        let model = if request.agent_type == aionui_common::AgentType::Aionrs {
+            None
+        } else {
+            extra["provider_id"] = serde_json::json!(request.backend);
+            extra["current_model_id"] = serde_json::json!(request.model);
+            Some(None)
+        };
+        let agent_type = serde_json::to_value(request.agent_type)
+            .ok()
+            .and_then(|value| value.as_str().map(str::to_owned))
+            .expect("agent type must serialize to a string");
+        self.repo
+            .update(
+                &user_id,
+                conversation_id,
+                &ConversationRowUpdate {
+                    r#type: Some(agent_type),
+                    model,
+                    extra: Some(serde_json::to_string(&extra).unwrap()),
+                    updated_at: Some(aionui_common::now_ms()),
+                    ..Default::default()
                 },
             )
             .await?;
@@ -6022,6 +6069,145 @@ async fn observed_model_switch_updates_all_model_facts_and_survives_rebuild() {
         .await
         .unwrap();
     assert_eq!(rebuilt_worker.model, "gpt-5.6-sol");
+}
+
+#[tokio::test]
+async fn ensure_session_moves_a_stale_aionrs_member_onto_a_runnable_backend() {
+    // Reproduces a team that was provisioned before backend resolution was
+    // fixed: the teammate is frozen on `aionrs` with a model no provider
+    // serves, so every attach fails with `Provider 'aionrs' not found` and
+    // Retry re-reads the same row. Provisioning new members correctly cannot
+    // help a member that already exists — opening the team must repair it.
+    let (svc, team_repo, _task_manager, conv_repo) =
+        setup_with_factory_metadata_team_repo_and_conversation_repo(success_factory(), seeded_agent_metadata_repo());
+    let created = svc
+        .create_team(
+            "user1",
+            CreateTeamRequest {
+                name: "T".into(),
+                agents: two_agent_input(),
+                workspace: None,
+            },
+        )
+        .await
+        .unwrap();
+    let worker = created
+        .assistants
+        .iter()
+        .find(|agent| agent.role == "teammate")
+        .unwrap()
+        .clone();
+    let lead_backend = created
+        .assistants
+        .iter()
+        .find(|agent| agent.role == "lead")
+        .unwrap()
+        .backend
+        .clone();
+
+    // Freeze the teammate into the broken shape, in both places it is stored:
+    // the team roster and the conversation row.
+    let row = team_repo.get_team_for_restore(&created.id).await.unwrap().unwrap();
+    let mut agents: Vec<serde_json::Value> = serde_json::from_str(&row.agents).unwrap();
+    for agent in &mut agents {
+        if agent["slot_id"] == serde_json::json!(worker.slot_id) {
+            agent["backend"] = serde_json::json!("aionrs");
+            agent["model"] = serde_json::json!("gpt-5.3-codex-spark");
+        }
+    }
+    team_repo
+        .update_team(
+            "user1",
+            &created.id,
+            &aionui_db::UpdateTeamParams {
+                agents: Some(serde_json::to_string(&agents).unwrap()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    conv_repo
+        .update(
+            "user1",
+            &worker.conversation_id,
+            &ConversationRowUpdate {
+                r#type: Some("aionrs".into()),
+                model: Some(Some(r#"{"provider_id":"aionrs","model":"gpt-5.3-codex-spark"}"#.into())),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+    svc.ensure_session("user1", &created.id).await.unwrap();
+
+    let persisted = svc.get_team("user1", &created.id).await.unwrap();
+    let repaired = persisted
+        .assistants
+        .iter()
+        .find(|agent| agent.slot_id == worker.slot_id)
+        .unwrap();
+    assert_eq!(
+        repaired.backend, lead_backend,
+        "the stale teammate must be moved onto the leader's backend"
+    );
+    assert_ne!(
+        repaired.backend, "aionrs",
+        "the unrunnable backend must not survive the repair"
+    );
+
+    let row = conv_repo.get("user1", &worker.conversation_id).await.unwrap().unwrap();
+    assert_ne!(
+        row.r#type, "aionrs",
+        "the conversation must no longer be an aionrs runtime"
+    );
+    assert_eq!(
+        row.model, None,
+        "the unresolvable provider id must be cleared, not carried onto the CLI backend"
+    );
+}
+
+#[tokio::test]
+async fn ensure_session_still_opens_when_a_member_cannot_be_repaired() {
+    // No provider and no usable fallback. The team must still open: the user
+    // needs the leader and every working member, and the unfixable slot keeps
+    // reporting its own reason rather than taking the whole team down.
+    let (svc, team_repo, _task_manager, _conv_repo) =
+        setup_with_factory_metadata_team_repo_and_conversation_repo(success_factory(), seeded_agent_metadata_repo());
+    let created = svc
+        .create_team(
+            "user1",
+            CreateTeamRequest {
+                name: "T".into(),
+                agents: two_agent_input(),
+                workspace: None,
+            },
+        )
+        .await
+        .unwrap();
+
+    // Both slots unrunnable: the leader cannot rescue anyone.
+    let row = team_repo.get_team_for_restore(&created.id).await.unwrap().unwrap();
+    let mut agents: Vec<serde_json::Value> = serde_json::from_str(&row.agents).unwrap();
+    for agent in &mut agents {
+        agent["backend"] = serde_json::json!("aionrs");
+        agent["model"] = serde_json::json!("model-no-provider-serves");
+    }
+    team_repo
+        .update_team(
+            "user1",
+            &created.id,
+            &aionui_db::UpdateTeamParams {
+                agents: Some(serde_json::to_string(&agents).unwrap()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+    svc.ensure_session("user1", &created.id)
+        .await
+        .expect("an unrepairable member must not stop the team from opening");
 }
 
 #[tokio::test]

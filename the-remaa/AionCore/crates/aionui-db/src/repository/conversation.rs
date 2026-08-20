@@ -351,6 +351,13 @@ impl ConversationFilters {
 #[derive(Debug, Clone, Default)]
 pub struct ConversationRowUpdate {
     pub name: Option<String>,
+    /// Runtime kind of the conversation (the `type` column).
+    ///
+    /// Only a backend migration writes this — a conversation's agent type is
+    /// otherwise fixed at creation. It exists so a team member provisioned
+    /// onto a backend it cannot start on can be moved onto one it can, in
+    /// place, instead of the user having to delete and re-add the member.
+    pub r#type: Option<String>,
     pub pinned: Option<bool>,
     pub pinned_at: Option<Option<TimestampMs>>,
     pub model: Option<Option<String>>,
