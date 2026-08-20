@@ -8,6 +8,7 @@ import { ipcBridge } from '@/common';
 import { getAcpImageFileName } from '@/common/chat/acpToolCallOutput';
 import type { NormalizedToolCall, NormalizedToolStatus, ToolMessage } from '@/common/chat/normalizeToolCall';
 import { normalizeToolMessages, hasRunningToolMessages } from '@/common/chat/normalizeToolCall';
+import { teamToolDisplayLabel } from '@/common/chat/teamToolDisplayName';
 import LocalImageView from '@/renderer/components/media/LocalImageView';
 import { downloadFileFromPath } from '@/renderer/utils/file/download';
 import './MessageToolGroupSummary.css';
@@ -35,6 +36,10 @@ const ToolItemDetail: React.FC<{ item: NormalizedToolCall }> = ({ item }) => {
   const [loadingFull, setLoadingFull] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const displayItem = fullItem ?? item;
+  // Team MCP tools arrive as raw ids (`aionui-team_team_task_update`); show the
+  // action instead. Tools from other servers keep the name the agent reported.
+  const teamLabel = teamToolDisplayLabel(displayItem.name);
+  const toolLabel = teamLabel ? t(teamLabel.key, { defaultValue: teamLabel.defaultValue }) : displayItem.name;
   const hasDetail = displayItem.input || displayItem.output || item.truncated || item.imagePath;
   const [messageApi, messageContext] = Message.useMessage();
   const handleDownloadImage = useCallback(
@@ -87,7 +92,7 @@ const ToolItemDetail: React.FC<{ item: NormalizedToolCall }> = ({ item }) => {
           }
           onClick={hasDetail ? toggleExpanded : undefined}
         >
-          <span className='font-medium text-13px'>{displayItem.name}</span>
+          <span className='font-medium text-13px'>{toolLabel}</span>
           {displayItem.description && displayItem.description !== displayItem.name && (
             <span className='m-l-4px opacity-80 text-13px'>{displayItem.description}</span>
           )}

@@ -65,5 +65,21 @@
     "create": "create",
     "modify": "modify",
     "delete": "delete"
+  },
+  "team": {
+    "members": "Listing team members",
+    "listAssistants": "Listing available assistants",
+    "describeAssistant": "Reading assistant details",
+    "spawnAgent": "Adding a teammate",
+    "renameAgent": "Renaming a teammate",
+    "shutdownAgent": "Stopping a teammate",
+    "interruptAgent": "Interrupting a teammate",
+    "clearAgentContext": "Clearing teammate context",
+    "sendMessage": "Sending message to teammate",
+    "readMessages": "Reading messages",
+    "taskCreate": "Creating task",
+    "taskList": "Listing tasks",
+    "taskUpdate": "Updating task",
+    "runId": "Checking the current run"
   }
 }

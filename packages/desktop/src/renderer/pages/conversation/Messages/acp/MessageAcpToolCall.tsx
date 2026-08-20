@@ -6,6 +6,7 @@
 
 import type { IMessageAcpToolCall } from '@/common/chat/chatLib';
 import { getAcpImageFileName, getAcpImagePath } from '@/common/chat/acpToolCallOutput';
+import { teamToolDisplayLabel } from '@/common/chat/teamToolDisplayName';
 import FileChangesPanel from '@/renderer/components/base/FileChangesPanel';
 import LocalImageView from '@/renderer/components/media/LocalImageView';
 import { useDiffPreviewHandlers } from '@/renderer/hooks/file/useDiffPreviewHandlers';
@@ -107,6 +108,9 @@ const MessageAcpToolCall: React.FC<{ message: IMessageAcpToolCall }> = ({ messag
   }
   const { update } = content;
   const { tool_call_id, kind, title, status, rawInput, content: diffContent } = update;
+  // See MessageToolGroupSummary: the same raw Team MCP ids surface here.
+  const teamLabel = teamToolDisplayLabel(title);
+  const toolTitle = teamLabel ? t(teamLabel.key, { defaultValue: teamLabel.defaultValue }) : title;
   const hasOnlyDiffs =
     Array.isArray(diffContent) &&
     diffContent.length > 0 &&
@@ -143,7 +147,7 @@ const MessageAcpToolCall: React.FC<{ message: IMessageAcpToolCall }> = ({ messag
       <div className='flex items-start gap-3'>
         <div className='flex-1 min-w-0'>
           <div className='flex items-center gap-2 mb-2'>
-            <span className='font-medium text-t-primary'>{title || getKindDisplayName(kind)}</span>
+            <span className='font-medium text-t-primary'>{toolTitle || getKindDisplayName(kind)}</span>
             <StatusTag status={status} />
           </div>
           {rawInput && (
