@@ -57,15 +57,28 @@ function querySqliteIds(dataDir: string, sql: string): string[] {
     .filter((s) => s.length > 0);
 }
 
-/** Backend binary resolved from PATH / cargo bin. */
+/**
+ * Backend binary, resolved the same way the app resolves it.
+ *
+ * The bundled copy comes first: `node scripts/build-paviicore.js` puts it
+ * there, it is what the rest of the suite runs against, and it is the only one
+ * present on a fresh checkout. Without it these specs threw "not found" rather
+ * than skipping, which reads as a broken suite.
+ */
 function resolveBackendBinary(): string {
-  const candidates = [process.env.AIONUI_BACKEND_BINARY, path.join(os.homedir(), '.cargo', 'bin', 'paviicore')].filter(
-    (x): x is string => typeof x === 'string' && x.length > 0
-  );
+  const exe = process.platform === 'win32' ? 'paviicore.exe' : 'paviicore';
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const candidates = [
+    process.env.AIONUI_BACKEND_BINARY,
+    path.join(repoRoot, 'resources', 'bundled-paviicore', `${process.platform}-${process.arch}`, exe),
+    path.join(os.homedir(), '.cargo', 'bin', exe),
+  ].filter((x): x is string => typeof x === 'string' && x.length > 0);
   for (const c of candidates) {
     if (fs.existsSync(c)) return c;
   }
-  throw new Error(`aioncore binary not found. Set AIONUI_BACKEND_BINARY or install to ~/.cargo/bin/aioncore.`);
+  throw new Error(
+    'paviicore binary not found. Run `node scripts/build-paviicore.js`, or set AIONUI_BACKEND_BINARY to an existing build.'
+  );
 }
 
 // ── Backend HTTP contract (shared with renderer httpBridge) ──────────────────

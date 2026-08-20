@@ -89,14 +89,21 @@ async function listAutoInjectBuiltinSkills(page: Parameters<typeof httpGet>[0]):
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
+/** Resolved the same way the app does; see assistant-user-data.e2e.ts. */
 function resolveBackendBinary(): string {
-  const candidates = [process.env.AIONUI_BACKEND_BINARY, path.join(os.homedir(), '.cargo', 'bin', 'paviicore')].filter(
-    (x): x is string => typeof x === 'string' && x.length > 0
-  );
+  const exe = process.platform === 'win32' ? 'paviicore.exe' : 'paviicore';
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const candidates = [
+    process.env.AIONUI_BACKEND_BINARY,
+    path.join(repoRoot, 'resources', 'bundled-paviicore', `${process.platform}-${process.arch}`, exe),
+    path.join(os.homedir(), '.cargo', 'bin', exe),
+  ].filter((x): x is string => typeof x === 'string' && x.length > 0);
   for (const c of candidates) {
     if (fs.existsSync(c)) return c;
   }
-  throw new Error('aioncore binary not found. Set AIONUI_BACKEND_BINARY or install to ~/.cargo/bin/aioncore.');
+  throw new Error(
+    'paviicore binary not found. Run `node scripts/build-paviicore.js`, or set AIONUI_BACKEND_BINARY to an existing build.'
+  );
 }
 
 // ── Suite ───────────────────────────────────────────────────────────────────
