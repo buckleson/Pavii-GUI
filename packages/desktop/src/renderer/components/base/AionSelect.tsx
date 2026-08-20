@@ -44,18 +44,14 @@ const BASE_CLASS = classNames(
 );
 
 /**
- * 默认的弹出层容器获取函数
- * 始终返回 document.body 以避免嵌套容器导致的 ResizeObserver 循环错误
  * Default popup container getter function
  * Always returns document.body to avoid ResizeObserver loop errors from nested containers
  */
 const defaultGetPopupContainer = (): HTMLElement => {
-  // 在浏览器环境下始终挂载到 body，避免嵌套容器导致 ResizeObserver 循环
   // Always mount popup to body in browsers to avoid nested-container ResizeObserver loops
   if (typeof document !== 'undefined' && document.body) {
     return document.body;
   }
-  // SSR/测试环境降级返回占位，具体不会真正渲染
   // Fallback for SSR/tests – this code path shouldn't render popups
   return undefined as unknown as HTMLElement;
 };
@@ -63,7 +59,6 @@ const defaultGetPopupContainer = (): HTMLElement => {
 /**
  * Custom select component
  *
- * 基于 Arco Design Select 的封装，提供统一的样式主题和弹出层处理
  * Wrapper around Arco Design Select with unified theme styling and popup handling
  *
  * @features
@@ -87,8 +82,6 @@ const defaultGetPopupContainer = (): HTMLElement => {
  * </AionSelect>
  *
  * Grouped options
- * <AionSelect placeholder="请选择">
- *   <AionSelect.OptGroup label="分组1">
  *     AionSelect.Option>
  *   </AionSelect.OptGroup>
  *   <AionSelect.OptGroup label="分组2">

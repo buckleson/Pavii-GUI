@@ -25,10 +25,8 @@ interface HTMLEditorProps {
 }
 
 /**
- * HTML 代码编辑器组件
  * HTML code editor component
  *
- * 使用 CodeMirror 进行 HTML 代码编辑，支持撤销/重做历史记录
  * Uses CodeMirror for HTML code editing with undo/redo history support
  */
 const HTMLEditor: React.FC<HTMLEditorProps> = ({ value, onChange, containerRef, onScroll, file_path }) => {
@@ -47,7 +45,6 @@ const HTMLEditor: React.FC<HTMLEditorProps> = ({ value, onChange, containerRef, 
   );
   useScrollSyncTarget(containerRef, handleTargetScroll);
 
-  // 使用 file_path 作为 key 的一部分，确保编辑器实例稳定
   // Use file_path as part of key to ensure editor instance is stable
   const editorKey = useMemo(() => {
     return file_path || 'html-editor';
@@ -77,7 +74,6 @@ const HTMLEditor: React.FC<HTMLEditorProps> = ({ value, onChange, containerRef, 
   // the large files that need it most.
   const disableHighlight = shouldDisableHighlighting(value.length);
 
-  // 配置扩展，包含 HTML 语法和历史记录支持
   // Configure extensions including HTML syntax and history support
   const extensions = useMemo<Extension[]>(
     () => [

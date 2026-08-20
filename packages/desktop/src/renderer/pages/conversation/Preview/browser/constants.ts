@@ -5,7 +5,6 @@
  */
 
 /**
- * 应用内浏览器 tab 的共享常量与地址栏输入解析
  * Shared constants and address-bar input parsing for in-app browser tabs
  */
 
@@ -22,7 +21,6 @@ export { BROWSER_SESSION_PARTITION } from '@/common/config/constants';
 export const BROWSER_BLANK_URL = 'about:blank';
 
 /**
- * 浏览器 tab 的占位标题，页面标题就绪后会被替换。
  * Placeholder title for a browser tab, replaced once the page title arrives.
  */
 export const BROWSER_TAB_FALLBACK_TITLE = 'New Tab';
@@ -40,7 +38,6 @@ export const MAX_BROWSER_TABS = 10;
 const SEARCH_URL_TEMPLATE = 'https://www.bing.com/search?q={query}';
 
 /**
- * 已知的无主机名 scheme：这些直接原样通过，不做域名猜测。
  * Schemes with no host part — passed through untouched, never guessed at.
  */
 const PASSTHROUGH_SCHEMES = ['about:', 'data:', 'blob:', 'chrome:', 'devtools:', 'view-source:'];

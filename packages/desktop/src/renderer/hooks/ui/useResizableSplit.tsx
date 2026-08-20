@@ -36,7 +36,6 @@ interface UseResizableSplitOptions {
 }
 
 /**
- * 可拖动分割面板 Hook，支持记录用户偏好
  * Resizable split panel Hook with user preference persistence
  *
  * @param options Configuration options

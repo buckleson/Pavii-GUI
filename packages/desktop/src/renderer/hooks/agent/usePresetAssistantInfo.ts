@@ -24,7 +24,6 @@ export interface PresetAssistantInfo {
 }
 
 /**
- * 从 conversation extra 中解析预设助手 ID
  * Resolve preset assistant ID from conversation extra
  *
  * 处理向后兼容：
@@ -129,7 +128,6 @@ function resolveLegacyRuntimeDisplayName(conversation: TChatConversation): strin
 }
 
 /**
- * 规范化头像：支持 emoji / 内置 svg / 扩展资源 URL
  * Normalize avatar to either emoji text or a renderable image URL
  */
 function normalizeAvatar(avatar: string | undefined): { logo: string; isEmoji: boolean; isFallback?: boolean } {
@@ -267,7 +265,6 @@ function inferLegacyAssistantInfo(
 }
 
 /**
- * 获取预设助手信息的 Hook
  * Hook to get preset assistant info from conversation
  *
  * @param conversation Conversation object

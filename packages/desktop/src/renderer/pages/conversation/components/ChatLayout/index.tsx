@@ -280,7 +280,6 @@ const ChatLayout: React.FC<{
                   flexGrow: 1,
                   flexShrink: 1,
                   flexBasis: 0,
-                  // 桌面端只用左边框分界；移动端覆盖层保留完整描边
                   // Desktop: left divider only. Mobile overlay keeps a full border.
                   ...(isDesktop ? { borderLeft: '1px solid var(--bg-3)' } : { border: '1px solid var(--bg-3)' }),
                   minWidth: isDesktop ? '260px' : 0,

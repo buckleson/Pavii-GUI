@@ -5,7 +5,6 @@
  */
 
 /**
- * AionRouter 协议检测器
  * Protocol Detector for AionRouter
  *
  * 支持自动检测 API 端点使用的协议类型：
@@ -15,13 +14,11 @@
  */
 
 /**
- * 支持的协议类型
  * Supported protocol types
  */
 export type ProtocolType = 'openai' | 'gemini' | 'anthropic' | 'unknown';
 
 /**
- * 协议检测结果
  * Protocol detection result
  */
 export interface ProtocolDetectionResult {
@@ -49,7 +46,6 @@ export interface ProtocolDetectionResult {
 }
 
 /**
- * 多 Key 测试结果
  * Multi-key test result
  */
 export interface MultiKeyTestResult {
@@ -75,7 +71,6 @@ export interface MultiKeyTestResult {
 }
 
 /**
- * 协议检测请求参数
  * Protocol detection request parameters
  */
 export interface ProtocolDetectionRequest {
@@ -92,7 +87,6 @@ export interface ProtocolDetectionRequest {
 }
 
 /**
- * 协议检测响应
  * Protocol detection response
  */
 export interface ProtocolDetectionResponse {
@@ -126,7 +120,6 @@ export interface ProtocolDetectionResponse {
 }
 
 /**
- * 协议特征定义
  * Protocol signature definitions
  */
 interface ProtocolSignature {
@@ -150,17 +143,14 @@ interface ProtocolSignature {
 }
 
 /**
- * 协议签名配置
  * Protocol signature configurations
  *
- * 参考 GPT-Load 的 Channel 设计，每个协议定义其特征
  * Reference GPT-Load Channel design, each protocol defines its signatures
  */
 export const PROTOCOL_SIGNATURES: ProtocolSignature[] = [
   // Gemini 协议
   {
     protocol: 'gemini',
-    // Gemini API Key 格式：AIza 开头，后跟 35 个字符
     // Gemini API Key format: starts with AIza, followed by 35 characters
     keyPattern: /^AIza[A-Za-z0-9_-]{35}$/,
     urlPatterns: [
@@ -260,7 +250,6 @@ export const PROTOCOL_SIGNATURES: ProtocolSignature[] = [
     ],
     endpoints: [
       {
-        // Anthropic 没有 models 端点，使用 messages 端点测试
         // Anthropic doesn't have models endpoint, use messages endpoint
         path: '/v1/messages',
         method: 'POST',
@@ -275,7 +264,6 @@ export const PROTOCOL_SIGNATURES: ProtocolSignature[] = [
           messages: [{ role: 'user', content: 'test' }],
         },
         validator: (_response, status) => {
-          // 200 或 400（参数错误但认证成功）都认为是有效的
           // 200 or 400 (param error but auth success) are both valid
           return status === 200 || status === 400;
         },
@@ -285,10 +273,8 @@ export const PROTOCOL_SIGNATURES: ProtocolSignature[] = [
 ];
 
 /**
- * 已知的第三方 OpenAI 兼容服务 Key 格式
  * Known third-party OpenAI-compatible service key patterns
  *
- * 这些服务使用 OpenAI 协议，但 Key 格式不同
  * These services use OpenAI protocol but with different key formats
  */
 export const THIRD_PARTY_KEY_PATTERNS: Array<{ pattern: RegExp; name: string; protocol: ProtocolType }> = [
@@ -302,7 +288,6 @@ export const THIRD_PARTY_KEY_PATTERNS: Array<{ pattern: RegExp; name: string; pr
 ];
 
 /**
- * 解析多个 API Key
  * Parse multiple API keys from string
  */
 export function parseApiKeys(api_keyString: string): string[] {
@@ -314,7 +299,6 @@ export function parseApiKeys(api_keyString: string): string[] {
 }
 
 /**
- * 掩码 API Key
  * Mask API key for display
  */
 export function maskApiKey(api_key: string): string {
@@ -323,10 +307,8 @@ export function maskApiKey(api_key: string): string {
 }
 
 /**
- * 常见的 API 路径后缀
  * Common API path suffixes
  *
- * 用于生成候选 URL 列表，当用户输入完整端点 URL 时可以尝试移除这些后缀
  * Used to generate candidate URL list when user enters full endpoint URL
  */
 export const API_PATH_SUFFIXES = [
@@ -347,10 +329,8 @@ export const API_PATH_SUFFIXES = [
 ];
 
 /**
- * 规范化 Base URL（仅做基本清理）
  * Normalize base URL (basic cleanup only)
  *
- * 只移除末尾斜杠，不修改路径
  * Only removes trailing slashes, does not modify path
  */
 export function normalizeBaseUrl(base_url: string): string {
@@ -362,7 +342,6 @@ export function normalizeBaseUrl(base_url: string): string {
 }
 
 /**
- * 从 URL 中移除已知的 API 路径后缀
  * Remove known API path suffix from URL
  */
 export function removeApiPathSuffix(base_url: string): string | null {
@@ -381,7 +360,6 @@ export function removeApiPathSuffix(base_url: string): string | null {
 }
 
 /**
- * 根据 URL 猜测协议类型
  * Guess protocol type from URL
  */
 export function guessProtocolFromUrl(base_url: string): ProtocolType | null {
@@ -401,10 +379,8 @@ export function guessProtocolFromUrl(base_url: string): ProtocolType | null {
 }
 
 /**
- * 根据 API Key 格式猜测协议类型
  * Guess protocol type from API key format
  *
- * 优先匹配更具体的模式，然后是通用模式
  * Prioritize more specific patterns, then general patterns
  */
 export function guessProtocolFromKey(api_key: string): ProtocolType | null {
@@ -426,7 +402,6 @@ export function guessProtocolFromKey(api_key: string): ProtocolType | null {
 }
 
 /**
- * 根据 API Key 识别服务提供商名称
  * Identify service provider name from API key
  */
 export function identifyProviderFromKey(api_key: string): string | null {
@@ -439,7 +414,6 @@ export function identifyProviderFromKey(api_key: string): string | null {
 }
 
 /**
- * 获取协议的显示名称
  * Get display name for protocol
  */
 export function getProtocolDisplayName(protocol: ProtocolType): string {
@@ -453,7 +427,6 @@ export function getProtocolDisplayName(protocol: ProtocolType): string {
 }
 
 /**
- * 获取协议对应的推荐平台
  * Get recommended platform for protocol
  */
 export function getRecommendedPlatform(protocol: ProtocolType): string | null {

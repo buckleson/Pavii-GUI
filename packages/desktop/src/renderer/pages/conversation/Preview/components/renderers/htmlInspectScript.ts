@@ -13,7 +13,6 @@ const DEFAULT_MESSAGES: InspectMessages = {
 };
 
 /**
- * 生成 HTML 审核元素的注入脚本
  * Generate HTML inspect mode injection script
  *
  * @param inspectMode - 是否启用审核模式

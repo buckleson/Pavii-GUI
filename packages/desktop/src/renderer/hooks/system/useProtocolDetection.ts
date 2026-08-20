@@ -9,7 +9,6 @@ import { ipcBridge } from '@/common';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
- * 协议检测 Hook 配置
  * Protocol detection hook configuration
  */
 interface UseProtocolDetectionOptions {
@@ -24,7 +23,6 @@ interface UseProtocolDetectionOptions {
 }
 
 /**
- * 协议检测 Hook 返回值
  * Protocol detection hook return value
  */
 interface UseProtocolDetectionResult {
@@ -41,10 +39,8 @@ interface UseProtocolDetectionResult {
 }
 
 /**
- * 协议检测 Hook
  * Protocol Detection Hook
  *
- * 用于自动检测 API 端点使用的协议类型
  * Used to auto-detect the protocol type used by an API endpoint
  *
  * @param base_url - Base URL
@@ -68,7 +64,6 @@ export function useProtocolDetection(
   const requestVersionRef = useRef(0);
 
   /**
-   * 执行协议检测
    * Execute protocol detection
    */
   const detect = useCallback(
@@ -126,7 +121,6 @@ export function useProtocolDetection(
   );
 
   /**
-   * 重置状态
    * Reset state
    */
   const reset = useCallback(() => {
@@ -141,7 +135,6 @@ export function useProtocolDetection(
   }, []);
 
   /**
-   * 自动检测（带防抖）
    * Auto-detect with debounce
    */
   useEffect(() => {

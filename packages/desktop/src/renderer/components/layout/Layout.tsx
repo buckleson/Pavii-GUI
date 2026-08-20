@@ -109,7 +109,6 @@ const detectMobileViewportOrTouch = (): boolean => {
   }
   const width = window.innerWidth;
   const byWidth = width < 768;
-  // 仅在小屏时才将 coarse/touch 视为移动端，避免触控笔记本被误判
   // Treat touch/coarse pointer as mobile only on smaller viewports
   const smallScreen = width < 1024;
   const byMedia = window.matchMedia('(hover: none)').matches || window.matchMedia('(pointer: coarse)').matches;

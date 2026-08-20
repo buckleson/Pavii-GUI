@@ -117,7 +117,6 @@ export const SubModal: React.FC<SubModalProps> = ({ visible, onCancel, title, ch
 /**
  * Main settings modal component
  *
- * 提供应用的全局设置界面，包括 Gemini、模型、工具、系统和关于等多个标签页
  * Provides global settings interface with multiple tabs including Gemini, Model, Tools, System and About
  *
  * @features
@@ -140,7 +139,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onCancel, defaul
   const extensionTabs = useExtensionSettingsTabs();
 
   /**
-   * 处理窗口尺寸变化，更新移动端状态
    * Handle window resize and update mobile state
    */
   const handleResize = useCallback(() => {

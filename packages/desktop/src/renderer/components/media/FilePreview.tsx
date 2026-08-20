@@ -49,7 +49,6 @@ const FilePreview: React.FC<FilePreviewProps> = ({ path, onRemove, readonly = fa
   }
 
   const isImage = isImageFile(path);
-  // 直接从路径中提取文件名，不清理时间戳后缀
   // Extract filename directly from path without cleaning timestamp suffix
   const file_name = path.split(/[\\/]/).pop() || '';
   const fileExt = getFileExtension(path).toUpperCase().replace('.', '');

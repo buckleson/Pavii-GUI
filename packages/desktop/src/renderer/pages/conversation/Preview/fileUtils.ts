@@ -7,7 +7,6 @@
 import type { PreviewContentType } from '@/common/types/office/preview';
 
 /**
- * 文件扩展名到内容类型的映射配置
  * Mapping configuration from file extensions to content types
  */
 export const FILE_EXTENSION_MAP: Record<PreviewContentType, readonly string[]> = {
@@ -44,7 +43,6 @@ export const FILE_EXTENSION_MAP: Record<PreviewContentType, readonly string[]> =
 };
 
 /**
- * 从文件路径中提取文件扩展名
  * Extract file extension from file path
  *
  * @param file_path File path
@@ -62,7 +60,6 @@ export const getFileExtension = (file_path: string): string => {
   if (!file_path) return '';
 
   const lastDotIndex = file_path.lastIndexOf('.');
-  // 没有点号，或点号在最后（如 "file."），返回空字符串
   // No dot, or dot at the end (e.g., "file."), return empty string
   if (lastDotIndex === -1 || lastDotIndex === file_path.length - 1) {
     return '';
@@ -72,7 +69,6 @@ export const getFileExtension = (file_path: string): string => {
 };
 
 /**
- * 根据文件扩展名确定预览内容类型
  * Determine preview content type based on file extension
  *
  * @param file_path File path
@@ -103,7 +99,6 @@ export const getContentTypeByExtension = (file_path: string): PreviewContentType
 };
 
 /**
- * 检查文件是否为图片类型
  * Check if file is an image type
  *
  * @param file_path File path
@@ -114,7 +109,6 @@ export const isImageFile = (file_path: string): boolean => {
 };
 
 /**
- * 检查文件是否为文本类型（可编辑）
  * Check if file is a text type (editable)
  *
  * @param file_path File path
@@ -126,7 +120,6 @@ export const isTextFile = (file_path: string): boolean => {
 };
 
 /**
- * 检查文件是否为 Office 文档类型
  * Check if file is an Office document type
  *
  * @param file_path File path

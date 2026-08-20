@@ -174,7 +174,6 @@ child.on('exit', (code, signal) => {
   process.exit(code ?? 0);
 });
 
-// 转发终止信号，避免 MCP 客户端关闭后留下孤儿进程
 // Forward termination signals so no orphan survives the MCP client shutting down.
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {

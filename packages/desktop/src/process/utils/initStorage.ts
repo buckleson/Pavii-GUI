@@ -283,7 +283,6 @@ const conversationHistoryProxy = (options: typeof _chatMessageFile, dir: string)
 const chatMessageFile = conversationHistoryProxy(_chatMessageFile, cacheDir);
 
 /**
- * 获取助手规则目录路径
  * Get assistant rules directory path
  */
 const getAssistantsDir = () => {
@@ -291,7 +290,6 @@ const getAssistantsDir = () => {
 };
 
 /**
- * 获取技能脚本目录路径
  * Get skills scripts directory path
  */
 const getSkillsDir = () => {
@@ -372,7 +370,6 @@ const initStorage = async () => {
   await migrateLegacyData();
   mark('1. migrateLegacyData');
 
-  // 2. 创建必要的目录（迁移后再创建，确保迁移能正常进行）
   // Use ensureDirectory to handle cases where a regular file blocks the path (#841)
   ensureDirectory(getHomePage());
   ensureDirectory(getDataPath());
@@ -448,7 +445,6 @@ export const getSystemDir = () => {
 };
 
 /**
- * 获取助手规则目录路径（供其他模块使用）
  * Get assistant rules directory path (for use by other modules)
  */
 export { getAssistantsDir, getSkillsDir, getCronSkillsDir, BUILTIN_IMAGE_GEN_ID, getBuiltinMcpScriptPath };

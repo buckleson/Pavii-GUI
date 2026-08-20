@@ -7,7 +7,6 @@
 import { useEffect, useState } from 'react';
 
 /**
- * 检测并监听主题变化
  * Detect and monitor theme changes
  *
  * @returns Current theme

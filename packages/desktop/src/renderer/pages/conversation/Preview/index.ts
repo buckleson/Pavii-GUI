@@ -5,18 +5,14 @@
  */
 
 /**
- * Preview 模块统一导出
  * Preview module unified exports
  *
- * 这是一个独立的、可复用的文档预览模块
  * This is an independent, reusable document preview module
  *
  * @example
  * ```typescript
- * // 使用Context
  * import { PreviewProvider, usePreviewContext } from '@/renderer/pages/conversation/Preview';
  *
- * // 使用组件
  * import { PreviewPanel, MarkdownViewer } from '@/renderer/pages/conversation/Preview';
  *
  * // 使用类型

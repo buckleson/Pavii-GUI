@@ -72,7 +72,6 @@ export const EXTENSION_MAP: Record<string, FileTypeInfo> = {
 };
 
 /**
- * 根据文件名推断内容类型及是否可编辑
  * Determine preview content type and editability from file name
  */
 export const getFileTypeInfo = (file_name: string): FileTypeInfo => {

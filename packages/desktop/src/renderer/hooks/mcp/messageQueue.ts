@@ -1,8 +1,6 @@
 /**
- * 全局消息队列管理器（单例模式）
  * Global message queue manager (singleton pattern)
  *
- * 作用：确保所有 MCP 相关消息按顺序显示，避免同时触发导致覆盖
  * Purpose: Ensure all MCP-related messages are displayed sequentially to prevent overlap when triggered simultaneously
  *
  * Use cases:
@@ -20,7 +18,6 @@ class MessageQueue {
   private constructor() {}
 
   /**
-   * 获取全局单例实例
    * Get the global singleton instance
    */
   static getInstance(): MessageQueue {
@@ -36,7 +33,6 @@ class MessageQueue {
    * @param showMessageFn Function to display the message
    */
   async add(showMessageFn: () => void): Promise<void> {
-    // 检查队列长度，如果超过限制则丢弃新消息而不是旧消息
     // Check queue length, discard new message if limit exceeded (not old ones)
     if (this.queue.length >= this.maxQueueSize) {
       console.warn(`Message queue size exceeded ${this.maxQueueSize}, dropping new message`);
@@ -49,7 +45,6 @@ class MessageQueue {
   }
 
   /**
-   * 按顺序处理队列中的所有消息
    * Process all messages in the queue sequentially
    */
   private async process(): Promise<void> {
@@ -58,7 +53,6 @@ class MessageQueue {
       const fn = this.queue.shift();
       if (fn) {
         fn();
-        // 添加延迟，让 Arco Design 有时间完成动画和布局计算
         // Add delay to allow Arco Design time to complete animations and layout calculations
         await new Promise((resolve) => setTimeout(resolve, this.delay));
       }
@@ -68,10 +62,8 @@ class MessageQueue {
 }
 
 /**
- * 全局消息队列实例
  * Global message queue instance
  *
- * 在所有 MCP 相关的 hooks 中使用，确保消息不会重叠显示
  * Used in all MCP-related hooks to ensure messages don't overlap when displayed
  */
 export const globalMessageQueue = MessageQueue.getInstance();

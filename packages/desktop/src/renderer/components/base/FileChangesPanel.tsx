@@ -43,10 +43,8 @@ export interface FileChangesPanelProps {
 }
 
 /**
- * 文件变更面板组件
  * File changes panel component
  *
- * 用于显示会话中生成/修改的文件列表，支持展开收起
  * Used to display generated/modified files in conversation, supports expand/collapse
  */
 const FileChangesPanel: React.FC<FileChangesPanelProps> = ({

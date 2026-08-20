@@ -16,7 +16,6 @@ import { useTranslation } from 'react-i18next';
 const MASK_GRADIENT =
   'linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 60%, rgba(0, 0, 0, 0.4) 90%, rgba(0, 0, 0, 0) 100%)';
 
-// 背景渐变模式：使用固定颜色遮罩，适用于普通场景
 // Background gradient mode: use fixed color mask, suitable for normal scenarios
 const BG_GRADIENT_DARK =
   'linear-gradient(to bottom, rgba(30, 30, 30, 0) 0%, rgba(30, 30, 30, 0.6) 40%, rgba(30, 30, 30, 0.95) 80%, rgba(30, 30, 30, 1) 100%)';
@@ -38,12 +37,10 @@ interface CollapsibleContentProps {
    */
   defaultCollapsed?: boolean;
   /**
-   * 自定义样式类名
    * Custom className
    */
   className?: string;
   /**
-   * 内容区域样式类名
    * Content area className
    */
   contentClassName?: string;
@@ -54,14 +51,12 @@ interface CollapsibleContentProps {
    */
   useMask?: boolean;
   /**
-   * 是否允许横向滚动，避免宽内容被裁剪
    * Allow horizontal scrolling to prevent clipping wide content
    */
   allowHorizontalScroll?: boolean;
 }
 
 /**
- * 长内容展示组件，支持折叠/展开功能
  * Collapsible content component with expand/collapse functionality
  *
  * 特性 Features:
@@ -114,9 +109,7 @@ export const CollapsibleContent: React.FC<CollapsibleContentProps> = ({
       }
     };
 
-    // 使用 ResizeObserver 替代 setTimeout，更精确地检测内容变化
     // Use ResizeObserver instead of setTimeout for more accurate content change detection
-    // Electron 环境完全支持 ResizeObserver，但添加检查以增强兼容性
     // ResizeObserver is fully supported in Electron, but add check for enhanced compatibility
     if (typeof ResizeObserver !== 'undefined') {
       const resizeObserver = new ResizeObserver(() => {
@@ -135,7 +128,6 @@ export const CollapsibleContent: React.FC<CollapsibleContentProps> = ({
         resizeObserver.disconnect();
       };
     } else {
-      // Fallback: 如果 ResizeObserver 不可用（理论上不会发生），使用 setTimeout
       // Fallback: use setTimeout if ResizeObserver is unavailable (should not happen in practice)
       const timer = setTimeout(scheduleHeightCheck, 100);
       return () => {

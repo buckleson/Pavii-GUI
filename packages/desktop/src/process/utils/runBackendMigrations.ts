@@ -187,7 +187,6 @@ function buildBuiltinBrowserServer(): McpImportServer {
     description:
       "Control Pavii.Ai's built-in browser (the side preview panel): open pages, click, type and read content. " +
       'Sign-in state is shared across tabs and preserved between sessions.',
-    // 默认开启：用户装好即可用，无需任何配置
     // Enabled by default: works out of the box with zero configuration.
     enabled: true,
     builtin: true,

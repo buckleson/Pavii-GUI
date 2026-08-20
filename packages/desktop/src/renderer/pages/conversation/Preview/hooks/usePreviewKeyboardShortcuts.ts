@@ -7,25 +7,21 @@
 import { useEffect } from 'react';
 
 /**
- * 预览面板快捷键配置
  * Preview panel keyboard shortcuts configuration
  */
 interface UsePreviewKeyboardShortcutsOptions {
   /**
-   * 当前是否有未保存的修改
    * Whether there are unsaved changes
    */
   isDirty?: boolean;
 
   /**
-   * 保存回调函数
    * Save callback function
    */
   onSave: () => void;
 }
 
 /**
- * 处理预览面板快捷键（Cmd/Ctrl + S 保存）
  * Handle preview panel keyboard shortcuts (Cmd/Ctrl + S to save)
  *
  * @param options Keyboard shortcuts configuration

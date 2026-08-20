@@ -10,7 +10,6 @@ import React from 'react';
 /**
  * Custom scroll area component
  *
- * 提供统一的滚动条样式，支持垂直、水平或双向滚动
  * Provides unified scrollbar styling, supports vertical, horizontal or both directions
  *
  * @example

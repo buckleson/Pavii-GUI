@@ -73,7 +73,6 @@ export class InternalNavTracker {
  * @returns true true when this is an external change and a reset is due
  */
 export const shouldResetHistoryForUrlProp = (incomingUrl: string, tracker: InternalNavTracker): boolean => {
-  // prop 只是内部导航绕回来的回声 → 保留历史
   // The prop is merely the echo of an internal navigation → keep history.
   return !tracker.consumeEcho(incomingUrl);
 };

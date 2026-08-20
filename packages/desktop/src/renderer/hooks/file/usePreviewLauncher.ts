@@ -39,7 +39,6 @@ interface PreviewLaunchOptions {
 }
 
 /**
- * 统一的预览面板打开逻辑
  * Shared preview launcher logic for components that need edit/preview buttons
  *
  * Processing flow:
@@ -116,8 +115,6 @@ export const usePreviewLauncher = () => {
         // Try to read actual file content (override optimistic preview)
         if (fileRef) {
           try {
-            // 单一判定点：取一次 metadata 拿到 size（判上限）与 lastModified（保存时的
-            // If-Match 条件），超限则完全不读内容。
             // Single decision point: one metadata call yields size (ceiling check)
             // and lastModified (the save-time If-Match); oversized files are never read.
             const payload = await resolvePreviewPayload(fileRef, contentType);
@@ -135,7 +132,6 @@ export const usePreviewLauncher = () => {
             });
             return;
           } catch (error) {
-            // 读取失败，如果已经显示了乐观预览，则只记录警告
             // Read failed, log warning if optimistic preview is already shown
             setErrorKind(classifyPreviewError(error));
             if (!hasOpened) {

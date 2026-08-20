@@ -7,7 +7,6 @@
 import { useRef, useLayoutEffect, useCallback } from 'react';
 
 /**
- * 保持值的最新引用，避免闭包陷阱
  * Keep the latest reference of a value to avoid closure trap
  *
  * @example
@@ -18,7 +17,6 @@ import { useRef, useLayoutEffect, useCallback } from 'react';
  *     setContentRef.current(text);
  *   };
  *   // ...
- * }, []); // 依赖数组为空，不会因为 setContent 变化而重新注册
  * ```
  *
  * @param value The value to keep latest reference
@@ -27,7 +25,6 @@ import { useRef, useLayoutEffect, useCallback } from 'react';
 export function useLatestRef<T>(value: T) {
   const ref = useRef(value);
 
-  // 使用 useLayoutEffect 确保在渲染完成前同步更新
   // Use useLayoutEffect to ensure synchronous update before render completes
   useLayoutEffect(() => {
     ref.current = value;
@@ -37,18 +34,15 @@ export function useLatestRef<T>(value: T) {
 }
 
 /**
- * 返回一个稳定的函数引用，但内部始终调用最新的函数
  * Return a stable function reference that always calls the latest function internally
  *
  * @example
  * ```tsx
  * const handleClick = useLatestCallback((text: string) => {
- *   setContent(text); // 始终使用最新的 setContent
  * });
  *
  * useEffect(() => {
  *   setSendBoxHandler(handleClick);
- * }, []); // 依赖数组为空，handleClick 引用始终稳定
  * ```
  *
  * @param fn The function to keep latest reference
@@ -57,7 +51,6 @@ export function useLatestRef<T>(value: T) {
 export function useLatestCallback<T extends (...args: any[]) => any>(fn: T): T {
   const ref = useLatestRef(fn);
 
-  // 返回一个稳定的函数引用（空依赖数组）
   // Return a stable function reference (empty dependency array)
   return useCallback(
     ((...args: any[]) => {

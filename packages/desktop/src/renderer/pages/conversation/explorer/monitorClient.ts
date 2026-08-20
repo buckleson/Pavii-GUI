@@ -6,7 +6,6 @@
 
 /**
  * MonitorClient — JSON-RPC request/response + notification pairing over the
- * shared WS singleton (see `formal/runtime/frontend.md` §连接层). Transport is
  * injected so the pairing/dispatch core is unit-testable without a real socket.
  *
  * Envelope: the transport wraps each frame as `{ name: "fs", data: <frame> }`
@@ -214,7 +213,6 @@ export class MonitorClient {
    * Abandon a pending request without waiting for a response — for streaming
    * requests (`fs/search`) that a newer request has superseded: the backend
    * auto-supersedes the old search and sends no terminal for it (protocol.md
-   * §取消两路), so its pending entry would otherwise leak. Rejects the awaiter
    * with `RPC_ABANDONED`; no-op if the id is unknown or already settled.
    */
   abandon(id: RpcId): void {

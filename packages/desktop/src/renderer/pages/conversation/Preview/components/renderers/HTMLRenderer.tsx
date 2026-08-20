@@ -109,7 +109,6 @@ function resolveRelativePath(basePath: string, relativePath: string): string {
 }
 
 /**
- * 内联化 HTML 中的相对资源（用于 browser iframe）
  * Inline relative resources in HTML (for browser iframe)
  *
  * - img src -> base64 data URL
@@ -195,7 +194,6 @@ async function inlineRelativeResources(html: string, basePath: string, workspace
       const absolutePath = resolveRelativePath(basePath, src);
       const scriptContent = await ipcBridge.fs.readFile.invoke({ path: absolutePath, workspace });
       if (scriptContent) {
-        // 保留其他属性（如 type, defer, async 等，但 async/defer 对 inline 无效）
         // Keep other attributes (like type, but defer/async don't work for inline)
         const attrsToKeep = (before + after).replace(/\s*(defer|async)\s*/gi, '');
         const scriptTag = `<script${attrsToKeep}>${scriptContent}</script>`;
@@ -210,10 +208,8 @@ async function inlineRelativeResources(html: string, basePath: string, workspace
 }
 
 /**
- * HTML 渲染器组件
  * HTML renderer component
  *
- * 在 iframe/webview 中渲染 HTML 内容（自动检测环境）
  * Renders HTML content in iframe/webview (auto-detect environment)
  */
 const HTMLRenderer: React.FC<HTMLRendererProps> = ({
@@ -258,13 +254,11 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  // 判断是否应该直接从文件加载（保留正常 file:// origin 和 Web Storage）- 仅 Electron 环境
   // Determine if should load directly from file (keeps normal file:// origin and Web Storage) - Electron only
   const shouldLoadFromFile = useMemo(() => {
     return isElectron && Boolean(file_path) && !isDirty;
   }, [file_path, isDirty, isElectron]);
 
-  // 检查是否有相对资源（用于 browser inline 处理）
   // Check if has relative resources (for browser inline processing)
   const hasRelativeResources = useMemo(() => {
     return (
@@ -274,7 +268,6 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
     );
   }, [content]);
 
-  // 流式打字动画：HTML 预览在使用 data URL 渲染时也能获得流式体验
   // Typing animation: provide streaming experience when rendering via data URL
   const { displayedContent } = useTypingAnimation({
     content,
@@ -287,23 +280,19 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
     [shouldLoadFromFile, content, displayedContent]
   );
 
-  // 在 browser 环境下，当有相对资源时进行内联化处理
   // In browser environment, inline relative resources when present
   useEffect(() => {
     if (isElectron) {
-      // Electron 环境不需要内联化，使用 webview 加载
       // Electron environment doesn't need inlining, uses webview loading
       return;
     }
 
     if (!hasRelativeResources || !file_path) {
-      // 没有相对资源或没有文件路径，使用原始内容
       // No relative resources or no file path, use original content
       setInlinedHtmlContent(content);
       return;
     }
 
-    // Browser 环境且有相对资源，进行内联化处理
     // Browser environment with relative resources, perform inlining
     let cancelled = false;
     inlineRelativeResources(content, file_path, workspace)
@@ -324,7 +313,6 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
     };
   }, [content, file_path, isElectron, hasRelativeResources, workspace]);
 
-  // 用于 browser iframe 的最终 HTML 内容
   // Final HTML content for browser iframe
   const browserHtmlContent = useMemo(() => {
     if (hasRelativeResources && file_path) {
@@ -333,16 +321,13 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
     return displayedContent;
   }, [hasRelativeResources, file_path, inlinedHtmlContent, content, displayedContent]);
 
-  // 计算 webview 的 src
   // Calculate webview src
   const webviewSrc = useMemo(() => {
-    // 如果有文件路径且内容未被编辑，直接用 file:// URL 加载，避免 data: URL 的 opaque origin 限制
     // If file path exists and content is clean, load via file:// to avoid data: URL opaque origin limits
     if (shouldLoadFromFile && file_path) {
       return `file://${file_path}`;
     }
 
-    // 否则使用 data URL（适用于动态生成的 HTML 或没有外部资源的情况）
     // Otherwise use data URL (for dynamically generated HTML or no external resources)
     let html = htmlContent;
 
@@ -483,7 +468,6 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
     };
   }, [executeScript]);
 
-  // 监听 webview 控制台消息，捕获检查元素事件和滚动事件
   // Listen for webview console messages to capture inspect element events and scroll events
   useEffect(() => {
     const webview = webviewRef.current;

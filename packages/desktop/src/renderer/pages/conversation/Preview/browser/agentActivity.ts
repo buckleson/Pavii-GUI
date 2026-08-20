@@ -73,7 +73,6 @@ const isBrowserMcpEntry = (entry: ToolGroupEntry): boolean => {
 };
 
 /**
- * 判断一条 tool_group 消息是否表示 Agent 正在操作浏览器。
  * Whether a tool_group message means the agent is currently driving the browser.
  */
 export const isBrowserMcpActivity = (messageType: string, data: unknown): boolean => {

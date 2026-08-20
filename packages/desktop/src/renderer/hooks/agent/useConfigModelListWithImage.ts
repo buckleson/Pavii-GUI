@@ -36,7 +36,6 @@ const useConfigModelListWithImage = () => {
           nextPlatform.models = nextPlatform.models.concat(['google/gemini-2.5-flash-image-preview']);
         }
       } else if (platformLower.includes('antigravity') && !hasImageModel) {
-        // AntigravityTools 平台：添加常用图像模型
         // AntigravityTools platform: add common image models
         nextPlatform.models = nextPlatform.models.concat(['gemini-3-pro-image-1x1']);
       }

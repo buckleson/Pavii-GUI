@@ -28,7 +28,6 @@ interface CodeEditorProps {
   targetColumn?: number; // Target column to reveal on initial open
 }
 
-// 流式判定空闲超时：超过此时长无外部增长则视为流结束
 // Idle timeout for streaming detection
 const STREAMING_IDLE_MS = 1200;
 
@@ -114,7 +113,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     });
   }, [fileName, targetColumn, targetLine, value.length]);
 
-  // 区分外部流式增长 vs 用户编辑：外部增长时显示角标并自动滚到底
   // Distinguish external streaming growth from user edits: badge + auto-scroll on external growth
   useEffect(() => {
     const grew = value.length > prevLenRef.current;

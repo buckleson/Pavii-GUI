@@ -11,48 +11,40 @@ import { useTranslation } from 'react-i18next';
 import { shouldShowDownload } from './previewToolbarUtils';
 
 /**
- * PreviewToolbar 组件属性
  * PreviewToolbar component props
  */
 interface PreviewToolbarProps {
   /**
-   * 内容类型
    * Content type
    */
   content_type: string;
 
   /**
-   * 是否为 Markdown 文件
    * Whether it's a Markdown file
    */
   isMarkdown: boolean;
 
   /**
-   * 是否为 HTML 文件
    * Whether it's an HTML file
    */
   isHTML: boolean;
 
   /**
-   * 当前视图模式
    * Current view mode
    */
   viewMode: 'source' | 'preview';
 
   /**
-   * 是否启用分屏模式
    * Whether split-screen mode is enabled
    */
   isSplitScreenEnabled: boolean;
 
   /**
-   * 文件名
    * Filename
    */
   file_name?: string;
 
   /**
-   * 是否显示"在系统中打开"按钮
    * Whether to show "Open in System" button
    */
   showOpenInSystemButton: boolean;
@@ -83,7 +75,6 @@ interface PreviewToolbarProps {
   hasFilePath: boolean;
 
   /**
-   * 刷新按钮状态 token；`'hidden'` 或未提供时不渲染。
    * Refresh control state token; not rendered when `'hidden'` or absent.
    */
   refreshState?: string;
@@ -95,65 +86,54 @@ interface PreviewToolbarProps {
   onRefresh?: () => void;
 
   /**
-   * 设置视图模式
    * Set view mode
    */
   onViewModeChange: (mode: 'source' | 'preview') => void;
 
   /**
-   * 设置分屏模式
    * Set split-screen mode
    */
   onSplitScreenToggle: () => void;
 
   /**
-   * 在系统中打开文件
    * Open file in system
    */
   onOpenInSystem: () => void;
 
   /**
-   * 下载文件
    * Download file
    */
   onDownload: () => void;
 
   /**
-   * 关闭预览面板
    * Close preview panel
    */
   onClose: () => void;
 
   /**
-   * HTML 审核元素模式（仅HTML类型使用）
    * HTML inspect mode (only for HTML type)
    */
   inspectMode?: boolean;
 
   /**
-   * 切换HTML审核元素模式（仅HTML类型使用）
    * Toggle HTML inspect mode (only for HTML type)
    */
   onInspectModeToggle?: () => void;
 
   /**
-   * 左侧额外渲染内容
    * Extra content rendered on the left section
    */
   leftExtra?: React.ReactNode;
 
   /**
-   * 右侧额外渲染内容
    * Extra content rendered on the right section
    */
   rightExtra?: React.ReactNode;
 }
 
 /**
- * 预览面板工具栏组件
  * Preview panel toolbar component
  *
- * 包含文件名、视图模式切换、下载按钮、关闭按钮等
  * Contains filename, view mode toggle, download button, close button, etc.
  */
 // eslint-disable-next-line max-len
@@ -183,8 +163,6 @@ const PreviewToolbar: React.FC<PreviewToolbarProps> = ({
   const { t } = useTranslation();
   const isDiff = content_type === 'diff';
   const preferActionButtonsInFront = Boolean(leftExtra);
-  // 下载的隐藏规则看的是「文件是否在磁盘上」，用 hasFilePath 而不是
-  // showOpenInSystemButton（后者已包含纯 fileRef 的情况）。
   // The download rule keys off "is the file on disk", so use hasFilePath rather
   // than showOpenInSystemButton (which now also covers bare-fileRef tabs).
   const showDownload = shouldShowDownload(content_type, hasFilePath);

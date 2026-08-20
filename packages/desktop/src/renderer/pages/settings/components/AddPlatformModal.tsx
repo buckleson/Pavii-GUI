@@ -182,7 +182,6 @@ const ProtocolDetectionStatus: React.FC<ProtocolDetectionStatusProps> = ({
 };
 
 /**
- * 供应商 Logo 组件
  * Provider Logo Component
  */
 const ProviderLogo: React.FC<{ logo: string | null; name: string; size?: number }> = ({ logo, name, size = 20 }) => {
@@ -193,14 +192,12 @@ const ProviderLogo: React.FC<{ logo: string | null; name: string; size?: number 
 };
 
 /**
- * 平台下拉选项渲染（第一层）
  * Platform dropdown option renderer (first level)
  *
  * @param platform Platform config
  * @param t Translation function
  */
 const renderPlatformOption = (platform: PlatformConfig, t?: (key: string) => string) => {
-  // 如果有 i18nKey 且提供了翻译函数，使用翻译后的名称；否则使用原始名称
   // If i18nKey exists and t function is provided, use translated name; otherwise use original name
   const display_name = platform.i18nKey && t ? t(platform.i18nKey) : platform.name;
   return (
@@ -218,7 +215,6 @@ const AddPlatformModal = ModalHOC<{
   const [message, messageContext] = Message.useMessage();
   const { t } = useTranslation();
   const [form] = Form.useForm();
-  // 用于追踪上次检测时的输入值，避免重复检测
   // Track last detection input to avoid redundant detection
   const [lastDetectionInput, setLastDetectionInput] = useState<{ base_url: string; api_key: string } | null>(null);
 
@@ -255,7 +251,6 @@ const AddPlatformModal = ModalHOC<{
     }
   }, [modelValue, isNewApi]);
 
-  // 计算实际使用的 base_url（优先使用用户输入，否则使用平台预设）
   // Calculate actual base_url (prefer user input, fallback to platform preset)
   const actualBaseUrl = useMemo(() => {
     if (base_url) return base_url;
@@ -267,15 +262,11 @@ const AddPlatformModal = ModalHOC<{
   const modelListState = useModeModeList(platform, actualBaseUrl, api_key, true, undefined);
 
   // Protocol detection hook
-  // 启用检测的条件：
-  // 1. 自定义平台 或 用户输入了自定义 base URL（非官方地址，如本地代理）
-  // 2. 输入值与上次"采纳建议"时不同（避免切换平台后重复检测）
   // Enable detection when:
   // 1. Custom platform OR user entered a custom base URL (non-official, like local proxy)
   // 2. Input values differ from last "accepted suggestion" (avoid redundant detection after platform switch)
   const isNonOfficialBaseUrl = base_url && !isGoogleApisHost(base_url);
   const shouldEnableDetection = isCustom || isNonOfficialBaseUrl;
-  // 只有在用户修改了输入值（相对于上次采纳建议时）才触发检测
   // Only trigger detection when input changed since last accepted suggestion
   const inputChangedSinceLastSwitch =
     !lastDetectionInput || lastDetectionInput.base_url !== actualBaseUrl || lastDetectionInput.api_key !== api_key;
@@ -289,11 +280,9 @@ const AddPlatformModal = ModalHOC<{
     }
   );
 
-  // 是否显示检测结果：启用检测 且 (有结果或正在检测) 且 输入值与上次采纳时不同
   // Whether to show detection result: enabled AND (has result or detecting) AND input changed since last switch
   const shouldShowDetectionResult = shouldEnableDetection && inputChangedSinceLastSwitch;
 
-  // 处理平台切换建议
   // Handle platform switch suggestion
   const handleSwitchPlatform = (suggestedPlatform: string) => {
     const targetPlatform = MODEL_PLATFORMS.find((p) => p.value === suggestedPlatform || p.name === suggestedPlatform);
@@ -301,7 +290,6 @@ const AddPlatformModal = ModalHOC<{
       form.setFieldValue('platform', targetPlatform.value);
       form.setFieldValue('model', '');
       protocolDetection.reset();
-      // 记录当前输入，防止切换后重复检测
       // Record current input to prevent redundant detection after switch
       setLastDetectionInput({ base_url: actualBaseUrl, api_key });
       message.success(t('settings.platformSwitched', { platform: targetPlatform.name }));
@@ -351,7 +339,6 @@ const AddPlatformModal = ModalHOC<{
     form
       .validate()
       .then((values) => {
-        // 如果有 i18nKey 使用翻译后的名称，否则使用 platform 的 name
         // If i18nKey exists use translated name, otherwise use platform name
         const name = selectedPlatform?.i18nKey
           ? t(selectedPlatform.i18nKey)
@@ -360,7 +347,6 @@ const AddPlatformModal = ModalHOC<{
           id: uuid(),
           platform: selectedPlatform?.platform ?? 'custom',
           name,
-          // 优先使用用户输入的 base_url，否则使用平台预设值
           // Prefer user input base_url, fallback to platform preset
           base_url: isBedrock ? '' : values.base_url || selectedPlatform?.base_url || '',
           api_key: isBedrock ? '' : values.api_key,

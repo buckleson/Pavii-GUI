@@ -5,11 +5,8 @@
  */
 
 /**
- * 主题桥接模块
  * Theme Bridge Module
  *
- * 主进程作为哑中继：缓存渲染进程发布的已解析 Theme 对象，
- * 并通过 changed 事件将其广播给所有窗口。
  * Main process acts as a dumb relay: caches the resolved Theme published by a
  * renderer via setActive, and re-broadcasts it to all windows via changed.
  */
@@ -33,10 +30,8 @@ export function onThemeChanged(listener: ThemeListener): () => void {
 }
 
 /**
- * 初始化主题桥接
  * Initialize theme bridge
  *
- * 注册 IPC 处理器以缓存并转发主题变更
  * Register IPC handlers to cache and relay theme changes
  */
 export function initThemeBridge(): void {

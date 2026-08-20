@@ -34,7 +34,6 @@ import { consumePendingDeepLink } from '@/renderer/hooks/system/useDeepLink';
 import '../model-provider.css';
 
 /**
- * 获取协议显示标签颜色
  * Get protocol badge color
  */
 const getProtocolColor = (protocol: string): string => {
@@ -50,7 +49,6 @@ const getProtocolColor = (protocol: string): string => {
 };
 
 /**
- * 获取协议显示名称
  * Get protocol display name
  */
 const getProtocolLabel = (protocol: string): string => {
@@ -58,7 +56,6 @@ const getProtocolLabel = (protocol: string): string => {
 };
 
 /**
- * 获取下一个协议（循环切换）
  * Get next protocol (cycle through options)
  */
 const getNextProtocol = (current: string): string => {
@@ -74,7 +71,6 @@ const getApiKeyCount = (api_key: string): number => {
 };
 
 /**
- * 获取供应商的启用状态（全选/半选/全不选）
  * Get provider enable state (all/partial/none)
  */
 const getProviderState = (platform: IProvider): { checked: boolean; indeterminate: boolean } => {
@@ -97,7 +93,6 @@ const getProviderState = (platform: IProvider): { checked: boolean; indeterminat
 };
 
 /**
- * 检查模型是否启用
  * Check if model is enabled
  */
 const isModelEnabled = (platform: IProvider, model: string): boolean => {
@@ -641,7 +636,6 @@ const ModelModalContent: React.FC = () => {
                                 title={t('settings.deleteModelConfirm')}
                                 onOk={() => {
                                   const newModels = platform.models.filter((item: string) => item !== model);
-                                  // 同时清理模型相关状态，避免删除后重加模型时复用脏状态
                                   // Clean all per-model state to avoid stale state on re-add.
                                   const newProtocols = { ...platform.model_protocols };
                                   const newModelEnabled = { ...platform.model_enabled };

@@ -15,10 +15,8 @@ interface UseAutoScrollOptions {
 }
 
 /**
- * 智能自动滚动 Hook
  * Smart auto-scroll Hook
  *
- * 当内容更新时，如果用户处于底部附近，则自动滚动到底部
  * When content updates, if user is near bottom, auto-scroll to bottom
  *
  * @example
@@ -50,7 +48,6 @@ export const useAutoScroll = ({
     // Calculate distance from bottom
     const distanceToBottom = scrollHeight - scrollTop - clientHeight;
 
-    // 如果距离底部小于阈值，自动滚动到底部
     // If distance from bottom is less than threshold, auto-scroll to bottom
     if (distanceToBottom < threshold) {
       container.scrollTo({ top: scrollHeight, behavior });

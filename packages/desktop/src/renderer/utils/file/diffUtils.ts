@@ -5,7 +5,6 @@
  */
 
 /**
- * 从 diff 内容中解析文件路径
  * Parse file path from diff content
  *
  * 支持多种 diff 格式：
@@ -44,7 +43,6 @@ export function parseFilePathFromDiff(diffContent: string): string | null {
 }
 
 /**
- * 从 diff 中提取实际文件内容（去除元数据）
  * Extract actual file content from diff (remove metadata)
  *
  * @param diffContent diff 内容

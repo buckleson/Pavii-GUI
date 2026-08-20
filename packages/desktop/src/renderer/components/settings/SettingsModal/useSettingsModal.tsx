@@ -24,7 +24,6 @@ interface UseSettingsModalReturn {
 /**
  * Hook for using the settings modal
  *
- * 提供设置弹窗的状态管理和操作方法
  * Provides state management and operation methods for settings modal
  *
  * @returns Hook Hook return object

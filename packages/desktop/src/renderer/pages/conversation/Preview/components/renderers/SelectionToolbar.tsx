@@ -17,10 +17,8 @@ interface SelectionToolbarProps {
 }
 
 /**
- * 文本选择浮动工具栏组件
  * Floating toolbar component for text selection
  *
- * 当用户选中文本时显示，提供"添加到会话"功能
  * Displays when user selects text, providing "Add to chat" functionality
  */
 const SelectionToolbar: React.FC<SelectionToolbarProps> = ({ selectedText, position, onClear }) => {
@@ -60,7 +58,6 @@ const SelectionToolbar: React.FC<SelectionToolbarProps> = ({ selectedText, posit
   if (!selectedText || !position) return null;
 
   // Handle "Add to chat" button click
-  // 使用 mousedown 而不是 click，因为 click 之前文本选择可能已被清除
   // Use mousedown instead of click because selection may be cleared before click fires
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();

@@ -5,10 +5,8 @@
  */
 
 /**
- * 窗口控制桥接模块
  * Window Controls Bridge Module
  *
- * 负责处理窗口的最小化、最大化、关闭等控制操作
  * Handles window minimize, maximize, close and other control operations
  */
 
@@ -31,7 +29,6 @@ function resolveControlWindow(): BrowserWindow | null {
 }
 
 /**
- * 为指定窗口注册最大化状态监听器
  * Register maximize state listeners for a specific window
  *
  * @param window BrowserWindow instance to listen to
@@ -49,10 +46,8 @@ export function registerWindowMaximizeListeners(window: BrowserWindow): void {
 }
 
 /**
- * 初始化窗口控制桥接
  * Initialize window controls bridge
  *
- * 注册 IPC 处理器以响应来自渲染进程的窗口控制请求
  * Register IPC handlers to respond to window control requests from renderer process
  */
 export function initWindowControlsBridge(): void {

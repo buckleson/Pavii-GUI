@@ -35,7 +35,6 @@ export function dispatchWorkspaceStateEvent(collapsed: boolean) {
 }
 
 /**
- * 当工作空间文件状态变化时触发
  * Dispatch when workspace files status changes
  */
 export function dispatchWorkspaceHasFilesEvent(

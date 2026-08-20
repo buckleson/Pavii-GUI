@@ -3,7 +3,6 @@
  * Copyright 2025 AionUi (aionui.com)
  * SPDX-License-Identifier: Apache-2.0
  *
- * 统一的 Agent Logo 工具
  * Unified Agent Logo utility
  *
  * Logo 真值由后端 `/api/agents/management` 提供（投影自 agent_metadata.icon/avatar）。

@@ -264,7 +264,7 @@ childProcess.execSync = function mockedExecSync(command) {
       ['installer-errors-sentry.nsh', [/MessageBox MB_YESNO\|MB_ICONSTOP/]],
       [
         'installer-process-control.nsh',
-        [/AIONUI_MSG_FILE_OR_FOLDER_IN_USE_ZH/, /\$\(appRunning\)/, /AIONUI_MSG_CLOSE_OR_REMOVE_PREVIOUS_ZH/],
+        [/AIONUI_MSG_FILE_OR_FOLDER_IN_USE_EN/, /\$\(appRunning\)/, /AIONUI_MSG_CLOSE_OR_REMOVE_PREVIOUS_EN/],
       ],
     ]);
 
@@ -289,12 +289,14 @@ childProcess.execSync = function mockedExecSync(command) {
   it('routes app-cannot-be-closed cancellation through E1003 instead of quitting silently', () => {
     const script = readFileSync(resolve(repoRoot, 'resources/windows/installer-process-control.nsh'), 'utf8');
     const cannotCloseBranch = script.match(
-      /AIONUI_MSG_CLOSE_OR_REMOVE_PREVIOUS_ZH[\s\S]*?IDRETRY aionui_wait_for_close([\s\S]*?)\$\{Else\}/
+      /AIONUI_MSG_CLOSE_OR_REMOVE_PREVIOUS_EN[\s\S]*?IDRETRY aionui_wait_for_close([\s\S]*?)\$\{Else\}/
     )?.[1];
 
     expect(cannotCloseBranch).toBeTruthy();
     expect(cannotCloseBranch).toContain('AIONUI_E_INSTALL_DIR_REMOVE_OR_LOCKED');
-    expect(cannotCloseBranch).toContain('AIONUI_FAIL_REPORTABLE_BILINGUAL_DIAGNOSTICS');
+    // The installer is English-only, so the bilingual macro family is gone; the
+    // diagnostics-carrying variant it collapsed into keeps the same guarantee.
+    expect(cannotCloseBranch).toContain('AIONUI_FAIL_REPORTABLE_DIAGNOSTICS');
     expect(cannotCloseBranch).not.toMatch(/^\s*Quit\s*$/m);
   });
 

@@ -77,7 +77,6 @@ const detachInternal = () => {
     contents.removeListener('destroyed', onDestroyed);
     if (dbg.isAttached()) dbg.detach();
   } catch {
-    // 已经销毁/已分离时 Electron 会抛，忽略即可。
     // Electron throws if it is already destroyed or detached; nothing to do.
   }
 };
@@ -215,7 +214,6 @@ const handleSocketMessage = async (ws: WebSocket, raw: string, announcedSessions
          * 同一个 sessionId 只宣布一次 attachedToTarget —— 重复宣布会让 puppeteer 换掉
          * 会话对象，把调用方手里的 handle 变成孤儿。
          *
-         * puppeteer 的 Connection.onMessage 收到 attachedToTarget 时无条件
          * Connection.js）。
          * 它不检查这个 sessionId 是否已经存在，于是第二次宣布会用一个全新对象覆盖旧的，
          * 而新对象带着一份空的 CallbackRegistry。
@@ -376,7 +374,6 @@ export const startCdpBridge = async (): Promise<CdpBridgeHandle> => {
 
   const port = await new Promise<number>((resolve, reject) => {
     httpServer.once('error', reject);
-    // 端口 0 = 让系统分配空闲端口，避免和别的服务撞。
     // Port 0 lets the OS pick a free port so we cannot collide with another service.
     httpServer.listen(0, HOST, () => {
       const addr = httpServer.address();

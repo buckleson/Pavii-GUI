@@ -28,7 +28,6 @@ import type { TabFadeState } from '../../hooks/useTabOverflow';
 const MAX_TAB_WIDTH_PX = 180;
 
 /**
- * Tab 信息
  * Tab information
  */
 export interface PreviewTab {
@@ -38,79 +37,66 @@ export interface PreviewTab {
   id: string;
 
   /**
-   * Tab 标题
    * Tab title
    */
   title: string;
 
   /**
-   * 是否有未保存的修改
    * Whether there are unsaved changes
    */
   isDirty?: boolean;
 
   /**
-   * 站点图标 URL，仅浏览器 tab 有
    * Site icon URL, browser tabs only
    */
   favicon?: string;
 
   /**
-   * Agent 正在操作该浏览器 tab
    * Agent is currently driving this browser tab
    */
   agentActive?: boolean;
 }
 
 /**
- * PreviewTabs 组件属性
  * PreviewTabs component props
  */
 interface PreviewTabsProps {
   /**
-   * Tabs 列表
    * Tabs list
    */
   tabs: PreviewTab[];
 
   /**
-   * 当前活动的 Tab ID
    * Current active tab ID
    */
   activeTabId: string | null;
 
   /**
-   * Tab 渐变状态（左右溢出指示器）
    * Tab fade state (left/right overflow indicators)
    */
   tabFadeState: TabFadeState;
 
   /**
-   * Tabs 容器引用
    * Tabs container ref
    */
   tabsContainerRef: React.RefObject<HTMLDivElement>;
 
   /**
-   * 切换 Tab 回调
    * Switch tab callback
    */
   onSwitchTab: (tabId: string) => void;
 
   /**
-   * 关闭 Tab 回调
    * Close tab callback
    */
   onCloseTab: (tabId: string) => void;
 
   /**
-   * Tab 右键菜单回调
    * Tab context menu callback
    */
   onContextMenu: (e: React.MouseEvent, tabId: string) => void;
 
   /**
-   * 关闭预览面板回调
    * Close preview panel callback
    */
   onClosePanel?: () => void;
@@ -124,13 +110,10 @@ interface PreviewTabsProps {
 }
 
 /**
- * 预览面板 Tabs 栏组件
  * Preview panel tabs bar component
  *
- * 显示多个 Tab，支持切换、关闭和右键菜单
  * Displays multiple tabs, supports switching, closing, and context menu
  *
- * 包含左右渐变指示器，提示用户可以滚动查看更多 Tab
  * Includes left/right gradient indicators to prompt users that more tabs can be scrolled
  */
 const PreviewTabs: React.FC<PreviewTabsProps> = ({

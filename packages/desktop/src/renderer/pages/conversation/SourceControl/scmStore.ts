@@ -92,7 +92,6 @@ export type ScmView = {
    * Which repo's changes the multi-repo panel body shows. `null` means "fall back
    * to the first repo" — the default on open and the landing spot after the selected
    * repo is removed. Pure front-end view state: switching it issues no `scm/*`
-   * request (every repo of the project is already subscribed, design D2丙). The view
    * resolves `null`-or-stale to the first repo, so a stale id never renders nothing.
    */
   selectedRepoId: string | null;

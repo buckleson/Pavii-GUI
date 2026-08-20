@@ -56,10 +56,8 @@ import { useTranslation } from 'react-i18next';
 import './preview.css';
 
 /**
- * 预览面板主组件
  * Main preview panel component
  *
- * 支持多 Tab 切换，每个 Tab 可以显示不同类型的内容
  * Supports multiple tabs, each tab can display different types of content
  */
 /**
@@ -104,9 +102,6 @@ const PreviewPanel: React.FC = () => {
   const [inspectMode, setInspectMode] = useState(false);
   const [toolbarExtras, setToolbarExtras] = useState<PreviewToolbarExtras | null>(null);
 
-  // 切换文件时把视图模式复位为预览，避免上一个文件的 source 模式串到下一个文件（如代码文件丢失语法高亮）。
-  // 注意：单预览浏览模式下打开新文件会复用当前 tab 的 id，所以这里要监听实际显示的文件标识（路径 + 类型），
-  // 而不是 activeTabId（它不会变）。
   // Reset view mode to preview when the displayed file changes so a previous file's source mode does not
   // leak into the next one (e.g. a code file losing syntax highlighting). In single-preview browse mode a
   // new file reuses the active tab's id, so we key on the file identity (path + type), not activeTabId.
@@ -295,7 +290,6 @@ const PreviewPanel: React.FC = () => {
     [setToolbarExtrasCallback]
   );
 
-  // 内层分割：编辑器和预览的分割比例（默认 50/50）
   // Inner split: Split ratio between editor and preview (default 50/50)
   const { splitRatio, createDragHandle } = useResizableSplit({
     defaultWidth: DEFAULT_SPLIT_RATIO,
@@ -927,7 +921,6 @@ const PreviewPanel: React.FC = () => {
       );
     } else if (content_type === 'code' || content_type === 'csv') {
       // Unified: always-editable CodeEditor (view = edit)
-      // csv 走同一分支：它本来就是纯文本，只是恰好有表格结构。
       // csv shares this branch: it is plain text that happens to be tabular.
       return (
         <div className='flex-1 overflow-hidden'>
@@ -1040,9 +1033,6 @@ const PreviewPanel: React.FC = () => {
           onCloseTab={handleCloseTab}
           onContextMenu={handleTabContextMenu}
           onClosePanel={handleClosePanel}
-          // 只要面板里已经有任意 tab（文件或浏览器），就露出「新建浏览器 tab」的加号，
-          // 不必等用户先手动开过一次浏览器。面板本身为空时才隐藏，避免出现一个没有
-          // 上下文的孤立加号。
           // Show the "new browser tab" plus as soon as the panel holds any tab (file or
           // browser) instead of requiring the user to open a browser first. It stays
           // hidden only while the panel is empty, so the plus never appears alone.

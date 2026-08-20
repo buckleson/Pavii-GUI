@@ -94,7 +94,6 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ tabId, fileRef, file_path, cont
         return;
       }
 
-      // webview 加载成功后隐藏 loading
       // Hide loading after webview finishes loading
       const webview = webviewRef.current;
       if (webview) {
@@ -122,7 +121,6 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ tabId, fileRef, file_path, cont
     }
   }, [fileRef, file_path, content, t]);
 
-  // 设置工具栏扩展（必须在所有条件返回之前调用）
   // Set toolbar extras (must be called before any conditional returns)
   useEffect(() => {
     if (!usePortalToolbar || !toolbarExtrasContext || loading || error) return;
@@ -138,7 +136,6 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ tabId, fileRef, file_path, cont
     return () => toolbarExtrasContext.setExtras(null);
   }, [usePortalToolbar, toolbarExtrasContext, t, loading, error]);
 
-  // 使用 Electron webview 加载本地 PDF 文件
   // Use Electron webview to load local PDF files
   const pdfSrc = buildPdfSrc(fileRef, content);
 

@@ -53,8 +53,6 @@ export interface PreviewMetadata {
   // once the threshold becomes a setting, recomputing would let a changed
   // setting alter tabs already on screen.
   thresholdBytes?: number;
-  // 上次已知修改时间，保存时作为 If-Match 乐观并发条件。
-  // openPreview 会把它写进 fileMtimeRef —— 那是这个字段唯一的用途。
   // Last-known mtime, the If-Match condition for save-time conflict detection.
   // openPreview copies it into fileMtimeRef, which is this field's only purpose.
   lastModified?: number;
@@ -116,7 +114,6 @@ export interface PreviewContextValue {
     options?: OpenPreviewOptions
   ) => void;
   /**
-   * 打开浏览器 tab，省略 url 则开空白页。
    * Open a browser tab; blank page when url is omitted.
    */
   openBrowserTab: (url?: string) => void;
@@ -208,7 +205,6 @@ const MAX_PERSISTED_SCOPES = 12;
 /** Persisted per-scope preview state. */
 type PersistedScopeState = { isOpen: boolean; tabs: PreviewTab[]; activeTabId: string | null };
 
-// 仅持久化小体积文本预览，避免大文本导致 localStorage 写入卡顿
 // Persist only lightweight text previews to avoid localStorage jank on large files
 const MAX_PERSISTED_TAB_CONTENT_LENGTH = 80_000;
 // `browser` tabs persist so switching projects/conversations restores the same
@@ -764,7 +760,6 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
         currentTabs.filter((tab) => tab.content_type === 'browser').length >= MAX_BROWSER_TABS;
       if (atBrowserTabLimit) setBrowserTabLimitHitAt(Date.now());
 
-      // Tab 标题：优先使用文件名，并从 title 中提取实际文件名
       // Tab title: Prefer file_name and extract actual filename from title
       const fallbackTitle = (() => {
         // Set default title based on content type
@@ -1089,7 +1084,6 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
           // 标记正在保存（避免触发轮询/流式回调）/ Mark as saving (avoid triggering poll/stream callbacks)
           savingFilesRef.current.add(saveKey);
 
-          // PUT /content：带 If-Match(上次已知 mtime) 乐观并发，冲突后端返 409
           // PUT /content: optimistic concurrency via If-Match (last-known mtime); backend returns 409 on conflict
           const ifMatch = fileMtimeRef.current.get(saveKey);
           const success = await ipcBridge.fs.writeContent.invoke({ file: fileRef, data: tab.content, ifMatch });
@@ -1103,7 +1097,6 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 return t;
               })
             );
-            // 保存成功后刷新已知 mtime，供下次保存发送新鲜 If-Match
             // Refresh known mtime after a successful save so the next save sends a fresh If-Match
             void ipcBridge.fs.getContentMetadata
               .invoke({ file: fileRef })
@@ -1157,9 +1150,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setDomSnippets([]);
   }, []);
 
-  // 流式内容订阅：订阅 agent 写入文件时的流式更新（替代文件监听）
   // Streaming content subscription: Subscribe to streaming updates when agent writes files (replaces file watching)
-  // 使用防抖优化：等待 agent 完成写入后再更新预览，避免打字动画被频繁中断
   // Use debounce optimization: Wait for agent to finish writing before updating preview, avoiding frequent animation interruptions
   useEffect(() => {
     // Debounce timer map: one timer per file path
@@ -1185,7 +1176,6 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return;
       }
 
-      // 对写入操作进行防抖：500ms 内没有新的更新才真正更新内容
       // Debounce write operations: Only update content if no new updates within 500ms
       const existingTimer = debounceTimers.get(file_path);
       if (existingTimer) {

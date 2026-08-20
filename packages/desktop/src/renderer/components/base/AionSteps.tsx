@@ -20,7 +20,6 @@ export interface AionStepsProps extends StepsProps {
 /**
  * Steps component
  *
- * 基于 Arco Design Steps 的封装，提供统一的样式主题
  * Wrapper around Arco Design Steps with unified theme styling
  *
  * @features

@@ -46,7 +46,6 @@ const hasNotified = (): boolean => {
   try {
     return localStorage.getItem(FIRST_USE_STORAGE_KEY) === '1';
   } catch {
-    // localStorage 不可用时宁可不提示，也不要每次都弹
     // If localStorage is unavailable, prefer never notifying over notifying always.
     return true;
   }
@@ -62,7 +61,6 @@ const rememberNotified = (): void => {
 };
 
 /**
- * 若尚未提示过，则展示一次性提示。已提示过时为空操作。
  * Shows the one-time notice unless it has already been shown. No-op otherwise.
  */
 export const maybeNotifyFirstAgentBrowserUse = (): void => {

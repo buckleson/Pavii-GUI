@@ -13,10 +13,8 @@ interface UseTypingAnimationOptions {
 }
 
 /**
- * 流式打字动画 Hook
  * Typing animation Hook
  *
- * 用于实现流式内容的逐字符显示效果，常用于 AI 生成内容的实时展示
  * Used to implement character-by-character display for streaming content, commonly used for real-time AI content display
  *
  * @example
@@ -44,13 +42,11 @@ export const useTypingAnimation = ({ content, enabled = true, speed = 50 }: UseT
 
     targetContentRef.current = content;
 
-    // 如果内容没变化，不做任何事
     // If content unchanged, do nothing
     if (content === displayedContent) {
       return;
     }
 
-    // 如果 displayedContent 是空的，说明是首次加载，直接显示
     // If displayedContent is empty, it's the first load, show immediately
     if (displayedContent.length === 0) {
       setDisplayedContent(content);
@@ -84,7 +80,6 @@ export const useTypingAnimation = ({ content, enabled = true, speed = 50 }: UseT
     const animate = (timestamp: number) => {
       const elapsed = timestamp - lastTimestamp;
 
-      // 每 msPerChar 毫秒显示一个字符
       // Show one character every msPerChar milliseconds
       if (elapsed >= msPerChar) {
         const charsToAdd = Math.floor(elapsed / msPerChar);
@@ -93,7 +88,6 @@ export const useTypingAnimation = ({ content, enabled = true, speed = 50 }: UseT
 
         setDisplayedContent(targetContent.substring(0, currentIndex));
 
-        // 如果还没显示完，继续动画
         // If not finished, continue animation
         if (currentIndex < targetContent.length) {
           animationFrameRef.current = requestAnimationFrame(animate);
@@ -102,17 +96,14 @@ export const useTypingAnimation = ({ content, enabled = true, speed = 50 }: UseT
           animationFrameRef.current = null;
         }
       } else {
-        // 继续等待
         // Keep waiting
         animationFrameRef.current = requestAnimationFrame(animate);
       }
     };
 
-    // 启动动画
     // Start animation
     animationFrameRef.current = requestAnimationFrame(animate);
 
-    // 清理函数
     // Cleanup function
     return () => {
       if (animationFrameRef.current) {

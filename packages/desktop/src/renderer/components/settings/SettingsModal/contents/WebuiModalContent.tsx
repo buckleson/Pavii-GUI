@@ -22,7 +22,6 @@ import { useTranslation } from 'react-i18next';
 import { useSettingsViewMode } from '../settingsViewContext';
 
 /**
- * 偏好设置行组件
  * Preference row component
  */
 const PreferenceRow: React.FC<{
@@ -59,7 +58,6 @@ const DESKTOP_WEBUI_ENABLED_KEY = 'webui.desktop.enabled';
 const DESKTOP_WEBUI_ALLOW_REMOTE_KEY = 'webui.desktop.allowRemote';
 
 /**
- * WebUI 设置内容组件
  * WebUI settings content component
  */
 const WebuiModalContent: React.FC = () => {
@@ -171,7 +169,6 @@ const WebuiModalContent: React.FC = () => {
           // Having initial password means can show plaintext
           setCanShowPlainPassword(true);
         }
-        // 注意：如果 running 但没有密码，会在下面的 useEffect 中自动重置
         // Note: If running but no password, auto-reset will be triggered in the useEffect below
       } else {
         // getStatus failed — fall back to treating server as stopped rather
@@ -229,15 +226,11 @@ const WebuiModalContent: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // 注意：不再自动重置密码，用户已有密码存储在数据库中
   // Note: No longer auto-reset password, user already has password stored in database
-  // 如果用户忘记密码，可以手动点击重置按钮
   // If user forgets password, they can manually click reset button
   useEffect(() => {
-    // 仅在组件首次加载且没有显示过密码时，标记为密文状态
     // Only when component first loads and password hasn't been shown, mark as hidden
     if (status?.running && !status?.initialPassword && !cachedPassword && !loading) {
-      // 不自动重置，只是确保密码显示为 ******
       // Don't auto-reset, just ensure password shows as ******
       setCanShowPlainPassword(false);
     }
@@ -334,7 +327,6 @@ const WebuiModalContent: React.FC = () => {
 
     const wasRunning = status?.running;
 
-    // 如果服务器正在运行，需要重启以应用新的绑定设置
     // If server is running, need to restart to apply new binding settings
     if (wasRunning) {
       setStartLoading(true);
@@ -520,7 +512,6 @@ const WebuiModalContent: React.FC = () => {
         setQrUrl(`${baseUrl}/qr-login?token=${qrData.token}`);
         setQrExpiresAt(qrData.expires_at_ms);
 
-        // 设置自动刷新定时器（4分钟后自动刷新，因为 token 5分钟过期）
         // Set auto-refresh timer (refresh after 4 minutes, as token expires in 5 minutes)
         if (qrRefreshTimerRef.current) {
           clearTimeout(qrRefreshTimerRef.current);

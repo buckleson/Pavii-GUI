@@ -5,10 +5,8 @@
  */
 
 /**
- * 模型平台配置模块
  * Model Platform Configuration Module
  *
- * 集中管理所有模型平台的配置信息，便于扩展和维护
  * Centralized management of all model platform configurations for extensibility and maintainability
  */
 
@@ -19,13 +17,11 @@ const buildLogoAssetUrl = (path: string): string => {
 };
 
 /**
- * 平台类型
  * Platform type
  */
 export type PlatformType = 'gemini' | 'gemini-vertex-ai' | 'anthropic' | 'custom' | 'new-api' | 'bedrock';
 
 /**
- * 模型平台配置接口
  * Model Platform Configuration Interface
  */
 export interface PlatformConfig {
@@ -44,7 +40,6 @@ export interface PlatformConfig {
 }
 
 /**
- * 模型平台选项列表
  * Model Platform options list
  *
  * 顺序：
@@ -264,7 +259,6 @@ export const MODEL_PLATFORMS: PlatformConfig[] = [
 ];
 
 /**
- * New API 协议选项
  * New API protocol options for per-model protocol configuration
  */
 export const NEW_API_PROTOCOL_OPTIONS = [
@@ -274,7 +268,6 @@ export const NEW_API_PROTOCOL_OPTIONS = [
 ];
 
 /**
- * 根据模型名称自动推断 New API 协议类型
  * Auto-detect New API protocol type based on model name
  */
 export const detectNewApiProtocol = (modelName: string): string => {
@@ -286,7 +279,6 @@ export const detectNewApiProtocol = (modelName: string): string => {
 };
 
 /**
- * 添加模型弹窗的默认平台——始终跟随列表第一位
  * Default platform for the add-model modal — always the first list entry
  */
 export const DEFAULT_PLATFORM_VALUE = MODEL_PLATFORMS[0].value;
@@ -294,7 +286,6 @@ export const DEFAULT_PLATFORM_VALUE = MODEL_PLATFORMS[0].value;
 // Utility Functions ============
 
 /**
- * 根据 value 获取平台配置
  * Get platform config by value
  */
 export const getPlatformByValue = (value: string): PlatformConfig | undefined => {
@@ -302,7 +293,6 @@ export const getPlatformByValue = (value: string): PlatformConfig | undefined =>
 };
 
 /**
- * 获取所有预设供应商（有 base_url 的）
  * Get all preset providers (with base_url)
  */
 export const getPresetProviders = (): PlatformConfig[] => {
@@ -350,7 +340,6 @@ export const getProviderLogo = ({
 };
 
 /**
- * 获取官方 Gemini 平台
  * Get official Gemini platforms
  */
 export const getGeminiPlatforms = (): PlatformConfig[] => {
@@ -358,7 +347,6 @@ export const getGeminiPlatforms = (): PlatformConfig[] => {
 };
 
 /**
- * 检查平台是否为 Gemini 类型
  * Check if platform is Gemini type
  */
 export const isGeminiPlatform = (platform: PlatformType): boolean => {
@@ -366,7 +354,6 @@ export const isGeminiPlatform = (platform: PlatformType): boolean => {
 };
 
 /**
- * 检查是否为自定义选项（无预设 base_url）
  * Check if it's custom option (no preset base_url)
  */
 export const isCustomOption = (value: string): boolean => {
@@ -378,7 +365,6 @@ export const isCustomOption = (value: string): boolean => {
 export { isNewApiPlatform } from '@/common/utils/platformConstants';
 
 /**
- * 根据名称搜索平台（不区分大小写）
  * Search platforms by name (case-insensitive)
  */
 export const searchPlatformsByName = (keyword: string): PlatformConfig[] => {

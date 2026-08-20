@@ -73,7 +73,6 @@ const DefaultIcon: React.FC<{ active: boolean }> = ({ active }) => (
 );
 
 /**
- * 折叠面板子项组件（仅用于类型检查和结构化）
  * Collapse item component (used for type checking and structure only)
  */
 const AionCollapseItem: React.FC<AionCollapseItemProps> = ({ children }) => <>{children}</>;
@@ -82,7 +81,6 @@ AionCollapseItem.displayName = 'AionCollapseItem';
 /**
  * Collapsible panel component
  *
- * 支持受控和非受控模式、手风琴模式、自定义图标等
  * Supports controlled/uncontrolled mode, accordion mode, custom icons, etc.
  *
  * @example
@@ -92,8 +90,6 @@ AionCollapseItem.displayName = 'AionCollapseItem';
  *   <AionCollapse.Item name="1" header="面板1">
  *     内容1
  *   </AionCollapse.Item>
- *   <AionCollapse.Item name="2" header="面板2">
- *     内容2
  *   </AionCollapse.Item>
  * </AionCollapse>
  *

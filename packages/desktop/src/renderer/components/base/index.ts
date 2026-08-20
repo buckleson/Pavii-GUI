@@ -7,7 +7,6 @@
 /**
  * AionUi base components unified exports
  *
- * 提供所有基础组件和类型的统一导出入口
  * Provides unified export entry for all base components and types
  */
 

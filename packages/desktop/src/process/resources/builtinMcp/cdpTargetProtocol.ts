@@ -236,7 +236,6 @@ export const decideCdpCommand = (req: CdpRequest, getTargetInfo: () => TargetInf
 
     case 'Target.detachFromTarget':
     case 'Target.closeTarget':
-      // 关掉侧边浏览器不该由 Agent 决定，静默应答即可。
       // Closing the in-app browser is not the agent's call; acknowledge and do nothing.
       return { kind: 'reply', payload: {} };
 
@@ -251,7 +250,6 @@ export const decideCdpCommand = (req: CdpRequest, getTargetInfo: () => TargetInf
       return { kind: 'error', message: 'Pavii.Ai in-app browser does not support multiple browser contexts.' };
 
     /**
-     * Browser.close 会关掉整个应用 —— 绝不能让 Agent 触发。
      * Browser.close would terminate the whole app; never let the agent reach it.
      */
     case 'Browser.close':

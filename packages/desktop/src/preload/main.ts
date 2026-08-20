@@ -78,7 +78,6 @@ contextBridge.exposeInMainWorld('__backendStartupBridge', {
   },
 });
 
-// 托盘事件监听 - 将 IPC 事件转换为 DOM 事件
 // Tray event listeners - convert IPC events to DOM events
 const trayEvents = [
   'tray:navigate-to-guid',

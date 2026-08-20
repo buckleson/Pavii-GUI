@@ -10,7 +10,6 @@ import useModeModeList from '@renderer/hooks/agent/useModeModeList';
 import { getProviderLogo } from '@/renderer/utils/model/modelPlatforms';
 
 /**
- * 供应商 Logo 组件
  * Provider Logo Component
  */
 const ProviderLogo: React.FC<{ logo: string | null; name: string; size?: number }> = ({ logo, name, size = 20 }) => {

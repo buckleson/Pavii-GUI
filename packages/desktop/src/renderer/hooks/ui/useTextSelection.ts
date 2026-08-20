@@ -15,7 +15,6 @@ export interface SelectionPosition {
 }
 
 /**
- * 文本选择 Hook，监听容器内的文本选择事件
  * Text selection Hook that monitors text selection events within a container
  *
  * @param containerRef Container reference

@@ -76,7 +76,6 @@ const BrowserDataSection: React.FC = () => {
   }, [t]);
 
   const handleClear = useCallback(() => {
-    // 二次确认：清掉之后所有网站都要重新登录，且不可撤销
     // Confirm first: this signs out of every site and cannot be undone.
     Modal.confirm({
       title: t('settings.browserData.clearConfirmTitle'),

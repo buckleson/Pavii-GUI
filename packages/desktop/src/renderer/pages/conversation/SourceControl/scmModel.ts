@@ -170,7 +170,6 @@ export const isActionable = (resource: ScmResource): boolean => {
 /**
  * Stable-enough row identity for React keys. The `staged` flag is part of the key
  * on purpose: git can report the same file twice in one frame (one staged entry
- * and one unstaged entry, source-control.md §变更清单), so `pe_id + path` alone is
  * not unique within a status frame.
  *
  * All **three** states of the flag get distinct keys — `true` / `false` /
@@ -333,7 +332,6 @@ export const failedRowKeys = (failures: ScmActionFailure[], rows: ScmResource[],
  * Only a row that exists **nowhere but the working tree** goes to the trash. A
  * `created` row that is already staged does not: it has a staged version, so
  * discarding restores from the index — which holds even in a repository with no
- * commits at all (source-control.md §空仓边界: an unborn HEAD still has an index,
  * so discard is the same rule, not a special case).
  */
 const isUntrackedForDiscard = (r: ScmResource): boolean => r.state === 'created' && r.staged !== true;

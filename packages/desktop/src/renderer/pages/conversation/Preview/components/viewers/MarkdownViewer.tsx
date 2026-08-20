@@ -211,10 +211,8 @@ const HEADING_COMPONENTS = Object.fromEntries(
 );
 
 /**
- * Markdown 预览组件
  * Markdown preview component
  *
- * 使用 Streamdown 原生渲染 Markdown（Shiki 代码高亮、Mermaid、KaTeX），支持原文/预览切换
  * Uses Streamdown native rendering (Shiki code highlight, Mermaid, KaTeX), supports source/preview toggle
  */
 const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({

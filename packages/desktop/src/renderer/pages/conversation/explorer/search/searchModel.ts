@@ -94,7 +94,6 @@ export const scoreSearchHit = (hit: SearchHit, query: string): number => {
 /**
  * Order the backend-bounded hit set for display: rank by {@link scoreSearchHit}
  * desc, ties broken by relative_path for stability (arrival order is not
- * guaranteed — multi-root hits merge into one unordered stream, search.md §多根).
  * An empty query = browse mode → keep arrival-stable order, path-sorted.
  */
 export const rankSearchHits = (hits: SearchHit[], query: string): SearchHit[] => {

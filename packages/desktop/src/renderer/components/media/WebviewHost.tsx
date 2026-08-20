@@ -178,7 +178,6 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
       if (!webviewEl || !targetUrl) return;
       if (targetUrl === currentUrl) return;
 
-      // 标记为内部导航，避免 url prop 回环触发历史重置
       // Mark as internal so the url-prop echo cannot trigger a history reset.
       internalNavRef.current.record(targetUrl);
       setCurrentUrl(targetUrl);
@@ -200,7 +199,6 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
     };
 
     /**
-     * 把按钮的可用状态对齐 webview 的真实历史。
      * Align the buttons' enabled state with the webview's real history.
      */
     const syncNavState = () => {

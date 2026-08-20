@@ -8,7 +8,6 @@ import type { IMcpServer } from '@/common/config/storage';
 import { globalMessageQueue } from './messageQueue';
 
 /**
- * 截断过长的错误消息，保持可读性
  * Truncate long error messages to keep them readable
  */
 const truncateErrorMessage = (message: string, maxLength: number = 150): string => {

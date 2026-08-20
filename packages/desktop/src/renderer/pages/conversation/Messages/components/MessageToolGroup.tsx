@@ -439,7 +439,6 @@ const ToolResultDisplay: React.FC<{
   // 将结果转换为字符串 Convert result to string
   const display = typeof result_display === 'string' ? result_display : JSON.stringify(result_display, null, 2);
 
-  // 使用 CollapsibleContent 包装长内容
   // Wrap long content with CollapsibleContent
   return (
     <CollapsibleContent maxHeight={RESULT_MAX_HEIGHT} defaultCollapsed={true} useMask={false}>

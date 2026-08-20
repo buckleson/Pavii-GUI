@@ -5,15 +5,12 @@
  */
 
 /**
- * API 提供商主机配置
  * API Provider Host Configuration
  *
- * 集中管理各 AI 服务商的官方 API 主机名
  * Centralized management of official API hostnames for AI providers
  */
 export const API_HOST_CONFIG = {
   /**
-   * Google AI 官方主机
    * Google AI Official Hosts
    */
   google: {
@@ -24,7 +21,6 @@ export const API_HOST_CONFIG = {
   },
 
   /**
-   * OpenAI 官方主机
    * OpenAI Official Hosts
    */
   openai: {
@@ -32,7 +28,6 @@ export const API_HOST_CONFIG = {
   },
 
   /**
-   * Anthropic 官方主机
    * Anthropic Official Hosts
    */
   anthropic: {
@@ -41,13 +36,11 @@ export const API_HOST_CONFIG = {
 } as const;
 
 /**
- * Google API 主机白名单（从配置派生）
  * Google API Hosts Whitelist (derived from config)
  */
 export const GOOGLE_API_HOSTS = Object.values(API_HOST_CONFIG.google);
 
 /**
- * 安全验证 URL 是否为指定提供商的官方主机
  * Safely validate if URL is an official host for specified provider
  *
  * @param urlString URL string to validate
@@ -64,10 +57,8 @@ export function isOfficialHost(urlString: string, allowedHosts: readonly string[
 }
 
 /**
- * 安全验证 URL 是否为 Google APIs 主机
  * Safely validate if URL is a Google APIs host
  *
- * 使用 URL 解析而非字符串包含检查，防止恶意 URL 绕过
  * Uses URL parsing instead of string includes to prevent malicious URL bypass
  *
  * @param urlString URL string to validate
@@ -83,7 +74,6 @@ export function isGoogleApisHost(urlString: string): boolean {
 }
 
 /**
- * 验证 URL 是否为 OpenAI 官方主机
  * Validate if URL is an official OpenAI host
  */
 export function isOpenAIHost(urlString: string): boolean {
@@ -91,7 +81,6 @@ export function isOpenAIHost(urlString: string): boolean {
 }
 
 /**
- * 验证 URL 是否为 Anthropic 官方主机
  * Validate if URL is an official Anthropic host
  */
 export function isAnthropicHost(urlString: string): boolean {

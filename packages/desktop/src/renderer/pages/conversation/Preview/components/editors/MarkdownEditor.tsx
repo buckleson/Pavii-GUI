@@ -25,10 +25,8 @@ interface MarkdownEditorProps {
 }
 
 /**
- * Markdown 编辑器组件
  * Markdown editor component
  *
- * 基于 CodeMirror 实现，支持语法高亮和实时编辑
  * Based on CodeMirror, supports syntax highlighting and live editing
  */
 const MarkdownEditor: React.FC<MarkdownEditorProps> = ({

@@ -524,17 +524,14 @@ export interface IProvider {
     profile?: string;
   };
   /**
-   * 供应商启用状态，默认为 true
    * Provider enabled state, defaults to true
    */
   enabled?: boolean;
   /**
-   * 各个模型的启用状态，默认全部为 true
    * Individual model enabled states, defaults to all true
    */
   model_enabled?: Record<string, boolean>;
   /**
-   * 各个模型的健康检测结果（仅用于 UI 显示，不影响启用状态）
    * Model health check results (for UI display only, does not affect enabled state)
    */
   model_health?: Record<

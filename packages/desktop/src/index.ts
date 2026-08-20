@@ -682,7 +682,6 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
     ipcBridge.application.devToolsStateChanged.emit({ isOpen: false });
   });
 
-  // 关闭拦截：当启用"关闭到托盘"时，隐藏窗口而非关闭
   // Close interception: hide window instead of closing when "close to tray" is enabled
   mainWindow.on('close', (event) => {
     if (mainWindow.isDestroyed()) return;
@@ -1023,7 +1022,6 @@ const handleAppReady = async (): Promise<void> => {
     appReadyDone = true;
     mark('createWindow');
 
-    // 读取语言设置并初始化主进程 i18n，然后刷新托盘菜单
     // Read language setting and initialize main process i18n, then refresh tray menu
     try {
       const savedLanguage = await ProcessConfig.get('language');

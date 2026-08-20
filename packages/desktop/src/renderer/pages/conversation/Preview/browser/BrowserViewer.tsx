@@ -56,8 +56,6 @@ const BrowserViewer: React.FC<BrowserViewerProps> = ({ url, tabId, onUrlChange, 
   );
 
   /**
-   * about:blank 不会触发 page-title-updated，所以空白页的标题在这里兜底，
-   * 否则新建 tab 会一直显示上一次的标题。
    * about:blank fires no title event, so derive the label here — otherwise a
    * fresh tab would keep showing the previous page's title.
    */

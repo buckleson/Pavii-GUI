@@ -9,18 +9,15 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
- * 关闭 Tab 确认状态
  * Close tab confirmation state
  */
 export interface CloseTabConfirmState {
   /**
-   * 是否显示确认对话框
    * Whether to show confirmation dialog
    */
   show: boolean;
 
   /**
-   * 要关闭的 Tab ID
    * Tab ID to close
    */
   tabId: string | null;
@@ -41,7 +38,6 @@ export interface CloseTabConfirmState {
   batchTabIds?: string[];
 
   /**
-   * 批量中未保存的 tab 数量，用于文案。
    * How many tabs in the batch are unsaved, for the message.
    */
   dirtyCount?: number;
@@ -61,18 +57,15 @@ export interface RefreshConfirmState {
 }
 
 /**
- * PreviewConfirmModals 组件属性
  * PreviewConfirmModals component props
  */
 interface PreviewConfirmModalsProps {
   /**
-   * 关闭 Tab 确认状态
    * Close tab confirmation state
    */
   closeTabConfirm: CloseTabConfirmState;
 
   /**
-   * 刷新确认状态
    * Refresh confirmation state
    */
   refreshConfirm?: RefreshConfirmState;
@@ -84,29 +77,24 @@ interface PreviewConfirmModalsProps {
   onCancelRefresh?: () => void;
 
   /**
-   * 保存并关闭 Tab
    * Save and close tab
    */
   onSaveAndCloseTab: () => void;
 
   /**
-   * 不保存直接关闭 Tab
    * Close tab without saving
    */
   onCloseWithoutSave: () => void;
 
   /**
-   * 取消关闭 Tab
    * Cancel close tab
    */
   onCancelCloseTab: () => void;
 }
 
 /**
- * 预览面板确认对话框组件
  * Preview panel confirmation modals component
  *
- * 包含关闭 Tab 确认对话框
  * Contains the close tab confirmation dialog
  */
 const PreviewConfirmModals: React.FC<PreviewConfirmModalsProps> = ({

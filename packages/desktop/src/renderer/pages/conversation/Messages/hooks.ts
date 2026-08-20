@@ -50,7 +50,6 @@ const [useMessagePaginationState, MessagePaginationProvider, useUpdateMessagePag
 
 const beforeUpdateMessageListStack: Array<(list: TMessage[]) => TMessage[]> = [];
 
-// 消息索引缓存类型定义
 // Message index cache type definitions
 interface MessageIndex {
   msgIdIndex: Map<string, number>; // msg_id -> index
@@ -65,7 +64,6 @@ function getMessageIndexKey(message: TMessage): string | undefined {
   return message.type === 'thinking' ? `thinking:${message.msg_id}` : message.msg_id;
 }
 
-// 使用 WeakMap 缓存索引，当列表被 GC 时自动清理
 // Use WeakMap to cache index, auto-cleanup when list is GC'd
 const indexCache = new WeakMap<TMessage[], MessageIndex>();
 
@@ -82,7 +80,6 @@ export function logDroppedToolCallWithoutCallId(message: TMessage | undefined): 
   return true;
 }
 
-// 构建消息索引
 // Build message index
 export function buildMessageIndex(list: TMessage[]): MessageIndex {
   const msgIdIndex = new Map<string, number>();
@@ -114,7 +111,6 @@ export function buildMessageIndex(list: TMessage[]): MessageIndex {
   return { msgIdIndex, call_idIndex, tool_call_idIndex, permission_call_idIndex, terminal_idIndex };
 }
 
-// 获取或构建索引（带缓存）
 // Get or build index with caching
 function getOrBuildIndex(list: TMessage[]): MessageIndex {
   let cached = indexCache.get(list);
@@ -130,7 +126,6 @@ const sanitizeMessageForList = (message: TMessage): TMessage =>
     ? ({ ...message, content: sanitizeAcpToolCallContent(message.content) } as TMessage)
     : message;
 
-// 使用索引优化的消息合并函数
 // Index-optimized message compose function
 export function composeMessageWithIndex(
   message: TMessage | undefined,
@@ -172,7 +167,6 @@ export function composeMessageWithIndex(
     return result;
   }
 
-  // tool_call: 使用 call_idIndex 快速查找
   // tool_call: use call_idIndex for fast lookup
   if (message.type === 'tool_call' && message.content?.call_id) {
     const existingIdx = index.call_idIndex.get(message.content.call_id);
@@ -406,7 +400,6 @@ export const useMergeLiveMessage = () => {
     if (!pending.length) return;
     pendingRef.current = [];
     update((list) => {
-      // 获取或构建索引用于快速查找 (O(1) instead of O(n))
       // Get or build index for fast lookup
       const index = getOrBuildIndex(list);
       let newList = list;
@@ -421,7 +414,6 @@ export const useMergeLiveMessage = () => {
         }
 
         if (item.add) {
-          // 新增消息，更新索引
           // New message, update index
           const msg = sanitizeMessageForList(item.message);
           const newIdx = newList.length;
@@ -441,7 +433,6 @@ export const useMergeLiveMessage = () => {
           }
           newList = newList.concat(msg);
         } else {
-          // 使用索引优化的消息合并
           // Use index-optimized message compose
           newList = composeMessageWithIndex(item.message, newList, index);
         }
