@@ -94,8 +94,21 @@ const ALLOWLIST = [
   },
 ];
 
-/** CJK ranges: Hiragana/Katakana, CJK Unified Ideographs, Hangul syllables. */
+/**
+ * CJK ranges: symbols/punctuation, Hiragana/Katakana, CJK Unified Ideographs,
+ * Hangul syllables.
+ *
+ * U+3000-U+303F must stay first in this list, and is the range most likely to
+ * be dropped by someone tidying it: it holds no ideographs, only punctuation --
+ * the ideographic comma U+3001, the ideographic full stop U+3002, the corner
+ * and angle brackets. Those are the characters that survive a translation pass,
+ * because a sentence reads as English right up until its separator. Leaving the
+ * list to start at U+3040 let three list-joining calls render U+3001 into
+ * English tooltips, and hid several comment fragments that an earlier pass had
+ * truncated at a full-width full stop.
+ */
 const CJK_RANGES = [
+  [0x3000, 0x303f],
   [0x3040, 0x30ff],
   [0x3400, 0x4dbf],
   [0x4e00, 0x9fff],

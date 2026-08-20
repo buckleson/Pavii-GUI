@@ -49,7 +49,10 @@ export const BoundAssistantStack: React.FC<{ assistants: Assistant[]; max?: numb
 
   const shown = assistants.slice(0, max);
   const overflow = assistants.length - shown.length;
-  const tooltip = assistants.map((a) => assistantLabel(a, localeKey)).join('、');
+  // Joined with an ASCII comma, not the ideographic comma (U+3001) this used to
+  // use: that is CJK punctuation, and the result renders straight into the
+  // tooltip of an English-only UI.
+  const tooltip = assistants.map((a) => assistantLabel(a, localeKey)).join(', ');
 
   return (
     <Tooltip

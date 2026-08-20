@@ -46,11 +46,8 @@ const PASSTHROUGH_SCHEMES = ['about:', 'data:', 'blob:', 'chrome:', 'devtools:',
 const EXPLICIT_SCHEME_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
 
 /**
- * x`。
- * Requires a TLD-like suffix after the first segment, or localhost / an IP with a port.
- *
  * Host-like input: `example.com`, `localhost:3000`, `192.168.1.5/x`. Requires a
- * TLD-ish suffix, or localhost/IP with a port.
+ * TLD-ish suffix after the first segment, or localhost / an IP with a port.
  */
 const HOST_LIKE_RE = /^(?:[\w-]+\.)+[a-z]{2,}(?::\d+)?(?:[/?#].*)?$/i;
 const LOCALHOST_RE = /^localhost(?::\d+)?(?:[/?#].*)?$/i;

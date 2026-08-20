@@ -13,7 +13,11 @@ type ModalHandles = {
 };
 
 async function openCreateModal(page: import('@playwright/test').Page): Promise<ModalHandles> {
-  const createBtn = page.locator('.h-20px.w-20px.rd-4px').first();
+  // Anchored on the sidebar entry's testid. This used to match the "+" button
+  // by its UnoCSS utility classes, which stopped matching when the button was
+  // restyled — every test in this file then failed on a 10s timeout that read
+  // like the modal was broken.
+  const createBtn = page.locator('[data-testid="team-create-btn"]').first();
   await expect(createBtn).toBeVisible({ timeout: 10_000 });
   await createBtn.click();
 

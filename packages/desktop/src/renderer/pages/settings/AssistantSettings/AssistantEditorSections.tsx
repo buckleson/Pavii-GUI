@@ -258,7 +258,7 @@ const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ edito
   };
 
   const readonlySelectionSummary = (items: string[], emptyLabel: string) =>
-    items.length > 0 ? items.join('、') : emptyLabel;
+    items.length > 0 ? items.join(', ') : emptyLabel;
 
   const handleBeginPromptEdit = (index: number) => {
     setEditingPromptIndex(index);

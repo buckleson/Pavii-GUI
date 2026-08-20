@@ -33,7 +33,7 @@ const SkillUsedByStack: React.FC<{ assistants: Assistant[]; max?: number }> = ({
 
   const shown = assistants.slice(0, max);
   const overflow = assistants.length - shown.length;
-  const names = assistants.map((a) => a.name_i18n?.[localeKey] || a.name).join('、');
+  const names = assistants.map((a) => a.name_i18n?.[localeKey] || a.name).join(', ');
 
   return (
     <Tooltip

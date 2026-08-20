@@ -82,7 +82,7 @@ test.describe('Team Workspace Migration', () => {
     const teamSection = page.locator('text=Teams').or(page.locator('text=团队'));
     await expect(teamSection.first()).toBeVisible({ timeout: 15_000 });
 
-    const createBtn = page.locator('.h-20px.w-20px.rd-4px').first();
+    const createBtn = page.locator('[data-testid="team-create-btn"]').first();
     await expect(createBtn).toBeVisible({ timeout: 10_000 });
     await createBtn.click();
 
