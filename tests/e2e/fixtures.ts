@@ -297,6 +297,47 @@ async function launchApp(): Promise<ElectronApplication> {
   return electronApp;
 }
 
+/**
+ * Close any modal the finished test left open.
+ *
+ * The Electron window is a singleton shared by all 435 specs, so a test that
+ * fails midway leaves its modal on screen and every later test inherits it. The
+ * damage does not look like a leftover modal, which is what made it expensive
+ * to diagnose:
+ *
+ *   - clicks report `<div …> from <div> subtree intercepts pointer events`,
+ *     because the overlay sits above the sidebar;
+ *   - `text=Teams` matches the modal's own body copy ("Let multiple AI
+ *     assistants team up and collaborate") instead of the sidebar heading;
+ *   - the assistant search keeps its previous value, so the option list filters
+ *     to nothing and helpers report "No assistant option matched" — which reads
+ *     as "no agents installed" rather than "a stale filter is applied".
+ *
+ * One genuine failure was manufacturing a run of unrelated ones. Best-effort by
+ * design: teardown must never fail a test that already passed.
+ */
+async function dismissOpenModals(page: Page | null): Promise<void> {
+  if (!page || page.isClosed()) return;
+
+  try {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const open = await page.locator('.arco-modal').count();
+      if (open === 0) return;
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(150);
+    }
+
+    // Escape does not close a modal with maskClosable/keyboard disabled; fall
+    // back to its own close control before giving up.
+    const closeButton = page.locator('.arco-modal .arco-modal-close-icon, .arco-modal button[aria-label="Close"]');
+    if ((await closeButton.count()) > 0) {
+      await closeButton.first().click({ timeout: 1_000 });
+    }
+  } catch {
+    // Teardown is best-effort; a page that has gone away is not a test failure.
+  }
+}
+
 export const test = base.extend<Fixtures>({
   // eslint-disable-next-line no-empty-pattern
   electronApp: async ({}, use) => {
@@ -353,6 +394,9 @@ export const test = base.extend<Fixtures>({
         // best-effort: page may have crashed
       }
     }
+
+    // Runs after the screenshot, so the failure is captured before it is undone.
+    await dismissOpenModals(mainPage);
   },
 });
 

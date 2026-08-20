@@ -83,7 +83,7 @@ test.describe('Team Rename & Pin', () => {
     // 3. The rename modal opens: clear the input and type the new name
     const modal = page.locator('.arco-modal').last();
     await expect(modal).toBeVisible({ timeout: 5_000 });
-    const input = modal.locator('input').first();
+    const input = modal.locator('[data-testid="team-create-name-input"]');
     await input.clear();
     await input.fill(RENAME_NEW);
 

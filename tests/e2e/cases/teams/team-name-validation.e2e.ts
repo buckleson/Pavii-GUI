@@ -27,7 +27,7 @@ async function openCreateModal(page: import('@playwright/test').Page): Promise<M
     .first();
   await expect(modal).toBeVisible({ timeout: 5_000 });
 
-  const nameInput = modal.locator('input').first();
+  const nameInput = modal.locator('[data-testid="team-create-name-input"]');
   await expect(nameInput).toBeVisible({ timeout: 5_000 });
 
   const submitBtn = page.locator('.arco-modal .arco-btn-primary');

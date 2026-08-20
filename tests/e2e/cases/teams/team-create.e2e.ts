@@ -46,7 +46,7 @@ test.describe('Team Create', () => {
 
     // Verify Team name input exists
     const modal = page.locator('.arco-modal');
-    const nameInput = modal.getByRole('textbox').first();
+    const nameInput = modal.locator('[data-testid="team-create-name-input"]');
     await expect(nameInput).toBeVisible();
 
     // Verify assistant leader choices render, or the empty-state appears.
@@ -80,7 +80,7 @@ test.describe('Team Create', () => {
 
     // Fill team name
     const modal = page.locator('.arco-modal');
-    const nameInput = modal.getByRole('textbox').first();
+    const nameInput = modal.locator('[data-testid="team-create-name-input"]');
     await nameInput.fill('E2E Test Team');
 
     const firstOption = modal.locator('[data-testid^="team-create-agent-option-"]').first();
@@ -143,7 +143,7 @@ async function createTeamWithAgent(
 
   // Fill team name
   const modal = page.locator('.arco-modal');
-  const nameInput = modal.getByRole('textbox').first();
+  const nameInput = modal.locator('[data-testid="team-create-name-input"]');
   await nameInput.fill(teamName);
 
   await page.screenshot({ path: `tests/e2e/results/${screenshotPrefix}-assistant-list.png` });

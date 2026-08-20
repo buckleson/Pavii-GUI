@@ -38,7 +38,7 @@ test.describe('Team Create - Full UI Flow', () => {
     await page.screenshot({ path: 'tests/e2e/results/team-ui-02-modal.png' });
 
     // Step 4: Fill team name
-    const nameInput = modal.getByRole('textbox').first();
+    const nameInput = modal.locator('[data-testid="team-create-name-input"]');
     await expect(nameInput).toBeVisible();
     await nameInput.fill(TEAM_NAME);
     await expect(nameInput).toHaveValue(TEAM_NAME);

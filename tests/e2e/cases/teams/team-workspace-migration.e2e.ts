@@ -89,7 +89,7 @@ test.describe('Team Workspace Migration', () => {
     const modal = page.locator('.team-create-modal');
     await expect(modal).toBeVisible({ timeout: 10_000 });
 
-    const nameInput = modal.locator('input').first();
+    const nameInput = modal.locator('[data-testid="team-create-name-input"]');
     await nameInput.fill(TEAM_NAME);
 
     const agentCard = modal.locator('[data-testid^="team-create-agent-card-"]').first();

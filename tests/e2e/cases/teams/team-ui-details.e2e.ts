@@ -59,7 +59,7 @@ test.describe('Team UI Details', () => {
     const modal = page.locator('.arco-modal').last();
     await modal.waitFor({ state: 'visible', timeout: 5_000 });
 
-    const nameInput = modal.getByRole('textbox').first();
+    const nameInput = modal.locator('[data-testid="team-create-name-input"]');
     await nameInput.fill(TEAM_WORKSPACE);
 
     const leaderSelect = modal.locator('[data-testid="team-create-leader-select"]');

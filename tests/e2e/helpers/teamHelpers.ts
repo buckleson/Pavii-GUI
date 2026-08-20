@@ -39,7 +39,7 @@ export async function createTeam(page: Page, name: string, leaderType?: string):
   const modal = page.locator('.arco-modal').last();
   await modal.waitFor({ state: 'visible', timeout: 5_000 });
 
-  const nameInput = modal.getByRole('textbox').first();
+  const nameInput = modal.locator('[data-testid="team-create-name-input"]');
   await nameInput.fill(name);
 
   const option = await pickLeaderOption(page, leaderType);
