@@ -1,26 +1,31 @@
-# 多语言支持 (i18n)
+# Internationalization (i18n)
 
-本项目使用 i18next 和 react-i18next 实现多语言支持。
+This project uses i18next and react-i18next for internationalization.
 
-## 支持的语言
+## Supported Languages
 
-- 中文 (zh-CN) - 默认语言
-- 英文 (en-US)
+- English (en-US) — default and reference language
 
-## 文件结构
+Languages and translation modules are declared in
+`packages/desktop/src/common/config/i18n-config.json`.
+
+## File Structure
 
 ```
-src/renderer/i18n/
-├── index.ts              # i18next 配置文件
+src/renderer/services/i18n/
+├── index.ts              # i18next configuration
+├── i18n-keys.d.ts        # Generated key types (bun run i18n:types)
 ├── locales/
-│   ├── zh-CN.json        # 中文语言包
-│   └── en-US.json        # 英文语言包
-└── README.md             # 说明文档
+│   └── en-US/            # English translation modules
+│       ├── index.ts      # Aggregates every module below
+│       ├── common.json
+│       └── ...           # One JSON file per module
+└── README.md             # This document
 ```
 
-## 使用方法
+## Usage
 
-### 在组件中使用翻译
+### Translating in a component
 
 ```tsx
 import { useTranslation } from 'react-i18next';
@@ -37,7 +42,7 @@ const MyComponent = () => {
 };
 ```
 
-### 切换语言
+### Switching languages
 
 ```tsx
 import { useTranslation } from 'react-i18next';
@@ -49,50 +54,45 @@ const LanguageSwitcher = () => {
     i18n.changeLanguage(lng);
   };
 
-  return (
-    <div>
-      <button onClick={() => changeLanguage('zh-CN')}>中文</button>
-      <button onClick={() => changeLanguage('en-US')}>English</button>
-    </div>
-  );
+  return <button onClick={() => changeLanguage('en-US')}>English</button>;
 };
 ```
 
-## 添加新的翻译
+The selected language is persisted to `localStorage` and restored on the next
+launch.
 
-1. 在 `src/renderer/i18n/locales/zh-CN.json` 中添加中文翻译
-2. 在 `src/renderer/i18n/locales/en-US.json` 中添加对应的英文翻译
-3. 在组件中使用 `t('key')` 来获取翻译
+## Adding a New Translation
 
-### 翻译键的命名规范
+1. Add the key to the matching module under `locales/en-US/`
+2. Regenerate the key types with `bun run i18n:types`
+3. Reference it in your component with `t('key')`
+4. Validate with `node scripts/check-i18n.js`
 
-- 使用点号分隔的层级结构
-- 使用小写字母和下划线
-- 按功能模块分组
+### Key Naming Convention
 
-例如：
+- Use a dot-separated hierarchy
+- Use lowercase letters and underscores
+- Group keys by feature module
+
+For example:
 
 ```json
 {
   "common": {
-    "send": "发送",
-    "cancel": "取消"
+    "send": "Send",
+    "cancel": "Cancel"
   },
   "conversation": {
     "welcome": {
-      "title": "今天有什么安排？"
+      "title": "What's on the agenda today?"
     }
   }
 }
 ```
 
-## 语言切换器
+## Notes
 
-项目在顶部导航栏中集成了语言切换器，用户可以随时切换界面语言。语言选择会保存在 localStorage 中，下次访问时会自动应用上次选择的语言。
-
-## 注意事项
-
-1. 所有用户可见的文本都应该使用翻译函数
-2. 翻译键应该具有描述性，便于维护
-3. 新增翻译时，确保中英文都有对应的翻译
-4. 避免在代码中硬编码文本内容
+1. Every user-facing string must go through the translation function
+2. Keys should be descriptive so they stay maintainable
+3. Add new keys to every supported language, not just the reference one
+4. Never hardcode user-facing text in components

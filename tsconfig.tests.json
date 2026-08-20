@@ -1,0 +1,19 @@
+{
+  // Typechecks the test suites, which the root tsconfig never covered.
+  //
+  // Its `include` lists packages/desktop/src plus a few configs, so all 612
+  // files under tests/ were outside the program: `bunx tsc --noEmit` reported
+  // success while an E2E spec assigned to an undeclared `teamId` (declared as
+  // `team_id`), which is a ReferenceError the moment that spec runs.
+  //
+  // Kept separate from tsconfig.json so the app build stays unaffected, and so
+  // this can be tightened independently as the suites are cleaned up.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // vitest.config.ts sets `globals: true`, so `onTestFinished` and friends are
+    // real at runtime and only look undefined without these types.
+    "types": ["node", "vitest/globals"],
+    "noEmit": true
+  },
+  "include": ["tests/**/*.ts", "tests/**/*.tsx", "packages/desktop/src/renderer/types.d.ts"]
+}
