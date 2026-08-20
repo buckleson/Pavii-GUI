@@ -22,7 +22,7 @@ import { onPreviewWatchChange, reconcilePreviewWatch, resetPreviewWatch } from '
 export interface DomSnippet {
   /** Unique ID */
   id: string;
-  /** 简化标签名（用于显示）/ Simplified tag name (for display) */
+  /** Simplified tag name (for display) */
   tag: string;
   /** Full HTML */
   html: string;

@@ -18,7 +18,7 @@ export interface BrowserViewerProps {
   url: string;
   /** Id of the owning preview tab */
   tabId: string;
-  /** 地址变化时回写 tab（用于持久化）/ Persist the new address back onto the tab */
+  /** Persist the new address back onto the tab */
   onUrlChange: (tabId: string, url: string) => void;
   /** Persist the page title back onto the tab */
   onTitleChange: (tabId: string, title: string) => void;

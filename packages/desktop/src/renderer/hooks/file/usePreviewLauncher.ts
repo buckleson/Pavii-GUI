@@ -20,19 +20,19 @@ import { useCallback, useState } from 'react';
 interface PreviewLaunchOptions {
   /** Workspace-relative path */
   relativePath?: string;
-  /** 备用路径（如绝对路径）/ Fallback path (absolute or provided path) */
+  /** Fallback path (absolute or provided path) */
   originalPath?: string;
   /** File name */
   file_name?: string;
   /** Preview title */
   title?: string;
-  /** 代码语言（用于语法高亮）/ Code language (for syntax highlighting) */
+  /** Code language (for syntax highlighting) */
   language?: string;
   /** Content type */
   contentType: PreviewContentType;
   /** Whether editable */
   editable: boolean;
-  /** 若无法读取文件，使用此内容打开（可编辑）/ Use this content if file read fails (editable) */
+  /** Use this content if file read fails (editable) */
   fallbackContent?: string;
   /** Read-only diff fallback */
   diffContent?: string;

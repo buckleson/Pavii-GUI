@@ -11,7 +11,7 @@ import BrowserViewer from './BrowserViewer';
 export interface BrowserTabLayerProps {
   /** Every browser-type tab */
   browserTabs: PreviewTab[];
-  /** 当前激活的 tab id（可能不是浏览器 tab）/ Active tab id (may not be a browser tab) */
+  /** Active tab id (may not be a browser tab) */
   activeTabId: string | null;
   /** Patch fields back onto a tab */
   updateTab: (tabId: string, patch: PreviewTabPatch) => void;

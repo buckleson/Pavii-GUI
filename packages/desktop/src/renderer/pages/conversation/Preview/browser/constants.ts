@@ -49,7 +49,7 @@ const PASSTHROUGH_SCHEMES = ['about:', 'data:', 'blob:', 'chrome:', 'devtools:',
 const EXPLICIT_SCHEME_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
 
 /**
- * 看起来像主机名的输入：`example.com`、`localhost:3000`、`192.168.1.5/x`。
+ * x`。
  * IP。
  *
  * Host-like input: `example.com`, `localhost:3000`, `192.168.1.5/x`. Requires a

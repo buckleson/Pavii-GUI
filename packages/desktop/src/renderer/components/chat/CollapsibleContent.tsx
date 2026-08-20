@@ -72,7 +72,7 @@ interface CollapsibleContentProps {
  * @example
  * ```tsx
  * <CollapsibleContent maxHeight={200}>
- *   <div>很长的内容...</div>
+ * div>
  * </CollapsibleContent>
  * ```
  */

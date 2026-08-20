@@ -28,10 +28,10 @@ import { LEGACY_ANCHOR_REMAP } from '@/renderer/pages/settings/components/Settin
 
 // Constants ====================
 
-/** 移动端断点（px）/ Mobile breakpoint (px) */
+/** Mobile breakpoint (px) */
 const MOBILE_BREAKPOINT = 768;
 
-/** 侧边栏宽度（px）/ Sidebar width (px) */
+/** Sidebar width (px) */
 const SIDEBAR_WIDTH = 200;
 
 /** Modal width configuration */
@@ -47,7 +47,7 @@ const MODAL_HEIGHT = {
   desktop: 459,
 } as const;
 
-/** Resize 事件防抖延迟（ms）/ Resize event debounce delay (ms) */
+/** Resize event debounce delay (ms) */
 const RESIZE_DEBOUNCE_DELAY = 150;
 
 // Type Definitions ====================
@@ -95,7 +95,7 @@ interface SubModalProps {
  * @example
  * ```tsx
  * <SubModal visible={showModal} onCancel={handleClose} title="详情">
- *   <div>弹窗内容</div>
+ * div>
  * </SubModal>
  * ```
  */

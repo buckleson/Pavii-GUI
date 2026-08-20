@@ -39,7 +39,7 @@ export interface ProtocolDetectionResult {
   fixedBaseUrl?: string;
   /** Additional info */
   metadata?: {
-    /** 模型列表（如果获取成功）/ Model list if available */
+    /** Model list if available */
     models?: string[];
     /** API version */
     apiVersion?: string;
@@ -63,7 +63,7 @@ export interface MultiKeyTestResult {
   details: Array<{
     /** Key index */
     index: number;
-    /** Key 掩码（只显示前后几位）/ Masked key */
+    /** Masked key */
     maskedKey: string;
     /** Whether valid */
     valid: boolean;
@@ -81,13 +81,13 @@ export interface MultiKeyTestResult {
 export interface ProtocolDetectionRequest {
   /** Base URL */
   base_url: string;
-  /** API Key（可以是逗号或换行分隔的多个 Key）/ API Key (can be comma or newline separated) */
+  /** API Key (can be comma or newline separated) */
   api_key: string;
-  /** 超时时间（毫秒）/ Timeout in milliseconds */
+  /** Timeout in milliseconds */
   timeout?: number;
-  /** 是否测试所有 Key（默认只测试第一个）/ Whether to test all keys */
+  /** Whether to test all keys */
   testAllKeys?: boolean;
-  /** 指定要测试的协议（如果已知）/ Specific protocol to test (if known) */
+  /** Specific protocol to test (if known) */
   preferredProtocol?: ProtocolType;
 }
 
@@ -114,12 +114,12 @@ export interface ProtocolDetectionResponse {
     message: string;
     /** Suggested platform */
     suggestedPlatform?: string;
-    /** i18n key（前端使用）/ i18n key for frontend */
+    /** i18n key for frontend */
     i18nKey?: string;
     /** i18n parameters */
     i18nParams?: Record<string, string>;
   };
-  /** 多 Key 测试结果（如果启用）/ Multi-key test result if enabled */
+  /** Multi-key test result if enabled */
   multiKeyResult?: MultiKeyTestResult;
   /** Model list */
   models?: string[];
@@ -138,7 +138,7 @@ interface ProtocolSignature {
     method: 'GET' | 'POST';
     /** Headers */
     headers?: (api_key: string) => Record<string, string>;
-    /** 请求体（POST 请求）/ Request body for POST */
+    /** Request body for POST */
     body?: object;
     /** Response validator */
     validator: (response: any, status: number) => boolean;

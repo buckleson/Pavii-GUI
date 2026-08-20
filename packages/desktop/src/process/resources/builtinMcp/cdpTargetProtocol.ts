@@ -35,7 +35,7 @@
  * supports sessionId in both directions, so puppeteer's flatten mode lines up.
  */
 
-/** 伪造的稳定 id：只有一个目标，不需要真的分配。/ Fixed ids — there is only ever one target. */
+/** Fixed ids — there is only ever one target. */
 // Internal CDP wire ids exchanged between our bridge and chrome-devtools-mcp
 // within a single session. Never surfaced to users, so they keep their original
 // spelling rather than risk churn in the debugger protocol handshake.
@@ -275,7 +275,7 @@ export const decideCdpCommand = (req: CdpRequest, getTargetInfo: () => TargetInf
 export const isAcceptableSessionId = (sessionId: string | undefined): boolean =>
   sessionId === undefined || sessionId === '' || sessionId === SINGLE_SESSION_ID;
 
-/** 常量时间比较，避免用字符串比较泄漏 token 前缀信息。/ Constant-time compare so token prefixes do not leak. */
+/** Constant-time compare so token prefixes do not leak. */
 export const tokensMatch = (a: string, b: string): boolean => {
   if (a.length !== b.length) return false;
   let diff = 0;

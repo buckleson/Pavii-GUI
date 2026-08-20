@@ -20,7 +20,7 @@ type AionSelectSize = NativeSelectSize | 'middle';
 export interface AionSelectProps extends NativeSelectProps {
   /** Additional class name */
   className?: string;
-  /** 统一尺寸，新增 middle（32px）/ Unified size with additional "middle" (32px) */
+  /** Unified size with additional "middle" (32px) */
   size?: AionSelectSize;
 }
 

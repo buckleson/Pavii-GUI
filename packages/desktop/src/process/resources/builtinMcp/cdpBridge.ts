@@ -39,7 +39,7 @@ const WS_PATH = '/aionui-cdp';
 export type CdpBridgeHandle = {
   port: number;
   token: string;
-  /** 侧边浏览器的 webContents id；未附加时为 null。/ null while nothing is attached. */
+  /** null while nothing is attached. */
   attachedWebContentsId: () => number | null;
   attach: (webContentsId: number) => { ok: true } | { ok: false; reason: string };
   detach: () => void;

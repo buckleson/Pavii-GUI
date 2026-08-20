@@ -233,7 +233,7 @@ export type TChatConversation =
           preset_assistant_id?: string;
           /** Whether this conversation is pinned */
           pinned?: boolean;
-          /** 置顶时间戳（毫秒）/ Pin timestamp in milliseconds */
+          /** Pin timestamp in milliseconds */
           pinned_at?: number;
           /** ACP backend session UUID for session resume */
           acp_session_id?: string;
@@ -279,7 +279,7 @@ export type TChatConversation =
           preset_assistant_id?: string;
           /** Whether this conversation is pinned */
           pinned?: boolean;
-          /** 置顶时间戳（毫秒）/ Pin timestamp in milliseconds */
+          /** Pin timestamp in milliseconds */
           pinned_at?: number;
           /** Persisted session mode for resume support / 持久化的会话模式，用于恢复 */
           session_mode?: string;
@@ -329,7 +329,7 @@ export type TChatConversation =
           preset_assistant_id?: string;
           /** Whether this conversation is pinned */
           pinned?: boolean;
-          /** 置顶时间戳（毫秒）/ Pin timestamp in milliseconds */
+          /** Pin timestamp in milliseconds */
           pinned_at?: number;
           /** Legacy marker for pre-provider-probe health-check conversations */
           is_health_check?: boolean;
@@ -378,7 +378,7 @@ export type TChatConversation =
           preset_assistant_id?: string;
           /** Whether this conversation is pinned */
           pinned?: boolean;
-          /** 置顶时间戳（毫秒）/ Pin timestamp in milliseconds */
+          /** Pin timestamp in milliseconds */
           pinned_at?: number;
           /** Legacy marker for pre-provider-probe health-check conversations */
           is_health_check?: boolean;

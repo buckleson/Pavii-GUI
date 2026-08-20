@@ -13,11 +13,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * Protocol detection hook configuration
  */
 interface UseProtocolDetectionOptions {
-  /** 防抖延迟（毫秒）/ Debounce delay in milliseconds */
+  /** Debounce delay in milliseconds */
   debounceMs?: number;
   /** Whether to auto-detect */
   autoDetect?: boolean;
-  /** 超时时间（毫秒）/ Timeout in milliseconds */
+  /** Timeout in milliseconds */
   timeout?: number;
   /** Whether to test all keys */
   testAllKeys?: boolean;
