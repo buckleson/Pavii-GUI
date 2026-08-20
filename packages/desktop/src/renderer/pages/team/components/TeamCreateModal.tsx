@@ -302,7 +302,15 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
       footer={{
         render: () => (
           <div className='flex justify-end gap-10px'>
-            <Button onClick={handleClose} className='!h-38px min-w-84px !rounded-8px !px-18px !text-13px'>
+            {/* [E2E SYNC] Both testids are how the specs find these buttons.
+                They used to be matched by label, which broke silently when the
+                copy changed. Do not remove or rename without updating
+                tests/e2e/cases/teams/. */}
+            <Button
+              onClick={handleClose}
+              data-testid='team-create-cancel-btn'
+              className='!h-38px min-w-84px !rounded-8px !px-18px !text-13px'
+            >
               {t('common.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
@@ -310,6 +318,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
               onClick={handleCreate}
               loading={loading}
               disabled={!name.trim() || selectedMembers.length === 0 || !hasOneLeader}
+              data-testid='team-create-confirm-btn'
               className='!h-38px min-w-100px !rounded-8px !px-18px !text-13px'
             >
               {t('team.create.confirm', { defaultValue: 'Confirm Create' })}

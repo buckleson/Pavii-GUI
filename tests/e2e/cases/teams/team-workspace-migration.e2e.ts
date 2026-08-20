@@ -175,7 +175,7 @@ test.describe('Team Workspace Migration', () => {
 
     await expect(migrationModal.getByText(targetWorkspace).first()).toBeVisible({ timeout: 5_000 });
 
-    const migrateConfirmBtn = migrationModal.locator('button').filter({ hasText: /确定|Confirm|OK/ });
+    const migrateConfirmBtn = migrationModal.locator('button').filter({ hasText: /Confirm|OK/ });
     await expect(migrateConfirmBtn.first()).toBeEnabled();
     await migrateConfirmBtn.first().click();
 

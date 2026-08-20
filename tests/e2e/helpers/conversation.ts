@@ -306,7 +306,7 @@ export async function deleteConversation(page: Page, conversationId: string): Pr
   await menuTrigger.waitFor({ state: 'visible', timeout: 5_000 });
   await menuTrigger.click();
 
-  const deleteItem = page.locator('.arco-dropdown-menu-item').filter({ hasText: /Delete|删除/ });
+  const deleteItem = page.locator('.arco-dropdown-menu-item').filter({ hasText: /Delete/ });
   await deleteItem.waitFor({ state: 'visible', timeout: 5_000 });
   await deleteItem.click();
 

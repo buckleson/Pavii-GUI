@@ -66,7 +66,7 @@ test.describe('Team Create - assistant leader', () => {
       const teamName = `E2E Assistant Team ${Date.now()}`;
       await modal.locator('[data-testid="team-create-name-input"]').fill(teamName);
 
-      const confirmBtn = modal.getByRole('button', { name: /create team|创建团队/i });
+      const confirmBtn = modal.locator('[data-testid="team-create-confirm-btn"]');
       await expect(confirmBtn).toBeEnabled({ timeout: 5_000 });
       await confirmBtn.click();
 

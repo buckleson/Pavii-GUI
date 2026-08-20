@@ -14,22 +14,32 @@ bunx electron-vite build
 > `bun run start` (`electron-vite dev`) uses Vite's HMR and hot-reloads automatically.
 > E2E tests do NOT use Vite dev server — they load static files from `out/`.
 
-### 2. Ensure `aioncore` is on PATH
+### 2. Ensure the engine is available
 
-The Electron main process spawns the `aioncore` binary during startup and
-exposes its port to the renderer via `window.__backendPort`. The binary is
-located via `which aioncore`, so it must be reachable from the `PATH`
-inherited by the Playwright runner. If it isn't, `__backendPort` will be `0`
-and every HTTP call from the renderer (or from e2e helpers that use
-`tests/e2e/helpers/httpBridge.ts`) will fail with `Failed to fetch`.
+The Electron main process spawns the `paviicore` binary during startup and
+exposes its port to the renderer via `window.__backendPort`. If it cannot be
+found, `__backendPort` stays `0` and every HTTP call from the renderer (or from
+e2e helpers that use `tests/e2e/helpers/httpBridge.ts`) fails with
+`Failed to fetch`.
+
+It is resolved from `resources/bundled-paviicore/<platform>-<arch>/` first and
+the `PATH` second, so building the vendored engine once per checkout is enough:
 
 ```bash
-# Install the backend binary (builds to ~/.cargo/bin/aioncore)
-cd ../AionCore && cargo install --path crates/aionui-app
-
-# Make sure it's on PATH when running tests
-export PATH="$HOME/.cargo/bin:$PATH"
+node scripts/build-paviicore.js
 ```
+
+Quit the desktop app before running that — Windows locks a running executable
+and the copy step fails.
+
+### 2b. Signed-in state
+
+`PaviiSignInGate` covers the whole UI with a full-screen overlay while no
+session exists, and Playwright does not treat an occluded element as hidden —
+so assertion-only tests pass while every test that _clicks_ fails with
+"intercepts pointer events", which reads as a broken feature rather than a
+missing login. The fixture seeds a signed-in account into its disposable
+profile to get past it; see `seedSignedInSession` in `fixtures.ts`.
 
 ### 3. Run Tests
 

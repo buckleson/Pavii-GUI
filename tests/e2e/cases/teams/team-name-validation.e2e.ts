@@ -19,7 +19,7 @@ async function openCreateModal(page: import('@playwright/test').Page): Promise<M
 
   const modal = page
     .locator('.arco-modal')
-    .filter({ hasText: /Create Team|创建团队/ })
+    .filter({ has: page.locator('[data-testid="team-create-layout"], [data-testid="team-create-layout-mobile"]') })
     .first();
   await expect(modal).toBeVisible({ timeout: 5_000 });
 

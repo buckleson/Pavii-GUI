@@ -252,7 +252,7 @@ test.describe('Assistant Settings Edge Cases (P2)', () => {
 
     const nameInput = pathModal.locator('input').first();
     const pathInput = pathModal.locator('input').nth(1);
-    const okBtn = pathModal.locator('.arco-btn-primary').filter({ hasText: /OK|确定/i });
+    const okBtn = pathModal.locator('.arco-btn-primary').filter({ hasText: /OK/i });
 
     // Test 1: Name empty, Path filled -> disabled
     await nameInput.clear();

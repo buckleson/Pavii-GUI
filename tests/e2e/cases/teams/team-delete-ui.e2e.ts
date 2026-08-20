@@ -50,7 +50,7 @@ test.describe('Team Delete - Full UI Flow', () => {
     // Step 3: Click the Delete menu item
     const deleteMenuItem = page
       .locator('.arco-dropdown-menu-item, [role="menuitem"]')
-      .filter({ hasText: /删除|Delete/i })
+      .filter({ hasText: /Delete/i })
       .first();
     await deleteMenuItem.waitFor({ state: 'visible', timeout: 5_000 });
     await deleteMenuItem.click();
@@ -64,7 +64,7 @@ test.describe('Team Delete - Full UI Flow', () => {
     // Step 5: Click the confirm/OK button
     const confirmBtn = page
       .locator('.arco-modal .arco-btn-primary')
-      .filter({ hasText: /确定|OK|Delete|删除/i })
+      .filter({ hasText: /OK|Delete/i })
       .first();
     await confirmBtn.waitFor({ state: 'visible', timeout: 5_000 });
     await confirmBtn.click();

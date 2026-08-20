@@ -39,9 +39,10 @@ test.describe('Team Create', () => {
     // Screenshot: modal open
     await page.screenshot({ path: 'tests/e2e/results/team-02-modal.png' });
 
-    // Verify Modal is visible with "Create Team" title
-    const modalTitle = page.locator('.arco-modal h3').filter({ hasText: /Create Team|创建团队/ });
-    await expect(modalTitle).toBeVisible({ timeout: 5000 });
+    // Anchor on the modal's testid, not its title: the title is translatable
+    // copy and this assertion only means "the modal opened".
+    const modalBody = page.locator('[data-testid="team-create-layout"], [data-testid="team-create-layout-mobile"]');
+    await expect(modalBody).toBeVisible({ timeout: 5000 });
 
     // Verify Team name input exists
     const modal = page.locator('.arco-modal');
@@ -74,8 +75,8 @@ test.describe('Team Create', () => {
     await createBtn.click();
 
     // Wait for modal to appear
-    const modalTitle = page.locator('.arco-modal h3').filter({ hasText: /Create Team|创建团队/ });
-    await expect(modalTitle).toBeVisible({ timeout: 5000 });
+    const modalBody = page.locator('[data-testid="team-create-layout"], [data-testid="team-create-layout-mobile"]');
+    await expect(modalBody).toBeVisible({ timeout: 5000 });
 
     // Fill team name
     const modal = page.locator('.arco-modal');
@@ -137,8 +138,8 @@ async function createTeamWithAgent(
   await createBtn.click();
 
   // Wait for modal to appear
-  const modalTitle = page.locator('.arco-modal h3').filter({ hasText: /Create Team|创建团队/ });
-  await expect(modalTitle).toBeVisible({ timeout: 5000 });
+  const modalBody = page.locator('[data-testid="team-create-layout"], [data-testid="team-create-layout-mobile"]');
+  await expect(modalBody).toBeVisible({ timeout: 5000 });
 
   // Fill team name
   const modal = page.locator('.arco-modal');

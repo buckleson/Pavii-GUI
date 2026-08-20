@@ -96,7 +96,7 @@ test.describe('Agent Settings Detection', () => {
       timeout: 8_000,
     });
 
-    await page.getByRole('button', { name: /Cancel|取消/ }).click();
+    await page.getByRole('button', { name: /Cancel/ }).click();
     await expect(page.getByPlaceholder(new RegExp(TEXT.commandPlaceholder.join('|')))).toHaveCount(0);
   });
 

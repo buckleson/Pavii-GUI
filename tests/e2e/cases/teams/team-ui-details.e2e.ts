@@ -63,7 +63,7 @@ test.describe('Team UI Details', () => {
     if (!hasSelect) {
       await modal
         .locator('.arco-btn')
-        .filter({ hasText: /Cancel|取消/i })
+        .filter({ hasText: /Cancel/i })
         .first()
         .click({ force: true });
       test.skip();

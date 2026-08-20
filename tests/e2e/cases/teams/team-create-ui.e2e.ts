@@ -32,8 +32,8 @@ test.describe('Team Create - Full UI Flow', () => {
     const modal = page.locator('.arco-modal').last();
     await expect(modal).toBeVisible({ timeout: 5_000 });
 
-    const modalTitle = modal.locator('h3').filter({ hasText: /Create Team|创建团队/ });
-    await expect(modalTitle).toBeVisible({ timeout: 5_000 });
+    const modalBody = modal.locator('[data-testid="team-create-layout"], [data-testid="team-create-layout-mobile"]');
+    await expect(modalBody).toBeVisible({ timeout: 5_000 });
 
     await page.screenshot({ path: 'tests/e2e/results/team-ui-02-modal.png' });
 
@@ -51,7 +51,7 @@ test.describe('Team Create - Full UI Flow', () => {
       // No supported agents installed — cancel and skip
       const cancelBtn = modal
         .locator('.arco-btn')
-        .filter({ hasText: /Cancel|取消/i })
+        .filter({ hasText: /Cancel/i })
         .first();
       await cancelBtn.click({ force: true }).catch(() => {});
       console.log('[E2E] No supported agent available for team creation — skipping');

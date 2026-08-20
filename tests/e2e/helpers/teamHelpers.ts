@@ -95,7 +95,7 @@ async function pickLeaderOption(page: Page, leaderType?: string): Promise<Locato
 async function closeModal(page: Page, modal: Locator): Promise<void> {
   const cancel = modal
     .locator('.arco-btn')
-    .filter({ hasText: /Cancel|取消/i })
+    .filter({ hasText: /Cancel/i })
     .first();
   if ((await cancel.count().catch(() => 0)) > 0) {
     await cancel.click({ force: true }).catch(() => {});

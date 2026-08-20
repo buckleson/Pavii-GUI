@@ -25,14 +25,14 @@ async function deleteTeamBySiderMenu(page: Parameters<typeof createTeam>[0], tea
 
   const deleteMenuItem = page
     .locator('.arco-dropdown-menu-item, [role="menuitem"]')
-    .filter({ hasText: /删除|Delete/i })
+    .filter({ hasText: /Delete/i })
     .first();
   await deleteMenuItem.waitFor({ state: 'visible', timeout: 5_000 });
   await deleteMenuItem.click();
 
   const confirmOkBtn = page
     .locator('.arco-modal .arco-btn-primary')
-    .filter({ hasText: /确定|OK|Delete|删除/i })
+    .filter({ hasText: /OK|Delete/i })
     .first();
   await confirmOkBtn.waitFor({ state: 'visible', timeout: 5_000 });
   await confirmOkBtn.click();
