@@ -2389,15 +2389,51 @@ async fn attach_member_runtime_inner(
     AttachOutcome::Ready
 }
 
+/// Turn an attach failure into something the user can act on.
+///
+/// The public reason is shown verbatim in the team UI, so it must never carry
+/// raw engine text — paths, ids, provider internals. But collapsing every cause
+/// into one sentence was its own defect: a member could sit on
+/// "This assistant failed to start" indefinitely while the log said, ninety
+/// times, that no model provider was configured. The user had no way to reach
+/// that, and the one visible control (Retry) re-read the same frozen row and
+/// failed identically.
+///
+/// So: recognise the causes we can name, and phrase each as the next thing to
+/// do. Anything unrecognised keeps the generic sentence rather than guessing.
 fn sanitize_member_runtime_failure(error: &TeamError) -> MemberRuntimeFailure {
+    const GENERIC: &str = "Agent runtime failed to start";
+
     let classification = match error {
         TeamError::Database(_) => "runtime_configuration_failed",
         TeamError::SessionNotFound(_) => "session_stopped",
         _ => "runtime_start_failed",
     };
+
+    // Matched on the message because these originate several crates away as
+    // `AgentError`s that are already flattened into `TeamError::InvalidRequest`
+    // by the time they arrive; introducing a typed channel for them is a wider
+    // change than this fix warrants.
+    let text = error.to_string();
+    let public_reason = if text.contains("Provider '") && text.contains("not found") {
+        "No model provider is configured for this assistant. Add one in Settings > Models, \
+         then use Retry start."
+            .to_owned()
+    } else if text.contains("no longer supported for new conversations") {
+        "This assistant's agent type is no longer supported. Pick a different assistant for \
+         this teammate."
+            .to_owned()
+    } else if text.contains("not eligible for Team transport") {
+        "This assistant's agent cannot be used in a team. Pick a different assistant for this \
+         teammate."
+            .to_owned()
+    } else {
+        GENERIC.to_owned()
+    };
+
     MemberRuntimeFailure {
         classification,
-        public_reason: "Agent runtime failed to start".to_owned(),
+        public_reason,
     }
 }
 
@@ -2439,6 +2475,52 @@ mod tests {
     use super::*;
     use crate::event_loop::AgentLoopContext;
     use crate::test_utils::MockTeamRepo;
+
+    // ── What the user is told when a teammate will not start ─────────────────
+
+    #[test]
+    fn a_missing_provider_is_reported_as_something_the_user_can_fix() {
+        // Verbatim shape of the error observed in production, flattened through
+        // warmup into TeamError::InvalidRequest.
+        let error = TeamError::InvalidRequest(
+            "failed to warm up rebuilt agent slot-1: Invalid request: Bad request: \
+             Provider 'aionrs' not found"
+                .to_owned(),
+        );
+
+        let failure = sanitize_member_runtime_failure(&error);
+
+        assert_eq!(failure.classification, "runtime_start_failed");
+        assert!(
+            failure.public_reason.contains("Settings > Models"),
+            "the user needs the next action, got: {}",
+            failure.public_reason
+        );
+        // Engine internals must not reach the UI.
+        assert!(!failure.public_reason.contains("aionrs"));
+        assert!(!failure.public_reason.contains("slot-1"));
+        assert!(!failure.public_reason.contains("warm up"));
+    }
+
+    #[test]
+    fn an_unrecognised_cause_keeps_the_generic_sentence() {
+        // Guessing at an unknown failure would be worse than saying little.
+        let failure = sanitize_member_runtime_failure(&TeamError::InvalidRequest(
+            "some new failure mode nobody has classified".to_owned(),
+        ));
+
+        assert_eq!(failure.public_reason, "Agent runtime failed to start");
+    }
+
+    #[test]
+    fn a_stopped_session_is_classified_apart_from_a_start_failure() {
+        // `session_stopped` is recoverable and must not be reported as a
+        // permanent start failure.
+        let failure = sanitize_member_runtime_failure(&TeamError::SessionNotFound("team-1".to_owned()));
+
+        assert_eq!(failure.classification, "session_stopped");
+    }
+
     use crate::types::{Team, TeamAgent, TeammateRole};
     use crate::work_coordinator::SlotPhase;
     use aionui_ai_agent::AgentError;

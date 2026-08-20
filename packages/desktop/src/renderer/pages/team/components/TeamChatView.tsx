@@ -113,6 +113,8 @@ type TeamChatViewProps = {
   teamRunView?: TeamRunViewState;
   onTeamRunAck?: (ack: ITeamRunAck) => void;
   onRunStateStale?: () => Promise<boolean>;
+  /** Engine-supplied reason this slot's runtime failed, shown instead of the generic sentence. */
+  runtimeFailureReason?: string;
 };
 
 /**
@@ -131,6 +133,7 @@ const TeamChatView: React.FC<TeamChatViewProps> = ({
   teamRunView = EMPTY_TEAM_RUN_VIEW,
   onTeamRunAck,
   onRunStateStale,
+  runtimeFailureReason,
 }) => {
   const { t } = useTranslation();
   const { activeSlotId, switchTab } = useTeamTabs();
@@ -185,7 +188,12 @@ const TeamChatView: React.FC<TeamChatViewProps> = ({
             defaultValue: `Processing… ${count} queued`,
           }),
         runtimeStarting: () => t('team.work.runtimeStarting', { defaultValue: 'Waiting for this assistant to start…' }),
-        runtimeFailed: () => t('team.work.runtimeFailed', { defaultValue: 'This assistant failed to start.' }),
+        // The engine names the cause when it can recognise it (most often a
+        // missing model provider). Falling back to the generic sentence only
+        // when it did not is what turns a dead end into something actionable.
+        runtimeFailed: () =>
+          runtimeFailureReason?.trim() ||
+          t('team.work.runtimeFailed', { defaultValue: 'This assistant failed to start.' }),
         removing: () => t('team.work.removing', { defaultValue: 'Removing this assistant…' }),
         sessionStopped: () => t('team.work.sessionStopped', { defaultValue: 'The team session has stopped.' }),
       });

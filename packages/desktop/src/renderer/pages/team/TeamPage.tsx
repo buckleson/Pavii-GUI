@@ -57,6 +57,8 @@ type TeamPageContentProps = {
   warmupPhase: TeamWarmupPhase;
   warmupRuntimeStatus: Map<string, TeamWarmupMemberState>;
   onRetryWarmup: () => void;
+  /** Why each slot's runtime failed, keyed by slot_id. Empty when nothing failed. */
+  runtimeFailureReasons: Map<string, string>;
 };
 
 const configErrorMessageKey = (error: unknown) => {
@@ -128,6 +130,8 @@ const AssistantChatSlot: React.FC<{
   warmupStatus?: AcpWarmupStatus;
   /** True while the whole team is warming, during which manual triggers are withheld. */
   warmupDisabled?: boolean;
+  /** Why this slot's runtime failed, as reported by the engine. */
+  runtimeFailureReason?: string;
 }> = ({
   assistant,
   team_id,
@@ -140,6 +144,7 @@ const AssistantChatSlot: React.FC<{
   onRunStateStale,
   warmupStatus,
   warmupDisabled,
+  runtimeFailureReason,
 }) => {
   const layout = useLayoutContext();
   const teamPermission = useTeamPermission();
@@ -223,6 +228,7 @@ const AssistantChatSlot: React.FC<{
             teamRunView={teamRunView}
             onTeamRunAck={onTeamRunAck}
             onRunStateStale={() => onRunStateStale('pause.stale')}
+            runtimeFailureReason={runtimeFailureReason}
           />
         ) : (
           <div className='flex flex-1 items-center justify-center'>
@@ -241,6 +247,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   warmupPhase,
   warmupRuntimeStatus,
   onRetryWarmup,
+  runtimeFailureReasons,
 }) => {
   const { t } = useTranslation();
   useActiveLease({ type: 'team', id: team.id });
@@ -546,6 +553,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                       teamRunView={teamRun.state}
                       onTeamRunAck={teamRun.applyAck}
                       onRunStateStale={teamRun.reconcile}
+                      runtimeFailureReason={runtimeFailureReasons.get(assistant.slot_id)}
                       warmupStatus={warmupRuntimeStatus.get(assistant.slot_id)?.status ?? 'dormant'}
                       warmupDisabled={isWarmingUp}
                     />
@@ -610,6 +618,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                           teamRunView={teamRun.state}
                           onTeamRunAck={teamRun.applyAck}
                           onRunStateStale={teamRun.reconcile}
+                          runtimeFailureReason={runtimeFailureReasons.get(assistant.slot_id)}
                           warmupStatus={warmupRuntimeStatus.get(assistant.slot_id)?.status ?? 'dormant'}
                           warmupDisabled={isWarmingUp}
                         />
@@ -643,8 +652,15 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
 const TeamPage: React.FC<Props> = ({ team }) => {
   const { t } = useTranslation();
   const { phase: warmupPhase, runtimeStatus: warmupRuntimeStatus, retry: retryWarmup } = useTeamWarmup(team.id);
-  const { statusMap, membershipMutationBusy, addAssistant, renameAssistant, removeAssistant, mutateTeam } =
-    useTeamSession(team, warmupPhase);
+  const {
+    statusMap,
+    runtimeFailureReasons,
+    membershipMutationBusy,
+    addAssistant,
+    renameAssistant,
+    removeAssistant,
+    mutateTeam,
+  } = useTeamSession(team, warmupPhase);
   const { user } = useAuth();
   const { mutate: globalMutate } = useSWRConfig();
   const defaultSlotId = team.assistants[0]?.slot_id ?? '';
@@ -710,6 +726,7 @@ const TeamPage: React.FC<Props> = ({ team }) => {
         warmupPhase={warmupPhase}
         warmupRuntimeStatus={warmupRuntimeStatus}
         onRetryWarmup={retryWarmup}
+        runtimeFailureReasons={runtimeFailureReasons}
       />
     </TeamTabsProvider>
   );

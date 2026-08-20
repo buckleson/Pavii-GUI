@@ -39,6 +39,14 @@ export function useTeamSession(team: TTeam, warmupPhase?: TeamWarmupPhase) {
     ipcBridge.team.get.invoke({ id: team.id })
   );
 
+  // Why a slot's runtime failed, keyed by slot_id.
+  //
+  // The engine already sends this on `agentRuntimeStatusChanged` as `error`,
+  // and it was simply dropped here — so a member that could not start showed
+  // only "This assistant failed to start", with the actual cause (usually "no
+  // model provider configured") reachable only in the log file.
+  const [runtimeFailureReasons, setRuntimeFailureReasons] = useState<Map<string, string>>(() => new Map());
+
   const [statusMap, setStatusMap] = useState<Map<string, AgentStatusInfo>>(() => {
     return new Map(team.assistants.map((a) => [a.slot_id, { slot_id: a.slot_id, status: a.status }]));
   });
@@ -85,6 +93,21 @@ export function useTeamSession(team: TTeam, warmupPhase?: TeamWarmupPhase) {
       setMembershipMutationState((prev) =>
         applyTeamRuntimeStatusToMembershipMutationState(prev, event.slot_id, event.status)
       );
+      setRuntimeFailureReasons((prev) => {
+        const reason = event.status === 'failed' ? event.error?.trim() : undefined;
+        // Any non-failed status means the slot recovered; a stale reason would
+        // outlive the failure it describes.
+        if (!reason) {
+          if (!prev.has(event.slot_id)) return prev;
+          const next = new Map(prev);
+          next.delete(event.slot_id);
+          return next;
+        }
+        if (prev.get(event.slot_id) === reason) return prev;
+        const next = new Map(prev);
+        next.set(event.slot_id, reason);
+        return next;
+      });
       // Dormant is the only runtime state with no other status source, so
       // surface it on the badge directly. pending/ready/failed stay driven by
       // agentStatusChanged plus the send-box runtime gate as before.
@@ -158,5 +181,13 @@ export function useTeamSession(team: TTeam, warmupPhase?: TeamWarmupPhase) {
     [team, mutateTeam]
   );
 
-  return { statusMap, membershipMutationBusy, addAssistant, renameAssistant, removeAssistant, mutateTeam };
+  return {
+    statusMap,
+    runtimeFailureReasons,
+    membershipMutationBusy,
+    addAssistant,
+    renameAssistant,
+    removeAssistant,
+    mutateTeam,
+  };
 }

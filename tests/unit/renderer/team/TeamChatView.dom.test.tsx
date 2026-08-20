@@ -245,6 +245,63 @@ describe('TeamChatView', () => {
     );
   });
 
+  it.each([
+    [
+      'the engine-supplied reason',
+      'No model provider is configured for this assistant. Add one in Settings > Models, then use Retry start.',
+      'No model provider is configured for this assistant. Add one in Settings > Models, then use Retry start.',
+    ],
+    // A blank reason is not a reason. Falling through to the generic sentence
+    // is what keeps an empty engine field from blanking the status line.
+    ['a blank reason', '   ', 'This assistant failed to start.'],
+    ['no reason at all', undefined, 'This assistant failed to start.'],
+  ])('shows %s when a runtime fails', async (_label, runtimeFailureReason, expected) => {
+    usePresetAssistantInfoMock.mockReturnValue({ info: null });
+
+    render(
+      <TeamChatView
+        team_id='team-1'
+        slot_id='worker-1'
+        runtimeFailureReason={runtimeFailureReason}
+        conversation={{
+          id: 'conv-1',
+          type: 'acp',
+          name: 'Team member',
+          created_at: Date.now(),
+          updated_at: Date.now(),
+          extra: { workspace: '/tmp' },
+        }}
+        teamRunView={{
+          activeRun: undefined,
+          childTurnsBySlot: {},
+          slotWorkBySlot: {
+            'worker-1': {
+              slot_id: 'worker-1',
+              role: 'teammate',
+              state: 'blocked',
+              queued_foreground_count: 0,
+              queued_background_count: 0,
+              active_turn_id: null,
+              active_turn_started_at_ms: null,
+              active_turn_elapsed_ms: null,
+              active_turn_slow: null,
+              active_turn_slow_threshold_ms: null,
+              blocked_reason: 'runtime_failed',
+              team_run_id: null,
+            },
+          },
+        }}
+      />
+    );
+
+    expect(await screen.findByTestId('mock-acp-chat')).toBeInTheDocument();
+    expect(acpChatMock.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        teamRuntime: expect.objectContaining({ statusText: expected }),
+      })
+    );
+  });
+
   it('keeps sending open for a stale session_stopped slot', async () => {
     usePresetAssistantInfoMock.mockReturnValue({ info: null });
 
