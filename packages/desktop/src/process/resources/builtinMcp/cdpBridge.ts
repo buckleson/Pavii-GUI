@@ -214,8 +214,8 @@ const handleSocketMessage = async (ws: WebSocket, raw: string, announcedSessions
          * Announce attachedToTarget once per sessionId - announcing again makes puppeteer swap the
          * session object and orphan the caller's handle.
          *
-         * Connection.js）。
-         * it never checks whether the sessionId already exists, so a second announcement overwrites
+         * constructing a new CdpSession (see puppeteer's cdp/Connection.js).
+         * It never checks whether the sessionId already exists, so a second announcement overwrites
          * the old object with a brand-new one carrying an empty CallbackRegistry.
          *
          * That is the lethal part: setAutoAttach announced once, attachToTarget announces again, and

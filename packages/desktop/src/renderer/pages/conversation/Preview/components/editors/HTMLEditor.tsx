@@ -63,7 +63,7 @@ const HTMLEditor: React.FC<HTMLEditorProps> = ({ value, onChange, containerRef, 
     [onChange]
   );
 
-  // historyKeymap。
+  // Large-file degradation drops only HTML parsing, keeping history and historyKeymap.
   // Do NOT copy CodeEditor's approach of clearing extensions entirely: basicSetup below sets
   // `history: false` explicitly, so undo/redo depends entirely on the history() here. Clearing it costs large files their undo.
   //

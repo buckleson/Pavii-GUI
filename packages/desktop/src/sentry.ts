@@ -14,8 +14,8 @@ import { readAutoUpdateDiagnostics } from './process/services/autoUpdateDiagnost
 import { collectBackendInstallDiagnostics } from './process/startup/backendInstallDiagnostics';
 import { classifyBackendStartupFailure } from './process/startup/backendStartupFailure';
 
-// ELECTRON-9D）：
-// 自愈逻辑在 gpuRecovery 中处理，事件流量已无价值。
+// Suppress Chromium GPU crash noise (see ELECTRON-9A / ELECTRON-9D):
+// gpuRecovery handles the self-healing, so the event traffic carries no value.
 const GPU_CRASH_DROP_PATTERNS = [
   /'GPU' process exited with /,
   /IntentionallyCrashBrowserForUnusableGpuProcess/,

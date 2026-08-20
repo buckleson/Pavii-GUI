@@ -22,7 +22,7 @@ import TeamMemberDraftList, { type TeamMemberDraft } from './memberPicker/TeamMe
 // must update the selectors in tests/e2e/cases/teams/team-create.e2e.ts, team-whitelist.e2e.ts
 // and team-name-validation.e2e.ts, and report the change immediately.
 // Note: since the move to AionModal variant='standard', the close button is button[aria-label="Close"].
-// .arco-modal-close-icon。
+// It is no longer .arco-btn-text / .arco-modal-close-icon.
 // Narrow screens (layout.isMobile, <768px) use a single column rooted at team-create-layout-mobile;
 // the assistant picker is a dropdown anchored to team-create-add-member-btn (choosing closes it and the assistant appears in the list below);
 // the desktop two-column layout is team-create-layout.

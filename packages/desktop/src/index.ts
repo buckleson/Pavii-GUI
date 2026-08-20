@@ -1075,7 +1075,8 @@ app.on('open-url', (event, url) => {
   showOrCreateMainWindow({ mainWindow, createWindow });
 });
 
-// ELECTRON-9D）。
+// Watch for GPU subprocess crashes; after several in a row the next launch
+// disables hardware acceleration (see ELECTRON-9A / ELECTRON-9D).
 installGpuCrashHandler();
 
 // Register the backend startup flow only when this process owns the single

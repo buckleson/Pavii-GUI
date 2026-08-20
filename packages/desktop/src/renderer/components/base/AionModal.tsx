@@ -55,7 +55,8 @@ export interface ModalFooterConfig {
   style?: CSSProperties;
   /**
    * Whether the component draws the footer's top divider and standard padding
-   * padding。
+   * A task modal opting in passes true explicitly and deletes the border-t and
+   * padding hand-written in its own footer.
    * between content and buttons. Defaults to false, which keeps existing behaviour
    */
   divider?: boolean;
