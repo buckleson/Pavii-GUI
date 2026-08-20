@@ -32,7 +32,7 @@ const CODE_STYLE = { marginTop: 4, marginBottom: 4 };
 const ALERT_CLASSES =
   '!items-start !rd-8px !px-8px [&_.arco-alert-icon]:flex [&_.arco-alert-icon]:items-start [&_.arco-alert-content-wrapper]:flex [&_.arco-alert-content-wrapper]:items-start [&_.arco-alert-content-wrapper]:w-full [&_.arco-alert-content]:flex-1';
 
-// CollapsibleContent 高度常量 CollapsibleContent height constants
+// CollapsibleContent height constants
 const RESULT_MAX_HEIGHT = COLLAPSE_CONFIG.MAX_HEIGHT;
 
 interface IMessageToolGroupProps {
@@ -575,7 +575,7 @@ const MessageToolGroup: React.FC<IMessageToolGroupProps> = ({ message }) => {
                 {result_display && (
                   <div>
                     {/* 在 Alert 外展示完整结果 Display full result outside Alert */}
-                    {/* ToolResultDisplay 内部已包含 CollapsibleContent，避免嵌套 */}
+                    {/* ToolResultDisplay already contains a CollapsibleContent; do not nest another */}
                     {/* ToolResultDisplay already contains CollapsibleContent internally, avoid nesting */}
                     <ToolResultDisplay content={content} />
                   </div>

@@ -22,7 +22,7 @@ export interface ExcelSheetImage {
 
 export interface ExcelSheetData {
   name: string; // Sheet name
-  data: any[][]; // 单元格数据二维数组 / 2D array of cell values
+  data: any[][]; // 2D array of cell values
   merges?: { s: { r: number; c: number }; e: { r: number; c: number } }[]; // Merge ranges
   images?: ExcelSheetImage[]; // Embedded images info
 }

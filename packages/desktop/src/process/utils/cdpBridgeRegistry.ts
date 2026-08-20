@@ -5,11 +5,11 @@
  */
 
 /**
- * 单目标 CDP 通道句柄的存放处。
+ * Home of the single-target CDP channel handle.
  *
- * 单独一个小模块，是为了避开循环依赖：通道在 index.ts 里启动，而使用它的是
- * applicationBridge.ts，后者又是被 index.ts 间接引入的。让两边都只依赖这个中立模块，
- * 就不必让 bridge 反向 import 入口文件。
+ * A small standalone module to dodge a dependency cycle: the channel starts in index.ts while
+ * its consumer is applicationBridge.ts, itself indirectly imported by index.ts. Both depending
+ * on this neutral module saves the bridge from importing the entry file backwards.
  *
  * Holds the single-target CDP bridge handle. It lives in its own tiny module to avoid a
  * cycle: the bridge is started in index.ts but consumed by applicationBridge.ts, which

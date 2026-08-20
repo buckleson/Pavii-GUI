@@ -8,16 +8,16 @@
 /**
  * In-app browser MCP launcher.
  *
- * 为什么需要这个中间层：
+ * Why this middle layer exists:
  *
- * chrome-devtools-mcp 只接受命令行参数 `--browser-url`，不认环境变量。而我们的
- * CDP 端口是启动时动态决定的（默认 9230，被占用就往上找，多开几个实例端口各不同）。
- * 如果把端口直接写进 MCP 注册记录的 args 里，每次启动都得改写数据库里的这条记录，
- * 而且多实例共用一份注册表时必然写串。
+ * chrome-devtools-mcp only accepts the `--browser-url` CLI argument, not env vars. Our
+ * CDP port is decided at startup (9230 by default, walking upward when taken; several instances each get their own).
+ * Writing the port into the MCP registration's args would mean rewriting that DB row on every launch,
+ * and instances sharing one registry would inevitably clobber each other.
  *
- * 所以注册记录保持不变（永远指向这个脚本），端口通过环境变量传进来，由这个脚本
- * 在运行时翻译成 `--browser-url` 参数再拉起真正的 chrome-devtools-mcp。
- * 注册记录是静态的，端口是动态的，两边都不用妥协。
+ * So the registration never changes (it always points at this script); the port arrives in an
+ * env var and this script translates it into `--browser-url` before launching the real chrome-devtools-mcp.
+ * The registration stays static, the port stays dynamic, and neither side compromises.
  *
  * Why this indirection exists: chrome-devtools-mcp only accepts the CLI flag
  * `--browser-url` — it has no environment variable for it. Our CDP port is
@@ -33,8 +33,8 @@ import { spawn } from 'node:child_process';
 import { buildMcpSpawnCommand, resolveBridgeToken, resolveBrowserUrl } from './browserServerPort';
 
 /**
- * stdio MCP 服务器的 stdout 是协议通道，任何附加输出都会破坏握手。
- * 因此所有诊断信息只能走 stderr。
+ * A stdio MCP server's stdout is the protocol channel; any extra output breaks the handshake.
+ * All diagnostics therefore go to stderr only.
  *
  * A stdio MCP server's stdout is the protocol channel; anything extra breaks the
  * handshake. All diagnostics therefore go to stderr.
@@ -48,12 +48,12 @@ const bridgeToken = resolveBridgeToken({ env: process.env });
 
 if (!browserUrl || !bridgeToken) {
   /**
-   * 没有端口或口令就直接退出，而不是拉起一个会自己开新 Chrome 的 MCP 服务器。
-   * 后者更糟：Agent 会以为自己在操作 APP 内的浏览器，实际操作的是一个用户看不见的
-   * 独立 Chrome —— 侧边栏什么都不会发生，问题极难排查。
+   * With no port or token, exit rather than launch an MCP server that would open its own Chrome.
+   * The latter is worse: the agent believes it is driving the app's browser while actually
+   * driving an invisible standalone Chrome - the side panel shows nothing and the problem is brutal to trace.
    *
-   * 口令与端口同等重要：单目标通道要求口令，没有它连上去只会被 403 拒绝，
-   * 那时 chrome-devtools-mcp 就会退回去自己开 Chrome，正是我们要消灭的行为。
+   * The token matters as much as the port: the single-target channel requires it, and a
+   * token-less connection just gets 403 - at which point chrome-devtools-mcp falls back to opening its own Chrome, exactly the behaviour this exists to kill.
    *
    * Exit rather than launching a server that would spawn its own Chrome. That failure mode
    * is worse: the agent believes it is driving the in-app browser while actually driving an
@@ -71,15 +71,15 @@ if (!browserUrl || !bridgeToken) {
 }
 
 /**
- * 刻意把口令留在服务端，不拼进 --browser-url。
+ * The token deliberately stays server-side and is never joined into --browser-url.
  *
- * puppeteer 会执行 `new URL('/json/version', browserUrl)`，绝对路径会丢掉整个 query，
- * 所以拼上去的口令根本传不到服务端 —— 反而会让人误以为发现段受了保护。
- * 真正的校验发生在 WebSocket 段：通道在 /json/version 的响应里回填带口令的 ws 地址，
- * puppeteer 原样拿去建连，口令就在那一跳生效。
+ * puppeteer runs `new URL('/json/version', browserUrl)`; the absolute path drops the whole query,
+ * so a token appended there never reaches the server - and misleads people into thinking the discovery leg is protected.
+ * Real validation happens on the WebSocket leg: the channel returns a tokened ws URL in the
+ * /json/version response, puppeteer connects with it verbatim, and the token takes effect on that hop.
  *
- * 这里仍然要求 env 里有口令：它是「通道确实起来了」的凭证，缺了就说明通道没起，
- * 此时必须退出而不是让 MCP 回退去开独立 Chrome。
+ * The env token is still required here: it is the proof the channel actually started - its
+ * absence means the channel is down, and the right move is to exit, not let the MCP fall back to a standalone Chrome.
  *
  * The token deliberately stays server-side rather than being appended to --browser-url.
  * puppeteer runs `new URL('/json/version', browserUrl)` and an absolute path drops the
@@ -95,10 +95,10 @@ if (!browserUrl || !bridgeToken) {
 logDiagnostic(`Connecting chrome-devtools-mcp to the in-app browser bridge at ${browserUrl}`);
 
 /**
- * 固定版本，不用 @latest。
+ * Pinned version, not @latest.
  *
- * @latest 每次首启都要联网解析，离线直接失败，还意味着一个不受控的上游可以随时换掉
- * 驱动浏览器的代码 —— 而那个浏览器里有用户的登录态。
+ * @latest needs a network resolve on every first start (failing offline outright), and it
+ * means an uncontrolled upstream can swap the code driving the browser at any time - a browser holding the user's sessions.
  *
  * Pinned rather than @latest: @latest re-resolves over the network on first launch
  * (silent multi-second delay, hard failure offline) and leaves an uncontrolled
@@ -108,23 +108,23 @@ logDiagnostic(`Connecting chrome-devtools-mcp to the in-app browser bridge at ${
 const CHROME_DEVTOOLS_MCP_VERSION = '0.16.0';
 
 /**
- * Windows 上 npx 是 npx.cmd，而 .cmd 属于批处理文件，没有终端无法自己执行。
- * 直接 spawn('npx.cmd') 会同步抛错（CVE-2024-27980 修复后 Node 收紧了 .cmd 处理，
- * 表现为 EINVAL；见 issue #3883），于是 MCP 在 Windows 上根本起不来。
+ * On Windows, npx is npx.cmd - a batch file that cannot execute without a terminal.
+ * A direct spawn('npx.cmd') throws synchronously (Node tightened .cmd handling after
+ * CVE-2024-27980, surfacing as EINVAL; see issue #3883), so the MCP never started on Windows at all.
  *
- * 同类问题在 shellBridge.ts 修过一次（#2211，用的是 shell: true）。这里**刻意不照抄**
- * 那个写法，原因是本调用点的参数不一样：
+ * The same class of problem was fixed once in shellBridge.ts (#2211, using shell: true).
+ * That fix is **deliberately not copied** here, because this call site's arguments differ:
  *
- *  1. Node 24 起「shell: true + args 数组」会打印 DEP0190 弃用警告，明确指出参数只被
- *     拼接、不做转义。而 #3883 的报告者正是 Node v24.15.0 —— 照抄会换来一个警告。
- *  2. 更要紧的是这里有 browserUrl 这个动态参数。shell 模式下它会先经 cmd.exe 解析，
- *     那 `&` `|` `^` 之类都成了元字符。当前它由 resolveBrowserUrl() 从端口号拼出、
- *     形如 http://127.0.0.1:<port>，本身是安全的；但把「安全」寄托在上游拼串方式上，
- *     等哪天那个函数改了就是一个注入点。
- *  3. #2211 那个场景传的是固定的 folderPath，没有这两个顾虑，所以 shell: true 在那里
- *     是合适的 —— 两处结论不同是因为约束不同，不是其中一处写错了。
+ *  1. Since Node 24, "shell: true + an args array" prints the DEP0190 deprecation warning,
+ *     which states the args are only concatenated, never escaped. #3883's reporter runs Node v24.15.0 - copying would just trade the error for a warning.
+ *  2. More importantly, browserUrl is dynamic here. Under shell mode it passes through
+ *     cmd.exe first, where `&` `|` `^` become metacharacters. Today resolveBrowserUrl()
+ *     builds it from a port number as http://127.0.0.1:<port>, which is safe - but pinning
+ *     "safe" on how an upstream function happens to build a string makes it an injection point the day that function changes.
+ *  3. #2211 passed a fixed folderPath with neither concern, so shell: true is right there
+ *     - the two sites conclude differently because their constraints differ, not because one is wrong.
  *
- * cmd.exe /c 是 Node 文档给出的推荐写法，参数数组各自保留转义语义，不触发 DEP0190。
+ * cmd.exe /c is the Node documentation's recommended form: array args keep their escaping semantics and DEP0190 never fires.
  *
  * On Windows npx is npx.cmd, a batch file that cannot execute without a terminal, so
  * spawn('npx.cmd') throws synchronously (Node tightened .cmd handling after
@@ -154,7 +154,7 @@ const spawnPlan = buildMcpSpawnCommand({
 });
 
 const child = spawn(spawnPlan.command, spawnPlan.args, {
-  // stdio 直通：这个进程只是转发者，MCP 协议流不能被中间层缓冲或改写
+  // stdio pass-through: this process only forwards; the MCP protocol stream must not be buffered or rewritten by a middle layer
   // Pass stdio straight through: this process is a forwarder, and the MCP
   // protocol stream must not be buffered or rewritten in between.
   stdio: 'inherit',

@@ -8,9 +8,9 @@ import { AuthType } from '@/common/types/provider/authType';
 import { isNewApiPlatform } from './platformConstants';
 
 /**
- * 根据平台名称获取对应的认证类型
- * @param platform 平台名称
- * @returns 对应的AuthType
+ * Resolve the auth type for a platform name
+ * @param platform Platform name
+ * @returns The matching AuthType
  */
 export function getAuthTypeFromPlatform(platform: string): AuthType {
   const platformLower = platform?.toLowerCase() || '';
@@ -29,27 +29,27 @@ export function getAuthTypeFromPlatform(platform: string): AuthType {
     return AuthType.USE_GEMINI;
   }
 
-  // Anthropic/Claude 相关平台
+  // Anthropic/Claude platforms
   if (platformLower.includes('anthropic') || platformLower.includes('claude')) {
     return AuthType.USE_ANTHROPIC;
   }
 
-  // AWS Bedrock 平台
+  // AWS Bedrock platform
   if (platformLower.includes('bedrock')) {
     return AuthType.USE_BEDROCK;
   }
 
   // New API gateway defaults to OpenAI compatible (per-model protocol handled by getProviderAuthType)
-  // 其他所有平台默认使用OpenAI兼容协议
-  // 包括：OpenRouter, OpenAI, DeepSeek, new-api, 等
+  // Every other platform defaults to the OpenAI-compatible protocol
+  // Including OpenRouter, OpenAI, DeepSeek, new-api, etc.
   return AuthType.USE_OPENAI;
 }
 
 /**
  * Get provider auth type, prefer explicit authType, otherwise infer from platform
  * For new-api platform, supports per-model protocol overrides
- * @param provider 包含platform和可选authType的provider配置
- * @returns 认证类型
+ * @param provider Provider config carrying platform and an optional authType
+ * @returns The auth type
  */
 export function getProviderAuthType(provider: {
   platform: string;
@@ -70,6 +70,6 @@ export function getProviderAuthType(provider: {
     }
   }
 
-  // 否则根据platform推断
+  // Otherwise infer from the platform
   return getAuthTypeFromPlatform(provider.platform);
 }

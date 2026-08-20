@@ -5,24 +5,24 @@
  */
 
 /**
- * AionUI应用程序共用常量
+ * Shared application constants
  */
 
 // In-app browser =====
 
 /**
- * 所有浏览器 tab 共享的持久化 session partition。
+ * Persistent session partition shared by every browser tab.
  *
- * 放在 common 而不是渲染进程：渲染进程用它创建 webview，主进程用它清理登录态和
- * 缓存 —— 两边必须是同一个字符串，写死两份迟早对不上。
+ * Lives in common rather than the renderer: the renderer creates webviews with
+ * it and the main process clears sessions and caches with it - both sides must use the same string, and two hardcoded copies drift apart eventually.
  *
  * The persistent session partition shared by every in-app browser tab. It lives in
  * common rather than the renderer because the renderer uses it to create webviews
  * while the main process uses it to clear sign-in state and caches; two hardcoded
  * copies would eventually drift apart.
  *
- * 用同一个固定值（而非按 tab / 项目区分）是刻意的：登录态需要在所有 tab、所有项目
- * 之间共享，并在重启后保留 —— 这样用户可以替 Agent 过登录关。
+ * One fixed value (rather than per-tab / per-project) is deliberate: sessions must be shared
+ * across every tab and project and survive restarts - that is what lets the user clear login walls for the agent.
  *
  * A single fixed value (rather than per-tab or per-project) is deliberate: sign-in
  * state must be shared across all tabs and projects and survive restarts, so a
@@ -35,11 +35,11 @@
 export const BROWSER_SESSION_PARTITION = 'persist:aionui-browser';
 
 /**
- * 内置浏览器 MCP 的注册名。
+ * Registration name of the built-in browser MCP.
  *
- * 放在 common 的理由和上面一样，而且更强：主进程用它注册这个内置 MCP，渲染进程用它
- * 从工具调用流里认出「Agent 正在操作浏览器」并点亮角标。两边必须是同一个字符串，
- * 各写一份早晚会不一致 —— 而不一致的表现是角标永远不亮，很难查。
+ * Lives in common for the same reason as above, only stronger: the main process registers
+ * the MCP under this name and the renderer recognizes "the agent is driving the browser" in
+ * the tool-call stream to light the badge. Two copies eventually diverge - and the symptom, a badge that never lights, is painful to trace.
  *
  * Registered name of the built-in browser MCP.
  *
@@ -58,21 +58,21 @@ export const BUILTIN_BROWSER_MCP_NAME = 'pavii-browser';
  */
 export const LEGACY_BUILTIN_BROWSER_MCP_NAME = 'aionui-browser';
 
-// ===== 文件处理相关常量 =====
+// ===== File handling constants =====
 
-/** 临时文件时间戳分隔符 */
+/** Timestamp separator for temp files */
 export const AIONUI_TIMESTAMP_SEPARATOR = '_aionui_';
 
-/** 用于匹配和清理时间戳后缀的正则表达式 */
+/** Regex matching and stripping the timestamp suffix */
 export const AIONUI_TIMESTAMP_REGEX = /_aionui_\d{13}(\.\w+)?$/;
 export const AIONUI_FILES_MARKER = '[[AION_FILES]]';
 
-// ===== 媒体类型相关常量 =====
+// ===== Media type constants =====
 
-/** 支持的图片文件扩展名 */
+/** Supported image file extensions */
 export const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.svg'] as const;
 
-/** 文件扩展名到MIME类型的映射 */
+/** File extension to MIME type map */
 export const MIME_TYPE_MAP: Record<string, string> = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
@@ -84,7 +84,7 @@ export const MIME_TYPE_MAP: Record<string, string> = {
   '.svg': 'image/svg+xml',
 };
 
-/** MIME类型到文件扩展名的映射 */
+/** MIME type to file extension map */
 export const MIME_TO_EXT_MAP: Record<string, string> = {
   jpeg: '.jpg',
   jpg: '.jpg',
@@ -96,10 +96,10 @@ export const MIME_TO_EXT_MAP: Record<string, string> = {
   'svg+xml': '.svg',
 };
 
-/** 默认图片文件扩展名 */
+/** Default image file extension */
 export const DEFAULT_IMAGE_EXTENSION = '.png';
 
-// ===== WebUI 相关常量 =====
+// ===== WebUI constants =====
 
 /** WebUI default port: 25808 for production, 25809 for development, 25810 for multi-instance dev */
 export const WEBUI_DEFAULT_PORT = (() => {
@@ -110,7 +110,7 @@ export const WEBUI_DEFAULT_PORT = (() => {
 
 export const TEAM_MODE_ENABLED = true;
 
-// ===== AI Provider 相关常量 =====
+// ===== AI provider constants =====
 
 // Stable ID for the Google Auth virtual provider.
 // Shared between frontend (useModelProviderList) and backend (SystemActions).

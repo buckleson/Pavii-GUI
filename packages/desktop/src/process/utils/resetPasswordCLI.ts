@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Reset password CLI utility for packaged applications
- * 打包应用的密码重置命令行工具
+ * Password-reset command-line tool for the packaged app
  */
 
 // Color output

@@ -736,10 +736,10 @@ export function initUpdateBridge(): void {
         // prerelease semver into `package.json#version` for dev builds (e.g. `1.7.2-dev.1234+sha.abcdef0`)
         // so semver ordering holds.
         //
-        // 中文：版本号说明
-        // 更新比较严格使用 semver：`app.getVersion()`（应用自身版本号）对比 CDN manifest 的 `version`。
-        // 若要 dev/预发布版本更新可靠生效，需要 CI 在 dev 构建时把 `package.json#version`
-        // 注入为带 prerelease 的 semver（如 `1.7.2-dev.1234+sha.abcdef0`），以保证比较顺序正确。
+        // Version comparison notes
+        // Updates compare strict semver: `app.getVersion()` (the app's own version) against the CDN manifest's `version`.
+        // For dev/prerelease updates to work reliably, CI must inject `package.json#version`
+        // as a prerelease semver (e.g. `1.7.2-dev.1234+sha.abcdef0`) so ordering compares correctly.
 
         // Source of truth: the CDN channel manifest when a CDN feed is
         // configured, otherwise the repo's GitHub releases.
@@ -791,7 +791,7 @@ export function initUpdateBridge(): void {
         // Defense-in-depth: do not allow arbitrary downloads from renderer.
         // EN: Only allowlisted hosts (CDN + GitHub release hosts) are permitted;
         // each redirect hop is re-validated against the allowlist.
-        // 中文：仅允许白名单内的域名（CDN + GitHub release 相关），并手动处理重定向，每一跳都校验白名单。
+        // Only allowlisted domains (CDN + GitHub release hosts); redirects are followed manually and every hop is re-checked against the allowlist.
         await assertAllowedUrl(params.url);
         if (params.fallbackUrl) {
           await assertAllowedUrl(params.fallbackUrl);

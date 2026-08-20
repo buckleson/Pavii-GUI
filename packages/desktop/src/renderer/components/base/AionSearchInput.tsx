@@ -12,31 +12,31 @@ import { useTranslation } from 'react-i18next';
 import styles from './AionSearchInput.module.css';
 
 /**
- * AionSearchInput —— 全局统一搜索框
+ * AionSearchInput - the shared search box
  *
- * 样式基准取自会话记录搜索面板：搜索图标 + 输入框 + 圆形清除按钮，
- * 38px 高、10px 圆角、focus 主色描边。各调用处只需传 placeholder 文案，
- * 搜索逻辑（过滤、防抖、结果展示）仍由调用方持有 —— 本组件只负责外观与录入。
+ * Styled after the conversation-history search panel: search icon, input and a round clear
+ * button, 38px tall, 10px radius, focus outlined in the primary colour. Callers pass only the
+ * placeholder; the search logic (filtering, debouncing, results) stays with them - this component owns appearance and entry only.
  */
 export type AionSearchInputProps = {
-  /** 当前输入值（受控） */
+  /** Current value (controlled) */
   value: string;
-  /** 值变化回调，返回最新字符串 */
+  /** Change callback, receiving the latest string */
   onChange: (value: string) => void;
   placeholder?: string;
-  /** 是否显示清除按钮（有内容时），默认 true */
+  /** Whether to show the clear button when there is content; defaults to true */
   allowClear?: boolean;
-  /** 自定义清除逻辑，默认清空为 '' */
+  /** Custom clear behaviour; defaults to setting '' */
   onClear?: () => void;
   className?: string;
   style?: CSSProperties;
   autoFocus?: boolean;
   disabled?: boolean;
-  /** 落在原生 input 上（测试用 fill 需要它指向真实输入框） */
+  /** Applied to the native input (tests using fill need it to target the real input) */
   'data-testid'?: string;
-  /** 落在外层容器上，用于定位整块搜索栏 */
+  /** Applied to the outer container, for locating the whole search bar */
   wrapTestId?: string;
-  /** 透传给原生 input 的额外属性（如 onKeyDown、aria-label 等） */
+  /** Extra props forwarded to the native input (onKeyDown, aria-label and the like) */
   inputProps?: Omit<
     InputHTMLAttributes<HTMLInputElement>,
     'value' | 'onChange' | 'placeholder' | 'disabled' | 'autoFocus' | 'className'

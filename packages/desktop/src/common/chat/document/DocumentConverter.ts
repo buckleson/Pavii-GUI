@@ -5,18 +5,18 @@
  */
 
 /**
- * 文档转换器 - Markdown 中心化
+ * Document converter - Markdown-centric
  *
- * 核心理念：所有可编辑文档都转换为 Markdown 进行统一编辑
- * Word/Excel → Markdown → 编辑 → Word/Excel/PDF
+ * Core idea: every editable document converts to Markdown for uniform editing
+ * Word/Excel -> Markdown -> edit -> Word/Excel/PDF
  */
 export class DocumentConverter {
   /**
    * Word → Markdown
-   * 使用 mammoth + turndown
+   * Uses mammoth + turndown
    */
   async wordToMarkdown(arrayBuffer: ArrayBuffer): Promise<string> {
-    // 动态导入以减少初始加载
+    // Dynamic import to keep initial load small
     const mammoth = await import('mammoth');
     const TurndownService = (await import('turndown')).default;
     const { gfm } = await import('turndown-plugin-gfm');
@@ -31,7 +31,7 @@ export class DocumentConverter {
       codeBlockStyle: 'fenced',
       bulletListMarker: '-',
     });
-    turndown.use(gfm); // 支持 GitHub Flavored Markdown (表格等)
+    turndown.use(gfm); // GitHub Flavored Markdown support (tables etc.)
 
     const markdown = turndown.turndown(html);
 
@@ -40,13 +40,13 @@ export class DocumentConverter {
 
   /**
    * Markdown → Word
-   * 使用 docx 库将 Markdown 转换为 Word 文档
+   * Convert Markdown to a Word document with the docx library
    */
   async markdownToWord(markdown: string): Promise<ArrayBuffer> {
     const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import('docx');
 
-    // 简单实现：将 Markdown 段落转为 Word 段落
-    // 更复杂的实现可以解析 Markdown AST
+    // Simple implementation: Markdown paragraphs become Word paragraphs
+    // A richer implementation could parse the Markdown AST
     const lines = markdown.split('\n');
     const paragraphs = [];
 
@@ -79,7 +79,7 @@ export class DocumentConverter {
           })
         );
       } else {
-        // 空行
+        // Blank line
         paragraphs.push(new Paragraph({ text: '' }));
       }
     }
@@ -94,13 +94,13 @@ export class DocumentConverter {
     });
 
     const buffer = await Packer.toBuffer(doc);
-    // 将 Buffer 转换为 ArrayBuffer
+    // Convert the Buffer to an ArrayBuffer
     return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
   }
 
   /**
-   * Excel → Markdown (表格)
-   * 使用 SheetJS
+   * Excel -> Markdown (tables)
+   * Uses SheetJS
    */
   async excelToMarkdown(arrayBuffer: ArrayBuffer): Promise<string> {
     const XLSX = await import('xlsx-republish');
@@ -109,7 +109,7 @@ export class DocumentConverter {
     let markdown = '';
 
     workbook.SheetNames.forEach((sheetName) => {
-      // 多个 Sheet 时添加标题
+      // Add a heading when there is more than one sheet
       if (workbook.SheetNames.length > 1) {
         markdown += `## ${sheetName}\n\n`;
       }
@@ -119,15 +119,15 @@ export class DocumentConverter {
 
       if (data.length === 0) return;
 
-      // 表头
+      // Header row
       const headers = data[0].map((cell: any) => String(cell || ''));
       markdown += `| ${headers.join(' | ')} |\n`;
       markdown += `| ${headers.map(() => '---').join(' | ')} |\n`;
 
-      // 数据行
+      // Data rows
       for (let i = 1; i < data.length; i++) {
         const row = data[i].map((cell: any) => String(cell || ''));
-        // 补齐列数
+        // Pad to the full column count
         while (row.length < headers.length) {
           row.push('');
         }
@@ -142,7 +142,7 @@ export class DocumentConverter {
 
   /**
    * Markdown → Excel
-   * 解析 Markdown 表格并转换为 Excel
+   * Parse Markdown tables and convert them to Excel
    */
   async markdownToExcel(markdown: string): Promise<ArrayBuffer> {
     const XLSX = await import('xlsx-republish');
@@ -157,12 +157,12 @@ export class DocumentConverter {
     });
 
     const uint8Array = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
-    // 将 Uint8Array 转换为 ArrayBuffer
+    // Convert the Uint8Array to an ArrayBuffer
     return uint8Array.buffer.slice(uint8Array.byteOffset, uint8Array.byteOffset + uint8Array.byteLength);
   }
 
   /**
-   * 解析 Markdown 表格
+   * Parse Markdown tables
    */
   private parseMarkdownTables(markdown: string): Array<{ name: string; data: any[][] }> {
     const sheets: Array<{ name: string; data: any[][] }> = [];
@@ -174,15 +174,15 @@ export class DocumentConverter {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
 
-      // 检测 Sheet 标题 (## Sheet名)
+      // Detect a sheet heading (## SheetName)
       if (line.startsWith('## ')) {
-        // 保存上一个 Sheet
+        // Save the previous sheet
         if (currentSheet && currentTable.length > 0) {
           currentSheet.data = currentTable;
           sheets.push(currentSheet);
         }
 
-        // 创建新 Sheet
+        // Start a new sheet
         currentSheet = {
           name: line.substring(3).trim(),
           data: [],
@@ -191,21 +191,21 @@ export class DocumentConverter {
         continue;
       }
 
-      // 检测表格行
+      // Detect a table row
       if (line.startsWith('|')) {
         const cells = line
           .split('|')
           .filter((cell, idx, arr) => idx > 0 && idx < arr.length - 1)
           .map((cell) => cell.trim());
 
-        // 跳过分隔行 (|---|---|)
+        // Skip the separator row (|---|---|)
         if (cells.every((cell) => /^-+$/.test(cell))) {
           continue;
         }
 
         currentTable.push(cells);
       } else if (currentTable.length > 0) {
-        // 表格结束
+        // Table ended
         if (currentSheet) {
           currentSheet.data = currentTable;
           sheets.push(currentSheet);
@@ -217,7 +217,7 @@ export class DocumentConverter {
       }
     }
 
-    // 保存最后一个表格
+    // Save the last table
     if (currentTable.length > 0) {
       if (currentSheet) {
         currentSheet.data = currentTable;

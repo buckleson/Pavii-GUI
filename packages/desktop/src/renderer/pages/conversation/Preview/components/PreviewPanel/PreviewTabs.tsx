@@ -12,12 +12,12 @@ import { useTranslation } from 'react-i18next';
 import type { TabFadeState } from '../../hooks/useTabOverflow';
 
 /**
- * 单个 tab 的最大宽度。
+ * Maximum width of a single tab.
  *
- * 网页标题可以任意长（"某某官网 - 首页 - 欢迎光临……"），不设上限时一个 tab 就能
- * 撑满整条 tab 栏，用户完全看不出还有别的 tab。180px 够放下十几个中文字或一个可
- * 辨识的域名，同时保证预览框在最小宽度（260px）下仍能露出第二个 tab 的边缘，给出
- * "还有更多"的视觉线索。
+ * Page titles can be arbitrarily long, and without a cap one tab can fill the whole strip,
+ * leaving the user unable to see that any others exist. 180px fits a recognisable domain or a
+ * dozen-odd wide characters, and still lets the edge of a second tab show at the panel minimum
+ * width (260px), giving the visual hint that there is more.
  *
  * Maximum width of a single tab. Page titles can be arbitrarily long, and without a
  * cap one tab fills the whole strip so the user cannot tell other tabs exist. 180px
@@ -102,7 +102,7 @@ interface PreviewTabsProps {
   onClosePanel?: () => void;
 
   /**
-   * 新建浏览器 tab 回调；仅在已有浏览器 tab 时提供，避免在纯文档场景出现无意义的加号
+   * Called to open a new browser tab; supplied only when a browser tab already exists, so a document-only panel shows no pointless plus
    * New browser tab callback. Only supplied when a browser tab already exists, so
    * the plus button never appears in a document-only panel.
    */
@@ -136,7 +136,7 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
       style={{ minHeight: '36px', borderBottom: '1px solid var(--border-base)' }}
     >
       <div className='flex items-center h-36px w-full'>
-        {/* Tabs 滚动区域 / Tabs scroll area */}
+        {/* Tabs scroll area */}
         <div ref={tabsContainerRef} className='flex items-center h-full flex-1 overflow-x-auto'>
           {tabs.length > 0 ? (
             tabs.map((tab) => (
@@ -148,15 +148,15 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
                 onContextMenu={(e) => onContextMenu(e, tab.id)}
                 // Middle-click to close.
                 //
-                // 走 onCloseTab 而不是直接关，所以未保存的 tab 仍会先弹确认——中键
-                // 不能成为绕过该确认的第二条路。
+                // Routed through onCloseTab rather than closing directly, so an unsaved tab still prompts:
+                // middle-click must not become a second path around that confirmation.
                 //
                 // Routed through onCloseTab rather than closing directly, so a tab with
                 // unsaved edits still asks first: middle-click must not become a second
                 // path around that confirmation.
                 //
-                // preventDefault 只在这个 tab 上：中键在浏览器里默认触发自动滚动，
-                // 而全局拦截会连带破坏页面其它地方的正常中键行为。
+                // preventDefault is scoped to this tab: middle-click triggers autoscroll by default, and
+                // intercepting globally would break legitimate middle-click behaviour elsewhere on the page.
                 //
                 // preventDefault is scoped to this tab: middle-click otherwise starts
                 // autoscroll, and intercepting it globally would break legitimate
@@ -168,11 +168,11 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
                   onCloseTab(tab.id);
                 }}
               >
-                {/* min-w-0 是省略号生效的前提：flex 子项默认按内容撑开，不允许收缩
+                {/* min-w-0 is what makes the ellipsis work: flex children size to content and refuse to shrink by default
                     min-w-0 is what makes truncation possible: a flex child defaults
                     to its content width and refuses to shrink below it. */}
                 <span className='text-12px flex items-center gap-4px min-w-0'>
-                  {/* 站点图标（浏览器 tab）/ Site icon (browser tabs) */}
+                  {/* Site icon (browser tabs) */}
                   {tab.favicon && (
                     <img
                       src={tab.favicon}
@@ -184,22 +184,22 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
                       }}
                     />
                   )}
-                  {/* 只让标题文字收缩并省略；图标与指示器保持完整可见。
-                      title 属性提供完整标题，避免截断后信息丢失。
+                  {/* Only the title text shrinks and ellipsizes; icons and indicators stay fully visible.
+                      The title attribute carries the full text so nothing is lost to truncation.
                       Only the title text shrinks and ellipsizes; icons and indicators
                       stay fully visible. The title attribute exposes the full text so
                       truncation never hides information. */}
                   <span className='truncate' title={tab.title}>
                     {tab.title}
                   </span>
-                  {/* Agent 操作中指示器 / Agent activity indicator */}
+                  {/* Agent activity indicator */}
                   {tab.agentActive && (
                     <span
                       className='w-6px h-6px rd-full bg-success animate-pulse flex-shrink-0'
                       title={t('preview.browser.agentActiveTooltip')}
                     />
                   )}
-                  {/* 未保存指示器 / Unsaved indicator */}
+                  {/* Unsaved indicator */}
                   {tab.isDirty && (
                     <span
                       className='w-6px h-6px rd-full bg-primary flex-shrink-0'
@@ -207,10 +207,10 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
                     />
                   )}
                 </span>
-                {/* 叉叉比加号「显得」大，是因为加号有 24px 的悬停底框衬托，而叉叉是
-                    一个裸露的图标。所以这里给叉叉同样的方框（16px，比加号的 24px 小
-                    一档，因为它在 tab 内部），并把图标本身收到 12px，视觉重量就和加号
-                    一致了。
+                {/* The cross *looks* bigger than the plus because the plus sits on a 24px hover box while the
+                    cross is a bare icon. So the cross gets the same treatment: a 16px box (one step below the
+                    plus's 24px, since it lives inside a tab) with the glyph itself down to 12px, which matches
+                    the two visually.
                     The close glyph looked bigger than the plus because the plus sits in a
                     24px hover box while the close icon was bare. Giving it the same kind
                     of box (16px — one step down from the plus's 24px since it lives inside
@@ -230,7 +230,7 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
             <div className='text-12px text-t-tertiary px-10px'>{t('preview.noTabs')}</div>
           )}
 
-          {/* 新建浏览器 tab / New browser tab */}
+          {/* New browser tab */}
           {onNewBrowserTab && (
             <div
               className='flex items-center justify-center w-24px h-24px ml-4px rd-4px cursor-pointer flex-shrink-0 hover:bg-bg-3 transition-colors'
@@ -242,7 +242,7 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
           )}
         </div>
 
-        {/* 收起面板按钮 / Collapse panel button */}
+        {/* Collapse panel button */}
         {onClosePanel && (
           <div className='flex items-center h-full px-10px flex-shrink-0 rounded-tr-[16px]'>
             <div
@@ -256,7 +256,7 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
         )}
       </div>
 
-      {/* 左侧渐变指示器 / Left gradient indicator */}
+      {/* Left gradient indicator */}
       {showLeftFade && (
         <div
           className='pointer-events-none absolute left-0 top-0 bottom-0 w-32px rounded-tl-[16px]'
@@ -266,7 +266,7 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
         />
       )}
 
-      {/* 右侧渐变指示器 / Right gradient indicator */}
+      {/* Right gradient indicator */}
       {showRightFade && (
         <div
           className='pointer-events-none absolute right-0 top-0 bottom-0 w-32px rounded-tr-[16px]'

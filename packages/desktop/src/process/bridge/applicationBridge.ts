@@ -322,11 +322,11 @@ export function initApplicationBridge(): void {
   });
 
   /**
-   * 清空应用内浏览器的登录态与缓存。
+   * Clear the in-app browser session and caches.
    *
-   * 登录态是全局共享的（所有 tab、所有项目共用一个 partition），所以这里是唯一
-   * 的"退出全部网站"入口。已打开的浏览器 tab 需要刷新后才会体现，这在设置项的
-   * 说明文案里告诉用户。
+   * The session is shared globally (every tab and project uses one partition), so this
+   * is the single "sign out of every site" entry point. Already-open browser tabs only
+   * reflect it after a refresh, which the settings copy tells the user.
    *
    * Clear the in-app browser's sign-in state and cache. Sign-in state is globally
    * shared (one partition across all tabs and projects), so this is the only way
@@ -336,8 +336,8 @@ export function initApplicationBridge(): void {
   ipcBridge.application.clearBrowserData.provider(async () => {
     try {
       const browserSession = session.fromPartition(BROWSER_SESSION_PARTITION);
-      // clearStorageData 只清 cookie 和各类 storage，不含 HTTP 缓存和认证缓存 ——
-      // 而设置里的文案承诺了「清理缓存」，所以三个都要清。
+      // clearStorageData only clears cookies and the storage families, not the HTTP or auth
+      // caches - and the settings copy promises "clear caches", so all three are cleared.
       //
       // clearStorageData covers cookies and storages but neither the HTTP cache nor
       // the HTTP auth cache, and the settings copy promises the cache is cleared.
@@ -352,11 +352,11 @@ export function initApplicationBridge(): void {
 
   ipcBridge.application.reportBrowserWebContentsId.provider(async ({ webContentsId }) => {
     /**
-     * 把单目标 CDP 通道附加到侧边浏览器。
+     * Attach the single-target CDP channel to the side browser.
      *
-     * 每次浏览器 tab 切换都会重报一次：通道同时只服务一个目标，切换即改附加对象，
-     * 这样 Agent 操作的始终是用户当前看到的那个页面。多 tab 情况下这是刻意的取舍 ——
-     * 与其同时暴露 10 个 webContents，不如只暴露活跃的那一个。
+     * Re-reported on every browser tab switch: the channel serves one target at a time and
+     * switching re-attaches it, so the agent always drives the page the user is looking at.
+     * With many tabs this is a deliberate trade: expose the one active webContents, not ten.
      *
      * Attaches the single-target CDP bridge to the in-app browser. Re-reported on every
      * browser tab switch: the bridge serves one target at a time, so switching re-points

@@ -93,12 +93,12 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
   const [zoomFactor, setZoomFactor] = useState(1);
   const [webviewReady, setWebviewReady] = useState(false);
 
-  // 最近由本组件内部触发的导航地址集合。
+  // Addresses this component navigated to itself.
   //
-  // 浏览器 tab 会把「当前地址」当作 url prop 回传下来，于是内部导航会形成回环：
-  // 内部导航 → onUrlChange → 父组件更新 url prop → 下面的重置 effect 触发 → 历史被清空。
-  // 结果就是后退按钮永远是灰的。记住内部导航的地址，当 prop 只是这个回环的回声时
-  // 就跳过重置。完整说明与「为什么要记一组而不是最后一个」见 webviewHistory.ts。
+  // A browser tab feeds the current address back as the url prop, which closes a loop:
+  // internal navigation -> onUrlChange -> parent updates url -> the reset effect below fires -> history is cleared.
+  // The back button then stays grey forever. Remembering internal addresses lets the reset be
+  // skipped when the prop is only that echo. See webviewHistory.ts for the full account, including why a set is kept rather than just the last address.
   //
   // Addresses recently navigated to from inside this component.
   //
@@ -137,8 +137,8 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
 
   // Reset when props.url changes
   useEffect(() => {
-    // 只有「外部」换址才该清空历史（换 tab、换预览文件）。判断逻辑抽到
-    // shouldResetHistoryForUrlProp，那里有完整的回环说明与单测。
+    // Only an external address change should clear history (switching tabs or preview files).
+    // That decision lives in shouldResetHistoryForUrlProp, with the loop explained and unit-tested.
     //
     // Only an *external* address change should clear history (switching tabs or
     // preview targets). The decision lives in shouldResetHistoryForUrlProp, which
@@ -168,7 +168,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
   /**
    * Navigate to a new address.
    *
-   * 历史由 webview 自己维护，这里只需要发起导航；按钮状态在 did-navigate 里统一同步。
+   * The webview owns its history, so this only starts the navigation; button state syncs in did-navigate.
    * The webview owns the history, so this only triggers the navigation — button state
    * is synced centrally in did-navigate.
    */
@@ -300,11 +300,11 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
       injectClickInterceptor();
 
       /**
-       * 把这个 webview 的 webContents id 报给主进程，让单目标 CDP 通道附加到它。
+       * Report this webview's webContents id to the main process so the single-target CDP channel attaches to it.
        *
-       * 放在 dom-ready 里：此时 getWebContentsId() 才可用，而且每次导航/切 tab 后都会
-       * 再触发一次，正好让通道跟着用户当前看的页面走。失败只记日志不打扰用户 ——
-       * Agent 操作浏览器本就是可选能力，不该因为它挡住正常浏览。
+       * Done in dom-ready: getWebContentsId() is only available then, and it fires again after every
+       * navigation and tab switch, which is exactly how the channel follows the page the user is on.
+       * Failures are logged and nothing more: agent browser control is optional and must not block ordinary browsing.
        *
        * Report this webview's webContents id so the single-target CDP bridge can attach.
        * Done on dom-ready because getWebContentsId() is only valid by then, and because it
@@ -529,12 +529,12 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
   );
 
   /**
-   * 后退 / 前进直接交给 webview 自己的历史。
+   * Back and forward defer to the webview's own history.
    *
-   * 之前是手写两个地址栈 + 手动改 src。这在浏览器 tab 上是坏的：webview 自己的历史
-   * 与手写栈是两份状态，重定向、页内跳转、prop 回环都会让它们对不上，出现「按钮亮着
-   * 但点了没反应」（canGoBack 为 true，而栈已经被清空）。webview 本来就维护着一份
-   * 准确的历史，用它就不存在同步问题。
+   * This used to be two hand-written address stacks plus manual src changes, which is broken for
+   * browser tabs: the webview's history and the hand-written stacks are two states, and
+   * redirects, in-page jumps and the prop loop all desynchronise them, producing "the button is
+   * lit but clicking does nothing" (canGoBack true while the stack was cleared). The webview already keeps an accurate history, and using it removes the sync problem entirely.
    *
    * Delegate Back/Forward to the webview's own history instead of hand-rolled URL
    * stacks plus manual `src` assignment. The stacks were a second copy of state that
@@ -589,13 +589,13 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
 
   // Build webview attributes
   /**
-   * 这个 webview 渲染任意外部网页，所以三个开关都按「不信任页面」来设。
+   * This webview renders arbitrary external pages, so all three switches assume the page is untrusted.
    *
-   * contextIsolation=yes 是刻意打开的：Electron 官方建议即使关掉 nodeIntegration 也保持
-   * 隔离，多一层纵深。我们不依赖与页面共享 JS 上下文 —— 注入脚本和宿主之间靠
-   * postMessage → console.log → 'console-message' 事件通信（见 handleConsoleMessage），
-   * 全程在页面世界里，隔离开着照样成立。别为了图方便把它关回 no：那样以后任何
-   * preload / IPC 暴露都会被不可信页面直接摸到。
+   * contextIsolation=yes is deliberate: Electron recommends keeping isolation even with
+   * nodeIntegration off, for defence in depth. We never rely on sharing a JS context with the
+   * page: injected scripts talk to the host through postMessage -> console.log -> the
+   * 'console-message' event (see handleConsoleMessage), entirely inside the page world, which
+   * works fine with isolation on. Do not flip it back to no for convenience: any future preload or IPC surface would then be reachable by an untrusted page.
    *
    * This webview renders arbitrary external pages, so all three flags assume the page is
    * untrusted. contextIsolation is deliberately on: Electron recommends keeping it even
@@ -685,9 +685,9 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
             .aion-url-viewer-toolbar .toolbar-input {
               -webkit-appearance: none;
               appearance: none;
-              /* box-sizing 必须显式声明：width:100% 配 padding + border 时，
-                 content-box 会把左右各 13px（12px padding + 1px border）加在
-                 100% 之外，整行被顶宽 26px 而溢出预览框右边缘。
+              /* box-sizing must be explicit: with width:100% plus padding and a border,
+                 content-box adds 13px on each side (12px padding + 1px border) outside the
+                 100%, pushing the row 26px wider and overflowing the right edge of the preview panel.
                  box-sizing must be explicit: with width:100% plus padding and
                  border, content-box adds 13px per side (12px padding + 1px
                  border) on top of the 100%, widening the row by 26px so it

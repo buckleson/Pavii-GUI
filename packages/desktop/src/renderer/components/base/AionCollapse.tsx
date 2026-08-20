@@ -87,8 +87,8 @@ AionCollapseItem.displayName = 'AionCollapseItem';
  * ```tsx
  * Basic usage
  * <AionCollapse defaultActiveKey={['1']}>
- *   <AionCollapse.Item name="1" header="面板1">
- *     内容1
+ *   <AionCollapse.Item name="1" header="Panel 1">
+ *     Content 1
  *   </AionCollapse.Item>
  *   </AionCollapse.Item>
  * </AionCollapse>
@@ -185,7 +185,7 @@ const AionCollapseComponent: React.FC<AionCollapseProps> & { Item: typeof AionCo
               disabled && 'opacity-50'
             )}
           >
-            {/* 面板标题 / Panel header */}
+            {/* Panel header */}
             <div
               onClick={() => handleToggle(name, disabled)}
               className={classNames(
@@ -197,7 +197,7 @@ const AionCollapseComponent: React.FC<AionCollapseProps> & { Item: typeof AionCo
               <div className='flex-1 text-t-primary text-14px leading-22px'>{header}</div>
               {expandIconPosition === 'right' && <span className='flex items-center'>{iconNode}</span>}
             </div>
-            {/* 面板内容（使用 grid 实现平滑动画）/ Panel content (using grid for smooth animation) */}
+            {/* Panel content (grid gives the smooth animation) */}
             <div className='transition-all duration-300 ease-in-out'>
               {isActive && (
                 <div

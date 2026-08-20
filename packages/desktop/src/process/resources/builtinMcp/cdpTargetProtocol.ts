@@ -5,19 +5,19 @@
  */
 
 /**
- * 单目标 CDP 转发层的纯协议逻辑（不含 Electron / socket 依赖，便于单测）。
+ * Pure protocol logic of the single-target CDP relay (no Electron/socket deps, for unit testing).
  *
- * 为什么需要这一层：Chromium 的 remote-debugging-port 是「整个应用级」的，没有
- * per-target ACL，开一个口子等于把主窗口（连着 preload 桥）一起暴露给本机任意进程。
- * 我们改成只对侧边浏览器那一个 webContents 暴露，但 chrome-devtools-mcp 用的是
- * puppeteer 的 browserURL 连接方式，它上来就把对面当成「一整个浏览器」，先发
- * Target.setDiscoverTargets / setAutoAttach，再靠 Target.attachToTarget 拿 sessionId。
- * Electron 的 webContents.debugger 只能服务单个页面，答不上这些命令。
+ * Why this layer exists: Chromium's remote-debugging-port is application-wide with no
+ * per-target ACL - opening it exposes the main window (preload bridge attached) to any local process.
+ * We expose only the side browser's webContents instead, but chrome-devtools-mcp connects via
+ * puppeteer's browserURL flow, which treats its peer as a whole browser: it opens with
+ * Target.setDiscoverTargets / setAutoAttach, then gets a sessionId via Target.attachToTarget.
+ * Electron's webContents.debugger serves a single page and cannot answer those commands.
  *
- * 所以这里把自己伪装成「只有一个标签页的浏览器」：Target.* 由我们本地应答，其余命令
- * 透传给 debugger。Electron 的 debugger 收发两端都支持 sessionId（electron.d.ts
- * sendCommand(method, params, sessionId) 与 'message' 事件的 sessionId 参数），
- * 所以 puppeteer 要的 flatten 模式能对上。
+ * So this impersonates a one-tab browser: Target.* is answered locally, everything else passes
+ * through to the debugger. Electron's debugger supports sessionId on both directions
+ * (electron.d.ts sendCommand(method, params, sessionId) and the 'message' event's sessionId),
+ * so the flatten mode puppeteer wants lines up.
  *
  * Pure protocol logic for the single-target CDP bridge (no Electron or socket
  * dependency, so it can be unit-tested).
@@ -60,7 +60,7 @@ export type CdpRequest = {
   sessionId?: string;
 };
 
-/** 本地应答 / 透传给 debugger / 明确拒绝。 */
+/** Answer locally / pass through to the debugger / refuse explicitly. */
 export type CdpDecision =
   | { kind: 'reply'; payload: Record<string, unknown> }
   | {
@@ -82,8 +82,8 @@ export const buildTargetInfo = (title: string, url: string): TargetInfo => ({
 });
 
 /**
- * /json/version 的响应。puppeteer 的 getWSEndpoint() 只读 webSocketDebuggerUrl，
- * 但 Browser.version() 会用到 Browser 字段，一并给全避免后续报错。
+ * The /json/version response. puppeteer's getWSEndpoint() reads only webSocketDebuggerUrl,
+ * but Browser.version() uses the Browser field - provide both to avoid later errors.
  *
  * puppeteer's getWSEndpoint() only reads webSocketDebuggerUrl, but Browser.version()
  * surfaces the Browser field, so provide both.
@@ -97,7 +97,7 @@ export const buildVersionPayload = (wsUrl: string, chromeVersion: string) => ({
   webSocketDebuggerUrl: wsUrl,
 });
 
-/** /json/list 的响应：永远只有那一个页面。/ Always exactly one page. */
+/** The /json/list response. Always exactly one page. */
 export const buildListPayload = (wsUrl: string, title: string, url: string) => [
   {
     description: '',
@@ -111,12 +111,12 @@ export const buildListPayload = (wsUrl: string, title: string, url: string) => [
 ];
 
 /**
- * 决定一条入站命令怎么处理。
+ * Decide how an inbound command is handled.
  *
- * 关键取舍：Target.createTarget 明确报错而不是静默忽略。这个命令的语义是「新开一个
- * 标签页」，我们做不到，但如果假装成功、返回那个唯一的 targetId，Agent 会以为自己开了
- * 新页面，实际上在原页面上继续操作 —— 那种错法比直接失败更难查。宁可让它拿到一个
- * 说明清楚的错误。
+ * Key trade: Target.createTarget errors explicitly rather than being ignored. Its meaning is
+ * "open a new tab", which we cannot do - but faking success by returning the one targetId would
+ * leave the agent believing it opened a new page while still driving the old one, a failure mode
+ * far harder to trace than an outright error. Give it a clear one.
  *
  * Deliberate choice: Target.createTarget errors out rather than silently no-oping.
  * It means "open a new tab", which we cannot do; pretending it succeeded and handing
@@ -129,8 +129,8 @@ export const decideCdpCommand = (req: CdpRequest, getTargetInfo: () => TargetInf
 
   switch (method) {
     /**
-     * discover:true 时 Chromium 会立刻补发已存在目标的 targetCreated。puppeteer 靠
-     * 这个事件建立 Target 对象，不补发它就一直等在 initialize() 里。
+     * With discover:true, Chromium immediately backfills targetCreated for existing targets.
+     * puppeteer builds its Target objects from that event and waits in initialize() without it.
      *
      * With discover:true Chromium backfills targetCreated for existing targets.
      * puppeteer builds its Target objects from that event and would otherwise hang
@@ -148,13 +148,13 @@ export const decideCdpCommand = (req: CdpRequest, getTargetInfo: () => TargetInf
 
     case 'Target.setAutoAttach': {
       /**
-       * 只有「浏览器级」的 setAutoAttach 才补发 attachedToTarget。
+       * Only the browser-level setAutoAttach backfills attachedToTarget.
        *
-       * 实测踩到的死循环：puppeteer 收到 attachedToTarget 后会为新 session 再发一次
-       * setAutoAttach（递归附加子目标），如果我们对每一次都补发，就会
-       * setAutoAttach → attachedToTarget → setAutoAttach … 无限循环，
-       * 连接永远初始化不完。带 sessionId 的那次代表「在页面会话里问子目标」，
-       * 我们没有子目标（没有 iframe/worker 需要暴露），直接应答空即可。
+       * The infinite loop hit in practice: on attachedToTarget, puppeteer sends setAutoAttach again
+       * for the new session (recursively attaching children); backfilling on every one gives
+       * setAutoAttach -> attachedToTarget -> setAutoAttach ... forever,
+       * and the connection never finishes initializing. The sessionId-carrying call means "asking the
+       * page session about children" - we expose no iframes/workers, so answer empty.
        *
        * Only the browser-level setAutoAttach backfills attachedToTarget. Testing hit an
        * infinite loop: on receiving attachedToTarget puppeteer issues another setAutoAttach
@@ -167,16 +167,16 @@ export const decideCdpCommand = (req: CdpRequest, getTargetInfo: () => TargetInf
       if (!isBrowserLevel) return { kind: 'reply', payload: {} };
 
       /**
-       * 必须主动补发 attachedToTarget，否则 puppeteer 认不出这个页面。
+       * attachedToTarget must be backfilled proactively or puppeteer never recognizes the page.
        *
-       * puppeteer 的 TargetManager.getAvailableTargets() 返回的是
-       * #attachedTargetsByTargetId —— 只有「已附加」的目标才算数，而「已附加」只由
-       * attachedToTarget 事件建立。targetCreated 只进 discovered 列表，
-       * 所以只发 targetCreated 会让 browser.pages() 返回 0。
+       * puppeteer's TargetManager.getAvailableTargets() returns
+       * #attachedTargetsByTargetId - only attached targets count, and "attached" is established
+       * solely by the attachedToTarget event. targetCreated only reaches the discovered list,
+       * so sending targetCreated alone leaves browser.pages() at 0.
        *
-       * filter 里的 {type:'page', exclude:true} 看着像「别自动附加页面」，但那管的是
-       * 运行中新开的页面；对连接时就已存在的页面，真实 Chrome 会在 setAutoAttach 时
-       * 直接补发 attachedToTarget。我们那个常驻页面属于后者。
+       * The filter's {type:'page', exclude:true} reads like "don't auto-attach pages", but that
+       * governs pages opened later at runtime; for pages already existing at connect time, real
+       * Chrome backfills attachedToTarget during setAutoAttach. Our resident page is the latter.
        *
        * We must proactively emit attachedToTarget or puppeteer never recognises the page:
        * getAvailableTargets() returns #attachedTargetsByTargetId, and only the
@@ -210,8 +210,8 @@ export const decideCdpCommand = (req: CdpRequest, getTargetInfo: () => TargetInf
       return { kind: 'reply', payload: { browserContextIds: [SINGLE_BROWSER_CONTEXT_ID] } };
 
     /**
-     * 只允许附加到我们唯一的目标；其它 id 直接报错，避免把请求转给一个不存在的会话。
-     * attachedToTarget 事件带 sessionId，flatten 模式下 puppeteer 依赖它路由后续命令。
+     * Only our single target may be attached; any other id errors rather than forwarding to a session that does not exist.
+     * The attachedToTarget event carries the sessionId that flatten-mode puppeteer routes subsequent commands by.
      *
      * Only our single target may be attached; any other id errors out instead of being
      * routed to a session that does not exist. The attachedToTarget event carries the
@@ -261,10 +261,10 @@ export const decideCdpCommand = (req: CdpRequest, getTargetInfo: () => TargetInf
 };
 
 /**
- * 判断入站 sessionId 是否可接受。
+ * Decide whether an inbound sessionId is acceptable.
  *
- * 空 sessionId = 浏览器级命令；我们那个固定 session = 页面级。其余一律拒绝，
- * 而不是当成浏览器级放过去 —— 静默放行会让错路由的命令看起来「成功」。
+ * Empty sessionId = browser-level command; our fixed session = page-level. Everything else is
+ * refused rather than treated as browser-level - waving it through makes a misrouted command look successful.
  *
  * An empty sessionId means a browser-level command; our fixed session means page level.
  * Anything else is rejected rather than quietly treated as browser-level, since letting

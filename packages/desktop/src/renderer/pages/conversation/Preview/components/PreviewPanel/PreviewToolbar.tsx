@@ -50,9 +50,9 @@ interface PreviewToolbarProps {
   showOpenInSystemButton: boolean;
 
   /**
-   * 这个 tab 没有内容可操作（超过大小上限，或格式无法渲染）。
-   * 视图切换、分屏、审查元素都是对内容的操作，隐藏；
-   * 但「在系统中打开」与「下载」照常显示 —— 那是用户唯一的出路。
+   * This tab has no content to act on (over the size limit, or an unrenderable format).
+   * View switching, split view and inspect all operate on content and are hidden;
+   * "open in system" and "download" stay, because they are the only way out.
    *
    * The tab has no content to act on — either it exceeded the size ceiling or its
    * format cannot be rendered. View-mode switching, split screen and inspect all
@@ -62,10 +62,10 @@ interface PreviewToolbarProps {
   hasNoRenderableContent?: boolean;
 
   /**
-   * 文件是否在磁盘上（有 file_path）。
-   * 刻意与 showOpenInSystemButton 分开传：后者现在也接受纯 fileRef（逃生出口），
+   * Whether the file exists on disk (has a file_path).
+   * Deliberately separate from showOpenInSystemButton, which now also accepts a bare fileRef
    * md tab
-   * 悄悄丢掉下载按钮。
+   * (the escape hatch) and would otherwise quietly drop the download button.
    *
    * Whether the file exists on disk (has a file_path). Passed separately from
    * showOpenInSystemButton on purpose: that flag now also accepts a bare fileRef
@@ -175,7 +175,7 @@ const PreviewToolbar: React.FC<PreviewToolbarProps> = ({
   return (
     <div className='flex items-center justify-between h-32px px-10px bg-bg-2 flex-shrink-0 border-b border-border-1 overflow-x-auto'>
       <div className='flex items-center justify-between gap-8px w-full' style={{ minWidth: 'max-content' }}>
-        {/* 左侧：Tabs（Markdown/HTML）+ 文件名 / Left: Tabs (Markdown/HTML) + Filename */}
+        {/* Left: tabs (Markdown/HTML) + filename */}
         <div className='flex items-center h-full gap-8px'>
           {(isMarkdown || isHTML || isDiff) && !hasNoRenderableContent && (
             <>
@@ -273,9 +273,9 @@ const PreviewToolbar: React.FC<PreviewToolbarProps> = ({
         </div>
 
         <div className='flex items-center gap-4px flex-shrink-0'>
-          {/* 刷新：放在这个稳定容器里，不进下面那两个「前置/后置」重复块 ——
-              那两块由 preferActionButtonsInFront 二选一，只有 PDF 注入 leftExtra，
-              所以按钮会随 tab 类型左右跳。
+          {/* Refresh lives in this stable container rather than the duplicated leading/trailing blocks
+              below: those are chosen by preferActionButtonsInFront and only PDF injects leftExtra, so the
+              button would jump left and right with the tab type.
               Refresh lives in this stable container rather than in the duplicated
               front/back action blocks below: those two are selected by
               preferActionButtonsInFront, and only PDF injects leftExtra, so anything

@@ -11,10 +11,10 @@ import * as path from 'path';
 // gpu.config.json
 const GPU_CONFIG_FILE = 'gpu.config.json';
 
-// 连续 GPU 崩溃达到此阈值后，下次启动自动关闭硬件加速。
+// After this many consecutive GPU crashes, the next launch disables hardware acceleration.
 const GPU_CRASH_THRESHOLD = 3;
 
-// 距上次崩溃超过此时间后视作偶发，重置计数并尝试恢复硬件加速。
+// A crash older than this window counts as incidental: reset the count and try re-enabling.
 const GPU_CRASH_RESET_MS = 24 * 60 * 60 * 1000;
 
 type GpuOverride = 'force-on' | 'force-off';
@@ -23,7 +23,7 @@ interface GpuConfig {
   disableHardwareAcceleration?: boolean;
   crashCount?: number;
   lastCrashAt?: number;
-  /** 用户手动开关：force-on 永远启用硬件加速；force-off 永远禁用。 */
+  /** Manual override: force-on always enables hardware acceleration; force-off always disables. */
   userOverride?: GpuOverride;
 }
 
@@ -67,7 +67,7 @@ export function applyGpuRecoveryFlags(): void {
     return;
   }
 
-  // 距上次崩溃超过重置窗口：清理状态，恢复硬件加速。
+  // Last crash is past the reset window: clear the state and restore hardware acceleration.
   if (cfg.lastCrashAt && Date.now() - cfg.lastCrashAt > GPU_CRASH_RESET_MS) {
     if (cfg.disableHardwareAcceleration || (cfg.crashCount ?? 0) > 0) {
       writeConfig({ ...cfg, crashCount: 0, disableHardwareAcceleration: false });

@@ -286,7 +286,7 @@ export type IMessageAgentStatus = IMessage<
   {
     backend: string; // Agent identifier: 'claude', 'qwen', 'codex', 'remote', etc.
     status: 'connecting' | 'connected' | 'authenticated' | 'session_active' | 'error';
-    /** Display name for the agent (e.g. extension-contributed adapter name) / Agent 显示名称 */
+    /** Display name for the agent (e.g. extension-contributed adapter name) */
     agent_name?: string;
     // Optional legacy fields for backward compatibility
     session_id?: string;
@@ -423,7 +423,7 @@ export type TMessage =
   | IMessageAvailableCommands
   | IMessageAcpTerminalOutput;
 
-// 统一所有需要用户交互的用户类型
+// Union of every message type that needs user interaction
 export interface IConfirmation<Option extends any = any> {
   title?: string;
   id: string;
@@ -669,7 +669,7 @@ export const normalizeAgentStreamError = (value: unknown): AgentStreamErrorInfo 
 };
 
 /**
- * @description 将后端返回的消息转换为前端消息
+ * @description Convert a backend message into a frontend message
  * */
 const isChatMessagePosition = (value: unknown): value is NonNullable<TMessage['position']> =>
   value === 'left' || value === 'right' || value === 'center' || value === 'pop';
@@ -907,7 +907,7 @@ const transformMessageInner = (message: IResponseMessage): TMessage | undefined 
 };
 
 /**
- * @description 将消息合并到消息列表中
+ * @description Merge a message into the message list
  * */
 export const composeMessage = (
   message: TMessage | undefined,
@@ -1060,18 +1060,18 @@ export const composeMessage = (
 };
 
 export const handleImageGenerationWithWorkspace = (message: TMessage, workspace: string): TMessage => {
-  // 只处理text类型的消息
+  // Only text messages are handled
   if (message.type !== 'text') {
     return message;
   }
 
-  // 深拷贝消息以避免修改原始对象
+  // Deep-copy the message so the original object is not mutated
   const processedMessage = {
     ...message,
     content: {
       ...message.content,
       content: message.content.content.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, imagePath) => {
-        // 如果是绝对路径、http链接或data URL，保持不变
+        // Absolute paths, http links and data URLs pass through unchanged
         if (
           imagePath.startsWith('http') ||
           imagePath.startsWith('data:') ||
@@ -1082,7 +1082,7 @@ export const handleImageGenerationWithWorkspace = (message: TMessage, workspace:
         ) {
           return match;
         }
-        // 如果是相对路径，与workspace拼接
+        // A relative path is joined with the workspace
         const absolutePath = joinPath(workspace, imagePath);
         return `![${alt}](${encodeURI(absolutePath)})`;
       }),

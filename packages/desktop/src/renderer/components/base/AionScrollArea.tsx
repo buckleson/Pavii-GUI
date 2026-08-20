@@ -14,7 +14,7 @@ import React from 'react';
  *
  * @example
  * ```tsx
- * // 垂直滚动（默认）/ Vertical scroll (default)
+ * // Vertical scroll (default)
  * <AionScrollArea className="h-400px">
  *   <div>Content...</div>
  * </AionScrollArea>
@@ -33,7 +33,7 @@ import React from 'react';
 interface AionScrollAreaProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Scroll direction: y-vertical, x-horizontal, both-bidirectional */
   direction?: 'y' | 'x' | 'both';
-  /** 是否禁用滚动（用于嵌入式页面展示） */
+  /** Whether scrolling is disabled (for embedded page display) */
   disableOverflow?: boolean;
 }
 

@@ -69,20 +69,20 @@ const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
     return null;
   }
 
-  // 计算圆环参数
+  // Compute the ring geometry
   const strokeWidth = 2;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
-  // 根据状态获取颜色
+  // Colour by status
   const getStrokeColor = () => {
     if (isDanger) return 'rgb(var(--danger-6))';
     if (isWarning) return 'rgb(var(--warning-6))';
     return 'rgb(var(--primary-6))';
   };
 
-  // 背景圆环颜色 - 适配深浅主题
+  // Track colour, tuned for light and dark themes
   const getTrackColor = () => {
     return 'var(--color-fill-3)';
   };
@@ -160,7 +160,7 @@ const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
         style={{ width: 32, height: 32 }}
       >
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }}>
-          {/* 背景圆环 */}
+          {/* Track ring */}
           <circle
             cx={size / 2}
             cy={size / 2}
@@ -169,7 +169,7 @@ const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
             stroke={getTrackColor()}
             strokeWidth={strokeWidth}
           />
-          {/* 进度圆环 — only when the denominator is known; otherwise the hollow track alone signals "count available, window unknown" */}
+          {/* Progress ring - only when the denominator is known; otherwise the hollow track alone signals "count available, window unknown" */}
           {hasWindow && (
             <circle
               cx={size / 2}
@@ -207,10 +207,10 @@ export function formatCostAmount(cost: TokenUsageCost): string {
 }
 
 /**
- * 格式化 token 数量显示
- * @param count token 数量
- * @param hideZeroDecimals 是否隐藏小数点为0的情况（如 1.0M 显示为 1M），默认为 false
- * @returns 格式化后的字符串，如 "37.0K" 或 "1.2M"，当 hideZeroDecimals 为 true 时 "1.0M" 显示为 "1M"
+ * Format a token count for display
+ * @param count Token count
+ * @param hideZeroDecimals Whether to drop a zero decimal (1.0M becomes 1M); defaults to false
+ * @returns The formatted string, e.g. "37.0K" or "1.2M"; with hideZeroDecimals, "1.0M" renders as "1M"
  */
 export function formatTokenCount(count: number, hideZeroDecimals = false): string {
   if (count >= 1_000_000) {

@@ -31,29 +31,29 @@ export interface AionStepsProps extends StepsProps {
  * ```tsx
  * Basic usage
  * <AionSteps current={1}>
- *   <AionSteps.Step title="步骤1" description="这是描述" />
- *   <AionSteps.Step title="步骤2" description="这是描述" />
- *   <AionSteps.Step title="步骤3" description="这是描述" />
+ *   <AionSteps.Step title="Step 1" description="A description" />
+ *   <AionSteps.Step title="Step 2" description="A description" />
+ *   <AionSteps.Step title="Step 3" description="A description" />
  * </AionSteps>
  *
  * Vertical steps
  * <AionSteps current={1} direction="vertical">
- *   <AionSteps.Step title="步骤1" description="描述" />
- *   <AionSteps.Step title="步骤2" description="描述" />
+ *   <AionSteps.Step title="Step 1" description="Description" />
+ *   <AionSteps.Step title="Step 2" description="Description" />
  * </AionSteps>
  *
  * Steps with icons
  * <AionSteps current={1}>
- *   <AionSteps.Step title="完成" icon={<IconCheck />} />
- *   <AionSteps.Step title="进行中" icon={<IconLoading />} />
- *   <AionSteps.Step title="待处理" icon={<IconClock />} />
+ *   <AionSteps.Step title="Done" icon={<IconCheck />} />
+ *   <AionSteps.Step title="In progress" icon={<IconLoading />} />
+ *   <AionSteps.Step title="Pending" icon={<IconClock />} />
  * </AionSteps>
  *
  * Mini steps
  * <AionSteps current={1} size="small" type="dot">
- *   <AionSteps.Step title="步骤1" />
- *   <AionSteps.Step title="步骤2" />
- *   <AionSteps.Step title="步骤3" />
+ *   <AionSteps.Step title="Step 1" />
+ *   <AionSteps.Step title="Step 2" />
+ *   <AionSteps.Step title="Step 3" />
  * </AionSteps>
  * ```
  *

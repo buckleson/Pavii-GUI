@@ -8,10 +8,10 @@ import type { SpeechToTextConfig } from '@/common/types/provider/speech';
 import type { Theme } from '@/common/theme/types';
 import { buildStorage } from '@/common/platform/storage';
 
-// 系统配置存储
+// System configuration storage
 export const ConfigStorage = buildStorage<IConfigStorageRefer>('agent.config');
 
-// 系统环境变量存储
+// System environment variable storage
 export const EnvStorage = buildStorage<IEnvStorageRefer>('agent.env');
 
 export interface IConfigStorageRefer {
@@ -34,9 +34,9 @@ export interface IConfigStorageRefer {
   'theme.activeId': string;
   /** User-created themes */
   'theme.userThemes': Theme[];
-  // 是否在粘贴文件到工作区时询问确认（true = 不再询问）
+  // Whether pasting files into the workspace asks for confirmation (true = never ask again)
   'workspace.pasteConfirm'?: boolean;
-  // 上传的文件是否保存到工作区目录（true = 保存到工作区，false = 保存到缓存目录）
+  // Whether uploads are saved into the workspace (true) or the cache directory (false)
   'upload.saveToWorkspace'?: boolean;
   // Minimize to system tray when closing window
   'system.closeToTray'?: boolean;
@@ -77,7 +77,7 @@ export interface IConfigStorageRefer {
  */
 export interface ILegacyConfigStorageRefer extends IConfigStorageRefer {
   'google.config'?: {
-    /** Proxy URL for Google OAuth endpoint reachability / Google OAuth 端点代理 */
+    /** Proxy URL for Google OAuth endpoint reachability */
     proxy?: string;
   };
   /** Global LLM prompt timeout in seconds (default: 300). Per-backend promptTimeout overrides this. */
@@ -103,7 +103,7 @@ export interface IEnvStorageRefer {
 
 /**
  * Conversation source type - identifies where the conversation was created
- * 会话来源类型 - 标识会话创建的来源
+ * Conversation source: where the conversation was created from
  */
 export type ConversationSource = 'aionui' | 'telegram' | 'lark' | 'dingtalk' | 'weixin' | 'wecom' | (string & {});
 
@@ -180,7 +180,7 @@ export interface TConversationForkLineage {
   last_turn_id?: string;
 }
 
-// Token 使用统计数据类型
+// Token usage statistics types
 export interface TokenUsageBreakdown {
   input_tokens?: number;
   output_tokens?: number;
@@ -217,7 +217,7 @@ export type TChatConversation =
           custom_workspace?: boolean;
           agent_name?: string;
           custom_agent_id?: string; // UUID for identifying specific custom agent
-          preset_context?: string; // 智能助手的预设规则/提示词 / Preset context from smart assistant
+          preset_context?: string; // Preset context from smart assistant
           /** Skills snapshot for this conversation — authoritative list, written
            * once at creation. Join with `GET /api/skills` for descriptions. */
           skills?: string[];
@@ -237,7 +237,7 @@ export type TChatConversation =
           pinned_at?: number;
           /** ACP backend session UUID for session resume */
           acp_session_id?: string;
-          /** Conversation ID that owns the ACP session / 拥有该 ACP session 的会话 ID */
+          /** Conversation ID that owns the ACP session */
           acp_session_conversation_id?: string;
           /** Last update time of ACP session */
           acp_session_updated_at?: number;
@@ -245,13 +245,13 @@ export type TChatConversation =
           last_token_usage?: TokenUsageData;
           /** Context window capacity from usage_update */
           last_context_limit?: number;
-          /** Persisted session mode for resume support / 持久化的会话模式，用于恢复 */
+          /** Persisted session mode for resume support */
           session_mode?: string;
-          /** Persisted model ID for resume support / 持久化的模型 ID，用于恢复 */
+          /** Persisted model ID for resume support */
           current_model_id?: string;
-          /** Cached config options from ACP backend / 缓存的 ACP 配置选项 */
+          /** Cached config options from ACP backend */
           cached_config_options?: import('@/common/types/platform/acpTypes').AcpSessionConfigOption[];
-          /** Pending config option selections from Guid page / Guid 页面待应用的配置选项 */
+          /** Pending config option selections from Guid page */
           pending_config_options?: Record<string, string>;
           /** Legacy marker for pre-provider-probe health-check conversations */
           is_health_check?: boolean;
@@ -271,7 +271,7 @@ export type TChatConversation =
           cli_path?: string;
           custom_workspace?: boolean;
           sandboxMode?: 'read-only' | 'workspace-write' | 'danger-full-access'; // Codex sandbox permission mode
-          preset_context?: string; // 智能助手的预设规则/提示词 / Preset context from smart assistant
+          preset_context?: string; // Preset context from smart assistant
           /** Skills snapshot for this conversation — authoritative list, written
            * once at creation. Join with `GET /api/skills` for descriptions. */
           skills?: string[];
@@ -281,9 +281,9 @@ export type TChatConversation =
           pinned?: boolean;
           /** Pin timestamp in milliseconds */
           pinned_at?: number;
-          /** Persisted session mode for resume support / 持久化的会话模式，用于恢复 */
+          /** Persisted session mode for resume support */
           session_mode?: string;
-          /** User-selected Codex model from Guid page / 用户在引导页选择的 Codex 模型 */
+          /** User-selected Codex model from Guid page */
           codexModel?: string;
           /** Legacy marker for pre-provider-probe health-check conversations */
           is_health_check?: boolean;
@@ -460,20 +460,20 @@ export type IChatConversationRefer = {
 };
 
 export type ModelType =
-  | 'text' // 文本对话
-  | 'vision' // 视觉理解
-  | 'function_calling' // 工具调用
-  | 'image_generation' // 图像生成
-  | 'web_search' // 网络搜索
-  | 'reasoning' // 推理模型
-  | 'embedding' // 嵌入模型
-  | 'rerank' // 重排序模型
-  | 'excludeFromPrimary'; // 排除：不适合作为主力模型
+  | 'text' // Text conversation
+  | 'vision' // Visual understanding
+  | 'function_calling' // Tool calling
+  | 'image_generation' // Image generation
+  | 'web_search' // Web search
+  | 'reasoning' // Reasoning model
+  | 'embedding' // Embedding model
+  | 'rerank' // Reranking model
+  | 'excludeFromPrimary'; // Excluded: unsuitable as a primary model
 
 export type ModelCapability = {
   type: ModelType;
   /**
-   * 是否为用户手动选择，如果为true，则表示用户手动选择了该类型，否则表示用户手动禁止了该模型；如果为undefined，则表示使用默认值
+   * Whether the user chose this manually: true = manually selected, false = manually disabled, undefined = default
    */
   isUserSelected?: boolean;
 };
@@ -495,16 +495,16 @@ export interface IProvider {
   api_key: string;
   models: string[];
   /**
-   * 模型能力标签列表。打了标签就是支持，没打就是不支持
+   * Capability tags for the model. Tagged means supported; untagged means not.
    */
   capabilities?: ModelCapability[];
   /**
-   * 上下文token限制，可选字段，只在明确知道时填写
+   * Context token limit; optional, filled in only when known for certain
    */
   context_limit?: number;
   /**
-   * 每个模型的协议覆盖配置。映射模型名称到协议字符串。
-   * 仅在 platform 为 'new-api' 时使用。
+   * Per-model protocol overrides, mapping model name to protocol string.
+   * Used only when platform is 'new-api'.
    * Per-model protocol overrides. Maps model name to protocol string.
    * Only used when platform is 'new-api'.
    * e.g. { "gemini-2.5-pro": "gemini", "claude-sonnet-4": "anthropic", "gpt-4o": "openai" }
@@ -538,7 +538,7 @@ export interface IProvider {
     string,
     {
       status: 'unknown' | 'healthy' | 'unhealthy';
-      last_check?: number; // 时间戳 / timestamp
+      last_check?: number; // timestamp
       latency?: number; // latency in milliseconds
       error?: string; // error message
     }
@@ -593,14 +593,14 @@ export interface IMcpServer {
   id: string;
   name: string;
   description?: string;
-  enabled: boolean; // 是否默认启用（新会话默认勾选）
+  enabled: boolean; // Enabled by default (pre-checked for new conversations)
   transport: IMcpServerTransport;
   tools?: IMcpTool[];
-  last_test_status?: 'connected' | 'disconnected' | 'error' | 'testing'; // 最近一次检测结果
+  last_test_status?: 'connected' | 'disconnected' | 'error' | 'testing'; // Latest connectivity check result
   last_connected?: number;
   created_at: number;
   updated_at: number;
-  original_json: string; // 存储原始JSON配置，用于编辑时的准确显示
+  original_json: string; // Original JSON config, kept for faithful display when editing
   /** Built-in MCP server managed by AionUi (hide edit/delete in UI) */
   builtin?: boolean;
 }

@@ -27,23 +27,23 @@ const configErrorMessageKey = (error: unknown) => {
 };
 
 export interface AgentModeSelectorProps {
-  /** Agent backend type / 代理后端类型 */
+  /** Agent backend type */
   backend?: string;
-  /** Display name for the agent / 代理显示名称 */
+  /** Display name for the agent */
   agent_name?: string;
-  /** Custom agent logo (SVG path or emoji) / 自定义代理 logo */
+  /** Custom agent logo (SVG path or emoji) */
   agentLogo?: string;
-  /** Whether the logo is an emoji / logo 是否为 emoji */
+  /** Whether the logo is an emoji */
   agentLogoIsEmoji?: boolean;
   /** Whether the explicit assistant logo is intentionally empty. */
   agentLogoIsFallback?: boolean;
-  /** Conversation ID for mode switching / 用于切换模式的会话 ID */
+  /** Conversation ID for mode switching */
   conversation_id?: string;
-  /** Compact mode: only show mode label + dropdown, no logo/name / 紧凑模式：仅显示模式标签和下拉 */
+  /** Compact mode: only the mode label and dropdown, no logo or name */
   compact?: boolean;
-  /** Show agent logo in compact mode / 紧凑模式是否显示代理图标 */
+  /** Show the agent logo in compact mode */
   showLogoInCompact?: boolean;
-  /** Compact label content: mode label or agent name / 紧凑模式文案：模式名或代理名 */
+  /** Compact label content: mode label or agent name */
   compactLabelType?: 'mode' | 'agent';
   /** Initial mode override (for Guid page pre-conversation selection) */
   initialMode?: string;
@@ -55,7 +55,7 @@ export interface AgentModeSelectorProps {
   compactLeadingIcon?: React.ReactNode;
   /** Optional display label formatter for mode options */
   modeLabelFormatter?: (mode: AgentModeOption) => string;
-  /** Optional compact prefix text, e.g. "Permission" / "权限" */
+  /** Optional compact prefix text, e.g. "Permission" */
   compactLabelPrefix?: string;
   /** Hide compact prefix on mobile */
   hideCompactLabelPrefixOnMobile?: boolean;
@@ -75,8 +75,8 @@ export interface AgentModeSelectorProps {
  * AgentModeSelector - A dropdown component for switching agent modes
  * Displays agent logo and name, with dropdown menu for mode selection
  *
- * 代理模式选择器 - 用于切换代理模式的下拉组件
- * 显示代理 logo 和名称，通过下拉菜单选择模式
+ * Agent mode selector: a dropdown for switching agent modes
+ * Shows the agent logo and name, with the mode chosen from the dropdown
  */
 const AgentModeSelector: React.FC<AgentModeSelectorProps> = ({
   backend,

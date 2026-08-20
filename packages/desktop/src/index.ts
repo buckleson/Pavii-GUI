@@ -526,7 +526,7 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
     autoHideMenuBar: true,
     // Set icon for Windows/Linux in development mode
     ...(devIcon && process.platform !== 'darwin' ? { icon: devIcon } : {}),
-    // Custom titlebar configuration / 自定义标题栏配置
+    // Custom titlebar configuration
     ...(process.platform === 'darwin'
       ? {
           titleBarStyle: 'hidden',
@@ -584,7 +584,7 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
   attachWindowBoundsPersistence(mainWindow, (bounds) => ProcessConfig.set('window.bounds', bounds));
 
   // Initialize auto-updater service (skip when disabled via env, e.g. E2E / CI)
-  // 初始化自动更新服务（通过环境变量禁用时跳过，例如 E2E / CI 场景）
+  // Initialize the auto-update service (skipped when disabled by env var, e.g. E2E / CI)
   const isCiRuntime = process.env.CI === 'true' || process.env.CI === '1' || process.env.GITHUB_ACTIONS === 'true';
   const disableAutoUpdater =
     process.env.AIONUI_DISABLE_AUTO_UPDATE === '1' || process.env.AIONUI_E2E_TEST === '1' || isCiRuntime;
@@ -601,7 +601,7 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
         // build: the app's final version guides users to the website instead of
         // auto-checking, so startup stays silent. The flag is a compile-time
         // literal, so this branch is tree-shaken out of non-discontinued builds.
-        // 3秒后检查更新。停更版启动静默，不做应用内检测。
+        // Check for updates after 3s. Update-frozen builds start silently and never check in-app.
         // checkForUpdatesAndNotify() is itself a no-op unless a Pavii-owned
         // update feed is configured (see process/services/updateFeed.ts), so no
         // launch-time request ever reaches a third party by default.
@@ -743,19 +743,19 @@ const handleAppReady = async (): Promise<void> => {
   }
 
   /**
-   * 启动单目标 CDP 通道，并把端口/口令写进自己的 env。
+   * Start the single-target CDP channel and write its port and token into our own env.
    *
-   * ⚠️ 必须在 startBackendOrExit() 之前 —— 这是硬顺序，不是风格问题。
+   * This must happen before startBackendOrExit(). It is a hard ordering requirement, not style.
    *
-   * 两个值靠进程继承链传给 Agent：aioncore 是本进程的子进程，内置浏览器 MCP 又是
-   * aioncore 的子进程，所以不用落库、不用写配置。但继承是「spawn 那一刻的快照」：
-   * backend-launcher 用 `{ ...process.env }` spawn aioncore，此后我们再改 process.env
-   * 对已经起来的 aioncore 毫无影响。一旦这段挪到 backend 启动之后，aioncore 继承到的
-   * 口令就是 undefined，浏览器 MCP 读不到凭证直接 exit(1)，「Agent 可控」这条链就断在
-   * 最后一环 —— 而手动浏览、标签、前进后退全都正常，故障看起来跟浏览器无关，极难排查。
+   * Both values reach the agent by process inheritance: the engine is our child and the built-in
+   * browser MCP is its child, so nothing is persisted or configured. But inheritance is a
+   * snapshot taken at spawn time: backend-launcher spawns the engine with `{ ...process.env }`,
+   * and later mutations of process.env do not reach an already-running engine. Move this block
+   * after backend startup and the engine inherits an undefined token, the browser MCP exits(1)
+   * for want of credentials, and the agent-control chain breaks at its last link - while manual browsing, tabs and back/forward all still work, so the fault looks unrelated to the browser and is brutal to trace.
    *
-   * 这里只起一个 node http/ws 服务，不碰 Electron 的 app.ready 相关能力，
-   * 附加目标是后续渲染进程通过 IPC 报上来的，所以放在这个位置是安全的。
+   * This only starts a node http/ws service and touches nothing that requires Electron app.ready;
+   * the attach target is reported later by the renderer over IPC, so this position is safe.
    *
    * Start the single-target CDP bridge and publish port/token into our own env.
    *
@@ -780,9 +780,9 @@ const handleAppReady = async (): Promise<void> => {
       const bridge = await startCdpBridge();
       setCdpBridgeHandle(bridge);
       /**
-       * 回填真实端口，让设置页显示的是「连得上的地址」。
-       * 以前这里显示的是 9230 段那个预留号，而通道走 listen(0) —— 用户照着复制的
-       * MCP 配置根本连不上。
+       * Backfill the real port so the settings page shows an address that actually connects.
+       * It used to show the reserved 9230-range number while the channel used listen(0), so an MCP
+       * config copied from it could never connect.
        *
        * Backfill the real port so the settings page shows a reachable address. It used to
        * display the reserved 9230-range number while the bridge listened on listen(0), so
@@ -800,8 +800,8 @@ const handleAppReady = async (): Promise<void> => {
       mark('cdpBridge');
     } catch (error) {
       /**
-       * 通道起不来就不设 env。MCP 读不到端口/口令会自行退出（见 browserServer.ts），
-       * 绝不会退回去自己开一个独立 Chrome —— 那正是我们要消灭的行为。
+       * If the channel fails to start, the env is left unset. The MCP exits on missing port/token
+       * (see browserServer.ts) and never falls back to opening its own Chrome, which is the behaviour this design exists to remove.
        *
        * If the bridge fails to start we leave the env unset. The MCP exits when it cannot
        * read port/token (see browserServer.ts) and never falls back to spawning its own

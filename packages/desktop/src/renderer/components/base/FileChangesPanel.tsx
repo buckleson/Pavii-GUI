@@ -36,7 +36,7 @@ export interface FileChangesPanelProps {
   defaultExpanded?: boolean;
   /** Callback when preview button is clicked */
   onFileClick?: (file: FileChangeItem) => void;
-  /** 点击变更统计的回调（+8/-3 数字触发，打开 diff 对比）/ Callback when change stats are clicked (opens diff view) */
+  /** Callback when the change stats are clicked (opens the diff view) */
   onDiffClick?: (file: FileChangeItem) => void;
   /** Additional class name */
   className?: string;
@@ -120,18 +120,18 @@ const FileChangesPanel: React.FC<FileChangesPanelProps> = ({
       )}
       style={{ width: '100%' }}
     >
-      {/* 标题栏 / Header */}
+      {/* Header */}
       <div
         className='flex items-center justify-between px-16px py-12px cursor-pointer select-none'
         onClick={() => setExpanded(!expanded)}
       >
         <div className='flex items-center gap-8px'>
-          {/* 绿色圆点 / Green dot */}
+          {/* Green dot */}
           <span className='w-8px h-8px rounded-full shrink-0' style={{ backgroundColor: diffColors.addition }}></span>
-          {/* 标题 / Title */}
+          {/* Title */}
           <span className='text-14px text-t-primary font-medium'>{title}</span>
         </div>
-        {/* 展开/收起箭头 / Expand/collapse arrow */}
+        {/* Expand/collapse arrow */}
         <Down
           theme='outline'
           size='16'
@@ -140,7 +140,7 @@ const FileChangesPanel: React.FC<FileChangesPanelProps> = ({
         />
       </div>
 
-      {/* 文件列表 / File list */}
+      {/* File list */}
       {expanded && (
         <div className='w-full bg-2'>
           {files.map((file, index) => (
@@ -150,13 +150,13 @@ const FileChangesPanel: React.FC<FileChangesPanelProps> = ({
                 'group flex items-center justify-between px-16px py-12px hover:bg-3 transition-colors'
               )}
             >
-              {/* 文件名 / File name */}
+              {/* File name */}
               <div className='flex items-center min-w-0'>
                 <span className='text-14px text-t-primary truncate'>{file.file_name}</span>
               </div>
-              {/* 变更统计 + 预览按钮 / Change statistics + Preview button */}
+              {/* Change stats + preview button */}
               <div className='flex items-center gap-8px shrink-0'>
-                {/* 变更统计 - 点击打开 diff 对比 / Change stats - click to open diff view */}
+                {/* Change stats - click to open the diff view */}
                 {(file.insertions > 0 || file.deletions > 0) && (
                   <span
                     className={classNames(
@@ -180,7 +180,7 @@ const FileChangesPanel: React.FC<FileChangesPanelProps> = ({
                     )}
                   </span>
                 )}
-                {/* 预览按钮 - 点击打开文件预览 / Preview button - click to open file preview */}
+                {/* Preview button - click to open the file preview */}
                 <span
                   className='group-hover:opacity-100 transition-opacity shrink-0 ml-4px flex items-center gap-4px text-12px text-t-secondary cursor-pointer rd-4px px-4px py-2px hover:bg-4'
                   onClick={(e) => {

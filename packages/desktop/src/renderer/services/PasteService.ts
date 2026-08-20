@@ -57,7 +57,7 @@ type PasteHandler = (event: React.ClipboardEvent | ClipboardEvent) => Promise<bo
  */
 export type ImageCounter = { next: () => number };
 
-// MIME 类型到文件扩展名的映射
+// MIME type to file extension map
 function getExtensionFromMimeType(mimeType: string): string {
   const mimeMap: Record<string, string> = {
     'image/png': '.png',
@@ -68,13 +68,13 @@ function getExtensionFromMimeType(mimeType: string): string {
     'image/bmp': '.bmp',
     'image/svg+xml': '.svg',
   };
-  return mimeMap[mimeType] || '.png'; // 默认为 .png
+  return mimeMap[mimeType] || '.png'; // Defaults to .png
 }
 
-// 浏览器把剪贴板图片默认命名成 image.png / image.jpg 之类，这种名字
-// 跟 MIME 一一对应、没有实际语义，应视为系统默认名并由我们重命名。
+// Browsers name clipboard images image.png / image.jpg and similar. Such names map one-to-one
+// to the MIME type and carry no meaning, so they count as system defaults and we rename them.
 const BROWSER_DEFAULT_IMAGE_NAME_RE = /^image\.(png|jpe?g|gif|webp|bmp|svg)$/i;
-// 我们自己旧版本的默认名，形如 `2024-01-02_03-04-05` 前缀。
+// Our own older default names, prefixed like `2024-01-02_03-04-05`.
 const LEGACY_SYSTEM_GENERATED_NAME_RE = /^[a-zA-Z]?_?\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}/;
 
 function isSystemGeneratedImageName(name: string | undefined | null): boolean {
@@ -87,7 +87,7 @@ class PasteServiceClass {
   private lastFocusedComponent: string | null = null;
   private isInitialized = false;
 
-  // 初始化全局粘贴监听
+  // Install the global paste listener
   init() {
     if (this.isInitialized) return;
 
@@ -95,24 +95,24 @@ class PasteServiceClass {
     this.isInitialized = true;
   }
 
-  // 注册组件的粘贴处理器
+  // Register a component's paste handler
   registerHandler(componentId: string, handler: PasteHandler) {
     this.handlers.set(componentId, handler);
   }
 
-  // 注销组件的粘贴处理器
+  // Unregister a component's paste handler
   unregisterHandler(componentId: string) {
     this.handlers.delete(componentId);
   }
 
-  // 设置当前焦点组件
+  // Set the currently focused component
   setLastFocusedComponent(componentId: string) {
     this.lastFocusedComponent = componentId;
   }
 
-  // 全局粘贴事件处理
+  // Global paste event handler
   private handleGlobalPaste = async (event: ClipboardEvent) => {
-    // 当粘贴目标是可编辑元素（input/textarea/contentEditable）时，直接交给浏览器原生行为，避免拦截其他输入框
+    // When the paste target is editable (input/textarea/contentEditable), leave it to the browser so other inputs are not hijacked
     if (this.shouldAllowNativePaste(event)) {
       return;
     }
@@ -155,7 +155,7 @@ class PasteServiceClass {
     return false;
   }
 
-  // 通用粘贴处理逻辑
+  // Shared paste handling
   async handlePaste(
     event: React.ClipboardEvent | ClipboardEvent,
     supportedExts: string[],
@@ -165,26 +165,26 @@ class PasteServiceClass {
     source: UploadSource = 'sendbox',
     imageCounter?: ImageCounter
   ): Promise<boolean> {
-    // 立即事件冒泡,避免全局监听器重复处理
+    // Stop propagation immediately so the global listener does not handle it twice
     event.stopPropagation();
     const clipboardText = event.clipboardData?.getData('text');
     const files = event.clipboardData?.files;
     // If caller passes an empty array, treat it as "allow all file types"
     const allowAll = !supportedExts || supportedExts.length === 0;
 
-    // 优先检查是否有文件，如果有文件则忽略文本（避免粘贴文件时同时插入文件名）
+    // Files take precedence over text, so pasting a file does not also insert its name
     if (files && files.length > 0) {
-      // 处理文件，跳过文本处理
+      // Handle the files and skip text handling
       const fileList: FileMetadata[] = [];
       const usedFileNames = new Set<string>();
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const file_path = (file as File & { path?: string }).path;
 
-        // 检查是否有文件路径 (Electron 环境下 File 对象会有额外的 path 属性)
+        // Check for a file path (under Electron a File carries an extra path property)
 
         if (!file_path && file.type.startsWith('image/')) {
-          // 剪贴板图片，需要检查是否支持该类型
+          // A clipboard image; check the type is supported
           const fileExt = getFileExtension(file.name) || getExtensionFromMimeType(file.type);
 
           if (allowAll || supportedExts.includes(fileExt)) {
@@ -193,9 +193,9 @@ class PasteServiceClass {
               const uint8Array = new Uint8Array(arrayBuffer);
 
               // Generate a concise filename; replace system-generated default names.
-              // 剪贴板里的图片通常叫 `image.png` 这种 MIME 默认名，优先按调用方传入的
-              // imageCounter 递增序号命名（跨多次粘贴保持唯一）；没给 counter 时退回
-              // 到时间戳兜底。
+              // Clipboard images usually carry a MIME default name like `image.png`, so prefer the caller's
+              // incrementing imageCounter (unique across repeated pastes) and fall back to a timestamp
+              // when no counter is supplied.
               const isSystemGenerated = isSystemGeneratedImageName(file.name);
               let file_name: string;
               if (!isSystemGenerated && file.name) {
@@ -221,7 +221,7 @@ class PasteServiceClass {
               }
               usedFileNames.add(file_name);
 
-              // 上传到后端并拿回绝对路径（Electron / WebUI 都走 HTTP multipart）
+              // Upload to the backend and get an absolute path back (both Electron and WebUI use HTTP multipart)
               const tempPath = await createTempFile(file_name, uint8Array, file.type, conversation_id, source);
 
               if (tempPath) {
@@ -237,15 +237,15 @@ class PasteServiceClass {
               if (error instanceof Error && error.message === 'FILE_TOO_LARGE') {
                 throw error;
               }
-              console.error('创建临时文件失败:', error);
+              console.error('Failed to create the temp file:', error);
             }
           } else {
-            // 不支持的文件类型，跳过但不报错（让后续过滤处理）
+            // Unsupported type: skip without erroring and let later filtering deal with it
             console.warn(`Unsupported image type: ${file.type}, extension: ${fileExt}`);
           }
         } else if (file_path) {
-          // 有文件路径的文件（从文件管理器复制/拖拽粘贴的文件）
-          // 检查文件类型是否支持
+          // Files that have a path (copied or dragged from a file manager)
+          // Check the file type is supported
           const fileExt = getFileExtension(file.name);
 
           if (allowAll || supportedExts.includes(fileExt)) {
@@ -289,18 +289,18 @@ class PasteServiceClass {
               if (error instanceof Error && error.message === 'FILE_TOO_LARGE') {
                 throw error;
               }
-              console.error('上传粘贴文件失败:', error);
+              console.error('Failed to upload the pasted file:', error);
             }
           } else {
-            // 不支持的文件类型
+            // Unsupported file type
             console.warn(`Unsupported file type: ${file.name}, extension: ${fileExt}`);
           }
         } else if (!file.type.startsWith('image/')) {
-          // 没有文件路径的非图片文件（从文件管理器复制粘贴的文件）
+          // Non-image files without a path (copied from a file manager)
           const fileExt = getFileExtension(file.name);
 
           if (allowAll || supportedExts.includes(fileExt)) {
-            // 对于复制粘贴的文件，我们需要创建临时文件
+            // Copy-pasted files need a temp file created for them
             try {
               const arrayBuffer = await file.arrayBuffer();
               const uint8Array = new Uint8Array(arrayBuffer);
@@ -339,7 +339,7 @@ class PasteServiceClass {
               if (error instanceof Error && error.message === 'FILE_TOO_LARGE') {
                 throw error;
               }
-              console.error('创建临时文件失败:', error);
+              console.error('Failed to create the temp file:', error);
             }
           } else {
             console.warn(`Unsupported file type: ${file.name}, extension: ${fileExt}`);
@@ -347,33 +347,33 @@ class PasteServiceClass {
         }
       }
 
-      // 处理完文件后，总是返回 true（阻止文本插入）
+      // Always return true after handling files, which prevents the text insert
       if (fileList.length > 0) {
         onFilesAdded(fileList);
       }
-      return true; // 阻止默认行为，不插入文件名文本
+      return true; // Prevent the default so the file name is not inserted as text
     }
 
-    // 处理纯文本粘贴（只在没有文件时）
+    // Plain-text paste (only when no files are present)
     if (clipboardText && (!files || files.length === 0)) {
-      // 在 iOS 上, 让 Safari 自己处理纯文本粘贴, 以避免粘贴菜单/键盘抖动问题
+      // On iOS let Safari handle plain-text paste itself, avoiding paste-menu and keyboard jitter
       const isIOS = typeof navigator !== 'undefined' && /iP(hone|ad|od)/.test(navigator.userAgent);
       if (isIOS) {
         return false;
       }
       if (onTextPaste) {
-        // 清理文本中多余的换行符，特别是末尾的换行符
+        // Strip redundant newlines, especially trailing ones
         const cleanedText = clipboardText.replace(/\n\s*$/, '');
         onTextPaste(cleanedText);
-        return true; // 已处理，阻止默认行为
+        return true; // Handled: prevent the default
       }
-      return false; // 如果没有回调，允许默认行为
+      return false; // No callback, so allow the default
     }
 
     return false;
   }
 
-  // 清理资源
+  // Release resources
   destroy() {
     if (this.isInitialized) {
       document.removeEventListener('paste', this.handleGlobalPaste);
@@ -384,5 +384,5 @@ class PasteServiceClass {
   }
 }
 
-// 导出单例实例
+// Export the singleton instance
 export const PasteService = new PasteServiceClass();

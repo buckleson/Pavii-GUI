@@ -56,14 +56,14 @@ const mkdirSync = (path: string) => {
 };
 
 /**
- * 迁移老版本数据从temp目录到userData/config目录
+ * Migrate old-version data from the temp directory to userData/config
  */
 const migrateLegacyData = async () => {
-  const oldDir = getTempPath(); // 老的temp目录
-  const newDir = getConfigPath(); // 新的userData/config目录
+  const oldDir = getTempPath(); // The old temp directory
+  const newDir = getConfigPath(); // The new userData/config directory
 
   try {
-    // 检查新目录是否为空（不存在或者存在但无内容）
+    // Whether the new directory is empty (missing, or present with no content)
     const isNewDirEmpty =
       !existsSync(newDir) ||
       (() => {
@@ -71,27 +71,31 @@ const migrateLegacyData = async () => {
           return existsSync(newDir) && readdirSync(newDir).length === 0;
         } catch (error) {
           console.warn('[AionUi] Warning: Could not read new directory during migration check:', error);
-          return false; // 假设非空以避免迁移覆盖
+          return false; // Assume non-empty so migration never overwrites
         }
       })();
 
-    // 检查迁移条件：老目录存在且新目录为空
+    // Migration precondition: old directory exists and new one is empty
     if (existsSync(oldDir) && isNewDirEmpty) {
-      // 创建目标目录
+      // Create the target directory
       mkdirSync(newDir);
 
-      // 复制所有文件和文件夹
+      // Copy every file and folder
       await copyDirectoryRecursively(oldDir, newDir);
 
-      // 验证迁移是否成功
+      // Verify the migration succeeded
       const isVerified = await verifyDirectoryFiles(oldDir, newDir);
       if (isVerified) {
-        // 确保不会删除相同的目录
+        // Make sure we never delete the same directory
         if (path.resolve(oldDir) !== path.resolve(newDir)) {
           try {
             await fs.rm(oldDir, { recursive: true });
           } catch (cleanupError) {
-            console.warn('[AionUi] 原目录清理失败，请手动删除:', oldDir, cleanupError);
+            console.warn(
+              '[AionUi] Failed to clean up the old directory; please delete it manually:',
+              oldDir,
+              cleanupError
+            );
           }
         }
       }
@@ -99,7 +103,7 @@ const migrateLegacyData = async () => {
       return true;
     }
   } catch (error) {
-    console.error('[AionUi] 数据迁移失败:', error);
+    console.error('[AionUi] Data migration failed:', error);
   }
 
   return false;
@@ -366,7 +370,7 @@ const initStorage = async () => {
   const mark = (label: string) => console.log(`[AionUi:init] ${label} +${Math.round(performance.now() - t0)}ms`);
   mark('start');
 
-  // 1. 先执行数据迁移（在任何目录创建之前）
+  // 1. Run the data migration first (before any directory is created)
   await migrateLegacyData();
   mark('1. migrateLegacyData');
 
@@ -374,7 +378,7 @@ const initStorage = async () => {
   ensureDirectory(getHomePage());
   ensureDirectory(getDataPath());
 
-  // 3. 初始化存储系统
+  // 3. Initialize the storage system
   ConfigStorage.interceptor(configFile);
   EnvStorage.interceptor(envFile);
   mark('3. storage interceptors');
@@ -436,7 +440,7 @@ export const getSystemDir = () => {
   return {
     cacheDir: cacheDir,
     // getDataPath() returns CLI-safe path (symlink on macOS) to avoid spaces
-    // getDataPath() 返回 CLI 安全路径（macOS 上的符号链接）以避免空格问题
+    // getDataPath() returns the CLI-safe path (a symlink on macOS) to avoid spaces
     workDir: dirConfig?.workDir || getDataPath(),
     logDir,
     platform: process.platform as PlatformType,

@@ -305,7 +305,7 @@ const SendBox: React.FC<{
     return () => clearTimeout(timer);
   }, []);
 
-  // 移动端挂载后主动清除焦点，拦截路由切换导致的非用户触发聚焦
+  // On mobile, clear focus after mount to intercept the non-user focus a route change causes
   useEffect(() => {
     if (!isMobile) return;
     const timer = setTimeout(() => {
@@ -374,7 +374,7 @@ const SendBox: React.FC<{
     return () => cancelAnimationFrame(frame);
   }, [input, effectiveLockMultiLine]);
 
-  // 使用拖拽 hook
+  // Drag-and-drop hook
   const { isFileDragging, dragHandlers } = useDragUpload({
     supportedExts,
     onFilesAdded,
@@ -1014,16 +1014,16 @@ const SendBox: React.FC<{
     ]
   );
 
-  // 使用共享的输入法合成处理
+  // Shared IME composition handling
   const { compositionHandlers, isComposingState, createKeyDownHandler } = useCompositionInput();
 
-  // 使用共享的PasteService集成
+  // Shared PasteService integration
   const { onPaste, onFocus: handlePasteFocus } = usePasteService({
     supportedExts,
     onFilesAdded,
     conversation_id: conversationContext?.conversation_id,
     onTextPaste: (text: string) => {
-      // 处理清理后的文本粘贴，在当前光标位置插入文本而不是替换整个内容
+      // Insert the cleaned pasted text at the caret rather than replacing the whole value
       const textarea = document.activeElement as HTMLTextAreaElement;
       if (textarea && textarea.tagName === 'TEXTAREA') {
         const cursorPosition = textarea.selectionStart;
@@ -1032,12 +1032,12 @@ const SendBox: React.FC<{
         const end = textarea.selectionEnd ?? start;
         const newValue = current_value.slice(0, start) + text + current_value.slice(end);
         setInput(newValue);
-        // 设置光标到插入文本后的位置
+        // Place the caret after the inserted text
         setTimeout(() => {
           textarea.setSelectionRange(cursorPosition + text.length, cursorPosition + text.length);
         }, 0);
       } else {
-        // 如果无法获取光标位置，回退到追加到末尾的行为
+        // Without a caret position, fall back to appending
         setInput(text);
       }
     },
@@ -1548,7 +1548,7 @@ const SendBox: React.FC<{
               </div>
             </div>
           )}
-          {/* DOM 片段标签 / DOM snippet tags */}
+          {/* DOM snippet tags */}
           {domSnippets.length > 0 && (
             <div className='flex flex-wrap gap-6px mb-8px'>
               {domSnippets.map((snippet) => (

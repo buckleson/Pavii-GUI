@@ -13,7 +13,7 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { ADAPTER_BRIDGE_EVENT_KEY } from '../common/adapter/constant';
 
 /**
- * @description 注入到renderer进程中, 用于与main进程通信
+ * @description Injected into the renderer to communicate with the main process
  * */
 contextBridge.exposeInMainWorld('electronAPI', {
   emit: (name: string, data: unknown) => {

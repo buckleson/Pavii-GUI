@@ -5,13 +5,13 @@
  */
 
 /**
- * 单目标 CDP 通道：只把「侧边浏览器那一个 webContents」暴露给 Agent。
+ * Single-target CDP channel: only the side browser's one webContents is exposed to the agent.
  *
- * 替代 Chromium 的 remote-debugging-port。那个开关是应用级的，没有 per-target ACL，
- * 一开就把主窗口（连着 preload 桥）暴露给本机任意进程。这里改成：
- *   - 只绑 127.0.0.1，且必须带口令才能连
- *   - 只服务一个目标，Target.* 由 cdpTargetProtocol 本地应答
- *   - 其余命令透传给 webContents.debugger
+ * Replaces Chromium's remote-debugging-port. That switch is application-wide with no
+ * per-target ACL - one flip exposes the main window (preload bridge attached) to any local process. Instead:
+ *   - bind 127.0.0.1 only, and require the token to connect
+ *   - serve exactly one target; Target.* is answered locally by cdpTargetProtocol
+ *   - everything else passes through to webContents.debugger
  *
  * Single-target CDP bridge: exposes only the in-app browser's webContents to the agent.
  * Replaces Chromium's remote-debugging-port, which is application-wide with no
@@ -82,12 +82,12 @@ const detachInternal = () => {
 };
 
 /**
- * 附加到指定 webContents。
+ * Attach to the given webContents.
  *
- * 两道校验都必须报错而不是「尽力而为」：
- *  - getType() 必须是 webview：防止把主窗口（带 preload 桥）交出去，这正是原方案的漏洞。
- *  - debugger.attach() 会和同一个 webContents 上打开的 DevTools 冲突（Electron 限制），
- *    这时给出可读的原因，而不是抛一个原始异常。
+ * Both checks must error rather than "do their best":
+ *  - getType() must be webview: it stops the main window (with its preload bridge) being handed over - the original design's hole.
+ *  - debugger.attach() conflicts with DevTools open on the same webContents (an Electron
+ *    limitation); give a readable reason instead of a raw exception.
  *
  * Both checks must fail loudly rather than degrade:
  *  - getType() must be 'webview', so the main window (with its preload bridge) can never
@@ -122,10 +122,10 @@ const attachInternal = (webContentsId: number): { ok: true } | { ok: false; reas
 
   const onMessage = (_event: unknown, method: string, params: unknown, _sessionId: string) => {
     /**
-     * 统一贴上我们那个固定 sessionId 再转发。
+     * Stamp our fixed sessionId onto everything before forwarding.
      *
-     * puppeteer 用 flatten 模式，它靠 sessionId 把事件路由到对应的页面会话；不贴的话
-     * 事件会被当成浏览器级的，Page/Runtime 那些事件就丢了。
+     * puppeteer uses flatten mode and routes events to page sessions by sessionId; unstamped
+     * events are treated as browser-level and the Page/Runtime events are lost.
      *
      * Stamp our fixed sessionId before forwarding. puppeteer runs in flatten mode and
      * routes events to the page session by sessionId; without it these would look
@@ -146,17 +146,17 @@ const attachInternal = (webContentsId: number): { ok: true } | { ok: false; reas
 };
 
 /**
- * 回包必须带上入站的 sessionId，否则页面级命令会永久挂起。
+ * Replies must carry the inbound sessionId or page-level commands hang forever.
  *
- * puppeteer 按 sessionId 分发回包（cdp/Connection.js）：带 sessionId 的交给对应
- * CdpSession 的 CallbackRegistry，不带的交给 Connection 自己那一份。而页面级命令是
- * 用 session.send() 发的，callback 只登记在 session 的 registry 里 —— 回包一旦漏掉
- * sessionId 就会被投到 Connection 的 registry，那里查无此 id，
- * CallbackRegistry.resolve/reject 直接静默 return，Promise 永不 settle。
+ * puppeteer dispatches replies by sessionId (cdp/Connection.js): with one, the reply goes to
+ * that CdpSession's CallbackRegistry; without one, to Connection's own. Page-level commands
+ * are sent with session.send(), whose callbacks live only in the session's registry - a reply
+ * that drops the sessionId lands in Connection's registry, where the id is unknown,
+ * CallbackRegistry.resolve/reject silently return, and the Promise never settles.
  *
- * 于是一个本该「立刻报错」的命令变成了挂死，最后由 puppeteer 的 protocolTimeout 抛出
- * 「XXX timed out. Increase the 'protocolTimeout' setting」—— 一条把人指向超时设置的
- * 假线索，而真实原因（比如浏览器面板没打开）被彻底吞掉。
+ * A command that should have failed instantly becomes a hang, surfacing later as puppeteer's
+ * "XXX timed out. Increase the 'protocolTimeout' setting" - a false lead pointing at timeout
+ * settings while the real cause (say, the browser panel not being open) is swallowed whole.
  *
  * Replies must echo the inbound sessionId or page-level commands hang forever.
  * puppeteer routes replies by sessionId: with one it goes to that CdpSession's
@@ -174,9 +174,9 @@ const sendError = (ws: WebSocket, id: number | undefined, message: string, sessi
 };
 
 /**
- * announcedSessions 是**每条连接**的状态，不能提到模块作用域：一条新连接的 puppeteer
- * 手上没有任何会话对象，必须重新收到 attachedToTarget 才能建立；若跨连接共享，第二个
- * 客户端就永远等不到那个事件，browser.pages() 会一直是 0。
+ * announcedSessions is **per-connection** state and must not move to module scope: a fresh
+ * connection's puppeteer holds no session objects and must receive attachedToTarget anew;
+ * shared across connections, the second client never gets that event and browser.pages() stays 0.
  *
  * announcedSessions is PER-CONNECTION state and must not be hoisted to module scope: a freshly
  * connected puppeteer holds no session objects and needs attachedToTarget to build them. Sharing
@@ -211,20 +211,20 @@ const handleSocketMessage = async (ws: WebSocket, raw: string, announcedSessions
     if (decision.kind === 'reply-and-emit') {
       for (const evt of decision.emit) {
         /**
-         * 同一个 sessionId 只宣布一次 attachedToTarget —— 重复宣布会让 puppeteer 换掉
-         * 会话对象，把调用方手里的 handle 变成孤儿。
+         * Announce attachedToTarget once per sessionId - announcing again makes puppeteer swap the
+         * session object and orphan the caller's handle.
          *
          * Connection.js）。
-         * 它不检查这个 sessionId 是否已经存在，于是第二次宣布会用一个全新对象覆盖旧的，
-         * 而新对象带着一份空的 CallbackRegistry。
+         * it never checks whether the sessionId already exists, so a second announcement overwrites
+         * the old object with a brand-new one carrying an empty CallbackRegistry.
          *
-         * 这正是致命之处：setAutoAttach 已经宣布过一次，attachToTarget 再宣布一次，
-         * 调用方（TargetManager / 任何持有 CDPSession 的代码）手上那个 handle 就指向了被
-         * 换掉的旧对象。它 send() 出去的命令 id 登记在旧 registry 里，回包却按 sessionId
-         * 被路由到新对象的 registry —— 那里查无此 id，resolve/reject 静默 return，
-         * Promise 永不 settle，最后以 protocolTimeout 的形式浮现。
+         * That is the lethal part: setAutoAttach announced once, attachToTarget announces again, and
+         * the handle held by the caller (TargetManager / anything holding a CDPSession) now points at
+         * the replaced object. Its send()s register ids in the old registry while replies route by
+         * sessionId to the new object's registry - unknown id, resolve/reject silently return,
+         * the Promise never settles, and it all surfaces as protocolTimeout.
          *
-         * 真实 Chrome 不会重复宣布已附加的会话，所以这是本伪装层特有的问题。
+         * Real Chrome never re-announces an attached session, so this problem is unique to this impersonation layer.
          *
          * Announce attachedToTarget at most once per sessionId: re-announcing makes puppeteer
          * swap out the session object and orphans handles the caller already holds.
@@ -259,9 +259,9 @@ const handleSocketMessage = async (ws: WebSocket, raw: string, announcedSessions
   // forward
   if (!attached || attached.contents.isDestroyed()) {
     /**
-     * 说清楚「怎么办」，因为 Agent 侧无法自己修复：attach 只由渲染进程在 webview
-     * dom-ready 时上报触发（WebviewHost.tsx），Target.createTarget 又是明确拒绝的。
-     * 所以这条消息必须告诉用户去开浏览器面板，否则 Agent 只能反复撞同一面墙。
+     * Spell out "what to do", because the agent cannot fix this itself: attach is only triggered
+     * by the renderer's webview dom-ready report (WebviewHost.tsx), and Target.createTarget is explicitly refused.
+     * So this message must tell the user to open the browser panel, or the agent just keeps hitting the same wall.
      *
      * Say what to do about it: the agent cannot fix this itself. Attachment is only
      * triggered by the renderer reporting its webContents id on dom-ready
@@ -293,25 +293,25 @@ const writeJson = (res: ServerResponse, body: unknown) => {
 };
 
 /**
- * 启动通道。返回 handle 供主进程在浏览器 tab 切换时改附加目标。
+ * Start the channel. Returns a handle the main process uses to re-attach on browser tab switches.
  *
- * 口令只加在 WebSocket 段，不加在 HTTP 发现段 —— 这是被实测逼出来的设计：
- * puppeteer 拿 browserURL 后执行 `new URL('/json/version', browserURL)`，绝对路径会
- * 把 query 整段丢掉，所以口令放在 browserURL 的 ?token= 上根本传不到服务端，
- * 只会让 puppeteer 被自己的 403 挡死。
+ * The token guards only the WebSocket leg, not HTTP discovery - a design forced by observation:
+ * puppeteer takes browserURL and runs `new URL('/json/version', browserURL)`; the absolute
+ * path drops the whole query, so a token in browserURL's ?token= never reaches the server and
+ * only gets puppeteer walled off by its own 403.
  *
- * 于是分两层：
- *  - HTTP 发现段（/json/version、/json/list）不校验口令，响应里带着含口令的 ws 地址。
- *  - WebSocket 段强制校验口令，所有实际控制都走这里。
+ * Hence two layers:
+ *  - HTTP discovery (/json/version, /json/list) skips the token check and returns a tokened ws URL.
+ *  - The WebSocket leg enforces the token; all actual control flows through it.
  *
- * ⚠️ 威胁模型要说实话：因为发现段不鉴权且会吐出口令，同机同用户的任意进程扫到这个端口后
- * 一个 GET 就能取回口令再连 WS。所以口令的作用是**阻止盲连**（不知道端口/没读过发现段
- * 的连接一律 403），**不是身份证明** —— 它无法证明对端就是我们 spawn 的那个 MCP。
- * 对本机进程而言，真实屏障只有「listen(0) 随机分配的临时端口」这一层。
+ * The threat model, honestly: discovery is unauthenticated and hands out the token, so any
+ * same-user process that finds the port can GET the token and connect. The token therefore
+ * **blocks blind connections** (no port / never read discovery -> 403), and is **not identity proof** - it cannot show the peer is the MCP we spawned.
+ * Against local processes, the only real barrier is the ephemeral port that listen(0) assigns.
  *
- * 这与 Chrome 原生 remote-debugging-port 的 /json/version 是同一水平，不是回归；本方案真正
- * 的收益在别处：只暴露侧边浏览器那一个 webview，绝不暴露主窗口（见 attachInternal 的
- * getType() 校验）。把「同用户本机进程」算作可信边界是这里的显式假设。
+ * That matches Chrome's native remote-debugging-port /json/version - no regression. The real
+ * win is elsewhere: only the side browser's webview is exposed, never the main window (see
+ * attachInternal's getType() check). Treating same-user local processes as trusted is the explicit assumption.
  *
  * The token guards only the WebSocket leg, not HTTP discovery — a design forced by testing:
  * puppeteer runs `new URL('/json/version', browserURL)`, and an absolute path discards the

@@ -26,11 +26,11 @@ type BackendClientPreferences = Record<string, unknown>;
 const BUILTIN_CHROME_DEVTOOLS_NAME = 'chrome-devtools';
 
 /**
- * 内置「应用内浏览器」MCP。
+ * The built-in "in-app browser" MCP.
  *
- * 与 chrome-devtools 的区别：那个默认关闭，开启后会由 MCP 自己开一个独立 Chrome
- * 窗口 —— 用户在 APP 里看不见。这个默认开启，且强制连到 APP 自己的 CDP 端口，
- * Agent 的每一步操作都发生在用户能看到的侧边预览面板里。
+ * Unlike chrome-devtools: that one is off by default and, when enabled, opens its own
+ * standalone Chrome the user cannot see in the app. This one is on by default and pinned to the app's own CDP port,
+ * so every agent action happens in the side preview panel the user can watch.
  *
  * The built-in in-app browser MCP. Unlike `chrome-devtools` (default-disabled and
  * spawning its own separate Chrome window the user cannot see), this one is
@@ -438,12 +438,12 @@ async function ensureBootstrapMcpServersInDb(configFile: ConfigFile): Promise<vo
   }
 
   /**
-   * 修复浏览器 MCP 记录里过期的脚本绝对路径。
+   * Repair the browser MCP record's stale absolute script path.
    *
-   * 注册时把绝对路径写进了 transport.args，只在「首次插入」时写一次。应用被移动过
-   * （用户把 .app 拖出 /Applications、Windows 重装到别的目录、开发时换 worktree）
-   * 之后这条路径就失效了，而按名字判断「已注册」使它永远不会被重新插入 ——
-   * 结果是浏览器工具永久失效且不会自愈。所以每次启动都对齐一次实际路径。
+   * Registration wrote the absolute path into transport.args exactly once, on first insert.
+   * Once the app moves (.app dragged out of /Applications, Windows reinstalled elsewhere,
+   * a different dev worktree) that path is dead, and the by-name "already registered" check
+   * means it is never re-inserted - browser tools stay broken with no self-healing. So every launch realigns the actual path.
    *
    * Repair a stale absolute script path in the browser MCP record. The path is baked
    * into transport.args and only written on first insert, so once the app moves (user

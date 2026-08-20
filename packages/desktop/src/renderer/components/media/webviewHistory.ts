@@ -5,9 +5,9 @@
  */
 
 /**
- * 记录最近由 WebviewHost 内部触发的导航地址，用来识别 url prop 的「回声」。
+ * Records addresses WebviewHost navigated to itself, so the url prop's echo can be recognised.
  *
- * 背景：浏览器 tab 会把「当前地址」当作 url prop 回传给 WebviewHost，于是每次内部
+ * Background: a browser tab feeds the current address back as the url prop, so every internal
  * 导航都会形成回环（内部导航 → onUrlChange → 父组件更新 prop → 重置）。如果无条件
  * 重置，每次导航后都会被当成「换了预览目标」而重新加载，页面状态全丢。
  *

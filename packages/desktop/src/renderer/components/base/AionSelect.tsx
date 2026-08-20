@@ -25,8 +25,8 @@ export interface AionSelectProps extends NativeSelectProps {
 }
 
 /**
- * 基础样式类名
- * 注意：主题相关样式（背景色、边框色）在 arco-override.css 的 .aion-select 类中定义
+ * Base class name
+ * Note: theme-dependent styles (background, border) live in the .aion-select class in arco-override.css
  * Note: Theme-related styles (background, border colors) are defined in .aion-select class in arco-override.css
  */
 const BASE_CLASS = classNames(
@@ -70,13 +70,13 @@ const defaultGetPopupContainer = (): HTMLElement => {
  * @example
  * ```tsx
  * Basic usage
- * <AionSelect placeholder="请选择" style={{ width: 200 }}>
+ * <AionSelect placeholder="Select..." style={{ width: 200 }}>
  *   AionSelect.Option>
  *   AionSelect.Option>
  * </AionSelect>
  *
  * Multiple selection
- * <AionSelect mode="multiple" placeholder="请选择多个">
+ * <AionSelect mode="multiple" placeholder="Select several...">
  *   AionSelect.Option>
  *   AionSelect.Option>
  * </AionSelect>
@@ -84,7 +84,7 @@ const defaultGetPopupContainer = (): HTMLElement => {
  * Grouped options
  *     AionSelect.Option>
  *   </AionSelect.OptGroup>
- *   <AionSelect.OptGroup label="分组2">
+ *   <AionSelect.OptGroup label="Group 2">
  *     AionSelect.Option>
  *   </AionSelect.OptGroup>
  * </AionSelect>

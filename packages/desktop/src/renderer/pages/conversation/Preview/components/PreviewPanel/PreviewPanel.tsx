@@ -249,8 +249,8 @@ const PreviewPanel: React.FC = () => {
   const handleNewBrowserTab = useCallback(() => openBrowserTab(), [openBrowserTab]);
 
   /**
-   * 浏览器 tab 达上限时提示用户。上限触达会复用最旧的 tab，如果不说一声，
-   * 用户看到的是"点了新建但旧 tab 内容变了"——像 bug。
+   * Warn the user when the browser tab limit is hit. Reaching it reuses the oldest tab, and
+   * without a word the user just sees "I clicked new and an old tab changed" - which reads as a bug.
    *
    * Warn when the browser tab cap is hit. Hitting the cap reuses the oldest tab;
    * without this notice the user just sees an old tab's content change, which
@@ -314,9 +314,9 @@ const PreviewPanel: React.FC = () => {
     [updateContent]
   );
 
-  // 批量关闭的统一入口：有未保存的就先确认，否则直接关。
-  // 四个右键项和「收起面板」全部走这里 —— 以前它们各自 forEach(closeTab)，
-  // 绕过了单 tab 才有的确认，未保存的编辑被静默丢弃。
+  // Single entry point for bulk closing: confirm when anything is unsaved, otherwise just close.
+  // All four context-menu items and "collapse panel" route through here. They each used to
+  // forEach(closeTab), bypassing the single-tab confirmation and silently discarding unsaved edits.
   //
   // Single entry point for batch closes: confirm first when anything is unsaved,
   // otherwise close straight away. All four context-menu items and the panel
@@ -470,8 +470,8 @@ const PreviewPanel: React.FC = () => {
     requestCloseBatch(tabs);
   }, [tabs, requestCloseBatch]);
 
-  // 收起面板：只改可见性，tab 留着照常持久化 —— 但仍要过 dirty 确认，
-  // 否则「收起」会变成一条静默丢弃未保存内容的路径。
+  // Collapsing the panel only changes visibility and tabs persist as usual - but it still goes
+  // through the dirty confirmation, or "collapse" becomes a path that silently drops unsaved work.
   //
   // Collapsing the panel only flips visibility and keeps the tabs persisted, but
   // it still has to pass the dirty check: otherwise "collapse" becomes another
@@ -498,10 +498,10 @@ const PreviewPanel: React.FC = () => {
   const isHTML = content_type === 'html';
   const isEditable = metadata?.editable !== false; // Default editable
 
-  // 「在系统中打开」：有 file_path 或有 fileRef 都能打开。
-  // fileRef 分支是超限 / 不支持态的逃生出口 —— Explorer 打开的 tab 刻意不带
-  // 绝对路径（见 ExplorerContainer 的 "No absolute path is ever exposed"），
-  // 只认 file_path 会让那些 tab 一个能点的按钮都没有。
+  // "Open in system": works with either a file_path or a fileRef.
+  // The fileRef branch is the escape hatch for over-limit and unsupported states: tabs opened
+  // from Explorer deliberately carry no absolute path (see ExplorerContainer's "No absolute
+  // path is ever exposed"), so requiring file_path would leave them with no working button at all.
   //
   // "Open in system": available with either a file_path or a fileRef. The fileRef
   // branch is the escape hatch for oversized / unsupported tabs — explorer-opened
@@ -526,9 +526,9 @@ const PreviewPanel: React.FC = () => {
     try {
       const rawFileName = metadata?.file_name || `${content_type}-${Date.now()}`;
 
-      // 超限 tab 的内容从未被读取（content === ''）。若继续往下走，会走到
-      // downloadTextContent('') 导出一个 0 字节空文件 —— 用户以为下载成功，
-      // 拿到的是空文件。宁可明确报错，也不能产出静默错误的数据。
+      // An over-limit tab's content was never read (content === ''). Continuing would reach
+      // downloadTextContent('') and export a 0-byte file - the user believes the download worked
+      // and gets nothing. Better an explicit error than silently wrong data.
       //
       // An oversized tab never read its content (content === ''). Falling through
       // would hand downloadTextContent an empty string and produce a 0-byte file:
@@ -618,8 +618,8 @@ const PreviewPanel: React.FC = () => {
 
   // Open file in system default application
   const handleOpenInSystem = useCallback(async () => {
-    // 只接受真正指向文件的 ref —— project ref 的空 relative_path 表示 pe root
-    // 本身（一个目录），送去 shell 打开就不是这个按钮承诺的行为了。
+    // Only refs that genuinely point at a file are accepted: a project ref's empty relative_path
+    // means the pe root itself (a directory), and shelling that open is not what this button promises.
     // Only accept a ref that addresses a file: an empty relative_path on a project
     // ref denotes the pe root — a directory — and shell-opening that is not what
     // this button promises.
@@ -637,8 +637,8 @@ const PreviewPanel: React.FC = () => {
 
     try {
       if (fileRef) {
-        // 按 ChatFileRef 身份打开：后端 resolve 后调系统打开，前端拿不到绝对路径。
-        // 这条分支让 Explorer 打开的 tab（刻意无 file_path）也有逃生出口。
+        // Open by ChatFileRef identity: the backend resolves it and calls the system opener; the frontend never sees an absolute path.
+        // This branch gives Explorer-opened tabs (deliberately without file_path) an escape hatch too.
         //
         // Open by ChatFileRef identity: the backend resolves it and shells out, so
         // the renderer never sees an absolute path. This branch is what gives
@@ -654,8 +654,8 @@ const PreviewPanel: React.FC = () => {
       }
     } catch (err) {
       try {
-        // 按错误码选本地文案，不透传后端 message（后端已保证响应不含绝对路径，
-        // 前端也不该把它当文案来源）。
+        // Pick local copy by error code rather than forwarding the backend message (the backend
+        // guarantees no absolute paths in responses, and the frontend should not treat it as a copy source anyway).
         // Pick a local message from the error code; never surface the backend
         // message (the backend guarantees it holds no absolute path, and the
         // front end should not treat it as copy either).
@@ -690,8 +690,8 @@ const PreviewPanel: React.FC = () => {
     );
   };
 
-  // 超过大小上限：内容从未被读取，所以只说明原因 + 给逃生出口。
-  // 刻意不进编辑器 —— 半截内容进了可保存的编辑器就会毁掉未读的部分。
+  // Over the size limit: the content was never read, so explain why and offer the escape hatch.
+  // Deliberately not routed into the editor: half the content in a savable editor would destroy the unread remainder.
   //
   // Over the size ceiling: content was never read, so explain why and offer the
   // escape hatch. Deliberately never reaches an editor — partial content in a
@@ -716,9 +716,9 @@ const PreviewPanel: React.FC = () => {
     );
   };
 
-  // 无法渲染的格式：说明原因 + 给逃生出口，而不是送进一个打不开它的渲染器。
-  // 以前这些格式被路由给 officecli，失败提示还引导用户去装 officecli ——
-  // 而装了对这些格式也没用。
+  // Unrenderable format: explain and offer the escape hatch instead of handing it to a renderer that cannot open it.
+  // These formats used to route to officecli, whose failure message told the user to install
+  // officecli - which would not have helped these formats anyway.
   //
   // A format we can name but not render: explain that, and offer the escape hatch,
   // instead of handing it to a renderer that cannot open it. These formats used to
@@ -739,7 +739,7 @@ const PreviewPanel: React.FC = () => {
     if (metadata?.oversized) return renderOversized();
     if (content_type === 'unsupported') return renderUnsupported();
 
-    // 浏览器 tab 由常驻的 BrowserTabLayer 渲染，不能走这里 —— 否则切 tab 会重新加载页面
+    // Browser tabs render in the always-mounted BrowserTabLayer and must not come through here, or switching tabs would reload the page
     // Browser tabs are rendered by the always-mounted BrowserTabLayer; rendering
     // them here would reload the page on every tab switch.
     if (content_type === 'browser') return null;
@@ -760,7 +760,7 @@ const PreviewPanel: React.FC = () => {
         // Desktop: Split layout
         return (
           <div className='flex flex-1 relative overflow-hidden'>
-            {/* 左侧：编辑器 / Left: Editor */}
+            {/* Left: Editor */}
             <div className='flex flex-col relative' style={{ width: `${splitRatio}%` }}>
               <div className='h-40px flex items-center px-12px bg-bg-2'>
                 <span className='text-12px text-t-secondary'>{t('preview.editor')}</span>
@@ -774,11 +774,11 @@ const PreviewPanel: React.FC = () => {
                   onScroll={handleEditorScroll}
                 />
               </div>
-              {/* 拖动分割线 / Drag handle */}
+              {/* Drag handle */}
               {createDragHandle({ className: 'absolute right-0 top-0 bottom-0' })}
             </div>
 
-            {/* 右侧：预览 / Right: Preview */}
+            {/* Right: Preview */}
             <div className='flex flex-col' style={{ width: `${100 - splitRatio}%`, minWidth: 0 }}>
               <div className='h-40px flex items-center px-12px bg-bg-2'>
                 <span className='text-12px text-t-secondary'>{t('preview.preview')}</span>
@@ -834,7 +834,7 @@ const PreviewPanel: React.FC = () => {
         // Desktop: Split layout
         return (
           <div className='flex flex-1 relative overflow-hidden'>
-            {/* 左侧：编辑器 / Left: Editor */}
+            {/* Left: Editor */}
             <div className='flex flex-col relative' style={{ width: `${splitRatio}%` }}>
               <div className='h-40px flex items-center px-12px bg-bg-2'>
                 <span className='text-12px text-t-secondary'>{t('preview.editor')}</span>
@@ -849,11 +849,11 @@ const PreviewPanel: React.FC = () => {
                   file_path={metadata?.file_path}
                 />
               </div>
-              {/* 拖动分割线 / Drag handle */}
+              {/* Drag handle */}
               {createDragHandle({ className: 'absolute right-0 top-0 bottom-0' })}
             </div>
 
-            {/* 右侧：预览 / Right: Preview */}
+            {/* Right: Preview */}
             <div className='flex flex-col' style={{ width: `${100 - splitRatio}%`, minWidth: 0 }}>
               <div className='h-40px flex items-center justify-between px-12px bg-bg-2'>
                 <span className='text-12px text-t-secondary'>{t('preview.preview')}</span>
@@ -1004,13 +1004,13 @@ const PreviewPanel: React.FC = () => {
 
   return (
     <PreviewToolbarExtrasProvider value={toolbarExtrasContextValue}>
-      {/* bg-1 是必需的：面板必须自己铺满底色，不能依赖外层容器
+      {/* bg-1 is required: the panel must paint its own background rather than relying on the outer container
           bg-1 is required: the panel paints its own background rather than
           relying on an outer container, so no window backdrop shows through. */}
       <div className='h-full flex flex-col bg-1'>
         {messageContextHolder}
 
-        {/* 确认对话框 / Confirmation modals */}
+        {/* Confirmation modals */}
         {/* eslint-disable-next-line max-len */}
         <PreviewConfirmModals
           closeTabConfirm={closeTabConfirm}
@@ -1022,7 +1022,7 @@ const PreviewPanel: React.FC = () => {
           onCancelCloseTab={handleCancelCloseTab}
         />
 
-        {/* Tab 栏 / Tab bar */}
+        {/* Tab bar */}
         {/* eslint-disable-next-line max-len */}
         <PreviewTabs
           tabs={previewTabs}
@@ -1039,7 +1039,7 @@ const PreviewPanel: React.FC = () => {
           onNewBrowserTab={previewTabs.length > 0 ? handleNewBrowserTab : undefined}
         />
 
-        {/* 工具栏（URL / 浏览器 类型不显示工具栏，因为不需要下载/编辑等功能）
+        {/* Toolbar (hidden for URL and browser types, which need no download/edit actions)
             Toolbar (hidden for URL and browser types — no download/edit needed) */}
         {content_type !== 'url' && content_type !== 'browser' && !metadata?.missingFile && (
           <PreviewToolbar
@@ -1070,14 +1070,14 @@ const PreviewPanel: React.FC = () => {
           />
         )}
 
-        {/* 预览内容 / Preview content */}
+        {/* Preview content */}
         {renderContent()}
 
-        {/* 浏览器层：常驻挂载，切 tab 不重新加载页面
+        {/* Browser layer: always mounted, so switching tabs never reloads the page
             Browser layer: always mounted so tab switches don't reload pages */}
         <BrowserTabLayer browserTabs={browserTabs} activeTabId={activeTabId} updateTab={updateTab} />
 
-        {/* Tab 右键菜单 / Tab context menu */}
+        {/* Tab context menu */}
         {/* eslint-disable-next-line max-len */}
         <PreviewContextMenu
           contextMenu={contextMenu}

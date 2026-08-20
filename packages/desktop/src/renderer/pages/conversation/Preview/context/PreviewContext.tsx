@@ -42,13 +42,13 @@ export interface PreviewMetadata {
   file_path?: string; // Absolute file path in workspace
   workspace?: string; // Workspace root directory
   editable?: boolean; // Whether editable
-  // 文件超过大小上限：内容从未被读取，只显示提示 + 逃生按钮
+  // File over the size limit: content was never read, so show the notice and the escape button only
   // File exceeds its size ceiling: content was never read; the tab shows an
   // explanation plus an escape hatch instead of an editor.
   oversized?: boolean;
   sizeBytes?: number; // Actual file size, for the oversized message
-  // 打开时生效的上限快照。刻意不在渲染时重算 —— 否则日后阈值改成设置项时，
-  // 调小设置会让已打开的 tab 显示新阈值，破坏「只影响新开 tab」的约束。
+  // Snapshot of the limit at open time. Deliberately not recomputed on render: once the
+  // threshold becomes a setting, lowering it would change already-open tabs and break the "new tabs only" contract.
   // Ceiling captured at open time. Deliberately not recomputed at render time:
   // once the threshold becomes a setting, recomputing would let a changed
   // setting alter tabs already on screen.
@@ -68,7 +68,7 @@ export interface PreviewTab {
   content: string;
   content_type: PreviewContentType;
   metadata?: PreviewMetadata;
-  title: string; // Tab 标题
+  title: string; // Tab title
   isDirty?: boolean; // Whether there are unsaved changes
   originalContent?: string; // Original content for comparison
 }
@@ -84,8 +84,8 @@ export interface OpenPreviewOptions {
 }
 
 /**
- * `updateTab` 允许修改的字段：标题、地址（content）、metadata。
- * 刻意不含 isDirty / originalContent —— 那是编辑器的账，浏览器 tab 不该碰。
+ * Fields `updateTab` may change: title, address (content), metadata.
+ * Deliberately excludes isDirty / originalContent: those are the editor's ledger and no browser tab should touch them.
  *
  * Fields `updateTab` may patch: title, address (content) and metadata.
  * Deliberately excludes isDirty / originalContent, which belong to the editor's
@@ -100,8 +100,8 @@ export type PreviewTabPatch = {
 export interface PreviewContextValue {
   // Preview panel state
   isOpen: boolean;
-  tabs: PreviewTab[]; // 所有打开的 tabs
-  activeTabId: string | null; // 当前激活的 tab ID
+  tabs: PreviewTab[]; // Every open tab
+  activeTabId: string | null; // Currently active tab id
 
   // Get active tab
   activeTab: PreviewTab | null;
@@ -124,9 +124,9 @@ export interface PreviewContextValue {
   switchTab: (tabId: string) => void;
   updateContent: (content: string) => void;
   /**
-   * 按 tabId 局部更新 tab（标题 / 地址 / metadata），不影响 dirty 状态。
-   * 浏览器 tab 用它把页面标题、favicon、Agent 活动状态同步上来 —— 用 tabId 而非
-   * activeTabId 是必须的：后台 tab 的标题也要能更新，不能抢焦点。
+   * Partially update a tab by id (title / address / metadata) without touching its dirty state.
+   * Browser tabs use it to sync page title, favicon and agent activity. Taking tabId rather than
+   * activeTabId is required: a background tab must be able to update its title without stealing focus.
    *
    * Patch a tab by id (title / address / metadata) without touching dirty state.
    * Browser tabs use this to sync page title, favicon and agent activity.
@@ -135,8 +135,8 @@ export interface PreviewContextValue {
    */
   updateTab: (tabId: string, patch: PreviewTabPatch) => void;
   /**
-   * 浏览器 tab 达到上限、被迫复用旧 tab 的时刻（时间戳）；null 表示未发生。
-   * UI 据此提示用户关闭旧 tab，而不是让"复用"看起来像 bug。
+   * Timestamp of the moment the browser tab limit forced an old tab to be reused; null when it has not happened.
+   * The UI uses it to suggest closing old tabs, so reuse does not look like a bug.
    *
    * Timestamp of the most recent browser-tab cap hit (null when it never
    * happened). Lets the UI tell the user to close old tabs instead of leaving
@@ -165,9 +165,9 @@ export interface PreviewContextValue {
   tabsWithUpdate: ReadonlySet<string>;
   /** Clear a tab's pending-change mark (after a reload, or when it is dismissed). */
   clearTabUpdate: (tabId: string) => void;
-  findPreviewTab: (type: PreviewContentType, content?: string, metadata?: PreviewMetadata) => PreviewTab | null; // 查找匹配的 tab
-  closePreviewByIdentity: (type: PreviewContentType, content?: string, metadata?: PreviewMetadata) => void; // 根据内容关闭指定 tab
-  closePreviewIfScopeChanged: (scopeKey: PreviewScopeKey) => void; // 切换隔离 scope(project;见 previewScope.ts):持久化旧 scope、恢复新 scope 的 tabs+可见性(per-project)
+  findPreviewTab: (type: PreviewContentType, content?: string, metadata?: PreviewMetadata) => PreviewTab | null; // Find a matching tab
+  closePreviewByIdentity: (type: PreviewContentType, content?: string, metadata?: PreviewMetadata) => void; // Close a tab by its content identity
+  closePreviewIfScopeChanged: (scopeKey: PreviewScopeKey) => void; // Switch isolation scope (project; see previewScope.ts): persist the old scope, restore the new one's tabs and visibility per project
 
   // Sendbox integration
   addToSendBox: (text: string) => void;
@@ -628,9 +628,9 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Track if currently saving (to avoid conflicts with streaming updates)
   const savingFilesRef = useRef<Set<string>>(new Set());
 
-  // 每个文件上次已知的 mtime，保存时作为 If-Match 条件。
-  // 两个填充点：打开 tab 时（openPreview 从 metadata.lastModified 取）和保存成功后。
-  // 缺了前者，每个 tab 的首次保存都会不带 If-Match ⇒ 后端跳过冲突检测 ⇒ 静默覆盖。
+  // Last known mtime per file, sent as the If-Match condition on save.
+  // Two fill points: opening a tab (openPreview reads metadata.lastModified) and a successful save.
+  // Without the former, every tab's first save omits If-Match, the backend skips conflict detection, and writes overwrite silently.
   //
   // Last-known mtime per file, used as the If-Match condition on save. Two fill
   // points: opening a tab (openPreview, from metadata.lastModified) and a
@@ -716,12 +716,12 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const openPreview = useCallback(
     (new_content: string, type: PreviewContentType, meta?: PreviewMetadata, options?: OpenPreviewOptions) => {
       /**
-       * 所有决策都在调用 setTabs 之前基于 tabsRef 做完，updater 只负责按决策产出
-       * 新数组。
+       * Every decision is made from tabsRef before setTabs is called; the updater only turns those
+       * decisions into a new array.
        *
-       * 这不是风格问题：React 只在 fiber 没有待处理更新时才会「急切求值」updater，
-       * 所以第二次之后 updater 内部的赋值读不到 —— 曾经导致"打开第二个 tab 不切
-       * 焦点"。updater 也必须保持纯函数，StrictMode 下会被调用两次。
+       * This is not a style preference: React only eagerly evaluates an updater while the fiber has
+       * no pending update, so assignments inside it are unreadable from the second call onward -
+       * which once caused "opening a second tab does not focus it". The updater must also stay pure: StrictMode calls it twice.
        *
        * Every decision is made from tabsRef before setTabs is called; the updater
        * only turns those decisions into a new array.
@@ -734,10 +734,10 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
        */
       const currentTabs = tabsRef.current;
 
-      // 记下打开时的 mtime，作为下次保存的 If-Match 条件。
-      // 必须在 setTabs 之外做 —— updater 在 StrictMode 下会跑两次，且必须保持纯函数。
-      // 这是「打开 tab 时取一次」那个填充点：没有它，每个 tab 的首次保存都不带
-      // If-Match，后端会跳过冲突检测并静默覆盖别人的改动。
+      // Record the mtime at open time as the If-Match condition for the next save.
+      // Must happen outside setTabs: the updater runs twice under StrictMode and has to stay pure.
+      // This is the "read once when the tab opens" fill point: without it every tab's first save
+      // omits If-Match, the backend skips conflict detection, and someone else's changes are overwritten silently.
       //
       // Record the mtime known at open time as the next save's If-Match condition.
       // Done outside setTabs: the updater runs twice under StrictMode and must
@@ -751,7 +751,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Same content already open: focus it
       const existingTab = findPreviewTabInList(currentTabs, type, new_content, meta);
 
-      // 浏览器 tab 上限：满了就复用最旧的一个，并给 UI 一个可提示的信号
+      // Browser tab limit: when full, reuse the oldest and give the UI a signal it can surface
       // Browser tab cap: when full, reuse the oldest and raise a signal the UI can
       // surface, so the reuse doesn't look like a bug.
       const atBrowserTabLimit =
@@ -843,11 +843,11 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 
   /**
-   * 打开一个浏览器 tab（省略 url 则开空白页）。
+   * Open a browser tab (omitting the url opens a blank page).
    *
-   * 单独提供而不是让调用方拼 openPreview('', 'browser') 的原因：
-   * 加号按钮、workspace 下拉入口、Agent 调用是三条独立路径，必须保证
-   * 空白页地址、标题兜底完全一致，否则会出现「有的新 tab 是空白、有的是搜索页」。
+   * Provided separately rather than having callers assemble openPreview('', 'browser') because
+   * the plus button, the workspace dropdown and agent calls are three independent paths that must
+   * agree exactly on the blank-page address and title fallback, or some new tabs open blank and others on a search page.
    *
    * Open a browser tab (blank when no url is given). Exposed as its own method
    * rather than having callers assemble `openPreview('', 'browser')`: the plus
@@ -1081,7 +1081,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (fileRef) {
         const saveKey = chatFileRefKey(fileRef);
         try {
-          // 标记正在保存（避免触发轮询/流式回调）/ Mark as saving (avoid triggering poll/stream callbacks)
+          // Mark as saving (avoid triggering poll/stream callbacks)
           savingFilesRef.current.add(saveKey);
 
           // PUT /content: optimistic concurrency via If-Match (last-known mtime); backend returns 409 on conflict
@@ -1213,7 +1213,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         // Clean up timer
         debounceTimers.delete(file_path);
-      }, 500); // 500ms 防抖时间 / 500ms debounce delay
+      }, 500); // 500ms debounce delay
 
       debounceTimers.set(file_path, timer);
     });
@@ -1262,13 +1262,13 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [openPreview]);
 
   /**
-   * 跟踪 Agent 对应用内浏览器的操作，并驱动两件事：
-   * 1. tab 上的活动角标（持续显示，用户随时知道浏览器不是自己在动）
-   * 2. 首次操作时的一次性提示（不打断、不需要确认）
+   * Track agent activity in the in-app browser and drive two things:
+   * 1. the activity badge on the tab (always visible, so the user knows the browser is not moving on its own)
+   * 2. a one-time notice on the first action (non-blocking, no confirmation)
    *
-   * 为什么监听工具调用流而不是等浏览器自己上报：Agent 是通过 CDP 直接操作 webview
-   * 的，webview 只会看到"页面变了"，分不清是用户点的还是 Agent 点的。工具调用流是
-   * 唯一能区分二者的信号。
+   * Why watch the tool-call stream rather than wait for the browser to report: the agent drives
+   * the webview directly over CDP, and the webview only sees "the page changed" - it cannot tell
+   * a user click from an agent one. The tool-call stream is the only signal that distinguishes them.
    *
    * Tracks the agent's use of the in-app browser and drives two things: the
    * persistent activity badge on the tab (so the user always knows the browser is
@@ -1282,7 +1282,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     const markBrowserTabs = (agentActive: boolean) => {
       setTabs((prevTabs) => {
-        // 只标记浏览器 tab；没有浏览器 tab 时返回原数组，避免无意义的重渲染
+        // Only browser tabs are marked; with none present the original array is returned to avoid a pointless re-render
         // Only browser tabs are marked; return the same array when there are none
         // so no pointless re-render is triggered.
         if (
@@ -1297,9 +1297,9 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     /**
-     * 这个订阅纯粹是锦上添花（一个角标 + 一次提示）。如果消息流不可用（WebUI
-     * 未连接、测试环境未提供该通道），不能让整个预览面板挂掉 —— 预览是主功能，
-     * 角标不是。
+     * This subscription is pure garnish (a badge and one notice). If the message stream is
+     * unavailable (WebUI not connected, a test environment without the channel) it must not take
+     * the whole preview panel down: preview is the feature, the badge is not.
      *
      * This subscription is purely cosmetic (a badge and a one-time notice). If the
      * message stream is unavailable (WebUI not connected, a test harness not
@@ -1395,11 +1395,11 @@ export const usePreviewContext = () => {
 };
 
 /**
- * 可选版本：不在 PreviewProvider 内时返回 null，而不是抛错。
+ * Optional variant: returns null outside a PreviewProvider instead of throwing.
  *
- * 给「预览只是附带能力」的组件用 —— 例如文件树顶部的工具下拉，它主要负责拉起
- * 外部程序，只是顺带提供一个"打开应用内浏览器"选项。这种组件不该因为一个可选
- * 菜单项就强制要求整个预览上下文存在。
+ * For components where preview is incidental - the tool dropdown atop the file tree, say,
+ * which mainly launches external programs and merely happens to offer "open the in-app
+ * browser". Such a component should not require the whole preview context for one optional menu item.
  *
  * Optional variant: returns null outside a PreviewProvider instead of throwing.
  * For components where previewing is incidental — e.g. the file-tree tool dropdown,

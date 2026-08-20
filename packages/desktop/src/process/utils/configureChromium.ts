@@ -18,7 +18,7 @@ import { applyGpuRecoveryFlags } from './gpuRecovery';
 // lives in a disposable directory. This keeps tests off the developer's real
 // database — critical because AionCore refuses to boot when a shared DB fails
 // migration. Guarded by AIONUI_E2E_TEST so it never affects dev/production.
-// 仅 E2E：把 userData 指向一次性沙箱目录，避免测试读写真实数据库。
+// E2E only: point userData at a disposable sandbox so tests never touch the real database.
 const e2eUserDataDir = process.env.AIONUI_E2E_TEST === '1' ? process.env.AIONUI_E2E_USER_DATA_DIR : undefined;
 if (e2eUserDataDir && e2eUserDataDir.trim() !== '') {
   fs.mkdirSync(e2eUserDataDir, { recursive: true });
@@ -29,8 +29,8 @@ if (e2eUserDataDir && e2eUserDataDir.trim() !== '') {
 // Set app name before any getPath() call so userData is isolated from production.
 // Note: getPlatformServices() auto-registration also applies this as a safety net
 // in case Rollup loads initStorage's chunk before this module runs.
-// 开发模式下设置独立 app 名称，userData 目录将与正式版隔离，允许同时运行
-// E2E 沙箱已显式设置 userData 时跳过，避免被 dev app 名覆盖。
+// Dev mode gets its own app name so userData is isolated from release builds and both can run
+// side by side. Skipped when the E2E sandbox already set userData explicitly, so the dev app name cannot override it.
 if (!app.isPackaged && !e2eUserDataDir) {
   const devAppName = getDevAppName();
   app.setName(devAppName);
@@ -44,18 +44,18 @@ if (!app.isPackaged && !e2eUserDataDir) {
 applyGpuRecoveryFlags();
 
 // Configure Chromium command-line flags for WebUI and CLI modes
-// 为 WebUI 和 CLI 模式配置 Chromium 命令行参数
+// Configure Chromium command-line switches for WebUI and CLI modes
 
 const isWebUI = process.argv.some((arg) => arg === '--webui');
 const isResetPassword = process.argv.includes('--resetpass');
 
 // Only configure flags for WebUI and --resetpass modes
-// 仅为 WebUI 和重置密码模式配置参数
+// Only WebUI and reset-password modes get these switches
 if (isWebUI || isResetPassword) {
   // In WebUI/reset-password mode on Linux, force headless Ozone backend.
   // This mode should never depend on X11/Wayland availability.
-  // 在 Linux 的 WebUI/重置密码模式下，强制使用 headless Ozone 后端，
-  // 避免因 DISPLAY 变量存在但显示服务不可用导致平台初始化失败。
+  // On Linux in WebUI/reset-password mode, force the headless Ozone backend so platform init
+  // does not fail when DISPLAY exists but no display server is reachable.
   // Note: Do NOT use --headless (browser automation mode that causes auto-exit).
   // Instead, use --ozone-platform=headless which provides a proper display backend
   // without requiring a display server, keeping the Electron process alive.
@@ -66,7 +66,7 @@ if (isWebUI || isResetPassword) {
   }
 
   // For root user, disable sandbox to prevent crash
-  // 对于 root 用户，禁用沙箱以防止崩溃
+  // For root, disable the sandbox to prevent crashes
   if (typeof process.getuid === 'function' && process.getuid() === 0) {
     app.commandLine.appendSwitch('no-sandbox');
   }
@@ -104,8 +104,8 @@ export interface CdpConfig {
   /** Whether CDP is enabled (default: true in dev mode, false in production) */
   enabled?: boolean;
   /**
-   * 历史字段：以前用来挑保留端口。通道改用 listen(0) 之后不再读它，
-   * 但保留在类型里，这样老配置文件不会因为多一个未知键而出问题。
+   * Historical field: it used to pick the reserved port. Unread since the channel moved to
+   * listen(0), but kept in the type so old config files with the extra key stay valid.
    *
    * Legacy field that used to pick a reserved port. Unread since the bridge moved to
    * listen(0), but kept in the type so existing config files do not trip over an
@@ -129,11 +129,11 @@ export interface CdpStatus {
 }
 
 /**
- * 顺手删掉遗留的实例注册表文件。
+ * Also removes the leftover instance-registry file.
  *
- * 这个文件（~/.aionui-cdp-registry.json）以前记录「每个实例占了哪个 CDP 端口」。相关逻辑
- * 已随应用级 remote-debugging-port 一起删除，但升级上来的机器上文件还在，里面是一堆早已
- * 无效的 pid/端口。留着只会让人以为还有这套机制，所以清掉。best-effort，失败无所谓。
+ * That file (~/.aionui-cdp-registry.json) used to record which CDP port each instance held.
+ * The logic went away with the app-level remote-debugging-port, but upgraded machines still
+ * carry the file full of long-dead pids/ports. Leaving it implies the machinery still exists, so clean it up. Best-effort; failure is fine.
  *
  * Remove the leftover instance-registry file. ~/.aionui-cdp-registry.json used to record
  * which CDP port each instance had taken; that logic went away with the application-wide
@@ -194,13 +194,13 @@ export function saveCdpConfig(config: CdpConfig): void {
  * Determine if CDP should be enabled at startup.
  * Priority: env variable > config file > default (enabled).
  *
- * 默认开启（含正式版）：应用内浏览器要让 Agent 操作，就必须有这条通道，否则
- * 「装好即可用」不成立。通道只绑 127.0.0.1，不对外暴露；用户仍可在设置里关掉，
- * 关掉后 Agent 就无法操作浏览器（此时 MCP 启动器会拒绝启动，不会偷偷开一个
- * 用户看不见的 Chrome）。
+ * On by default (release included): the in-app browser cannot be agent-driven without this
+ * channel, and "works out of the box" would not hold. It binds 127.0.0.1 only; the user can
+ * still disable it in settings, after which the agent cannot drive the browser (the MCP
+ * launcher then refuses to start rather than silently opening an invisible Chrome).
  *
- * AIONUI_CDP_PORT 现在只当开关用（"0"/"false" 关闭，其它非空值开启）。它的数值不再
- * 决定端口 —— 通道走 listen(0)，端口由系统分配。名字保留是为了不破坏既有脚本和 E2E 夹具。
+ * AIONUI_CDP_PORT is now only a switch ("0"/"false" = off, any other non-empty value = on).
+ * Its number no longer picks the port - the channel uses listen(0) and the OS assigns it. The name survives so existing scripts and E2E fixtures keep working.
  *
  * Enabled by default, production included: the in-app browser cannot be driven by the agent
  * without this bridge, so "works out of the box" would otherwise fail. The bridge binds to
@@ -225,14 +225,14 @@ function shouldEnableCdp(config: CdpConfig): boolean {
 }
 
 /**
- * 通道的实际监听端口，由 cdpBridge 启动后回填；未启用/未起来时为 null。
+ * The channel's actual listening port, backfilled by cdpBridge after startup; null when disabled or not yet up.
  *
- * 刻意不再在这里预留 9230-9250 段的端口号。移除 remote-debugging-port 之后那个号段
- * 没有任何进程监听，findAvailablePort/registerInstance 追踪的是一个不存在的服务：
- * 多实例避让失去意义，而设置页把它显示成「当前 CDP 端口」、还据此生成可复制的 MCP 配置，
- * 等于给用户一个连不上的地址。通道走 listen(0)（这也是本机唯一真实屏障，见 cdpBridge.ts
- * 的威胁模型说明），所以真实端口只可能在桥起来之后才知道 —— 由它回填这里，全局只保留
- * 一个端口概念。
+ * Deliberately no longer reserves the 9230-9250 range here. After remote-debugging-port was
+ * removed nothing listens on that range - findAvailablePort/registerInstance tracked a service
+ * that does not exist, multi-instance avoidance lost its meaning, and the settings page showed
+ * it as "current CDP port" and generated copyable MCP configs from it - handing the user an
+ * address that cannot connect. The channel uses listen(0) (also the only real local barrier; see cdpBridge.ts's threat model), so the true port is knowable only after the bridge starts -
+ * it backfills here, and the app keeps exactly one notion of the port.
  *
  * The bridge's real listening port, backfilled by cdpBridge once it starts; null while agent
  * browser control is off or the bridge has not come up.
@@ -262,14 +262,14 @@ cdpStartupEnabled = shouldEnableCdp(cdpConfig);
 
 if (cdpStartupEnabled) {
   /**
-   * 刻意不再调用 appendSwitch('remote-debugging-port', ...)。
+   * Deliberately no longer calls appendSwitch('remote-debugging-port', ...).
    *
-   * Chromium 那个开关是应用级的，没有 per-target ACL：一开就把每个 WebContents 都
-   * 暴露出去，包括挂着 preload 桥的主窗口，而且不需要任何认证。本机任意进程连上去就能
-   * 驱动整个应用。
+   * That Chromium switch is application-wide with no per-target ACL: one flip exposes every
+   * WebContents - the preload-bridged main window included - with no authentication at all.
+   * Any local process that connects can drive the whole application.
    *
-   * 改由 cdpBridge 只暴露侧边浏览器那一个 webContents。端口与 env 的写入都移到桥启动处
-   * （见 index.ts），这里只负责判断「用户是否开启了这个能力」。
+   * cdpBridge now exposes only the side browser's webContents. Port and env writes moved to the
+   * bridge startup site (see index.ts); this file only decides whether the user enabled the capability.
    *
    * Deliberately no longer calls appendSwitch('remote-debugging-port', ...). That switch is
    * application-wide with no per-target ACL: it exposes every WebContents — including the
@@ -283,17 +283,17 @@ if (cdpStartupEnabled) {
   console.log('[CDP] Agent browser control disabled');
 }
 
-// 无论开关状态如何都清一次：关掉这个能力的用户同样不该留着那个失效文件。
+// Clean once regardless of the switch: users who disabled the capability should not keep the dead file either.
 // Runs regardless of the switch: users who turned the capability off should not be left
 // with the stale file either.
 removeLegacyCdpRegistryFile();
 
 /**
- * verifyCdpReady 已随 remote-debugging-port 一并移除。
+ * verifyCdpReady went away together with remote-debugging-port.
  *
- * 它探测的是 Chromium 那个应用级端口的 /json/version；现在没有进程在那个端口上监听，
- * 留着只会让启动日志报一个必然失败的警告。单目标通道的就绪与否由 startCdpBridge()
- * 的返回值直接体现，不需要再探测。
+ * It probed the app-level port's /json/version; nothing listens there any more, so keeping it
+ * would only put a guaranteed-failure warning in the startup log. The single-target channel's
+ * readiness shows directly in startCdpBridge()'s return value; no probe needed.
  *
  * verifyCdpReady was removed together with remote-debugging-port. It probed
  * /json/version on Chromium's application-wide port, where nothing listens any more, so
@@ -308,8 +308,8 @@ export function getCdpStatus(): CdpStatus {
   const config = loadCdpConfig();
   return {
     /**
-     * enabled 表示「通道真的起来了、连得上」，所以看 cdpPort 而不是配置：
-     * 配置开着但桥启动失败时，UI 不该说它是启用的。
+     * enabled means "the channel is actually up and reachable", so it reads cdpPort, not config:
+     * with the config on but the bridge failed to start, the UI must not claim it is enabled.
      *
      * `enabled` means the bridge is actually up and reachable, so it reads cdpPort rather
      * than the config: with the setting on but bridge startup failed, the UI must not claim

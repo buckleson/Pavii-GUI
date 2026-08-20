@@ -15,11 +15,11 @@ export interface ElectronBridgeAPI {
   on: (callback: (event: { value: string }) => void) => void;
   // Get absolute path for dragged file/directory
   getPathForFile?: (file: File) => string;
-  // Feedback log collection / 收集反馈日志
+  // Feedback log collection
   collectFeedbackLogs?: () => Promise<{ filename: string; data: number[] } | null>;
-  // Feedback screenshot capture / 反馈截图
+  // Feedback screenshot capture
   captureFeedbackScreenshot?: () => Promise<{ filename: string; data: number[] } | null>;
-  // Forward feedback diagnostics logs to the main process console / 转发反馈诊断日志到主进程控制台
+  // Forward feedback diagnostics logs to the main process console
   logFeedbackEvent?: (payload: { details?: unknown; level: 'info' | 'warn' | 'error'; message: string }) => void;
   recoverCorruptedDatabase?: () => Promise<void>;
 }

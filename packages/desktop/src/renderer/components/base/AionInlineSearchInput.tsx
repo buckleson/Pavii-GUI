@@ -11,31 +11,31 @@ import React, { forwardRef } from 'react';
 import styles from './AionInlineSearchInput.module.css';
 
 /**
- * AionInlineSearchInput —— 下拉列表专用的轻量搜索框
+ * AionInlineSearchInput - the lightweight search box for dropdown lists
  *
- * 样式基准取自首页 Project 选择下拉曾用的搜索框：浅灰填充、无边框、8px 圆角、
- * 放大镜图标 + 透明输入框，柔和紧凑，适合“点击展开的下拉列表”顶部内嵌使用。
- * 与 AionSearchInput（34px 描边、focus 主色环，适合常驻搜索栏）区分：
- * 常驻列表用 AionSearchInput，点击触发展开的下拉列表用本组件。
+ * Styled after the search box the home page project dropdown used to carry: light grey fill,
+ * no border, 8px radius, magnifier icon and a transparent input - soft and compact, made to sit inside the top of a dropdown.
+ * Distinct from AionSearchInput (34px, outlined, focus ring in the primary colour), which suits
+ * a permanent search bar: use that for always-visible lists and this one for dropdowns.
  *
- * API 与 AionSearchInput 对齐（value/onChange/placeholder），只负责外观与录入，
- * 过滤/防抖等逻辑仍由调用方持有。
+ * The API matches AionSearchInput (value/onChange/placeholder). It owns appearance and entry
+ * only; filtering and debouncing stay with the caller.
  */
 export type AionInlineSearchInputProps = {
-  /** 当前输入值（受控） */
+  /** Current value (controlled) */
   value: string;
-  /** 值变化回调，返回最新字符串 */
+  /** Change callback, receiving the latest string */
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   style?: CSSProperties;
   autoFocus?: boolean;
   disabled?: boolean;
-  /** 落在原生 input 上（测试用 fill 需要它指向真实输入框） */
+  /** Applied to the native input (tests using fill need it to target the real input) */
   'data-testid'?: string;
-  /** 落在外层容器上，用于定位整块搜索栏 */
+  /** Applied to the outer container, for locating the whole search bar */
   wrapTestId?: string;
-  /** 透传给原生 input 的额外属性（如 onKeyDown、aria-label 等） */
+  /** Extra props forwarded to the native input (onKeyDown, aria-label and the like) */
   inputProps?: Omit<
     InputHTMLAttributes<HTMLInputElement>,
     'value' | 'onChange' | 'placeholder' | 'disabled' | 'autoFocus' | 'className'

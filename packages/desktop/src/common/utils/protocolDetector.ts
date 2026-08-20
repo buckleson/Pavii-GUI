@@ -7,10 +7,10 @@
 /**
  * Protocol Detector for AionRouter
  *
- * 支持自动检测 API 端点使用的协议类型：
- * - OpenAI 协议（大多数第三方服务）
- * - Gemini 协议（Google 官方）
- * - Anthropic 协议（Claude 官方）
+ * Auto-detects which protocol an API endpoint speaks:
+ * - OpenAI protocol (most third-party services)
+ * - Gemini protocol (Google official)
+ * - Anthropic protocol (Claude official)
  */
 
 /**
@@ -148,15 +148,15 @@ interface ProtocolSignature {
  * Reference GPT-Load Channel design, each protocol defines its signatures
  */
 export const PROTOCOL_SIGNATURES: ProtocolSignature[] = [
-  // Gemini 协议
+  // Gemini protocol
   {
     protocol: 'gemini',
     // Gemini API Key format: starts with AIza, followed by 35 characters
     keyPattern: /^AIza[A-Za-z0-9_-]{35}$/,
     urlPatterns: [
-      /generativelanguage\.googleapis\.com/, // 标准 Gemini API
+      /generativelanguage\.googleapis\.com/, // Standard Gemini API
       /aiplatform\.googleapis\.com/, // Vertex AI
-      /gemini\.google\.com/, // Gemini 网页版
+      /gemini\.google\.com/, // Gemini web app
       /aistudio\.google\.com/, // AI Studio
     ],
     endpoints: [
@@ -180,17 +180,17 @@ export const PROTOCOL_SIGNATURES: ProtocolSignature[] = [
       },
     ],
   },
-  // OpenAI 协议（包括兼容服务）
+  // OpenAI protocol (including compatible services)
   {
     protocol: 'openai',
-    // OpenAI Key 格式多样：
-    // - 标准格式: sk-xxx
-    // - 项目 Key: sk-proj-xxx
-    // - 服务账号: sk-svcacct-xxx
-    // - 第三方服务可能使用其他格式
+    // OpenAI key formats vary:
+    // - standard: sk-xxx
+    // - project key: sk-proj-xxx
+    // - service account: sk-svcacct-xxx
+    // - third-party services may use other formats
     keyPattern: /^sk-[A-Za-z0-9-_]{20,}$/,
     urlPatterns: [
-      /api\.openai\.com/, // OpenAI 官方
+      /api\.openai\.com/, // OpenAI official
       /\.openai\.azure\.com/, // Azure OpenAI
       /api\.deepseek\.com/, // DeepSeek
       /api\.moonshot\.cn/, // Moonshot/Kimi China
@@ -200,19 +200,19 @@ export const PROTOCOL_SIGNATURES: ProtocolSignature[] = [
       /openrouter\.ai/, // OpenRouter
       /api\.together\.xyz/, // Together AI
       /api\.perplexity\.ai/, // Perplexity
-      /dashscope\.aliyuncs\.com/, // 阿里云 DashScope
-      /aip\.baidubce\.com/, // 百度千帆
-      /ark\.cn-beijing\.volces\.com/, // 火山引擎
-      /open\.bigmodel\.cn/, // 智谱 AI
+      /dashscope\.aliyuncs\.com/, // Alibaba Cloud DashScope
+      /aip\.baidubce\.com/, // Baidu Qianfan
+      /ark\.cn-beijing\.volces\.com/, // Volcengine
+      /open\.bigmodel\.cn/, // Zhipu AI
       /api\.siliconflow\.cn/, // SiliconFlow
       /api\.siliconflow\.com/, // SiliconFlow (.com)
-      /api\.lingyiwanwu\.com/, // 零一万物
+      /api\.lingyiwanwu\.com/, // 01.AI
       /api\.minimaxi\.com/, // MiniMax China
       /api\.minimax\.io/, // MiniMax Global
       /platform\.minimaxi\.com/, // MiniMax Platform
-      /localhost/, // 本地服务
-      /127\.0\.0\.1/, // 本地服务
-      /0\.0\.0\.0/, // 本地服务
+      /localhost/, // Local service
+      /127\.0\.0\.1/, // Local service
+      /0\.0\.0\.0/, // Local service
     ],
     endpoints: [
       {
@@ -239,14 +239,14 @@ export const PROTOCOL_SIGNATURES: ProtocolSignature[] = [
       },
     ],
   },
-  // Anthropic 协议
+  // Anthropic protocol
   {
     protocol: 'anthropic',
-    // Anthropic Key 格式：sk-ant- 开头
+    // Anthropic key format: starts with sk-ant-
     keyPattern: /^sk-ant-[A-Za-z0-9-]{80,}$/,
     urlPatterns: [
-      /api\.anthropic\.com/, // Anthropic 官方
-      /claude\.ai/, // Claude 网页版
+      /api\.anthropic\.com/, // Anthropic official
+      /claude\.ai/, // Claude web app
     ],
     endpoints: [
       {
@@ -312,18 +312,18 @@ export function maskApiKey(api_key: string): string {
  * Used to generate candidate URL list when user enters full endpoint URL
  */
 export const API_PATH_SUFFIXES = [
-  // Gemini 路径
+  // Gemini paths
   '/v1beta/models',
   '/v1/models',
   '/models',
-  // OpenAI 路径
+  // OpenAI paths
   '/v1/chat/completions',
   '/chat/completions',
   '/v1/completions',
   '/completions',
   '/v1/embeddings',
   '/embeddings',
-  // Anthropic 路径
+  // Anthropic paths
   '/v1/messages',
   '/messages',
 ];
@@ -336,7 +336,7 @@ export const API_PATH_SUFFIXES = [
 export function normalizeBaseUrl(base_url: string): string {
   if (!base_url) return '';
   let url = base_url.trim();
-  // 移除末尾斜杠
+  // Strip the trailing slash
   url = url.replace(/\/+$/, '');
   return url;
 }
@@ -356,7 +356,7 @@ export function removeApiPathSuffix(base_url: string): string | null {
     }
   }
 
-  return null; // 没有匹配的后缀
+  return null; // No suffix matched
 }
 
 /**
@@ -384,14 +384,14 @@ export function guessProtocolFromUrl(base_url: string): ProtocolType | null {
  * Prioritize more specific patterns, then general patterns
  */
 export function guessProtocolFromKey(api_key: string): ProtocolType | null {
-  // 先尝试标准协议签名
+  // Try the standard protocol signatures first
   for (const sig of PROTOCOL_SIGNATURES) {
     if (sig.keyPattern && sig.keyPattern.test(api_key)) {
       return sig.protocol;
     }
   }
 
-  // 再尝试第三方服务 Key 格式
+  // Then the third-party service key formats
   for (const pattern of THIRD_PARTY_KEY_PATTERNS) {
     if (pattern.pattern.test(api_key)) {
       return pattern.protocol;
@@ -431,7 +431,7 @@ export function getProtocolDisplayName(protocol: ProtocolType): string {
  */
 export function getRecommendedPlatform(protocol: ProtocolType): string | null {
   const platforms: Record<ProtocolType, string | null> = {
-    openai: null, // OpenAI 协议是当前项目通过 custom 支持的
+    openai: null, // The OpenAI protocol is supported through 'custom' in this project
     gemini: 'gemini',
     anthropic: 'Anthropic',
     unknown: null,

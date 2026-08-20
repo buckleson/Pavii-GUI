@@ -614,10 +614,10 @@ const WebuiModalContent: React.FC = () => {
   const webuiPanel = (
     <AionScrollArea className='flex-1 min-h-0 pb-16px' disableOverflow={isPageMode}>
       <div className='space-y-12px px-[12px] md:px-[28px]'>
-        {/* 标题 / Title */}
+        {/* Title */}
         <h2 className='text-20px font-500 text-t-primary m-0'>WebUI</h2>
 
-        {/* 描述说明 / Description */}
+        {/* Description */}
         <div className='space-y-6px'>
           <p className='m-0 text-13px text-t-secondary leading-relaxed'>{t('settings.webui.description')}</p>
           <div className='flex flex-wrap gap-x-12px gap-y-6px'>
@@ -637,7 +637,7 @@ const WebuiModalContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Messaging 强引导入口 / Messaging primary entry — disabled, kept for future use
+        {/* Messaging primary entry - disabled, kept for future use
         <div className='rd-12px border border-line bg-2 px-12px py-10px flex items-center justify-between gap-10px'>
             <div className='min-w-0 flex items-center gap-8px'>
               <Communication theme='outline' size='18' className='text-[rgb(var(--primary-6))] shrink-0' />
@@ -652,15 +652,15 @@ const WebuiModalContent: React.FC = () => {
           </div>
         */}
 
-        {/* WebUI 服务卡片 / WebUI Service Card */}
+        {/* WebUI service card */}
         <div className='px-[12px] md:px-[28px] py-14px bg-2 rd-16px'>
-          {/* WebUI 引导提示 / WebUI hint */}
+          {/* WebUI hint */}
           <div className='mb-8px rd-10px border border-line bg-fill-1 px-10px py-8px flex items-start gap-6px'>
             <Earth theme='outline' size='16' className='mt-1px text-[rgb(var(--primary-6))]' />
             <div className='text-12px text-t-secondary leading-relaxed'>{t('settings.webui.featureRemoteDesc')}</div>
           </div>
 
-          {/* 启用 WebUI / Enable WebUI */}
+          {/* Enable WebUI */}
           <PreferenceRow
             label={t('settings.webui.enable')}
             extra={
@@ -674,7 +674,7 @@ const WebuiModalContent: React.FC = () => {
             <Switch checked={webuiEnabled} loading={startLoading} onChange={handleToggle} />
           </PreferenceRow>
 
-          {/* 访问地址（启用 WebUI 后即显示，不依赖后端 running 状态）/ Access URL (shown whenever WebUI is enabled, not tied to backend running state) */}
+          {/* Access URL (shown whenever WebUI is enabled, not tied to backend running state) */}
           {webuiEnabled && (
             <PreferenceRow label={t('settings.webui.accessUrl')}>
               <div className='flex items-center gap-8px min-w-0'>
@@ -696,7 +696,7 @@ const WebuiModalContent: React.FC = () => {
             </PreferenceRow>
           )}
 
-          {/* 允许局域网访问 / Allow LAN Access */}
+          {/* Allow LAN access */}
           <PreferenceRow
             label={t('settings.webui.allowRemote')}
             description={
@@ -744,11 +744,11 @@ const WebuiModalContent: React.FC = () => {
           </PreferenceRow>
         </div>
 
-        {/* 登录信息卡片 / Login Info Card */}
+        {/* Login info card */}
         <div className='px-[12px] md:px-[28px] py-14px bg-2 rd-16px'>
           <div className='text-14px font-500 mb-8px text-t-primary'>{t('settings.webui.loginInfo')}</div>
 
-          {/* 账号 / Account */}
+          {/* Account */}
           <div className='flex items-center justify-between gap-12px py-12px'>
             <span className='text-14px text-t-secondary shrink-0'>{t('settings.webui.username')}:</span>
             <div className='inline-flex items-center gap-8px rd-100px border border-line bg-fill-1 px-10px py-4px min-w-0'>
@@ -776,7 +776,7 @@ const WebuiModalContent: React.FC = () => {
             </div>
           </div>
 
-          {/* 密码 / Password */}
+          {/* Password */}
           <div className='flex items-center justify-between gap-12px py-12px'>
             <span className='text-14px text-t-secondary shrink-0'>{t('settings.webui.initialPassword')}:</span>
             <div className='inline-flex items-center gap-8px rd-100px border border-line bg-fill-1 px-10px py-4px min-w-0'>
@@ -794,7 +794,7 @@ const WebuiModalContent: React.FC = () => {
             </div>
           </div>
 
-          {/* 二维码登录（仅服务器运行且允许远程访问时显示）/ QR Code Login (only when server running and remote access allowed) */}
+          {/* QR code login (only when the server is running and remote access is allowed) */}
           {status?.running && tunnelState?.running && (
             <>
               <div className='border-t border-line my-12px' />
@@ -802,7 +802,7 @@ const WebuiModalContent: React.FC = () => {
               <div className='text-12px text-t-tertiary mb-12px'>{t('settings.webui.qrLoginHint')}</div>
 
               <div className='flex flex-col items-center gap-12px'>
-                {/* 二维码显示区域 / QR Code display area */}
+                {/* QR code display area */}
                 <div className='p-12px bg-fill-1 border border-line rd-10px'>
                   {qrLoading ? (
                     <div className='w-140px h-140px flex items-center justify-center'>
@@ -827,7 +827,7 @@ const WebuiModalContent: React.FC = () => {
                   )}
                 </div>
 
-                {/* 过期时间、复制链接和刷新按钮 / Expiration time, copy link and refresh button */}
+                {/* Expiry, copy link and refresh button */}
                 <div className='flex items-center gap-8px'>
                   {qrExpiresAt && (
                     <span className='text-12px text-t-tertiary'>
@@ -972,7 +972,7 @@ const WebuiModalContent: React.FC = () => {
         </Form>
       </AionModal>
 
-      {/* 设置新密码弹窗 / Set New Password Modal */}
+      {/* Set-new-password modal */}
       <AionModal
         visible={setPasswordModalVisible}
         onCancel={() => setSetPasswordModalVisible(false)}
