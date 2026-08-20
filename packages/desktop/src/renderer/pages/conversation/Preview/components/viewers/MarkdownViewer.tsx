@@ -255,7 +255,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
 
   return (
     <div className='flex flex-col w-full h-full overflow-hidden'>
-      {/* 内容区域 / Content area */}
+      {/* Content area */}
       <div
         ref={containerRef}
         className={`flex-1 ${viewMode === 'source' ? 'overflow-hidden' : 'overflow-auto p-32px text-t-primary'}`}
@@ -312,7 +312,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
         )}
       </div>
 
-      {/* 文本选择浮动工具栏 / Text selection floating toolbar */}
+      {/* Text selection floating toolbar */}
       {selectedText && (
         <SelectionToolbar selectedText={selectedText} position={selectionPosition} onClear={clearSelection} />
       )}

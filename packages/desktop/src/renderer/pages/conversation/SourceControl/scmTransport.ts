@@ -9,7 +9,7 @@
  * the explorer but on its **own outer envelope** (`name: "scm"`, routed to a
  * separate backend router) — the two lanes are decoupled because their semantics
  * differ: `fs` is directory-subscription with deltas, `scm` is whole-frame status
- * replacement (protocol.md §源代码控制).
+ * replacement (protocol.md, "Source control").
  *
  * The JSON-RPC pairing itself is reused verbatim from {@link MonitorClient}; only
  * the envelope name and the notification sink differ. This is thin production
@@ -39,7 +39,7 @@ const ACTION_METHOD: Record<ScmActionKind, string> = {
   discard: 'scm/discard',
 };
 
-/** Transport over the WS singleton: `scm` event族 in, `wsSend('scm', …)` out. */
+/** Transport over the WS singleton: the `scm` event family in, `wsSend('scm', ...)` out. */
 export function createWsScmTransport(): MonitorTransport {
   return {
     send: (frame) => wsSend(SCM_EVENT, frame),

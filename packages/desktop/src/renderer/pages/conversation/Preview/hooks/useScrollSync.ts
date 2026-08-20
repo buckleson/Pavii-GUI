@@ -47,8 +47,8 @@ interface UseScrollSyncReturn {
  *
  * Synchronizes scroll position between editor and preview based on scroll percentage
  *
- * 使用防抖机制避免循环触发和性能问题；优先使用 requestAnimationFrame 解锁同步状态，
- * 并在不可用时降级到 setTimeout + SCROLL_SYNC_DEBOUNCE，确保兼容性与安全降级。
+ * Debounced to avoid feedback loops and performance problems, preferring requestAnimationFrame
+ * to release the sync lock and falling back to setTimeout + SCROLL_SYNC_DEBOUNCE where it is unavailable.
  * Uses debounce to avoid circular triggers and performance issues; it prefers
  * requestAnimationFrame to unlock sync state, and falls back to
  * setTimeout + SCROLL_SYNC_DEBOUNCE when unavailable for compatibility and safe degradation.

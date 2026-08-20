@@ -64,8 +64,8 @@ const HTMLEditor: React.FC<HTMLEditorProps> = ({ value, onChange, containerRef, 
   );
 
   // historyKeymap。
-  // 🔴 不能照抄 CodeEditor 的写法把整个 extensions 清空 —— 下面 basicSetup 显式
-  // `history: false`，撤销/重做完全依赖这里的 history()。清空会让大文件失去撤销。
+  // Do NOT copy CodeEditor's approach of clearing extensions entirely: basicSetup below sets
+  // `history: false` explicitly, so undo/redo depends entirely on the history() here. Clearing it costs large files their undo.
   //
   // Large-file degradation: drop only HTML syntax parsing, keep history and its
   // keymap. Deliberately NOT the "empty the extensions array" shape used by

@@ -15,7 +15,7 @@
  *
  * import { PreviewPanel, MarkdownViewer } from '@/renderer/pages/conversation/Preview';
  *
- * // 使用类型
+ * // Usage
  * import type { PreviewContentType } from '@/renderer/pages/conversation/Preview';
  * ```
  */

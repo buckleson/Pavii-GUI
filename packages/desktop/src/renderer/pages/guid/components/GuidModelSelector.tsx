@@ -58,7 +58,7 @@ const GuidModelSelector: React.FC<GuidModelSelectorProps> = ({
   const navigate = useNavigate();
   const defaultModelLabel = t('common.defaultModel');
 
-  // 过滤掉被禁用的 provider
+  // Filter out disabled providers
   const enabledModelList = React.useMemo(() => {
     return modelList.filter((p) => p.enabled !== false);
   }, [modelList]);

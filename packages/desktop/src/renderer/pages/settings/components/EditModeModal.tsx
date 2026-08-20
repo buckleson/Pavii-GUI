@@ -184,7 +184,7 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
         {messageContext}
         <div>
           <Form form={form} layout='vertical'>
-            {/* 模型供应商名称（可编辑，带 Logo）/ Model Provider name (editable, with Logo) */}
+            {/* Model provider name (editable, with logo) */}
             <Form.Item
               label={
                 <span className='inline-flex items-center gap-6px'>
@@ -204,10 +204,10 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
               hidden={isBedrock}
               label={
                 <span className='inline-flex items-center gap-4px'>
-                  {t('settings.apiEndpoint', 'API 请求地址')}
+                  {t('settings.apiEndpoint', 'API endpoint')}
                   {isFullUrl && (
                     <Tag size='small' color='arcoblue'>
-                      {t('settings.fullUrl', '完整URL')}
+                      {t('settings.fullUrl', 'Full URL')}
                     </Tag>
                   )}
                 </span>

@@ -20,7 +20,7 @@ type Props = {
   nameStyle?: React.CSSProperties;
   nameTestId?: string;
   crownClassName?: string;
-  /** 叠加在头像右下角的节点（如状态点）。传入时头像外层为 relative 定位容器。 */
+  /** Node overlaid at the bottom-right of the avatar (a status dot, say). Supplying it makes the avatar wrapper a relative container. */
   avatarOverlay?: React.ReactNode;
 };
 

@@ -15,14 +15,14 @@ type Props = {
   onLeaderChange: (selectionId: string) => void;
   onRemove: (selectionId: string) => void;
   /**
-   * 可选的标题行操作区，渲染在“已选成员 N”标题右侧、替换默认的 Leader 图例。
-   * 窄屏用它承载“添加成员”按钮，避免另起一行重复渲染标题。
+   * Optional action area on the title row, rendered right of "Selected members N" in place of the default leader legend.
+   * Narrow screens use it for the "add member" button, avoiding a second row repeating the title.
    */
   headerAction?: React.ReactNode;
   /**
-   * 追加到成员列表框上的类名。默认框用 flex-1 撑满父级高度（桌面双栏有固定高度，
-   * 因此天然可滚动）。窄屏没有固定高度的父级，可传一个 max-height 让框自身受限、
-   * 内容变多时在框内滚动。
+   * Class name appended to the member list box. By default it uses flex-1 to fill the parent height
+   * (the desktop two-column layout has a fixed height and so scrolls naturally). Narrow screens have
+   * no fixed-height parent, so pass a max-height to bound the box and let it scroll as content grows.
    */
   listBoxClassName?: string;
 };

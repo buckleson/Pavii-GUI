@@ -136,7 +136,7 @@ const PreviewContextMenu: React.FC<PreviewContextMenuProps> = ({
         minWidth: '140px',
       }}
     >
-      {/* 关闭左侧 / Close tabs to the left */}
+      {/* Close tabs to the left */}
       <div
         className={`px-12px py-8px text-12px transition-colors ${hasLeftTabs ? 'cursor-pointer text-t-primary hover:bg-bg-3' : 'opacity-50 cursor-not-allowed text-t-tertiary'}`}
         onClick={() => hasLeftTabs && onCloseLeft(contextMenu.tabId!)}
@@ -144,7 +144,7 @@ const PreviewContextMenu: React.FC<PreviewContextMenuProps> = ({
         {t('preview.closeLeft')}
       </div>
 
-      {/* 关闭右侧 / Close tabs to the right */}
+      {/* Close tabs to the right */}
       <div
         className={`px-12px py-8px text-12px transition-colors ${hasRightTabs ? 'cursor-pointer text-t-primary hover:bg-bg-3' : 'opacity-50 cursor-not-allowed text-t-tertiary'}`}
         onClick={() => hasRightTabs && onCloseRight(contextMenu.tabId!)}
@@ -152,7 +152,7 @@ const PreviewContextMenu: React.FC<PreviewContextMenuProps> = ({
         {t('preview.closeRight')}
       </div>
 
-      {/* 关闭其他 / Close other tabs */}
+      {/* Close other tabs */}
       <div
         className={`px-12px py-8px text-12px transition-colors ${hasOtherTabs ? 'cursor-pointer text-t-primary hover:bg-bg-3' : 'opacity-50 cursor-not-allowed text-t-tertiary'}`}
         onClick={() => hasOtherTabs && onCloseOthers(contextMenu.tabId!)}
@@ -160,10 +160,10 @@ const PreviewContextMenu: React.FC<PreviewContextMenuProps> = ({
         {t('preview.closeOthers')}
       </div>
 
-      {/* 分隔线 / Divider */}
+      {/* Divider */}
       <div className='h-1px bg-border-1 my-4px mx-8px' />
 
-      {/* 全部关闭 / Close all tabs */}
+      {/* Close all tabs */}
       <div
         className='px-12px py-8px text-12px text-t-primary cursor-pointer hover:bg-bg-3 transition-colors'
         onClick={onCloseAll}

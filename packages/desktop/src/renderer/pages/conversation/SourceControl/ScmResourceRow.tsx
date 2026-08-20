@@ -7,7 +7,7 @@
 /**
  * One resource row in the Changes panel: state badge + name + dimmed parent dir.
  *
- * Rendering rules that are contract, not cosmetics (source-control.md §变更清单):
+ * Rendering rules that are contract, not cosmetics (source-control.md, "Change list"):
  *
  *  - `conflicted` must be visually distinct from `modified`. Folding them would
  *    let a user act on a half-resolved merge believing it is an ordinary edit.

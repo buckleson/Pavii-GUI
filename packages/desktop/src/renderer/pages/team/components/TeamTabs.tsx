@@ -22,9 +22,9 @@ type TeamTabViewProps = {
   isActive: boolean;
   status: TeammateStatus;
   isLeader: boolean;
-  /** warmup 失败：头像加红环 + 感叹角标提示。 */
+  /** Warmup failed: the avatar gains a red ring and an exclamation badge. */
   warmupFailed?: boolean;
-  /** 成员身份色 CSS 值（胶囊底色 / 选中描边）。 */
+  /** The member identity colour, used for the pill background and the selected outline. */
   color: string;
   /** Number of pending permission confirmations for this agent */
   pendingCount?: number;
@@ -103,8 +103,8 @@ const TeamTabView: React.FC<TeamTabViewProps> = ({
     [assistant_name]
   );
 
-  // 胶囊底色恒定浅灰（hover / 选中都不改底色，避免压低彩色名字可读性）；
-  // 选中态用一圈成员自己的身份色边框表示（与彩色名字呼应，明显但不脏）。身份色只落在名字与边框上。
+  // The pill background stays light grey through hover and selection, so it never dulls the coloured name;
+  // selection shows as a border in the member's own identity colour, echoing the name - clear without muddying it. The identity colour touches only the name and the border.
   // 拖拽走 dnd-kit sortable：hover 时手柄内联出现在头像前（同改名/移除按钮的「hover 增宽」语言，
   // 不遮头像和状态点），拖动时兄弟胶囊实时让位（transform 平移），松手原位落地。
   // dragActive 期间冻结其他胶囊的 hover 增宽（拖动经过时布局不能跳）；正被拖动的胶囊则保持

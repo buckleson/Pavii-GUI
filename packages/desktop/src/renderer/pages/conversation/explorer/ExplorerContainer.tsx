@@ -146,7 +146,7 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
   // the current project. Combined with the per-project remount (this component is
   // keyed by `projectId` in ProjectPanelHost), a stale/other-project detail can
   // never reach the tree — a mismatch yields no roots rather than another
-  // project's (宁空勿画错).
+  // project's (better blank than wrong).
   const detail = data && data.project_id === projectId ? data : undefined;
 
   // Let the workspace-collapse hook (keyed per-project via workspacePreferenceKey)

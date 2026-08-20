@@ -412,7 +412,7 @@ const AddPlatformModal = ModalHOC<{
       {messageContext}
       <div>
         <Form form={form} layout='vertical' className='[&_.arco-form-item]:mb-12px [&_.arco-form-item:last-child]:mb-0'>
-          {/* 模型平台选择（第一层）/ Model Platform Selection (first level) */}
+          {/* Model platform selection (first level) */}
           <Form.Item
             initialValue={DEFAULT_PLATFORM_VALUE}
             label={t('settings.modelPlatform')}
@@ -461,7 +461,7 @@ const AddPlatformModal = ModalHOC<{
             hidden={isBedrock}
             label={
               <span className='inline-flex items-center gap-4px'>
-                {t('settings.apiEndpoint', 'API 请求地址')}
+                {t('settings.apiEndpoint', 'API endpoint')}
                 {selectedPlatform?.base_url && !isFullUrl && (
                   <button
                     type='button'
@@ -505,10 +505,10 @@ const AddPlatformModal = ModalHOC<{
           {(isCustom || isNewApi) && !isBedrock && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 12 }}>
               <Switch size='small' checked={isFullUrl} onChange={setIsFullUrl} />
-              <span className='text-12px text-t-secondary'>{t('settings.fullUrlMode', '完整 URL')}</span>
+              <span className='text-12px text-t-secondary'>{t('settings.fullUrlMode', 'Full URL')}</span>
               <span className='text-11px text-t-tertiary'>
                 {isFullUrl
-                  ? t('settings.fullUrlHint', '直接使用此地址，不拼接路径')
+                  ? t('settings.fullUrlHint', 'Use this address as-is, without appending a path')
                   : t('settings.baseUrlHint', '系统会自动拼接请求路径')}
               </span>
             </div>
@@ -524,7 +524,7 @@ const AddPlatformModal = ModalHOC<{
             extra={
               <div className='space-y-2px'>
                 <div className='text-11px text-t-secondary mt-2 leading-4'>{t('settings.multiApiKeyTip')}</div>
-                {/* 协议检测状态 / Protocol detection status */}
+                {/* Protocol detection status */}
                 {shouldShowDetectionResult && (
                   <ProtocolDetectionStatus
                     isDetecting={protocolDetection.isDetecting}
@@ -614,7 +614,7 @@ const AddPlatformModal = ModalHOC<{
             <Input placeholder='default' />
           </Form.Item>
 
-          {/* 模型选择 / Model Selection */}
+          {/* Model selection */}
           <Form.Item
             label={t('settings.modelName')}
             field={'model'}
@@ -712,7 +712,7 @@ const AddPlatformModal = ModalHOC<{
             />
           </Form.Item>
 
-          {/* New API 协议选择 / New API Protocol Selection */}
+          {/* New API protocol selection */}
           {isNewApi && (
             <Form.Item
               label={t('settings.modelProtocol')}

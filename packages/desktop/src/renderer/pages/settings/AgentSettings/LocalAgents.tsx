@@ -324,7 +324,7 @@ const LocalAgents: React.FC = () => {
         }}
       >
         {/* Conditional mount + key unmounts the editor on close so the
-            next `创建自定义 Agent` click always starts from a blank form.
+            next "create custom agent" click always starts from a blank form.
             The inner useEffect([agent]) only resets when the `agent`
             reference changes; two consecutive `null` values would not
             retrigger it. */}

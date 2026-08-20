@@ -24,7 +24,7 @@ type UseWorkspaceCollapseParams = {
   /**
    * True when the current workspace is an auto-created temporary one (no folder
    * picked by the user). Auto-expand on hasFiles is suppressed in that case so
-   * that "send 你好 without picking a folder" leaves the panel collapsed.
+   * that "send a message without picking a folder" leaves the panel collapsed.
    */
   isTemporaryWorkspace?: boolean;
 };

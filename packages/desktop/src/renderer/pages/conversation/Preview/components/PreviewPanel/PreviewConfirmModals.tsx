@@ -23,11 +23,11 @@ export interface CloseTabConfirmState {
   tabId: string | null;
 
   /**
-   * 批量关闭时，本次要关掉的**全部** tab id（含干净的）。
+   * Every tab id in a bulk close, clean ones included.
    *
-   * 只有单个 tab 时留空，走原来的 `tabId` 路径。批量关闭（关闭左侧/右侧/其他/
-   * 全部、收起面板）以前完全绕过确认，未保存的编辑被静默丢弃 —— 关一个 tab 会问、
-   * 关十个不会问，同一个「关闭」动作两种安全等级。
+   * Left empty for a single tab, which takes the original `tabId` path. Bulk closes (left, right,
+   * other, all, collapse panel) used to bypass the confirmation entirely and silently discard
+   * unsaved edits: closing one tab asked, closing ten did not, giving one action two safety levels.
    *
    * All tab ids this batch will close (including clean ones). Empty for a
    * single-tab close, which keeps using `tabId`. Batch closes (left/right/others/
@@ -108,8 +108,8 @@ const PreviewConfirmModals: React.FC<PreviewConfirmModalsProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  // 批量关闭有多个未保存 tab 时，逐个弹窗会把用户按到烦 ⇒ 汇总成一次确认，
-  // 并在文案里说清有几个未保存。单个 tab 保持原文案。
+  // A dialog per unsaved tab in a bulk close would wear the user down, so it collapses into one
+  // confirmation stating how many are unsaved. A single tab keeps the original wording.
   //
   // Prompting once per dirty tab in a batch would just train the user to click
   // through, so a batch collapses into a single confirmation that states how many
@@ -119,7 +119,7 @@ const PreviewConfirmModals: React.FC<PreviewConfirmModalsProps> = ({
 
   return (
     <>
-      {/* 关闭tab确认对话框 / Close tab confirmation modal */}
+      {/* Close tab confirmation modal */}
       <Modal
         visible={closeTabConfirm.show}
         title={isBatch ? t('preview.closeTabsTitle') : t('preview.closeTabTitle')}
@@ -158,7 +158,7 @@ const PreviewConfirmModals: React.FC<PreviewConfirmModalsProps> = ({
         </div>
       </Modal>
 
-      {/* 刷新前的未保存确认 / Unsaved-work confirmation before reloading */}
+      {/* Unsaved-work confirmation before reloading */}
       <Modal
         visible={refreshConfirm?.show === true}
         title={t('preview.refresh.confirmTitle')}

@@ -51,9 +51,9 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   );
   useScrollSyncTarget(containerRef, handleTargetScroll);
 
-  // 大文件降级：只摘掉语法解析与高亮，保留表面主题（背景色跟随 token）。
-  // 实测同量级下带语法扩展比不带慢约三个数量级 —— 解析成本随文档大小超线性增长，
-  // 而增量编辑本身与文件大小无关。
+  // Large-file degradation drops only parsing and highlighting, keeping the surface theme so background colours still follow tokens.
+  // Measured at the same size, the syntax extensions run about three orders of magnitude slower:
+  // parsing cost grows superlinearly with document size while incremental editing does not.
   //
   // Large-file degradation: drop only syntax parsing/highlighting, keep the
   // surface theme (background follows theme tokens). Measured at the same size,
@@ -63,7 +63,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   const disableHighlight = shouldDisableHighlighting(value.length);
 
   const extensions = useMemo<Extension[]>(() => {
-    // 自定义 markdown 高亮（非 fallback，优先于 basicSetup 的默认高亮）
+    // Custom markdown highlighting, not a fallback: it wins over basicSetup's default
     // Custom markdown highlight (non-fallback) wins over basicSetup's default
     // highlighter, while basicSetup's treeHighlighter keeps painting.
     // basicSetup must keep syntaxHighlighting enabled.

@@ -6,7 +6,7 @@
 
 /**
  * Pure model for the Source Control front end (see
- * `formal/runtime/source-control.md`, wire types in `protocol.md` §源代码控制).
+ * `formal/runtime/source-control.md`, wire types in `protocol.md`, "Source control").
  * No I/O, no WS, no React: the wire types, the forward-compatible state
  * classification, and the display-layer grouping. The store wires this to the
  * `scm/*` client and `useSyncExternalStore`.
@@ -16,7 +16,7 @@
  *  - `ScmResourceState` is an **open set** — an unrecognized `state` must be
  *    rendered as opaque/blocked, never coerced into a regular state. Treating an
  *    unknown state as `modified` would offer actions on something we do not
- *    understand (a data-safety problem, source-control.md §变更清单).
+ *    understand (a data-safety problem, source-control.md, "Change list").
  *  - the wire is **flat per-resource, never pre-grouped** — staged/unstaged
  *    grouping is derived here from `capabilities.staging`, so a provider without
  *    a staging area lands as a single change list with no staging concept.
@@ -84,7 +84,7 @@ export type ScmKnownResourceState = 'created' | 'modified' | 'deleted' | 'confli
 
 /**
  * Neutral resource state. The known states unioned with `string` because the wire
- * set is **open** (protocol.md: 消费方须容未知值): an unrecognized value must
+ * set is **open** (protocol.md: consumers must tolerate unknown values): an unrecognized value must
  * type-check into this field rather than force a cast at the boundary, since
  * receiving one is contract-compliant, not an error.
  */
@@ -148,7 +148,7 @@ const REGULAR_STATES = new Set(['created', 'modified', 'deleted']);
 
 /**
  * Classify a wire `state`. Anything outside the known set is `opaque` — the
- * forward-compatibility rule from protocol.md (未知 state 前向兼容). Note that
+ * forward-compatibility rule from protocol.md (unknown states are forward-compatible). Note that
  * `conflicted` is *known* yet still action-blocked, so "blocked" and "unknown"
  * are deliberately distinct kinds rather than one flag.
  */
@@ -277,7 +277,7 @@ export const resourceDir = (resource: ScmResource): string => {
 /** The three multi-file actions. One request carries exactly one of them. */
 export type ScmActionKind = 'stage' | 'unstage' | 'discard';
 
-/** One entry of an action response's `failed[]` (protocol.md §源代码控制). */
+/** One entry of an action response's `failed[]` (protocol.md, "Source control"). */
 export type ScmActionFailure = {
   file: ScmFileRef;
   /** Display-only text. Never parsed — it is a raw engine message whose wording

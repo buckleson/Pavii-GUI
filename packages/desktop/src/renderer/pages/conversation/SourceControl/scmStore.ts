@@ -7,7 +7,7 @@
 /**
  * Source Control store — module-level state with a `useSyncExternalStore`
  * surface, following the `explorerStore` / `searchStore` pattern. See
- * `formal/runtime/frontend.md` §源代码控制 store.
+ * `formal/runtime/frontend.md`, "Source control" store.
  *
  * This store is deliberately **much simpler than the explorer's**: SCM status is
  * a value the backend recomputes from scratch against index/HEAD, has no stable
@@ -42,7 +42,7 @@ import type {
 } from './scmModel';
 import { failedRowKeys } from './scmModel';
 
-/** `scm/diff` result (protocol.md §源代码控制). */
+/** `scm/diff` result (protocol.md, "Source control"). */
 export type ScmDiffResult = {
   patch?: string;
   original?: string;
@@ -346,7 +346,7 @@ const subscribeRepos = async (repoIds: string[]): Promise<void> => {
 export const openScmProject = async (id: string): Promise<void> => {
   if (projectId === id) return;
   // Release the previous project's repos (switch project = release, per
-  // source-control.md §生命周期).
+  // source-control.md, "Lifecycle").
   if (projectId !== null) releaseSubscriptions();
   projectId = id;
   repositories = [];
@@ -419,7 +419,7 @@ export const closeScmProject = (): void => {
  * Manual / focus refresh: pull one repo's status. Needed because an external
  * editor writing a working-tree file — and editing `.gitignore` itself — produces
  * no `.git` event at all, so the backend watch cannot see it (source-control.md
- * §三信号 ③).
+ * "Three signals" (3)).
  */
 export const refreshRepo = async (repoId: string): Promise<void> => {
   if (!port) return;
@@ -449,7 +449,7 @@ export const selectScmResource = (key: string | null): void => {
  *
  * Pure front-end view state: every repo of the open project is already subscribed
  * and its status already in `statuses`, so switching renders from cache with **no
- * `scm/*` request and no latency** (design D2丙). A no-op when the id is unchanged.
+ * `scm/*` request and no latency** (design D2c). A no-op when the id is unchanged.
  *
  * Clears the open diff on an actual switch: the selected resource belongs to the
  * repo being left, so keeping it would show one repo's patch above another repo's

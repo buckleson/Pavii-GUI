@@ -4,39 +4,39 @@ import type { TeamAssistantOption } from '../assistantSelectUtils';
 import TeamAssistantPicker from './TeamAssistantPicker';
 
 /**
- * TeamAssistantPickerDropdown —— “点击加号 → 弹出下拉 → 选择助手”的公用组件。
+ * TeamAssistantPickerDropdown - the shared "click plus, open a dropdown, pick an assistant" component.
  *
- * 团队相关界面里有多处这种交互：桌面/移动端团队页 Tab 栏的加号、新建团队弹窗窄屏的
- * “添加成员”。它们都是：一个锚点（加号按钮）触发一个下拉浮层，浮层里是带搜索的助手列表。
- * 这里统一浮层的定位、层级与外观（浅灰边框、圆角、阴影、内边距、软样式搜索框），
- * 各调用处只需提供锚点、助手列表和选中回调；选中后的业务逻辑（加草稿 / 调后端）由调用方持有。
+ * Several team surfaces use it: the plus in the desktop and mobile team tab bars, and "add
+ * member" in the narrow create-team modal. All are an anchor (a plus button) opening a floating
+ * dropdown holding a searchable assistant list. This unifies the positioning, z-index and look
+ * (light border, radius, shadow, padding, soft search box); callers supply only the anchor, the list and a selection callback, and keep the business logic that follows.
  */
 type Props = {
-  /** 锚点元素（通常是“+”按钮）。 */
+  /** The anchor element, usually the "+" button. */
   children: React.ReactElement;
   assistants: TeamAssistantOption[];
   onSelect: (assistant: TeamAssistantOption) => void;
-  /** 受控展开状态。 */
+  /** Controlled open state. */
   visible: boolean;
   onVisibleChange: (visible: boolean) => void;
   disabled?: boolean;
-  /** 正在处理的助手 id（调用方异步添加时用于行内 loading）。 */
+  /** Id of the assistant being processed, for the inline spinner while the caller adds it. */
   pendingAssistantId?: string;
-  /** testId 前缀，透传给内部 picker（搜索框/选项都基于它）。 */
+  /** testId prefix passed to the inner picker, which the search box and options derive from. */
   testIdPrefix: string;
-  /** 浮层容器的 testId。 */
+  /** testId of the floating container. */
   panelTestId?: string;
-  /** 浮层顶部标题（如“添加成员”）。不传则不渲染标题区。 */
+  /** Title at the top of the dropdown ("Add member", say). Omitted, no title area renders. */
   title?: React.ReactNode;
-  /** 标题下的副标题（如“同一助手可被反复添加”）。仅在有 title 时渲染。 */
+  /** Subtitle under the title ("the same assistant can be added repeatedly"). Only renders with a title. */
   subtitle?: React.ReactNode;
-  /** 列表底部的辅助说明（如“同一助手可重复添加”）。 */
+  /** Helper text at the bottom of the list ("the same assistant can be added more than once"). */
   footer?: React.ReactNode;
-  /** 列表下方常驻的引导区（带上分隔线），如「找 Leader 拉人」。 */
+  /** A persistent prompt below the list, above a divider - "ask the leader to add people", say. */
   guidanceFooter?: React.ReactNode;
-  /** 助手列表为空时展示的文案；不传则由内部 picker 展示默认空状态。 */
+  /** Copy shown when the assistant list is empty; omitted, the inner picker shows its default empty state. */
   emptyText?: React.ReactNode;
-  /** 行密度，透传给内部 picker。默认 'modal'（较紧凑、无内部边框，适合浮层）。 */
+  /** Row density passed to the inner picker. Defaults to 'modal': compact, no inner borders, suited to a dropdown. */
   density?: 'compact' | 'modal';
 };
 
@@ -100,7 +100,7 @@ const TeamAssistantPickerDropdown: React.FC<Props> = ({
             />
           )}
           {guidanceFooter ? (
-            // 上分隔线贯穿整个下拉宽度（用负边距抵消 panel 的 p-8px），只留一根线 + 文字，不成盒子。
+            // The divider spans the full dropdown width (negative margins cancel the panel's p-8px), leaving one line and text rather than a box.
             <div
               className='shrink-0 -mx-8px mt-8px px-12px pt-8px border-t border-solid border-3'
               data-testid={panelTestId ? `${panelTestId}-guidance` : undefined}

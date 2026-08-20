@@ -15,9 +15,9 @@ const DEFAULT_MESSAGES: InspectMessages = {
 /**
  * Generate HTML inspect mode injection script
  *
- * @param inspectMode - 是否启用审核模式
- * @param messages - 自定义提示消息
- * @returns 注入脚本字符串
+ * @param inspectMode - Whether inspect mode is enabled
+ * @param messages - Custom prompt messages
+ * @returns The injected script as a string
  */
 export function generateInspectScript(inspectMode: boolean, messages: InspectMessages = DEFAULT_MESSAGES): string {
   const copySuccess = JSON.stringify(messages.copySuccess);

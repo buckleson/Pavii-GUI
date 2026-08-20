@@ -18,14 +18,14 @@ import TeamAssistantPicker from './memberPicker/TeamAssistantPicker';
 import TeamAssistantPickerDropdown from './memberPicker/TeamAssistantPickerDropdown';
 import TeamMemberDraftList, { type TeamMemberDraft } from './memberPicker/TeamMemberDraftList';
 
-// [E2E SYNC] 修改此组件的 DOM 结构（class、标题、关闭按钮等）时，
-// 必须同步更新 tests/e2e/cases/teams/team-create.e2e.ts、team-whitelist.e2e.ts、
-// team-name-validation.e2e.ts 中的 selector，并立即向上汇报改动情况。
-// 注意：迁移到 AionModal variant='standard' 后，关闭按钮为 button[aria-label="Close"]，
+// [E2E SYNC] When changing this component's DOM (classes, title, close button and so on) you
+// must update the selectors in tests/e2e/cases/teams/team-create.e2e.ts, team-whitelist.e2e.ts
+// and team-name-validation.e2e.ts, and report the change immediately.
+// Note: since the move to AionModal variant='standard', the close button is button[aria-label="Close"].
 // .arco-modal-close-icon。
-// 窄屏（layout.isMobile，<768px）改为单栏：布局根为 team-create-layout-mobile，
-// 助手选择器是锚在 team-create-add-member-btn 上的下拉（选中即关，助手随即出现在下方列表）；
-// 桌面双栏为 team-create-layout。
+// Narrow screens (layout.isMobile, <768px) use a single column rooted at team-create-layout-mobile;
+// the assistant picker is a dropdown anchored to team-create-add-member-btn (choosing closes it and the assistant appears in the list below);
+// the desktop two-column layout is team-create-layout.
 type Props = {
   visible: boolean;
   onClose: () => void;
@@ -43,7 +43,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
   const [leaderSelectionId, setLeaderSelectionId] = useState<string | undefined>(undefined);
   const [workspace, setWorkspace] = useState('');
   const [loading, setLoading] = useState(false);
-  // 窄屏专用：助手选择器以下拉列表形式，锚在“添加成员”按钮上按需唤出。
+  // Narrow screens only: the assistant picker is a dropdown anchored to the "add member" button, opened on demand.
   const [assistantDropdownOpen, setAssistantDropdownOpen] = useState(false);
   const nameInputRef = useRef<RefInputType | null>(null);
 
@@ -141,7 +141,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
       setLoading(false);
     }
   };
-  // 助手选择器：桌面端嵌在左栏，窄屏端复用同一份放进底部面板。空态文案与逻辑完全一致。
+  // The assistant picker sits in the left column on desktop and the same one moves into the bottom panel on narrow screens, with identical empty-state copy and logic.
   const assistantPicker = (
     <>
       {allAssistants.length === 0 ? (
@@ -159,7 +159,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
     </>
   );
 
-  // 团队名 + 工作空间：桌面端与窄屏端共用同一份字段（文案、testId、交互一致）。
+  // Team name and workspace share one set of fields across desktop and narrow screens, with the same copy, testIds and behaviour.
   const teamFields = (
     <div className='grid grid-cols-[76px_minmax(0,1fr)] items-center gap-x-14px gap-y-10px'>
       <div className='text-14px font-600 leading-21px text-t-secondary'>
@@ -196,7 +196,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
     </div>
   );
 
-  // 桌面端：左右双栏，通栏竖分隔线（保持原样，宽屏不受窄屏改动影响）。
+  // Desktop: two columns with a full-height vertical divider, unchanged so wide screens are unaffected by the narrow-screen work.
   const desktopBody = (
     <div
       data-testid='team-create-layout'
@@ -228,8 +228,8 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
     </div>
   );
 
-  // 窄屏端：单栏——只留“已选成员”与团队字段；助手选择器做成锚在“添加成员”按钮上的下拉列表。
-  // 选中即关：下拉收起后，用户直接看到助手出现在下方的已选成员列表里（这就是“加成功了”的反馈）。
+  // Narrow: a single column keeping only "selected members" and the team fields, with the assistant picker as a dropdown on the "add member" button.
+  // Choosing closes the dropdown, and the user sees the assistant appear in the selected-members list below - that is the confirmation it worked.
   const handleSelectFromDropdown = (assistant: TeamAssistantOption) => {
     handleSelectAssistant(assistant);
     setAssistantDropdownOpen(false);
@@ -257,8 +257,8 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
   );
   const mobileBody = (
     <div data-testid='team-create-layout-mobile' className='flex min-h-0 flex-col gap-16px px-20px py-16px'>
-      {/* 窄屏无固定高度的父级：给成员列表框一个固定 max-height（同桌面思路），成员变多时框内滚动，
-          团队字段区始终留在下方可见。 */}
+      {/* Narrow screens have no fixed-height parent, so the member list gets a max-height (as on desktop) and scrolls inside as members are added,
+          keeping the team fields visible below. */}
       <section className='flex min-h-0 flex-col' data-testid='team-create-details-pane'>
         <TeamMemberDraftList
           members={selectedMembers}
@@ -288,8 +288,8 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
       maskStyle={{ zIndex: 9999 }}
       autoFocus={false}
       unmountOnExit={false}
-      // 桌面通栏双栏是团队创建独有的布局：关闭内容区默认内边距，让中间竖分隔线贴边贯穿。
-      // 窄屏改为单栏（自带内边距），标题区 / 按钮区 / 居中 / 最大高度均沿用 standard 统一规则。
+      // The full-bleed two-column desktop layout is unique to team creation: the content padding is switched off so the centre divider runs edge to edge.
+      // Narrow screens fall back to a single column with its own padding, keeping the standard rules for the title band, button band, centring and max height.
       contentStyle={{ padding: 0, overflow: 'hidden' }}
       header={{
         title: t('team.create.title', { defaultValue: 'New Team' }),

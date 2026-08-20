@@ -66,7 +66,7 @@ const TeamChatEmptyState: React.FC<Props> = ({
 }) => {
   const { t } = useTranslation();
   const logos = useAgentLogos();
-  // 头像下方的名字用该成员的身份色（拿不到时回退到主文字色）。
+  // The name under the avatar uses that member's identity colour, falling back to the primary text colour.
   const identityColor = useTeammateColor(conversation_id);
 
   // Reuse the same SWR key as AgentChatSlot so this hits cache instead of a new fetch.

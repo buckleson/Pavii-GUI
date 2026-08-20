@@ -6,7 +6,7 @@
 
 /**
  * Changes panel — the Source Control component hosted in the project panel's
- * `changes` tab (see `formal/runtime/source-control.md` §前端).
+ * `changes` tab (see `formal/runtime/source-control.md`, "Front end").
  *
  * Lifecycle, and why it is the way it is: the subscription is **project-scoped,
  * not tab-scoped**. This component may be unmounted whenever the user switches to
@@ -20,7 +20,7 @@
  * Refresh: besides backend pushes, the panel pulls on window focus. An external
  * editor writing a working-tree file — and editing `.gitignore` itself — produces
  * no `.git` event, so the backend watch cannot observe it; only this signal can
- * (source-control.md §三信号 ③).
+ * (source-control.md, "Three signals" (3)).
  *
  * Layout: the body is a stack of collapsible/resizable sections (VS Code SCM
  * sidebar). Repositories and Changes are the two sections today; a future graph
@@ -451,7 +451,7 @@ const ViewModeToggle: React.FC<{ mode: ScmViewMode; onChange: (mode: ScmViewMode
  * A per-effect `cancelled` flag guards the async fetch: rapid row switches must not
  * let a slow earlier response open a stale tab over the newer one. Binary/empty
  * diffs carry no patch to render, so they open a short notice as plain text instead
- * of a blank diff view — the panel still "唤起" a preview for every click. Fetch
+ * of a blank diff view - the panel still summons a preview for every click. Fetch
  * failures are swallowed here (the row stays selected, no tab opens); surfacing them
  * belongs to the action-report path, not this passive bridge.
  */

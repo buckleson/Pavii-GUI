@@ -671,7 +671,7 @@ const GuidPage: React.FC = () => {
     // (`@arco-design/web-react/es/locale/default` re-exports zh-CN), and every
     // ConfigProvider pushes its locale into a module global that imperative
     // dialogs (`Modal.confirm`) read. Omitting it here overwrote the English
-    // global set in main.tsx, which is why confirm buttons rendered 取消/确定.
+    // global set in main.tsx, which is why confirm buttons rendered in Chinese.
     <ConfigProvider locale={arcoEnUS} getPopupContainer={() => guidContainerRef.current || document.body}>
       <div ref={guidContainerRef} className={styles.guidContainer}>
         <div className={styles.guidLayout}>

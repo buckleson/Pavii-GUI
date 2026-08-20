@@ -4,7 +4,7 @@ import type { TeammateStatus } from '@/common/types/team/teamTypes';
 type Props = {
   status: TeammateStatus;
   testId?: string;
-  /** 作为头像右下角叠加点时：绝对定位到右下角、带描边环以脱离头像底色。 */
+  /** As an overlay dot on an avatar: absolutely positioned bottom-right with a ring so it lifts off the avatar. */
   overlay?: boolean;
 };
 

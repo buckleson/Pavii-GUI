@@ -53,7 +53,7 @@ const bulkAction = (groupId: ScmGroupId): ScmActionKind | null => {
 
 /**
  * Whether a group's own gray title row is suppressed. The `unstaged` and staging-less
- * `changes` groups both label to "变更", which merely repeats the black section header
+ * `changes` groups both label to "Changes", which merely repeats the black section header
  * — VS Code shows no such duplicate. We hide those, hoisting their bulk stage-all into
  * the section header (see `stageAllTargets`); `staged` and `blocked` carry distinct
  * meaning and keep their labels.
@@ -210,7 +210,7 @@ export const ScmChangesView: React.FC<{
 }> = ({ repo, status, selectedKey, onAction, busy, failedRowKeys, viewMode, treeExpanded }) => {
   const { t } = useTranslation();
   // Grouping is a display-layer derivation from capabilities — the wire is flat and
-  // never pre-grouped (source-control.md §变更清单).
+  // never pre-grouped (source-control.md, "Change list").
   const groups = useMemo(
     () => groupResources(status?.resources ?? [], repo.capabilities.staging),
     [status?.resources, repo.capabilities.staging]

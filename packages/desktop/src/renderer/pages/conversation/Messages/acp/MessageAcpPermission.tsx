@@ -61,7 +61,7 @@ const MessageAcpPermission: React.FC<MessageAcpPermissionProps> = React.memo(({ 
   const description = tool_call.raw_input?.description;
   // Fallback A (2026-08-04 spec): when raw_input carries no `command`, render the
   // raw_input itself as readable JSON instead of echoing the title (the old echo
-  // produced cards like「命令: AskUserQuestion」with the actual question text —
+  // produced cards reading "Command: AskUserQuestion" with the actual question text -
   // the only user-readable content — silently dropped). No per-agent sniffing:
   // whatever the agent sent, the user can at least read it.
   const command =

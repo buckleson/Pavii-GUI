@@ -24,17 +24,17 @@ interface PDFPreviewProps {
   /**
    * ChatFileRef identity — rendered via the backend stream URL (no absolute path
    * exposed to the renderer). Project ref for explorer files, Local otherwise.
-   * PDF 的 ChatFileRef 身份 —— 通过后端 stream URL 渲染（不向渲染进程暴露绝对路径）
+   * The PDF's ChatFileRef identity, rendered through the backend stream URL so no absolute path reaches the renderer
    */
   fileRef?: ChatFileRef;
   /**
    * PDF file path (absolute path on disk) — retained for "open in system app".
-   * PDF 文件路径（磁盘上的绝对路径），仅用于"用系统应用打开"
+   * Absolute on-disk path of the PDF, used only for "open in the system app"
    */
   file_path?: string;
   /**
    * PDF content as base64 or blob URL
-   * PDF 内容（base64 或 blob URL）
+   * PDF content, as base64 or a blob URL
    */
   content?: string;
   hideToolbar?: boolean;
@@ -181,9 +181,9 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ tabId, fileRef, file_path, cont
           )}
         </div>
       )}
-      {/* PDF 内容区域 / PDF content area */}
+      {/* PDF content area */}
       <div className='flex-1 overflow-hidden bg-bg-1'>
-        {/* key 确保文件路径改变时 webview 重新挂载 / key ensures webview remounts when file path changes */}
+        {/* key ensures the webview remounts when the file path changes */}
         <webview
           key={pdfSrc}
           ref={webviewRef}

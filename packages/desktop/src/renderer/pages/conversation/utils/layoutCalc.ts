@@ -19,7 +19,7 @@ export const PREVIEW_REGION_CHROME_PX = 24;
 
 export type LayoutCalcInput = {
   containerWidth: number;
-  /** 用户偏好的工作空间宽度（像素） */
+  /** Workspace width the user prefers, in pixels */
   workspaceWidthPx: number;
   chatSplitRatio: number;
   workspaceEnabled: boolean;
@@ -30,13 +30,13 @@ export type LayoutCalcInput = {
 };
 
 export type LayoutMetrics = {
-  /** 桌面端工作空间生效宽度（像素，已根据容器宽度做上限收缩） */
+  /** Effective desktop workspace width in pixels, already capped against the container width */
   effectiveWorkspaceWidthPx: number;
   dynamicChatMinRatio: number;
   dynamicChatMaxRatio: number;
-  /** 聊天区在主区域内的 flex-grow（preview 关闭时为 100，打开时按 chatSplitRatio 分配） */
+  /** flex-grow of the chat area within the main region: 100 when preview is closed, otherwise split by chatSplitRatio */
   chatFlex: number;
-  /** 工作空间最终展示像素：mobile 模式下走移动端值，桌面端等于 effectiveWorkspaceWidthPx */
+  /** Final workspace width in pixels: the mobile value on mobile, effectiveWorkspaceWidthPx on desktop */
   workspaceWidthPx: number;
   mobileWorkspaceWidthPx: number;
   titleAreaMaxWidth: number;
@@ -61,7 +61,7 @@ export const calcLayoutMetrics = (input: LayoutCalcInput): LayoutMetrics => {
 
   const safeContainerWidth = Math.max(containerWidth || 0, 1);
 
-  // Workspace 在桌面端固定 px；当容器太窄时按上限收缩，但永远不小于 MIN
+  // The workspace is a fixed pixel width on desktop, capped down when the container is narrow but never below MIN
   const workspaceVisible = workspaceEnabled && isDesktop && !rightSiderCollapsed;
   const previewReservedPx = isPreviewOpen ? MIN_CHAT_PANEL_PX + MIN_PREVIEW_PANEL_PX : MIN_CHAT_PANEL_PX;
   const workspaceMaxByContainer = Math.max(MIN_WORKSPACE_PANEL_PX, safeContainerWidth - previewReservedPx);
@@ -72,7 +72,7 @@ export const calcLayoutMetrics = (input: LayoutCalcInput): LayoutMetrics => {
       )
     : 0;
 
-  // 计算 chat / preview 之间的动态比例约束（基于剩余可用宽度）
+  // Work out the dynamic chat/preview ratio constraints from the remaining width
   const availableWidthForChatPreview = Math.max(safeContainerWidth - effectiveWorkspaceWidthPx, 1);
   const minChatRatioByPx = (MIN_CHAT_PANEL_PX / availableWidthForChatPreview) * 100;
   const minPreviewRatioByPx = (MIN_PREVIEW_PANEL_PX / availableWidthForChatPreview) * 100;
@@ -84,11 +84,11 @@ export const calcLayoutMetrics = (input: LayoutCalcInput): LayoutMetrics => {
       : 80;
   const dynamicChatMaxRatio = Math.max(dynamicChatMinRatio, dynamicChatMaxCandidate);
 
-  // chat-area flex（外层 chat+preview 容器内的聊天面板的 flex-grow）：
-  // preview 打开时按 chatSplitRatio 分配，否则聊天区独占
+  // chat-area flex: the flex-grow of the chat panel inside the outer chat+preview container.
+  // Split by chatSplitRatio while preview is open, otherwise the chat area takes it all
   const chatFlex = isDesktop ? (isPreviewOpen ? chatSplitRatio : 100) : 100;
 
-  // 移动端工作空间宽度（覆盖式抽屉）
+  // Mobile workspace width (an overlay drawer)
   const viewportWidth = containerWidth || (typeof window === 'undefined' ? 0 : window.innerWidth);
   const mobileWorkspaceWidthPx = Math.min(
     Math.max(300, Math.round(viewportWidth * 0.84)),

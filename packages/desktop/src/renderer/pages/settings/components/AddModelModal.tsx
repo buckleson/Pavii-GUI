@@ -31,7 +31,7 @@ const AddModelModal = ModalHOC<{ data?: IProvider; model?: string; onSubmit: (mo
     const existingModels = data?.models || [];
     const showOpenAiApiMode = supportsOpenAiApiMode(data?.platform ?? '', modelProtocol);
     const optionsList = useMemo(() => {
-      // 处理新的数据格式，可能包含 fix_base_url
+      // Handle the new response shape, which may carry fix_base_url
       const fetchedModels = Array.isArray(modelList) ? modelList : modelList?.models || [];
       if (!fetchedModels || !data?.models) return fetchedModels;
       return fetchedModels.map((item) => {
@@ -124,7 +124,7 @@ const AddModelModal = ModalHOC<{ data?: IProvider; model?: string; onSubmit: (mo
             </div>
           )}
 
-          {/* New API 协议选择 / New API Protocol Selection */}
+          {/* New API protocol selection */}
           {isNewApi && (
             <div className='space-y-8px'>
               <div className='text-13px font-500 text-t-secondary'>{t('settings.modelProtocol')}</div>

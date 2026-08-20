@@ -169,13 +169,13 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({
 
   const handleNextStep = async () => {
     if (currentStep === 1) {
-      // 步骤1 -> 步骤2: 选择Agent后，进入获取MCP阶段
+      // Step 1 -> 2: after choosing an agent, move to fetching its MCP servers
       if (!selectedAgent) return;
       setCurrentStep(2);
       setImportedServers([]);
       await handleImportFromCLI();
     } else if (currentStep === 2) {
-      // 步骤2 -> 步骤3: 执行导入，显示成功页面
+      // Step 2 -> 3: run the import and show the success page
       if (submittingImport) {
         return;
       }
@@ -218,7 +218,7 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({
   const handleBatchImport = async () => {
     if (onBatchImport && fetchedServers.length > 0) {
       const serversToImport = importableFetchedServers.map((server) => {
-        // 为CLI导入的服务器生成标准的JSON格式
+        // Generate the standard JSON shape for CLI-imported servers
         const serverConfig: Record<string, string | string[] | Record<string, string>> = {
           description: server.description,
         };
@@ -245,7 +245,7 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({
           enabled: server.enabled,
           transport: server.transport,
           last_test_status: server.last_test_status as IMcpServer['last_test_status'],
-          tools: (server.tools || []) as IMcpTool[], // 保留原始的 tools 信息
+          tools: (server.tools || []) as IMcpTool[], // Keep the original tools information
           original_json: JSON.stringify({ mcpServers: { [server.name]: serverConfig } }, null, 2),
         };
       });
@@ -258,7 +258,7 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({
     setImportedServers([]);
   };
 
-  // 渲染步骤1: 选择Agent
+  // Step 1: choose an agent
   const renderStep1 = () => (
     <div className='py-4'>
       <Select
@@ -277,7 +277,7 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({
     </div>
   );
 
-  // 渲染步骤2: 获取MCP工具列表
+  // Step 2: fetch the MCP tool list
   const renderStep2 = () => (
     <div>
       {loadingImport ? (
@@ -324,7 +324,7 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({
     </div>
   );
 
-  // 渲染步骤3: 导入成功
+  // Step 3: import succeeded
   const renderStep3 = () => (
     <div>
       <div>

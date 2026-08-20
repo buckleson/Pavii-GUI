@@ -26,8 +26,8 @@ const TeamAddMemberPopover: React.FC<Props> = ({ children, disabled = false }) =
   const [visible, setVisible] = useState(false);
   const [pendingAssistantId, setPendingAssistantId] = useState<string | undefined>();
 
-  // Leader 会话草稿：用于「告诉 Leader」预填提示词。Hook 必须无条件调用，
-  // 未知 Leader 会话时传空串（不写入）。按 Leader 后端选 acp/aionrs 草稿。
+  // Leader conversation draft, used to prefill the "tell the leader" prompt. The hook must be
+  // called unconditionally, so an unknown leader conversation passes an empty string and writes nothing. The draft kind follows the leader's backend.
   const leader = teamMembers.find((m) => m.role === 'leader');
   const leaderConversationId = leader?.conversation_id ?? '';
   const acpDraft = useAcpDraft(leaderConversationId);

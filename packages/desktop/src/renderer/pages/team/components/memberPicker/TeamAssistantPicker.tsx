@@ -15,9 +15,9 @@ type Props = {
   className?: string;
   footer?: React.ReactNode;
   /**
-   * 搜索框样式：'default' 用常驻搜索栏样式（AionSearchInput，34px 描边）；
-   * 'inline' 用下拉列表专用的柔和样式（AionInlineSearchInput，浅灰填充无边框）。
-   * 点击展开的下拉列表传 'inline'，常驻列表用默认。
+   * Search box style: 'default' uses the permanent search bar (AionSearchInput, 34px, outlined);
+   * 'inline' uses the softer dropdown style (AionInlineSearchInput, light grey fill, no border).
+   * Dropdowns pass 'inline'; always-visible lists take the default.
    */
   searchVariant?: 'default' | 'inline';
 };

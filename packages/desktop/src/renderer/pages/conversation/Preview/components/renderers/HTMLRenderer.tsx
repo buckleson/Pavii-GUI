@@ -385,8 +385,8 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
     webviewLoadedRef.current = false;
   }, [webviewSrc]);
 
-  // 监听 webview 加载完成
-  // 依赖 webviewSrc 确保 webview 重新挂载时重新添加监听器
+  // Wait for the webview to finish loading
+  // Depending on webviewSrc re-adds the listener whenever the webview remounts
   // Depend on webviewSrc to ensure listeners are re-added when webview remounts
   useEffect(() => {
     const webview = webviewRef.current;
@@ -661,10 +661,10 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
     >
       {isElectron ? (
         <>
-          {/* 代理滚动层：使容器可滚动 / Proxy scroll layer: makes container scrollable */}
+          {/* Proxy scroll layer: makes the container scrollable */}
           <div style={{ height: proxyHeight, width: '100%', pointerEvents: 'none' }} />
-          {/* webview 固定在容器顶部 / webview fixed at container top */}
-          {/* key 确保内容改变时 webview 重新挂载 / key ensures webview remounts when content changes */}
+          {/* The webview is pinned to the top of the container */}
+          {/* key ensures the webview remounts when the content changes */}
           <webview
             key={webviewSrc}
             ref={webviewRef}

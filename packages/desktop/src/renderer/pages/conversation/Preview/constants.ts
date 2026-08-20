@@ -44,7 +44,7 @@ export const MIN_SPLIT_WIDTH = 20;
 export const MAX_SPLIT_WIDTH = 80;
 
 /**
- * 代码编辑器降级阈值（字符）：超过则关闭语法高亮与折叠以保持响应（内容不截断）
+ * Code editor degradation threshold in characters: past it, highlighting and folding switch off to stay responsive. Content is never truncated.
  * Threshold (chars) above which the code editor disables syntax highlighting
  * and folding to stay responsive. Content is never truncated.
  */
