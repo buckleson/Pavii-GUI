@@ -1730,6 +1730,66 @@ impl TeamAssistantCatalogPort for TestTeamAssistantCatalog {
     }
 }
 
+/// One enabled provider serving the model `aionrs_two_agent_input` asks for.
+///
+/// An `aionrs` agent reaches its model over HTTP, so a team built entirely from
+/// aionrs agents is only creatable when some enabled provider lists that model.
+/// Tests that deliberately exercise the aionrs runtime need this; tests about a
+/// *missing* provider must keep using `EmptyProviderRepo`.
+struct ClaudeProviderRepo;
+
+impl ClaudeProviderRepo {
+    fn provider() -> aionui_db::models::Provider {
+        aionui_db::models::Provider {
+            id: "provider-claude".to_owned(),
+            user_id: "user1".to_owned(),
+            platform: "anthropic".to_owned(),
+            name: "Test Provider".to_owned(),
+            base_url: "https://example.invalid/v1".to_owned(),
+            api_key_encrypted: String::new(),
+            models: serde_json::json!(["claude"]).to_string(),
+            enabled: true,
+            capabilities: "{}".to_owned(),
+            context_limit: None,
+            model_protocols: None,
+            model_enabled: None,
+            model_health: None,
+            model_settings: "{}".to_owned(),
+            bedrock_config: None,
+            is_full_url: false,
+            created_at: 0,
+            updated_at: 0,
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl IProviderRepository for ClaudeProviderRepo {
+    async fn list(&self, _user_id: &str) -> Result<Vec<aionui_db::models::Provider>, DbError> {
+        Ok(vec![Self::provider()])
+    }
+    async fn find_by_id(&self, _user_id: &str, id: &str) -> Result<Option<aionui_db::models::Provider>, DbError> {
+        Ok((id == "provider-claude").then(Self::provider))
+    }
+    async fn create(
+        &self,
+        _params: aionui_db::CreateProviderParams<'_>,
+    ) -> Result<aionui_db::models::Provider, DbError> {
+        Err(DbError::NotFound("not implemented".into()))
+    }
+    async fn update(
+        &self,
+        _user_id: &str,
+        _id: &str,
+        _params: aionui_db::UpdateProviderParams<'_>,
+    ) -> Result<aionui_db::models::Provider, DbError> {
+        Err(DbError::NotFound("not implemented".into()))
+    }
+    async fn delete(&self, _user_id: &str, _id: &str) -> Result<(), DbError> {
+        Err(DbError::NotFound("not implemented".into()))
+    }
+}
+
 struct EmptyProviderRepo;
 
 #[async_trait::async_trait]
@@ -2185,6 +2245,28 @@ fn setup_with_factory_metadata_team_repo_and_conversation_repo(
     Arc<CountingTaskManager>,
     Arc<MockConversationRepo>,
 ) {
+    setup_with_factory_metadata_providers_and_conversation_repo(
+        factory,
+        agent_metadata_repo,
+        Arc::new(EmptyProviderRepo),
+    )
+}
+
+/// The builder above, with the providers table under the test's control.
+///
+/// Split out so a test can exercise the aionrs runtime (which needs a provider
+/// serving its model) without changing the default for every other caller,
+/// several of which assert what happens when no provider exists at all.
+fn setup_with_factory_metadata_providers_and_conversation_repo(
+    factory: AgentFactory,
+    agent_metadata_repo: Arc<dyn IAgentMetadataRepository>,
+    provider_repo: Arc<dyn IProviderRepository>,
+) -> (
+    Arc<TeamSessionService>,
+    Arc<FullMockTeamRepo>,
+    Arc<CountingTaskManager>,
+    Arc<MockConversationRepo>,
+) {
     let team_repo = Arc::new(FullMockTeamRepo::new());
     let team_repo_dyn: Arc<dyn ITeamRepository> = team_repo.clone();
     let conv_repo = Arc::new(MockConversationRepo::new());
@@ -2195,7 +2277,6 @@ fn setup_with_factory_metadata_team_repo_and_conversation_repo(
     let task_manager = Arc::new(CountingTaskManager::new(factory));
     let task_manager_dyn: Arc<dyn IWorkerTaskManager> = task_manager.clone();
     let backend_binary_path = Arc::new(std::path::PathBuf::from("/tmp/aioncore-test"));
-    let provider_repo: Arc<dyn IProviderRepository> = Arc::new(EmptyProviderRepo);
     let svc = TeamSessionService::new_with_capability_port(
         team_repo_dyn,
         agent_metadata_repo,
@@ -2213,6 +2294,19 @@ fn setup_with_factory_metadata_team_repo_and_conversation_repo(
         backend_binary_path,
     );
     (svc, team_repo, task_manager, conv_repo)
+}
+
+/// `setup_with_factory`, but with a provider that serves the aionrs fixtures'
+/// model, so a team of aionrs agents can actually be created.
+fn setup_with_factory_and_claude_provider(
+    factory: AgentFactory,
+) -> (Arc<TeamSessionService>, Arc<CountingTaskManager>) {
+    let (svc, _team_repo, task_manager, _conv_repo) = setup_with_factory_metadata_providers_and_conversation_repo(
+        factory,
+        Arc::new(StubAgentMetadataRepo::empty()),
+        Arc::new(ClaudeProviderRepo),
+    );
+    (svc, task_manager)
 }
 
 fn setup_with_factory_metadata_assistants_and_conversation_repo(
@@ -2344,7 +2438,7 @@ fn setup_with_recording_turn_port() -> (
     let task_manager: Arc<dyn IWorkerTaskManager> = Arc::new(CountingTaskManager::new(success_factory()));
     let turn_port = Arc::new(RecordingTurnPort::default());
     let backend_binary_path = Arc::new(std::path::PathBuf::from("/tmp/aioncore-test"));
-    let provider_repo: Arc<dyn IProviderRepository> = Arc::new(EmptyProviderRepo);
+    let provider_repo: Arc<dyn IProviderRepository> = Arc::new(ClaudeProviderRepo);
     let svc = TeamSessionService::new_with_capability_port(
         team_repo_dyn,
         Arc::new(StubAgentMetadataRepo::empty()),
@@ -2731,6 +2825,16 @@ fn setup_with_metadata_rows(rows: Vec<AgentMetadataRow>) -> Arc<TeamSessionServi
     setup_with_factory_and_metadata(success_factory(), agent_metadata_repo).0
 }
 
+/// A path with `\` folded to `/`, so a layout assertion reads the same on every
+/// platform.
+///
+/// `PathBuf::join` emits the host separator, so these workspace paths are
+/// backslash-separated on Windows. The assertions below are about directory
+/// *structure*, not about which separator the OS prefers.
+fn slashed(path: &str) -> String {
+    path.replace('\\', "/")
+}
+
 fn two_agent_input() -> Vec<TeamAgentInput> {
     vec![
         TeamAgentInput {
@@ -3114,7 +3218,7 @@ async fn create_team_without_workspace_uses_leader_auto_workspace_for_all_initia
     let got = svc.get_team("user1", &created.id).await.unwrap();
     assert!(!got.workspace.trim().is_empty(), "teams.workspace must be set");
     assert!(
-        got.workspace.contains("/conversations/acp-temp-"),
+        slashed(&got.workspace).contains("/conversations/acp-temp-"),
         "unexpected auto workspace: {}",
         got.workspace
     );
@@ -5539,8 +5643,7 @@ async fn add_agent_uses_team_temp_workspace_when_team_and_leader_workspaces_are_
 
     let got = svc.get_team("user1", &created.id).await.unwrap();
     assert!(
-        got.workspace
-            .contains(&format!("/conversations/team-temp-{}", created.id)),
+        slashed(&got.workspace).contains(&format!("/conversations/team-temp-{}", created.id)),
         "unexpected team temp workspace: {}",
         got.workspace
     );
@@ -5652,10 +5755,7 @@ async fn add_agent_continues_when_team_temp_leader_patch_fails() {
         .unwrap();
 
     let got = svc.get_team("user1", &created.id).await.unwrap();
-    assert!(
-        got.workspace
-            .contains(&format!("/conversations/team-temp-{}", created.id))
-    );
+    assert!(slashed(&got.workspace).contains(&format!("/conversations/team-temp-{}", created.id)));
     let added_extra = conv_repo.get_extra(&added.conversation_id).unwrap();
     assert_eq!(
         added_extra.get("workspace").and_then(serde_json::Value::as_str),
@@ -7326,7 +7426,9 @@ async fn d9_ensure_session_persists_team_mcp_stdio_config() {
     // object by the time the factory is called — that is what the rebuilt
     // typed Team context will expose to reach the MCP server.
     use futures_util::FutureExt;
-    let (svc, _tm) = setup_with_factory(Arc::new(|opts: BuildTaskOptions| {
+    // The fixture builds an all-aionrs team, which is only creatable when a
+    // provider serves its model.
+    let (svc, _tm) = setup_with_factory_and_claude_provider(Arc::new(|opts: BuildTaskOptions| {
         async move {
             let context = opts.context;
             let typed_has_cfg = context

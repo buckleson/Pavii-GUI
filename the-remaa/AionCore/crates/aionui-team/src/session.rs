@@ -2408,12 +2408,6 @@ async fn attach_member_runtime_inner(
 fn sanitize_member_runtime_failure(error: &TeamError) -> MemberRuntimeFailure {
     const GENERIC: &str = "Agent runtime failed to start";
 
-    let classification = match error {
-        TeamError::Database(_) => "runtime_configuration_failed",
-        TeamError::SessionNotFound(_) => "session_stopped",
-        _ => "runtime_start_failed",
-    };
-
     // Matched on the message because these originate several crates away as
     // `AgentError`s that are already flattened into `TeamError::InvalidRequest`
     // by the time they arrive; introducing a typed channel for them is a wider
@@ -2433,6 +2427,23 @@ fn sanitize_member_runtime_failure(error: &TeamError) -> MemberRuntimeFailure {
             .to_owned()
     } else {
         GENERIC.to_owned()
+    };
+
+    // Derived from the recognition above, because the two answer the same
+    // question. A cause we can name is a configuration fault: it reproduces
+    // identically on every attach, so it is worth naming for the user and not
+    // worth retrying automatically. A cause we cannot name stays
+    // `runtime_start_failed`, which is the generic "runtime did not come up"
+    // bucket and must remain retryable -- transient spawn failures land here,
+    // and suppressing their retry stranded members that would have recovered.
+    let classification = if public_reason == GENERIC {
+        match error {
+            TeamError::Database(_) => "runtime_configuration_failed",
+            TeamError::SessionNotFound(_) => "session_stopped",
+            _ => "runtime_start_failed",
+        }
+    } else {
+        "runtime_configuration_failed"
     };
 
     MemberRuntimeFailure {
@@ -2494,7 +2505,10 @@ mod tests {
 
         let failure = sanitize_member_runtime_failure(&error);
 
-        assert_eq!(failure.classification, "runtime_start_failed");
+        // Naming the cause is what lets reconcile stop retrying it: a missing
+        // provider reproduces identically on every attach, so it is a
+        // configuration fault, not the generic "runtime did not come up".
+        assert_eq!(failure.classification, "runtime_configuration_failed");
         assert!(
             failure.public_reason.contains("Settings > Models"),
             "the user needs the next action, got: {}",

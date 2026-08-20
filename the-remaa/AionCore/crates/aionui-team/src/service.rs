@@ -188,9 +188,11 @@ pub struct TeamSessionService {
 ///
 /// These come from `sanitize_member_runtime_failure`. `session_stopped` is
 /// deliberately absent: an idle-reclaimed session is recoverable and must keep
-/// reconciling.
+/// reconciling. So is `runtime_start_failed`: it is the generic bucket for "the
+/// runtime did not come up", which includes transient faults, and treating it
+/// as permanent stranded members that a single retry would have recovered.
 fn is_configuration_failure(classification: &str) -> bool {
-    matches!(classification, "runtime_configuration_failed" | "runtime_start_failed")
+    classification == "runtime_configuration_failed"
 }
 
 impl TeamSessionService {
@@ -4316,11 +4318,17 @@ mod tests {
 
     #[test]
     fn only_configuration_failures_stop_automatic_reattach() {
-        // These repeat identically on every attach because the conversation's
-        // provider/model row is re-read verbatim, so reconcile retrying them is
-        // pure noise -- it is what produced the observed storm.
+        // A named configuration fault repeats identically on every attach
+        // because the conversation's provider/model row is re-read verbatim, so
+        // reconcile retrying it is pure noise -- it is what produced the
+        // observed storm.
         assert!(super::is_configuration_failure("runtime_configuration_failed"));
-        assert!(super::is_configuration_failure("runtime_start_failed"));
+
+        // `runtime_start_failed` must NOT qualify. It is the generic bucket for
+        // "the runtime did not come up", which a transient spawn failure also
+        // lands in; suppressing its retry strands a member that one more
+        // attempt would have recovered.
+        assert!(!super::is_configuration_failure("runtime_start_failed"));
 
         // An idle-reclaimed session is recoverable; reconcile must keep waking
         // it, or a member would be stranded by a fault that had already passed.

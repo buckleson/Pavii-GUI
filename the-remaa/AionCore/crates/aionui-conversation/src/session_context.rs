@@ -1267,9 +1267,13 @@ mod tests {
         let root = std::path::Path::new("/w");
         let user = "user_019f8de8-3537-7c73-8d92-3bfde17eb1ee";
         let new_path = expected_auto_workspace_path(root, user, "conv-1", &AgentType::Acp, None);
+        // Compared with separators folded to `/`: `PathBuf::join` emits the host
+        // separator, and this assertion is about directory structure, not about
+        // which separator the platform prefers.
         assert!(
             new_path
                 .to_string_lossy()
+                .replace('\\', "/")
                 .contains("/conversations/users/019f8de8-3537-7c73-8d92-3bfde17eb1ee/"),
             "new workspace must be under conversations/users/{{dir}}/: {}",
             new_path.display()

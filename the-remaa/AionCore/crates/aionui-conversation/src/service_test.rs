@@ -2019,6 +2019,16 @@ fn create_team_temp_workspace_uses_date_partition() {
     assert!(workspace.is_dir());
 }
 
+/// POSIX-only: it asserts a distinction the Windows filesystem does not make.
+///
+/// Win32 strips trailing spaces from a path's final component, so the request
+/// `<dir>/workspace ` resolves to `<dir>/workspace` whether or not the caller
+/// meant it. That makes this test and its sibling
+/// `create_accepts_existing_workspace_with_trailing_whitespace_in_name`
+/// mutually unsatisfiable there: both send the identical string, and in both
+/// cases the directory on disk is `workspace`. On Unix the two are genuinely
+/// different entries, so the distinction is real and worth asserting.
+#[cfg(unix)]
 #[tokio::test]
 async fn create_rejects_unavailable_workspace_with_trailing_whitespace_in_request() {
     let (svc, _broadcaster, _repo, _task_mgr) = make_service();
