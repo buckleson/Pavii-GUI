@@ -452,7 +452,10 @@ describe('AssistantEditorSections', () => {
     );
 
     const defaultsCard = screen.getByTestId('assistant-card-defaults');
-    expect(within(defaultsCard).getByText('User MCP、Disabled MCP、Builtin MCP')).toBeInTheDocument();
+    // Joined with an ASCII comma. This used to assert the ideographic
+    // comma (U+3001), which the summary rendered straight into an
+    // English-only UI.
+    expect(within(defaultsCard).getByText('User MCP, Disabled MCP, Builtin MCP')).toBeInTheDocument();
   });
 
   it('uses provider-backed models for aionrs even when detected agent metadata exposes model options', () => {
