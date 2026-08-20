@@ -34,6 +34,14 @@ tests/
 └── e2e/           # End-to-end tests (Playwright, playwright.config.ts)
 ```
 
+Desktop tests always live under `tests/`, never beside the source file. Only the globs in
+`vitest.config.ts` are collected, so a `*.test.ts` co-located under `packages/desktop/src/`
+silently never runs. Import the code under test through the `@/` alias
+(`@/common/chat/normalizeToolCall`) and mirror the source module name, so one test file
+covers one source module. `tests/unit/scripts/vitestTestDiscovery.test.ts` fails the suite
+when an uncollected test file appears; `packages/web-host` is the one package that keeps its
+own `vitest.config.ts`.
+
 ## Two Test Environments
 
 | Environment      | When                              | File naming     |
