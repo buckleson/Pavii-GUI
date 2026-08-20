@@ -1462,9 +1462,6 @@ export const systemSettings = {
     saveUploadToWorkspace: p.enabled,
   })),
   ensureNodeRuntime: httpPost<{ ready: boolean }, { scope: IRuntimeStatusScope }>('/api/system/ensure-node-runtime'),
-  ensureManagedAcpTool: httpPost<{ ready: boolean }, { scope: IRuntimeStatusScope; tool_id: string }>(
-    '/api/system/ensure-managed-acp-tool'
-  ),
 };
 
 // ---------------------------------------------------------------------------
