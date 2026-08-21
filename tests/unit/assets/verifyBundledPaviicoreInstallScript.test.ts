@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -16,6 +15,45 @@ function writeJson(filePath: string, value: unknown) {
   writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+function makeTempInstall() {
+  const root = join(process.cwd(), '.cache', 'tests');
+  mkdirSync(root, { recursive: true });
+  return mkdtempSync(join(root, 'aionui-install-verify-'));
+}
+
+function writeValidInstallBase(installDir: string, managedManifest: unknown) {
+  const baseDir = join(installDir, 'resources', 'bundled-paviicore', 'win32-x64');
+  const managedRoot = join(baseDir, 'managed-resources');
+
+  writeFile(join(baseDir, 'paviicore.exe'), 'x');
+  writeJson(join(baseDir, 'manifest.json'), {
+    platform: 'win32',
+    arch: 'x64',
+  });
+  writeFile(join(managedRoot, 'node', 'node-v24.11.0-win-x64', 'node.exe'), 'x');
+  writeJson(join(managedRoot, 'manifest.json'), managedManifest);
+}
+
+function runVerifier(installDir: string, logPath: string) {
+  return spawnSync(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-File',
+      scriptPath,
+      '-InstallDir',
+      installDir,
+      '-RuntimeKey',
+      'win32-x64',
+      '-LogPath',
+      logPath,
+    ],
+    { encoding: 'utf8' }
+  );
+}
+
 describe('Windows bundled aioncore install verifier', () => {
   it('reads managed resources manifest instead of deriving Codex platform paths', () => {
     expect(script).toContain("Join-Path $managedRoot 'manifest.json'");
@@ -27,7 +65,7 @@ describe('Windows bundled aioncore install verifier', () => {
 
   it('logs machine-readable contract failures', () => {
     expect(script).toContain('duplicate_cli_name');
-    expect(script).toContain('missing_required_cli');
+    expect(script).not.toContain('missing_required_cli');
     expect(script).toContain('unsupported_schema_version');
     expect(script).toContain('invalid_schema');
     expect(script).toContain('result=fail runtime=$RuntimeKey failures=$summary');
@@ -40,23 +78,40 @@ describe('Windows bundled aioncore install verifier', () => {
 
   const runOnWindows = process.platform === 'win32' ? it : it.skip;
 
-  runOnWindows('fails an old-version-only Codex CLI install directory', () => {
-    const tmp = mkdtempSync(join(tmpdir(), 'aionui-install-verify-'));
+  runOnWindows('passes when managed resources intentionally include no CLIs', () => {
+    const tmp = makeTempInstall();
     const installDir = join(tmp, 'install');
-    const managedRoot = join(installDir, 'resources', 'bundled-paviicore', 'win32-x64', 'managed-resources');
     const logPath = join(tmp, 'verify.log');
-    const codexTriple = 'x86_64-pc-windows-msvc';
 
     try {
-      writeFile(join(installDir, 'resources', 'bundled-paviicore', 'win32-x64', 'paviicore.exe'), 'x');
-      writeJson(join(installDir, 'resources', 'bundled-paviicore', 'win32-x64', 'manifest.json'), {
-        platform: 'win32',
-        arch: 'x64',
+      writeValidInstallBase(installDir, {
+        schemaVersion: 2,
+        runtimeKey: 'win32-x64',
+        node: {
+          version: '24.11.0',
+          root: 'node/node-v24.11.0-win-x64',
+          executable: 'node.exe',
+        },
+        clis: [],
       });
-      writeFile(join(managedRoot, 'node', 'node-v24.11.0-win-x64', 'node.exe'), 'x');
-      // claude is present at its pinned version.
-      writeFile(join(managedRoot, 'cli', 'claude', '2.1.215', 'win32-x64', 'claude.exe'), 'x');
-      writeJson(join(managedRoot, 'manifest.json'), {
+
+      const result = runVerifier(installDir, logPath);
+
+      expect(result.status).toBe(0);
+      const log = readFileSync(logPath, 'utf8');
+      expect(log).toContain('result=ok');
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  runOnWindows('fails malformed CLI entries that are present in the manifest', () => {
+    const tmp = makeTempInstall();
+    const installDir = join(tmp, 'install');
+    const logPath = join(tmp, 'verify.log');
+
+    try {
+      writeValidInstallBase(installDir, {
         schemaVersion: 2,
         runtimeKey: 'win32-x64',
         node: {
@@ -66,51 +121,22 @@ describe('Windows bundled aioncore install verifier', () => {
         },
         clis: [
           {
-            name: 'claude',
-            version: '2.1.215',
-            root: 'cli/claude/2.1.215/win32-x64',
-            platformDirectory: 'win32-x64',
-            executable: 'claude.exe',
-            requiredFiles: [],
-            requiredDirectories: [],
-          },
-          {
             name: 'codex',
             version: '0.144.6',
             root: 'cli/codex/0.144.6/win32-x64',
             platformDirectory: 'win32-x64',
-            executable: `vendor/${codexTriple}/bin/codex.exe`,
             requiredFiles: [],
-            requiredDirectories: [`vendor/${codexTriple}`],
+            requiredDirectories: [],
           },
         ],
       });
 
-      // Only an OLD codex version exists on disk; the contract pins 0.144.6.
-      const oldRoot = join(managedRoot, 'cli', 'codex', '0.100.0', 'win32-x64');
-      writeFile(join(oldRoot, 'vendor', codexTriple, 'bin', 'codex.exe'), 'x');
-
-      const result = spawnSync(
-        'powershell.exe',
-        [
-          '-NoProfile',
-          '-ExecutionPolicy',
-          'Bypass',
-          '-File',
-          scriptPath,
-          '-InstallDir',
-          installDir,
-          '-RuntimeKey',
-          'win32-x64',
-          '-LogPath',
-          logPath,
-        ],
-        { encoding: 'utf8' }
-      );
+      const result = runVerifier(installDir, logPath);
 
       expect(result.status).not.toBe(0);
       const log = readFileSync(logPath, 'utf8');
-      expect(log).toContain('cli/codex/0.144.6');
+      expect(log).toContain('codex');
+      expect(log).toContain('invalid_schema');
       expect(log).toContain('result=fail');
     } finally {
       rmSync(tmp, { recursive: true, force: true });
