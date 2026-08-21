@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.1.57](https://www.pavii.tech/products/Super-Assistant/) (2026-08-21)
+
+### Desktop
+
+#### Features
+
+- **models:** browse providers from the Models page. Three tabs -- Your providers (unchanged default), Free models (19 providers / 145 models with free tiers), and All providers. Picking one opens the add-provider form with the endpoint already mapped, so you only supply the key. Opening a provider's key page also offers the key from your clipboard when you return.
+
+#### Notes
+
+- The free-model catalogue is committed as JSON; there is no third-party request at runtime.
+- Cloudflare Workers AI is listed but cannot be connected in one click -- its base URL contains an account-id placeholder only you can fill in.
+
+---
+
 ## [2.1.56](https://www.pavii.tech/products/Super-Assistant/) (2026-08-21)
 
 ### Desktop
