@@ -78,13 +78,43 @@ export const applySkillBranding = <T extends SkillRowLike>(skill: T): T & Brande
 });
 
 /**
- * Builtin skills removed from the product. The engine indexes builtin skills
- * into its database and does not prune entries whose folders disappear, so
- * installs created before the removal keep stale rows; filter them here.
+ * Builtin skill names that no longer exist under that name.
+ *
+ * The engine indexes builtin skills into its database and does not prune
+ * entries whose folders disappear, so an install created before the change
+ * keeps the stale row. Two things land here:
+ *
+ * - skills removed from the product outright (`x-recruiter`,
+ *   `xiaohongshu-recruiter`);
+ * - skills renamed for the Pavii rebrand, whose folders now ship as `pavii-*`.
+ *   Without this the slash-command menu would list BOTH `/aionui-config` and
+ *   `/pavii-config` on every pre-rename install -- the old row still indexed,
+ *   the new row freshly added.
+ *
+ * `SKILL_TEXT_RULES` deliberately still maps the old names: a stale row can
+ * reach the UI through paths that do not go through `brandSkills`, and rendering
+ * it branded is better than rendering it raw.
  */
-const REMOVED_BUILTIN_SKILL_NAMES = new Set(['x-recruiter', 'xiaohongshu-recruiter']);
+const RETIRED_BUILTIN_SKILL_NAMES: ReadonlySet<string> = new Set([
+  'x-recruiter',
+  'xiaohongshu-recruiter',
+  // Renamed in the Pavii rebrand; the folders now ship as `pavii-*`.
+  'aionui-config',
+  'aionui-troubleshooting',
+  'aionui-webui-public',
+  'aionui-webui-setup',
+  'officecli',
+  'officecli-academic-paper',
+  'officecli-data-dashboard',
+  'officecli-docx',
+  'officecli-financial-model',
+  'officecli-pitch-deck',
+  'officecli-pptx',
+  'officecli-word-form',
+  'officecli-xlsx',
+]);
 
 export const brandSkills = <T extends SkillRowLike>(skills: T[]): Array<T & BrandedSkillExtras> =>
   Array.isArray(skills)
-    ? skills.filter((skill) => !REMOVED_BUILTIN_SKILL_NAMES.has(skill.name)).map(applySkillBranding)
+    ? skills.filter((skill) => !RETIRED_BUILTIN_SKILL_NAMES.has(skill.name)).map(applySkillBranding)
     : skills;

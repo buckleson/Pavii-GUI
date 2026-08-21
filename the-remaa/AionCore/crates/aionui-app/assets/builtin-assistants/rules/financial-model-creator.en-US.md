@@ -14,7 +14,7 @@ Then wait for the user's request.
 
 ## When the user wants to build a financial model
 
-Follow the `officecli-financial-model` skill exactly. It contains the complete workflow — from understanding the model request through building in layers to QA verification. Do not deviate from or simplify the skill's instructions.
+Follow the `pavii-cli-financial-model` skill exactly. It contains the complete workflow — from understanding the model request through building in layers to QA verification. Do not deviate from or simplify the skill's instructions.
 
 Before work starts, proactively remind the user once:
 

@@ -37,11 +37,11 @@ const SIBLING_BACKEND_PORT = 25903;
 /**
  * Frontmatter `name:` values expected under `auto-inject/` in the embedded
  * corpus. These come from the SKILL.md frontmatter, not the directory name
- * (e.g. `auto-inject/office-cli/SKILL.md` emits `name: officecli`).
+ * (e.g. `auto-inject/pavii-cli/SKILL.md` emits `name: pavii-cli`).
  */
 const REMOVED_AUTO_INJECT_NAME = 'aionui-skills';
 const REMOVED_AUTO_INJECT_DIR_NAME = 'aionui-skills';
-const AUTO_INJECT_EXPECTED_NAMES = ['cron', 'officecli', 'skill-creator'] as const;
+const AUTO_INJECT_EXPECTED_NAMES = ['cron', 'pavii-cli', 'skill-creator'] as const;
 
 /**
  * Directory-name tokens used by the per-conversation materialize flow —
@@ -49,7 +49,7 @@ const AUTO_INJECT_EXPECTED_NAMES = ['cron', 'officecli', 'skill-creator'] as con
  * the parent folder name, not the frontmatter name. The top-level flatten
  * of `auto-inject/cron/SKILL.md` lands at `{dir}/cron/SKILL.md`.
  */
-const AUTO_INJECT_DIR_NAMES = ['cron', 'office-cli', 'skill-creator'] as const;
+const AUTO_INJECT_DIR_NAMES = ['cron', 'pavii-cli', 'skill-creator'] as const;
 
 /** An opt-in skill that lives at the top level of the embedded corpus. */
 const OPT_IN_PROBE_NAME = 'mermaid';

@@ -1,6 +1,6 @@
 ---
-name: officecli-financial-model
-description: "Use this skill when the user wants to build a financial model — 3-statement model, DCF valuation, LBO, SaaS unit economics, sensitivity / scenario analysis, debt schedule, or fundraising projections — in Excel. Trigger on: 'financial model', '3-statement model', 'P&L + BS + CF', 'DCF', 'WACC', 'NPV', 'terminal value', 'LBO', 'debt schedule', 'cash sweep', 'MOIC', 'IRR / XIRR', 'sensitivity table', 'scenario analysis', 'ARR model', 'unit economics', 'CAC / LTV', 'cap table forecast'. Output is a single formula-driven .xlsx. This skill is a scene layer on top of officecli-xlsx — it inherits every xlsx v2 rule (4-color code, visual floor, number formats, cache-drift, Known Issues, Delivery Gate minimum cycle). DO NOT invoke for a simple budget tracker, CSV dump, or operational KPI sheet — route those to officecli-xlsx base."
+name: pavii-cli-financial-model
+description: "Use this skill when the user wants to build a financial model — 3-statement model, DCF valuation, LBO, SaaS unit economics, sensitivity / scenario analysis, debt schedule, or fundraising projections — in Excel. Trigger on: 'financial model', '3-statement model', 'P&L + BS + CF', 'DCF', 'WACC', 'NPV', 'terminal value', 'LBO', 'debt schedule', 'cash sweep', 'MOIC', 'IRR / XIRR', 'sensitivity table', 'scenario analysis', 'ARR model', 'unit economics', 'CAC / LTV', 'cap table forecast'. Output is a single formula-driven .xlsx. This skill is a scene layer on top of pavii-cli-xlsx — it inherits every xlsx v2 rule (4-color code, visual floor, number formats, cache-drift, Known Issues, Delivery Gate minimum cycle). DO NOT invoke for a simple budget tracker, CSV dump, or operational KPI sheet — route those to pavii-cli-xlsx base."
 ---
 
 > **⚠️ Platform note — read before running any command.** The shell snippets in this skill are written for **macOS / Linux** (bash/zsh). Always check which OS you are on first. On **Windows** do **not** run them verbatim — the underlying tool/CLI commands are usually cross-platform, but the surrounding shell syntax is not. Translate it to PowerShell before running:
@@ -21,9 +21,9 @@ description: "Use this skill when the user wants to build a financial model — 
 
 # OfficeCLI Financial-Model Skill
 
-**This skill is a scene layer on top of `officecli-xlsx`.** Every xlsx hard rule — shell quoting, incremental execution, Help-First Rule, visual delivery floor, CFO 4-color code (blue input / black formula / green cross-sheet / yellow-fill assumption), number-format standards (years as text, zero as `-`, `%` one decimal, negatives in parens), assumption-cell discipline, CSV batch import, chart data-feed forms (a/b/c), the 5-gate Delivery cycle, cache-drift guidance, Known Issues (the cross-sheet `!` trap, batch + resident for formulas, renderer caveats) — is **inherited, not re-taught**. This file adds only what a **financial model** requires on top: three-zone architecture, 3 model-type recipes (3-statement / DCF / LBO), sensitivity + scenario protocols, financial-function patterns, circular-reference discipline, and model-specific Delivery Gates 4–6.
+**This skill is a scene layer on top of `pavii-cli-xlsx`.** Every xlsx hard rule — shell quoting, incremental execution, Help-First Rule, visual delivery floor, CFO 4-color code (blue input / black formula / green cross-sheet / yellow-fill assumption), number-format standards (years as text, zero as `-`, `%` one decimal, negatives in parens), assumption-cell discipline, CSV batch import, chart data-feed forms (a/b/c), the 5-gate Delivery cycle, cache-drift guidance, Known Issues (the cross-sheet `!` trap, batch + resident for formulas, renderer caveats) — is **inherited, not re-taught**. This file adds only what a **financial model** requires on top: three-zone architecture, 3 model-type recipes (3-statement / DCF / LBO), sensitivity + scenario protocols, financial-function patterns, circular-reference discipline, and model-specific Delivery Gates 4–6.
 
-When the xlsx base rules cover it, the text here says `→ see xlsx v2 §X`. Read `skills/officecli-xlsx/SKILL.md` first if you have not.
+When the xlsx base rules cover it, the text here says `→ see xlsx v2 §X`. Read `skills/pavii-cli-xlsx/SKILL.md` first if you have not.
 
 ## Setup
 
@@ -46,7 +46,7 @@ This skill teaches what a financial model requires, not every CLI flag. When a p
 
 ## Mental Model & Inheritance
 
-**Inherits xlsx v2.** Read `skills/officecli-xlsx/SKILL.md` first. This skill assumes you know `create` / `open` / `close`, `set` values/formulas, `batch` heredocs for cross-sheet formulas, `/SheetName/A1` paths, named ranges, the 5-gate Delivery cycle, the cross-sheet `!` trap, and that **cross-sheet formulas go non-resident (single batch OR individual `set`), never batch-while-resident**.
+**Inherits xlsx v2.** Read `skills/pavii-cli-xlsx/SKILL.md` first. This skill assumes you know `create` / `open` / `close`, `set` values/formulas, `batch` heredocs for cross-sheet formulas, `/SheetName/A1` paths, named ranges, the 5-gate Delivery cycle, the cross-sheet `!` trap, and that **cross-sheet formulas go non-resident (single batch OR individual `set`), never batch-while-resident**.
 
 ## Shell & Execution Discipline
 

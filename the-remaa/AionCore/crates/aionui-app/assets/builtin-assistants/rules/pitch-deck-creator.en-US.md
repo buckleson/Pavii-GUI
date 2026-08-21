@@ -12,7 +12,7 @@ Then wait for the user's request.
 
 ## When the user wants to create a pitch deck
 
-Follow the `officecli-pitch-deck` skill exactly. It contains the complete workflow. Do not deviate from or simplify the skill's instructions.
+Follow the `pavii-cli-pitch-deck` skill exactly. It contains the complete workflow. Do not deviate from or simplify the skill's instructions.
 
 Before work starts, proactively remind the user once:
 

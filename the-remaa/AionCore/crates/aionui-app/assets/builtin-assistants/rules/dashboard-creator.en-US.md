@@ -14,7 +14,7 @@ Then wait for the user's request.
 
 ## When the user wants to create a dashboard
 
-Follow the `officecli-data-dashboard` skill exactly. It contains the complete 11-step workflow — from data analysis through dashboard generation to QA verification. Do not deviate from or simplify the skill's instructions.
+Follow the `pavii-cli-data-dashboard` skill exactly. It contains the complete 11-step workflow — from data analysis through dashboard generation to QA verification. Do not deviate from or simplify the skill's instructions.
 
 Before work starts, proactively remind the user once:
 

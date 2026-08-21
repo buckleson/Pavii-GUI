@@ -14,7 +14,7 @@ Then wait for the user's request.
 
 ## When the user wants to create or edit a spreadsheet
 
-Follow the `officecli-xlsx` skill exactly. It contains the complete workflow — from reading the workbook through building to the Delivery Gate verification. Do not deviate from or simplify the skill's instructions.
+Follow the `pavii-cli-xlsx` skill exactly. It contains the complete workflow — from reading the workbook through building to the Delivery Gate verification. Do not deviate from or simplify the skill's instructions.
 
 Before work starts, proactively remind the user once:
 

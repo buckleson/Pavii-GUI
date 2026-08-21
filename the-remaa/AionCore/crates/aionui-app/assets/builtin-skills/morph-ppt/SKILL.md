@@ -1,6 +1,6 @@
 ---
 name: morph-ppt
-description: "Use this skill when the user wants a .pptx with smooth cross-slide animation — PowerPoint Morph transitions, Keynote-style continuous motion, shapes that grow / move / rotate as the slide advances. Trigger on: 'morph', 'morph transition', 'smooth transition', 'continuous animation across slides', 'Keynote-style transition', 'animated slide sequence', 'shape continuity across slides'. Output is a single .pptx. This skill is a scene layer on top of officecli-pptx — inherits every pptx v2 rule (visual floor, grid, palettes, connector canon, Delivery Gate 1–5a). DO NOT invoke for a generic deck, pitch deck, or board review without cross-slide motion — route those to officecli-pptx base or officecli-pitch-deck."
+description: "Use this skill when the user wants a .pptx with smooth cross-slide animation — PowerPoint Morph transitions, Keynote-style continuous motion, shapes that grow / move / rotate as the slide advances. Trigger on: 'morph', 'morph transition', 'smooth transition', 'continuous animation across slides', 'Keynote-style transition', 'animated slide sequence', 'shape continuity across slides'. Output is a single .pptx. This skill is a scene layer on top of pavii-cli-pptx — inherits every pptx v2 rule (visual floor, grid, palettes, connector canon, Delivery Gate 1–5a). DO NOT invoke for a generic deck, pitch deck, or board review without cross-slide motion — route those to pavii-cli-pptx base or pavii-cli-pitch-deck."
 ---
 
 > **⚠️ Platform note — read before running any command.** The shell snippets in this skill are written for **macOS / Linux** (bash/zsh). Always check which OS you are on first. On **Windows** do **not** run them verbatim — the underlying tool/CLI commands are usually cross-platform, but the surrounding shell syntax is not. Translate it to PowerShell before running:
@@ -21,9 +21,9 @@ description: "Use this skill when the user wants a .pptx with smooth cross-slide
 
 # OfficeCLI Morph-PPT Skill
 
-**This skill is a scene layer on top of `officecli-pptx`.** Every pptx hard rule — visual delivery floor (title ≥ 36pt / body ≥ 18pt / title ≥ 2× body), 12-column grid on 33.87×19.05cm, canonical palettes, chart-choice decision table, connector canon, shell escape, resident + batch, Delivery Gate 1–5a — is inherited, not re-taught. This file adds only what **Morph** needs on top: cross-slide shape-name binding, Scene Actors vs content prefixing, ghost discipline, `transition=morph` CLI quirks, 52-style visual library lookup, and a morph-specific fresh-eyes Gate 5b extension.
+**This skill is a scene layer on top of `pavii-cli-pptx`.** Every pptx hard rule — visual delivery floor (title ≥ 36pt / body ≥ 18pt / title ≥ 2× body), 12-column grid on 33.87×19.05cm, canonical palettes, chart-choice decision table, connector canon, shell escape, resident + batch, Delivery Gate 1–5a — is inherited, not re-taught. This file adds only what **Morph** needs on top: cross-slide shape-name binding, Scene Actors vs content prefixing, ghost discipline, `transition=morph` CLI quirks, 52-style visual library lookup, and a morph-specific fresh-eyes Gate 5b extension.
 
-When the pptx base rules cover it, the text here says `→ see pptx v2 §X`. Read `skills/officecli-pptx/SKILL.md` first if you have not.
+When the pptx base rules cover it, the text here says `→ see pptx v2 §X`. Read `skills/pavii-cli-pptx/SKILL.md` first if you have not.
 
 ## Setup
 
@@ -56,7 +56,7 @@ Help reflects the installed CLI version. When skill and help disagree, **help wi
 
 ## Mental Model & Inheritance
 
-**Inherits pptx v2.** You should have read `skills/officecli-pptx/SKILL.md` first. This skill assumes you know how to: add slides + shapes + charts + connectors; address by `@name=` / `@id=`; quote paths; use `batch` heredocs; use `tailEnd=triangle` on flow connectors; run the Delivery Gate 1–5a; attribute `[AGENT-ERROR]` vs `[RENDERER-BUG]` vs `[SKILL gap]`. If any of those are unfamiliar, read pptx v2 first.
+**Inherits pptx v2.** You should have read `skills/pavii-cli-pptx/SKILL.md` first. This skill assumes you know how to: add slides + shapes + charts + connectors; address by `@name=` / `@id=`; quote paths; use `batch` heredocs; use `tailEnd=triangle` on flow connectors; run the Delivery Gate 1–5a; attribute `[AGENT-ERROR]` vs `[RENDERER-BUG]` vs `[SKILL gap]`. If any of those are unfamiliar, read pptx v2 first.
 
 **Inherited from pptx v2 (do NOT re-teach):**
 
@@ -82,7 +82,7 @@ Help reflects the installed CLI version. When skill and help disagree, **help wi
 
 ### Reverse handoff — when to go BACK to pptx base (or sibling skills)
 
-Stay in **pptx v2 base** for any deck without cross-slide motion (board reviews, sales decks, all-hands, training). Stay in **officecli-pitch-deck** for fundraising narrative arcs without morph. Use this skill only when the user explicitly asks for "morph" / "smooth transitions" / "continuous animation" AND ≥ 2 consecutive slides share a visual element that transforms. "Animated deck" meaning one-off entrance animations → pptx v2 §Animations, not morph.
+Stay in **pptx v2 base** for any deck without cross-slide motion (board reviews, sales decks, all-hands, training). Stay in **pavii-cli-pitch-deck** for fundraising narrative arcs without morph. Use this skill only when the user explicitly asks for "morph" / "smooth transitions" / "continuous animation" AND ≥ 2 consecutive slides share a visual element that transforms. "Animated deck" meaning one-off entrance animations → pptx v2 §Animations, not morph.
 
 ## Shell & Execution Discipline
 
@@ -552,7 +552,7 @@ Every morph deck ships with three artifacts, each as a standalone file:
 **Pre-deliver reminder to the user (verbatim-safe wording):**
 
 - "The deck is ready with morph transitions. Open it in PowerPoint 365 / Keynote / WPS to see the motion — LibreOffice and web viewers render static."
-- "While the build script is running, the `.pptx` may be rewritten several times. If you want to preview progress, use `officecli watch "$FILE"` and open the live preview in AionUi — do NOT click 'Open with system app' during the build, or you'll hit a file lock."
+- "While the build script is running, the `.pptx` may be rewritten several times. If you want to preview progress, use `officecli watch "$FILE"` and open the live preview in Pavii.Ai — do NOT click 'Open with system app' during the build, or you'll hit a file lock."
 
 ## Adjustments after creation
 
@@ -567,4 +567,4 @@ Standard adjustments table → see pptx v2 §Common Pitfalls / `swap` / `move` /
 - `reference/morph-helpers.py` — Cross-platform (Mac / Windows / Linux) Python helpers for clone + ghost + verify + final-check. Import as a library or call via CLI args. Preferred for 5+ slide arcs.
 - `reference/morph-helpers.sh` — Bash equivalent. Pick one per project; do not mix.
 - `reference/styles/INDEX.md` — 52-style visual library, grouped by palette (dark / light / warm / vivid / bw / mixed) and mood. Lookup workflow in §Style library lookup workflow above.
-- `skills/officecli-pptx/SKILL.md` — base pptx v2 rules (visual floor, grid, canonical palettes, chart-choice, connector canon, Delivery Gate 1–5a, Known Issues C-P-1..7, Shell escape 3-layer).
+- `skills/pavii-cli-pptx/SKILL.md` — base pptx v2 rules (visual floor, grid, canonical palettes, chart-choice, connector canon, Delivery Gate 1–5a, Known Issues C-P-1..7, Shell escape 3-layer).

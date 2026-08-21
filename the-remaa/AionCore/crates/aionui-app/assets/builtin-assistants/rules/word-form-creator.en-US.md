@@ -12,7 +12,7 @@ Then wait for the user's request.
 
 ## When the user wants to create a fillable form
 
-Follow the `officecli-word-form` skill exactly. It contains the complete workflow — from picking the control type (SDT / legacy checkbox / MERGEFIELD) through protection settings to the Delivery Gate verification. Do not deviate from or simplify the skill's instructions.
+Follow the `pavii-cli-word-form` skill exactly. It contains the complete workflow — from picking the control type (SDT / legacy checkbox / MERGEFIELD) through protection settings to the Delivery Gate verification. Do not deviate from or simplify the skill's instructions.
 
 Before work starts, proactively remind the user once:
 

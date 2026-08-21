@@ -14,7 +14,7 @@ Then wait for the user's request.
 
 ## When the user wants to create or edit a presentation
 
-Follow the `officecli-pptx` skill exactly. It contains the complete workflow — from reading the deck through building to the Delivery Gate verification. Do not deviate from or simplify the skill's instructions.
+Follow the `pavii-cli-pptx` skill exactly. It contains the complete workflow — from reading the deck through building to the Delivery Gate verification. Do not deviate from or simplify the skill's instructions.
 
 Before work starts, proactively remind the user once:
 

@@ -10,7 +10,7 @@
       "avatar": "avatars/word-creator.jpg",
       "agent_ref": "aionrs",
       "enabled_skills": [
-        "officecli-docx"
+        "pavii-cli-docx"
       ],
       "custom_skill_names": [],
       "disabled_builtin_skills": [],
@@ -31,7 +31,7 @@
       "avatar": "avatars/ppt-creator.jpg",
       "agent_ref": "aionrs",
       "enabled_skills": [
-        "officecli-pptx"
+        "pavii-cli-pptx"
       ],
       "custom_skill_names": [],
       "disabled_builtin_skills": [],
@@ -52,7 +52,7 @@
       "avatar": "avatars/excel-creator.jpg",
       "agent_ref": "aionrs",
       "enabled_skills": [
-        "officecli-xlsx"
+        "pavii-cli-xlsx"
       ],
       "custom_skill_names": [],
       "disabled_builtin_skills": [],
@@ -116,7 +116,7 @@
       "avatar": "avatars/pitch-deck-creator.jpg",
       "agent_ref": "aionrs",
       "enabled_skills": [
-        "officecli-pitch-deck"
+        "pavii-cli-pitch-deck"
       ],
       "custom_skill_names": [],
       "disabled_builtin_skills": [],
@@ -137,7 +137,7 @@
       "avatar": "avatars/dashboard-creator.jpg",
       "agent_ref": "aionrs",
       "enabled_skills": [
-        "officecli-data-dashboard"
+        "pavii-cli-data-dashboard"
       ],
       "custom_skill_names": [],
       "disabled_builtin_skills": [],
@@ -158,7 +158,7 @@
       "avatar": "avatars/academic-paper.jpg",
       "agent_ref": "aionrs",
       "enabled_skills": [
-        "officecli-academic-paper"
+        "pavii-cli-academic-paper"
       ],
       "custom_skill_names": [],
       "disabled_builtin_skills": [],
@@ -179,7 +179,7 @@
       "avatar": "avatars/financial-model-creator.jpg",
       "agent_ref": "aionrs",
       "enabled_skills": [
-        "officecli-financial-model"
+        "pavii-cli-financial-model"
       ],
       "custom_skill_names": [],
       "disabled_builtin_skills": [],
@@ -201,10 +201,10 @@
       "agent_ref": "aionrs",
       "enabled_skills": [
         "skill-creator",
-        "officecli-pptx",
-        "officecli-docx",
+        "pavii-cli-pptx",
+        "pavii-cli-docx",
         "pdf",
-        "officecli-xlsx"
+        "pavii-cli-xlsx"
       ],
       "custom_skill_names": [],
       "disabled_builtin_skills": [],
@@ -364,7 +364,7 @@
       "avatar": "📋",
       "agent_ref": "aionrs",
       "enabled_skills": [
-        "officecli-word-form"
+        "pavii-cli-word-form"
       ],
       "custom_skill_names": [],
       "disabled_builtin_skills": [],
@@ -377,7 +377,7 @@
       "models": []
     },
     {
-      "id": "aionui-assistant",
+      "id": "pavii-assistant",
       "sort_order": 0,
       "default_enabled": true,
       "name": "Your Pavii",
@@ -385,9 +385,9 @@
       "avatar": "avatars/aionui-assistant.jpg",
       "agent_ref": "aionrs",
       "enabled_skills": [
-        "aionui-config",
-        "aionui-troubleshooting",
-        "aionui-webui-public"
+        "pavii-config",
+        "pavii-troubleshooting",
+        "pavii-webui-public"
       ],
       "custom_skill_names": [],
       "disabled_builtin_skills": [],

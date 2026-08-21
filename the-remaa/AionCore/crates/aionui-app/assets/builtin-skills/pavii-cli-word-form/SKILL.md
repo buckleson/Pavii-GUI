@@ -1,6 +1,6 @@
 ---
-name: officecli-word-form
-description: "Use this skill to create fillable Word forms (.docx) with real Content Controls (SDT) + legacy FormField checkboxes + MERGEFIELD mail-merge placeholders + document protection. Trigger on: 'fillable form', 'form fields', 'content controls', 'SDT', 'word form', 'fill in', 'only editable fields', 'protect document', 'onboarding form', 'HR intake', 'survey template', 'contract / SOW template', 'mail-merge template', 'compliance checklist', 'medical intake questionnaire'. Output is a single .docx where specific fields are editable and the rest is locked. This skill is INDEPENDENT, not a scene layer on docx — payload is `<w:sdt>` + `<w:ffData>` + `<w:fldChar>` + `documentProtection`, none of which docx base skill covers. Do NOT trigger for regular reports, letters, memos, academic papers, pitch decks, or any document with no user-fillable fields — route those to officecli-docx or its scene layers."
+name: pavii-cli-word-form
+description: "Use this skill to create fillable Word forms (.docx) with real Content Controls (SDT) + legacy FormField checkboxes + MERGEFIELD mail-merge placeholders + document protection. Trigger on: 'fillable form', 'form fields', 'content controls', 'SDT', 'word form', 'fill in', 'only editable fields', 'protect document', 'onboarding form', 'HR intake', 'survey template', 'contract / SOW template', 'mail-merge template', 'compliance checklist', 'medical intake questionnaire'. Output is a single .docx where specific fields are editable and the rest is locked. This skill is INDEPENDENT, not a scene layer on docx — payload is `<w:sdt>` + `<w:ffData>` + `<w:fldChar>` + `documentProtection`, none of which docx base skill covers. Do NOT trigger for regular reports, letters, memos, academic papers, pitch decks, or any document with no user-fillable fields — route those to pavii-cli-docx or its scene layers."
 ---
 
 > **⚠️ Platform note — read before running any command.** The shell snippets in this skill are written for **macOS / Linux** (bash/zsh). Always check which OS you are on first. On **Windows** do **not** run them verbatim — the underlying tool/CLI commands are usually cross-platform, but the surrounding shell syntax is not. Translate it to PowerShell before running:
@@ -21,7 +21,7 @@ description: "Use this skill to create fillable Word forms (.docx) with real Con
 
 # OfficeCLI Word-Form Skill
 
-**This skill is INDEPENDENT, not a scene layer on docx.** A form's payload — `<w:sdt>` controls, `<w:ffData>` legacy fields, `<w:fldChar>` mail-merge, `documentProtection` — is a distinct element class from docx's paragraph/heading/style primitives. Its QA is different too: docx's Delivery Gate cares about visual layout and live PAGE fields, this skill's cares about data plumbing (protection enforced / alias+tag / items injected / name ≤ 20 / no underscore anti-pattern). **Reverse handoff:** if the user's document has no fillable fields (report, letter, memo, thesis, proposal), route to `officecli-docx` or a docx scene skill — don't use this one.
+**This skill is INDEPENDENT, not a scene layer on docx.** A form's payload — `<w:sdt>` controls, `<w:ffData>` legacy fields, `<w:fldChar>` mail-merge, `documentProtection` — is a distinct element class from docx's paragraph/heading/style primitives. Its QA is different too: docx's Delivery Gate cares about visual layout and live PAGE fields, this skill's cares about data plumbing (protection enforced / alias+tag / items injected / name ≤ 20 / no underscore anti-pattern). **Reverse handoff:** if the user's document has no fillable fields (report, letter, memo, thesis, proposal), route to `pavii-cli-docx` or a docx scene skill — don't use this one.
 
 ## BEFORE YOU START (CRITICAL)
 
@@ -58,7 +58,7 @@ A Word form is a `.docx` plus four OpenXML payload layers plain-docx skills do n
 
 **No inheritance from docx v2.** docx's Delivery Gate (cover-fill %, live-PAGE check) does NOT apply — form QA is `view forms` + `query sdt alias+tag` + `protectionEnforced`.
 
-**Reverse handoff to docx.** Route back to `officecli-docx` for reports / letters / memos / thesis / pitch decks / any document with no editable fields. Use **this** skill when the document's purpose is data capture or template merge.
+**Reverse handoff to docx.** Route back to `pavii-cli-docx` for reports / letters / memos / thesis / pitch decks / any document with no editable fields. Use **this** skill when the document's purpose is data capture or template merge.
 
 ## Shell & Execution Discipline
 

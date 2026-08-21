@@ -72,13 +72,36 @@ describe('applySkillBranding / brandSkills', () => {
 
   it('brands every row of a list', () => {
     const rows = brandSkills([
-      { name: 'aionui-webui-public', description: 'Expose AionUi WebUI' },
+      { name: 'pavii-webui-public', description: 'Expose AionUi WebUI' },
       { name: 'pdf', description: 'PDF toolkit' },
     ]);
     expect(rows[0].display_name).toBe('pavii-webui-public');
     expect(rows[0].description).toBe('Expose Pavii.Ai WebUI');
     expect(rows[1].display_name).toBe('pdf');
     expect(rows[1].description).toBe('PDF toolkit');
+  });
+
+  it('drops the pre-rebrand names so a renamed skill is not listed twice', () => {
+    // The engine indexes builtin skills and never prunes vanished folders, so an
+    // install that predates the rename still carries the old row while the new
+    // one is added alongside it. Both reaching the slash menu would show the
+    // user `/aionui-config` AND `/pavii-config`.
+    const rows = brandSkills([
+      { name: 'aionui-config', description: 'stale', source: 'builtin' },
+      { name: 'pavii-config', description: 'current', source: 'builtin' },
+      { name: 'officecli', description: 'stale', source: 'builtin' },
+      { name: 'pavii-cli', description: 'current', source: 'builtin' },
+      { name: 'officecli-xlsx', description: 'stale', source: 'builtin' },
+      { name: 'pavii-cli-xlsx', description: 'current', source: 'builtin' },
+    ]);
+    expect(rows.map((row) => row.name)).toEqual(['pavii-config', 'pavii-cli', 'pavii-cli-xlsx']);
+  });
+
+  it('still renders an old name branded if one reaches the UI another way', () => {
+    // Filtering only covers the list path; the text rules stay so a stale row
+    // arriving through a path that skips `brandSkills` is not shown raw.
+    expect(skillDisplayName('aionui-config')).toBe('pavii-config');
+    expect(skillDisplayName('officecli-pptx')).toBe('pavii-cli-pptx');
   });
 
   it('tags bundled custom skills as display_source official', () => {

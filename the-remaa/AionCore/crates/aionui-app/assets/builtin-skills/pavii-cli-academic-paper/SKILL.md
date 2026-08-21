@@ -1,5 +1,5 @@
 ---
-name: officecli-academic-paper
+name: pavii-cli-academic-paper
 description: "Use this skill to build academic-style .docx output: journal / conference / thesis chapters carrying formal citation style (APA, Chicago, IEEE, MLA), numbered equations, figure & table cross-references, footnotes/endnotes, bibliography, or multi-column journal layout. Trigger on: 'research paper', 'journal paper', 'conference paper', 'manuscript', 'thesis', 'APA', 'MLA', 'Chicago', 'IEEE two-column', 'bibliography', 'hanging indent', 'citation style', 'abstract + keywords', 'equation numbering', 'cross-reference', paper with footnotes/endnotes. Output is a single .docx."
 ---
 
@@ -21,7 +21,7 @@ description: "Use this skill to build academic-style .docx output: journal / con
 
 # OfficeCLI Academic Paper Skill
 
-**This skill is a scene layer on top of `officecli-docx`.** Every docx hard rule — style architecture, heading hierarchy, shell quoting, `break=newPage` alias, belt-and-suspenders page breaks, live PAGE field, Delivery Gate, renderer quirks — is inherited, not re-taught. This file adds only what academic papers need on top: citation styles, equations, SEQ / PAGEREF cross-refs, multi-column journal layout, bibliography hanging indent, abstract/keywords/affiliation block.
+**This skill is a scene layer on top of `pavii-cli-docx`.** Every docx hard rule — style architecture, heading hierarchy, shell quoting, `break=newPage` alias, belt-and-suspenders page breaks, live PAGE field, Delivery Gate, renderer quirks — is inherited, not re-taught. This file adds only what academic papers need on top: citation styles, equations, SEQ / PAGEREF cross-refs, multi-column journal layout, bibliography hanging indent, abstract/keywords/affiliation block.
 
 When the docx base rules cover it, the text here says `→ see docx v2 §X`. Read docx v2 first if you have not.
 
@@ -54,7 +54,7 @@ Help is pinned to the installed CLI version. **When this skill and help disagree
 
 ## Mental Model & Inheritance
 
-**Inherits docx v2.** You should have read `skills/officecli-docx/SKILL.md` first. This skill assumes you know how to add paragraphs, set styles, build tables, insert images, manage TOC/footer/headers, force page breaks, and run the Delivery Gate. If any of those are unfamiliar, open a second session on docx v2 before continuing.
+**Inherits docx v2.** You should have read `skills/pavii-cli-docx/SKILL.md` first. This skill assumes you know how to add paragraphs, set styles, build tables, insert images, manage TOC/footer/headers, force page breaks, and run the Delivery Gate. If any of those are unfamiliar, open a second session on docx v2 before continuing.
 
 ## Shell & Execution Discipline
 

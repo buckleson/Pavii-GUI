@@ -24,12 +24,12 @@ describe('buildSkillSlashCommands', () => {
   });
 
   it('maps each loaded skill to an insert-style template command', () => {
-    const commands = buildSkillSlashCommands(['cron', 'officecli'], new Map([['cron', 'Scheduled tasks']]), 'Skill');
+    const commands = buildSkillSlashCommands(['cron', 'pavii-cli'], new Map([['cron', 'Scheduled tasks']]), 'Skill');
 
     expect(commands).toEqual([
       { name: 'cron', description: 'Scheduled tasks', kind: 'template', source: 'skill', selectionBehavior: 'insert' },
       // No indexed description → falls back to the provided label.
-      { name: 'officecli', description: 'Skill', kind: 'template', source: 'skill', selectionBehavior: 'insert' },
+      { name: 'pavii-cli', description: 'Skill', kind: 'template', source: 'skill', selectionBehavior: 'insert' },
     ]);
   });
 });
@@ -63,10 +63,10 @@ describe('buildGuidSlashCommands', () => {
     const commands = buildGuidSlashCommands({
       builtinCommands: [builtin('open')],
       agentCommands: [acp('review'), acp('cron')],
-      selectedSkills: ['cron', 'officecli'],
+      selectedSkills: ['cron', 'pavii-cli'],
       descriptionByName: new Map([
         ['cron', 'Scheduled tasks'],
-        ['officecli', 'Office automation'],
+        ['pavii-cli', 'Office automation'],
       ]),
       skillFallbackDescription: 'Skill',
     });

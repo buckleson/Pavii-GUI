@@ -1,6 +1,6 @@
 ---
-name: officecli-data-dashboard
-description: "Use this skill to build a multi-element Excel dashboard — Dashboard sheet on open, multiple formula-driven KPI cards, multiple charts, sparklines, and conditional formatting — from CSV or tabular input. Trigger on: 'dashboard', 'KPI dashboard', 'analytics dashboard', 'executive dashboard', 'metrics dashboard', 'CSV to dashboard', 'data visualization'. Output is a single .xlsx. Scene-layer on officecli-xlsx: inherits every xlsx hard rule. DO NOT invoke for: a single budget tracker / one-sheet CSV-with-formatting (use xlsx), a 3-statement / DCF / LBO financial model (use financial-model), a weekly report with ≤ 1 chart and < 10 rows (use xlsx)."
+name: pavii-cli-data-dashboard
+description: "Use this skill to build a multi-element Excel dashboard — Dashboard sheet on open, multiple formula-driven KPI cards, multiple charts, sparklines, and conditional formatting — from CSV or tabular input. Trigger on: 'dashboard', 'KPI dashboard', 'analytics dashboard', 'executive dashboard', 'metrics dashboard', 'CSV to dashboard', 'data visualization'. Output is a single .xlsx. Scene-layer on pavii-cli-xlsx: inherits every xlsx hard rule. DO NOT invoke for: a single budget tracker / one-sheet CSV-with-formatting (use xlsx), a 3-statement / DCF / LBO financial model (use financial-model), a weekly report with ≤ 1 chart and < 10 rows (use xlsx)."
 ---
 
 > **⚠️ Platform note — read before running any command.** The shell snippets in this skill are written for **macOS / Linux** (bash/zsh). Always check which OS you are on first. On **Windows** do **not** run them verbatim — the underlying tool/CLI commands are usually cross-platform, but the surrounding shell syntax is not. Translate it to PowerShell before running:
@@ -19,9 +19,9 @@ description: "Use this skill to build a multi-element Excel dashboard — Dashbo
 >
 > If a command has no obvious Windows equivalent, prefer the built-in file/HTTP tools over raw shell.
 
-# Data Dashboard (scene-layer on officecli-xlsx)
+# Data Dashboard (scene-layer on pavii-cli-xlsx)
 
-A dashboard is not "a spreadsheet with charts". It is a composition: **one Dashboard sheet the user lands on** with formula-driven KPI cards, cell-range-linked charts, sparklines, and semantic conditional formatting. Everything else (raw data, aggregations) is upstream infrastructure the user should never need to open. This skill teaches the composition pattern. Everything about the xlsx engine — cells, formulas, batch JSON, shell quoting, validate, HTML preview — comes from `officecli-xlsx` and is not re-taught here.
+A dashboard is not "a spreadsheet with charts". It is a composition: **one Dashboard sheet the user lands on** with formula-driven KPI cards, cell-range-linked charts, sparklines, and semantic conditional formatting. Everything else (raw data, aggregations) is upstream infrastructure the user should never need to open. This skill teaches the composition pattern. Everything about the xlsx engine — cells, formulas, batch JSON, shell quoting, validate, HTML preview — comes from `pavii-cli-xlsx` and is not re-taught here.
 
 ## Setup
 
@@ -53,19 +53,19 @@ Help reflects the installed CLI version. When this skill and help disagree, **he
 
 ## Mental Model & Inheritance
 
-This skill **inherits every xlsx hard rule** from `officecli-xlsx` — shell quoting, zero formula errors, visual delivery floor, batch JSON shape (`{"command":"set"|"add","path":...,"props":{...}}` — key is `command`, NOT `action`), batch JSON dotted-name rule, chart data-feed forms, batch+resident limits, `validate` discipline. Read officecli-xlsx first; honour those rules, do not re-teach them here.
+This skill **inherits every xlsx hard rule** from `pavii-cli-xlsx` — shell quoting, zero formula errors, visual delivery floor, batch JSON shape (`{"command":"set"|"add","path":...,"props":{...}}` — key is `command`, NOT `action`), batch JSON dotted-name rule, chart data-feed forms, batch+resident limits, `validate` discipline. Read pavii-cli-xlsx first; honour those rules, do not re-teach them here.
 
 **Reverse handoff — do NOT use this skill when:**
 
-- The ask is a **single-sheet CSV-with-formatting tracker** (no Dashboard sheet, no KPI cards, ≤ 1 chart) → go back to `officecli-xlsx`.
-- The ask is a **3-statement / DCF / LBO financial model** with blue-inputs / black-formulas / cross-sheet drivers → use `officecli-financial-model`.
-- The ask is a **weekly status report** with one SUMIF summary and one chart over < 10 rows → `officecli-xlsx`.
+- The ask is a **single-sheet CSV-with-formatting tracker** (no Dashboard sheet, no KPI cards, ≤ 1 chart) → go back to `pavii-cli-xlsx`.
+- The ask is a **3-statement / DCF / LBO financial model** with blue-inputs / black-formulas / cross-sheet drivers → use `pavii-cli-financial-model`.
+- The ask is a **weekly status report** with one SUMIF summary and one chart over < 10 rows → `pavii-cli-xlsx`.
 
 This skill only accepts: "a Dashboard sheet the user opens first, multiple KPI cards, multiple charts, some CF / sparklines".
 
 ## Shell & Execution Discipline
 
-→ see officecli-xlsx §Shell & Execution Discipline for the baseline (quoting, heredoc for `!`, incremental execution).
+→ see pavii-cli-xlsx §Shell & Execution Discipline for the baseline (quoting, heredoc for `!`, incremental execution).
 
 Two increments specific to dashboards:
 
@@ -88,7 +88,7 @@ Five non-negotiable principles. If any one is violated the output is not a dashb
 
 ## Requirements
 
-All `officecli-xlsx` requirements apply (→ see officecli-xlsx §Requirements for Outputs). Dashboards add these:
+All `pavii-cli-xlsx` requirements apply (→ see pavii-cli-xlsx §Requirements for Outputs). Dashboards add these:
 
 - **Dashboard sheet is the active tab on open.** Confirm 0-based sheet index with `officecli query "$FILE" sheet` BEFORE filling `activeTab="N"`. Never guess the index.
 - **`calc.fullCalcOnLoad=true`.** Set via `officecli set "$FILE" / --prop calc.fullCalcOnLoad=true`. Do NOT `raw-set` `<calcPr>` — it produces duplicate elements that fail validate.
@@ -266,7 +266,7 @@ Delete any `Print_Area` set on Data / Summary sheets — conflicting scopes emit
 
 ### Minimum cycle before "done"
 
-Inherit the xlsx baseline (`view issues`, formula error queries, `validate`, HTML preview scan): → see officecli-xlsx §QA minimum cycle.
+Inherit the xlsx baseline (`view issues`, formula error queries, `validate`, HTML preview scan): → see pavii-cli-xlsx §QA minimum cycle.
 
 Then run the dashboard-specific Delivery Gates. Each gate uses **COUNT-then-if** pattern with a `.data.*` wrapper — never chain `&& echo OK || echo FAIL`.
 
@@ -339,7 +339,7 @@ LEAKS=$(officecli view "$FILE" text 2>/dev/null | grep -niE '\{\{|\$fy\$|<TODO>|
 - No `###` in any Dashboard or Data cell (columns too narrow).
 - No truncated KPI labels, sheet tab names, or chart titles.
 - No placeholder tokens rendered as text (`$fy$24`, `{var}`, `<TODO>`, `xxxx`).
-- Pie / doughnut slices render with distinct fill colors (if collapsed in LibreOffice, verify in the user's target viewer before declaring broken — → see officecli-xlsx §Known Issues/Renderer caveats).
+- Pie / doughnut slices render with distinct fill colors (if collapsed in LibreOffice, verify in the user's target viewer before declaring broken — → see pavii-cli-xlsx §Known Issues/Renderer caveats).
 - No empty chart anchors — every chart has a visible, plausible plot.
 - Dashboard sheet opens first (tab highlighted, active area scrolled to top).
 
@@ -437,4 +437,4 @@ Scatter charts do not accept `series1.xValues` (UNSUPPORTED) — feed the x-axis
 
 ### Inherited (pointer only)
 
-Cross-sheet `!` trap, batch + resident for formulas, `labelRotation` on axis-by-role, `chartType=pareto`, `validate` while resident, data bar without explicit `min`/`max`, chart `anchor` / series immutability after create → see officecli-xlsx §Known Issues.
+Cross-sheet `!` trap, batch + resident for formulas, `labelRotation` on axis-by-role, `chartType=pareto`, `validate` while resident, data bar without explicit `min`/`max`, chart `anchor` / series immutability after create → see pavii-cli-xlsx §Known Issues.

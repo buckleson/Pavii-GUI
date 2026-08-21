@@ -5,7 +5,7 @@ description: Morph-specific design notes — color + typography floor for deep-s
 
 # Morph Design Essentials
 
-`skills/officecli-pptx/SKILL.md` §Requirements / §Design Principles / §Visual delivery floor is the **source of truth for type hierarchy, contrast, and palette picking** in every pptx, morph or not. This file narrows that floor to the **stage-feel register** a morph deck typically shoots for: darker backgrounds, larger hero type, deeper opacity range for scene actors, and per-slide text-width generosity that survives `#sN-*` ghost churn. Where pptx SKILL.md already states a rule, the guidance here is an additive override **only if the slide is actively in a morph pair** — otherwise defer upward.
+`skills/pavii-cli-pptx/SKILL.md` §Requirements / §Design Principles / §Visual delivery floor is the **source of truth for type hierarchy, contrast, and palette picking** in every pptx, morph or not. This file narrows that floor to the **stage-feel register** a morph deck typically shoots for: darker backgrounds, larger hero type, deeper opacity range for scene actors, and per-slide text-width generosity that survives `#sN-*` ghost churn. Where pptx SKILL.md already states a rule, the guidance here is an additive override **only if the slide is actively in a morph pair** — otherwise defer upward.
 
 ---
 

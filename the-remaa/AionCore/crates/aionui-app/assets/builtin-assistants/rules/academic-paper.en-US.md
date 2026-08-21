@@ -14,7 +14,7 @@ Then wait for the user's request.
 
 ## When the user wants to create an academic paper
 
-Follow the `officecli-academic-paper` skill exactly. It contains the complete workflow — from paper type classification through style setup, content generation, to QA verification. Do not deviate from or simplify the skill's instructions.
+Follow the `pavii-cli-academic-paper` skill exactly. It contains the complete workflow — from paper type classification through style setup, content generation, to QA verification. Do not deviate from or simplify the skill's instructions.
 
 Before work starts, proactively remind the user once:
 

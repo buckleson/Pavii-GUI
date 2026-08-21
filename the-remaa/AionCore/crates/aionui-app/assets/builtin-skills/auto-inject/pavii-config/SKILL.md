@@ -1,14 +1,14 @@
 ---
-name: aionui-config
+name: pavii-config
 description: >-
-  Configure Pavii.Ai itself through the bundled aioncore config CLI: create and edit assistants, update assistant rules, inspect and import skills, manage MCP servers, configure model providers, update settings, manage agents, configure scheduled tasks, and manage app configuration from an agent conversation. Use when the user wants you to set up or modify a Pavii.Ai assistant, attach skills, change an assistant's system prompt, add MCP or model provider configuration, schedule recurring work, or otherwise configure their Pavii.Ai installation, including when the user needs to know whether assistant changes affect the current conversation or only new conversations.
+  Configure Pavii.Ai itself through the bundled Pavii Engine config CLI: create and edit assistants, update assistant rules, inspect and import skills, manage MCP servers, configure model providers, update settings, manage agents, configure scheduled tasks, and manage app configuration from an agent conversation. Use when the user wants you to set up or modify a Pavii.Ai assistant, attach skills, change an assistant's system prompt, add MCP or model provider configuration, schedule recurring work, or otherwise configure their Pavii.Ai installation, including when the user needs to know whether assistant changes affect the current conversation or only new conversations.
 ---
 
-# AionUi Config
+# Pavii.Ai Config
 
-Configure AionUi with the bundled agent-facing CLI. Do not discover ports, do
+Configure Pavii.Ai with the bundled agent-facing CLI. Do not discover ports, do
 not call raw backend paths, and do not depend on tools outside the bundled
-`aioncore` binary.
+`Pavii Engine` binary.
 
 ## Rules
 
@@ -44,7 +44,7 @@ Failures print one stable error line to stderr. Treat stderr as authoritative.
 
 ## Capability Discovery
 
-Ask aioncore what this version supports:
+Ask Pavii Engine what this version supports:
 
 ```bash
 "$AIONUI_HELPER_BIN" config capabilities
@@ -69,7 +69,7 @@ rules or defaults.
 
 ## Assistant Change Timing
 
-AionUi persists assistant configuration immediately, but running conversations
+Pavii.Ai persists assistant configuration immediately, but running conversations
 may keep the assistant snapshot created when the conversation started. Use this
 timing model when reporting successful assistant changes:
 
@@ -121,7 +121,7 @@ Create an assistant:
     "Turn this feature idea into a PRD",
     "Review this PRD and identify confusing parts for new users"
   ],
-  "enabled_skills": ["aionui-config"]
+  "enabled_skills": ["pavii-config"]
 }
 JSON
 ```
@@ -231,7 +231,7 @@ Attach skills to an assistant by updating the assistant's full skill list:
 "$AIONUI_HELPER_BIN" config assistants update <<'JSON'
 {
   "assistant_id": "current",
-  "enabled_skills": ["aionui-config", "cron"]
+  "enabled_skills": ["pavii-config", "cron"]
 }
 JSON
 ```

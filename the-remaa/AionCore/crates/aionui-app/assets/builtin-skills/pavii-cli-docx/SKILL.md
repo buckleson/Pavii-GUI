@@ -1,5 +1,5 @@
 ---
-name: officecli-docx
+name: pavii-cli-docx
 description: "Use this skill any time a .docx file is involved -- as input, output, or both. This includes: creating Word documents, reports, letters, memos, or proposals; reading, parsing, or extracting text from any .docx file; editing, modifying, or updating existing documents; working with templates, tracked changes, comments, headers/footers, or tables of contents. Trigger whenever the user mentions 'Word doc', 'document', 'report', 'letter', 'memo', or references a .docx filename."
 ---
 
@@ -259,7 +259,7 @@ officecli add "$FILE" "/body/p[3]" --type field --prop fieldType=mergefield --pr
 - **SEQ numbering** (`Figure 1/2/3`): `officecli set "$FILE" / --prop recalcFields=seq` counts SEQ fields in body document order and writes the cached values (`evaluated` flips true; switches/formats in `help docx document`). Heading-relative `\s` and SEQ in headers/footers defer to Word.
 - **PAGE / PAGEREF / NUMPAGES / TOC page numbers** need pagination, which officecli has no engine for — `officecli set "$FILE" /settings --prop updateFields=true` defers them to Word on open.
 
-Use both on a multi-figure document. Academic papers: see the `officecli-academic-paper` skill.
+Use both on a multi-figure document. Academic papers: see the `pavii-cli-academic-paper` skill.
 
 ### Headers & Footers (page numbering)
 
@@ -445,7 +445,7 @@ officecli add "$FILE" "/body/p[3]" --type footnote --prop text="See Appendix A f
 
 **Watermark.** `add / --type watermark --prop text="DRAFT" --prop color=BFBFBF --prop opacity=0.8` in one command (default opacity 0.5); `set /watermark --prop opacity=…` adjusts it later.
 
-**When to switch skills.** Stay in docx for chapter drafts, ≤ 3 footnotes, ≤ 2 equations, no bibliography/cross-refs. Switch to **`academic-paper`** for citation styles (APA / Chicago / IEEE / GB 7714), in-text↔reference auto-linking, numbered equations with `\ref`, "List of Figures", or auto-updating cross-refs. Switch to **`officecli-word-form`** when the document's purpose is **data capture** — fillable forms, contracts with user-fill slots, questionnaires, mail-merge templates (`<w:sdt>` content controls, `<w:ffData>`, `documentProtection=forms`).
+**When to switch skills.** Stay in docx for chapter drafts, ≤ 3 footnotes, ≤ 2 equations, no bibliography/cross-refs. Switch to **`academic-paper`** for citation styles (APA / Chicago / IEEE / GB 7714), in-text↔reference auto-linking, numbered equations with `\ref`, "List of Figures", or auto-updating cross-refs. Switch to **`pavii-cli-word-form`** when the document's purpose is **data capture** — fillable forms, contracts with user-fill slots, questionnaires, mail-merge templates (`<w:sdt>` content controls, `<w:ffData>`, `documentProtection=forms`).
 
 ### Raw-set escape hatch (L1 / L2 / L3)
 
