@@ -70,10 +70,17 @@ jobs:
           alias_of "Pavii.Ai-$V-win-x64.exe"       "Pavii.Ai-Windows-x64-Setup.exe"
           alias_of "Pavii.Ai-$V-win-arm64.exe"     "Pavii.Ai-Windows-arm64-Setup.exe"
           alias_of "Pavii.Ai-$V-mac-arm64.dmg"     "Pavii.Ai-macOS-arm64.dmg"
-          alias_of "Pavii.Ai-$V-linux-x64.AppImage"   "Pavii.Ai-Linux-x64.AppImage"
-          alias_of "Pavii.Ai-$V-linux-arm64.AppImage" "Pavii.Ai-Linux-arm64.AppImage"
-          alias_of "Pavii.Ai-$V-linux-x64.deb"     "Pavii.Ai-Linux-x64.deb"
-          alias_of "Pavii.Ai-$V-linux-arm64.deb"   "Pavii.Ai-Linux-arm64.deb"
+          # Linux x64 is NOT named `-linux-x64`. electron-builder resolves
+          # `${arch}` to each target's own conventional arch name, so the x64
+          # AppImage is `-linux-x86_64` and the x64 deb is `-linux-amd64`. Only
+          # arm64 happens to spell the same in both. Looking for `-linux-x64`
+          # matched nothing, both x64 aliases were skipped, and the guard below
+          # correctly refused to publish a release with two dead links -- which
+          # is why v2.1.56 built all five platforms and still published nothing.
+          alias_of "Pavii.Ai-$V-linux-x86_64.AppImage" "Pavii.Ai-Linux-x64.AppImage"
+          alias_of "Pavii.Ai-$V-linux-arm64.AppImage"  "Pavii.Ai-Linux-arm64.AppImage"
+          alias_of "Pavii.Ai-$V-linux-amd64.deb"       "Pavii.Ai-Linux-x64.deb"
+          alias_of "Pavii.Ai-$V-linux-arm64.deb"       "Pavii.Ai-Linux-arm64.deb"
 
           ( cd release && sha256sum * > SHA256SUMS )
           ls -lh release
