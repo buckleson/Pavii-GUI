@@ -75,6 +75,16 @@ describe('release packaging configuration', () => {
     expect(script).toMatch(/--mac\s+dmg\s+zip\s+--\$\{targetArch\}\s+--prepackaged/);
   });
 
+  it('prefers CI-built local Pavii Engine before upstream release downloads', () => {
+    const script = readProjectFile('packages/shared-scripts/src/prepare-paviicore.js');
+    const localBinaryIndex = script.indexOf('AIONUI_BACKEND_LOCAL_BINARY');
+    const downloadIndex = script.indexOf('Download from GitHub releases only when no explicit local source exists');
+
+    expect(localBinaryIndex).toBeGreaterThan(-1);
+    expect(downloadIndex).toBeGreaterThan(-1);
+    expect(localBinaryIndex).toBeLessThan(downloadIndex);
+  });
+
   itWithBash('fails release asset preparation when a mac zip is missing', () => {
     const tempDir = mkdtempSync(resolve(tmpdir(), 'aionui-release-assets-'));
     const artifactsDir = resolve(tempDir, 'build-artifacts');
