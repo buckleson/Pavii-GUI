@@ -23,13 +23,13 @@ const hostileEvent = (): AnalyticsCaptureResult => ({
     title: 'Pavii.Ai — divorce paperwork draft',
     $referrer: 'file:///C:/Users/alice/AppData/Local/Programs/PaviiAi/index.html',
     distinct_id: '5b1e6f2a-9d3c-4f8b-a1e2-7c9d0f3a5b6e',
-    skill: 'sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAA',
-    provider: 'C:\\Users\\alice\\Documents\\secret.md',
+    provider: 'sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAA',
+    agent_kind: 'C:\\Users\\alice\\Documents\\secret.md',
     reason: 'contact alice@example.com for help',
     ok: true,
     session_seconds: 42,
     prompt: 'x'.repeat(3000),
-    model_platform: 'line one\nline two',
+    transport: 'line one\nline two',
   },
   $set: {
     $initial_current_url: 'file:///C:/Users/alice/AppData/Local/Programs/PaviiAi/index.html',
@@ -69,8 +69,8 @@ describe('scrubEvent — nothing sensitive survives', () => {
 
   it('redacts secrets and paths and flags them so a leak upstream is alertable', () => {
     const out = scrubEvent(hostileEvent());
-    expect(out?.properties.skill).toBe(REDACTED);
     expect(out?.properties.provider).toBe(REDACTED);
+    expect(out?.properties.agent_kind).toBe(REDACTED);
     expect(out?.properties.reason).toBe(REDACTED);
     expect(out?.properties.$scrub_secret_hit).toBe(true);
     expect(out?.properties.$scrub_path_hit).toBe(true);
@@ -86,7 +86,7 @@ describe('scrubEvent — nothing sensitive survives', () => {
   it('drops unknown property keys, over-long values and multi-line values', () => {
     const out = scrubEvent(hostileEvent());
     expect(out?.properties).not.toHaveProperty('prompt'); // not in ALLOWED_PROPERTY_KEYS
-    expect(out?.properties).not.toHaveProperty('model_platform'); // multi-line
+    expect(out?.properties).not.toHaveProperty('transport'); // multi-line
   });
 
   it('keeps the legitimate dimensions and PostHog identifiers intact', () => {
@@ -123,11 +123,11 @@ describe('scrubEvent — curated events', () => {
   it('passes a well-formed event through unchanged', () => {
     const out = scrubEvent({
       event: 'conversation_started',
-      properties: { agent_kind: 'aionrs', skill_count: 3, mcp_count: 0, route: '/guid' },
+      properties: { agent_kind: 'aionrs', has_files: true, mcp_count: 0, route: '/guid' },
     });
     expect(out?.properties).toMatchObject({
       agent_kind: 'aionrs',
-      skill_count: 3,
+      has_files: true,
       mcp_count: 0,
       route: '/guid',
     });
@@ -146,11 +146,11 @@ describe('scrubEvent — curated events', () => {
 
   it('redacts an opaque high-entropy token in one of our own dimensions', () => {
     const out = scrubEvent({
-      event: 'skill_enabled',
-      properties: { skill: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', is_builtin: false },
+      event: 'mcp_connected',
+      properties: { transport: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', ok: false },
     });
-    expect(out?.properties.skill).toBe(REDACTED);
-    expect(out?.properties.is_builtin).toBe(false);
+    expect(out?.properties.transport).toBe(REDACTED);
+    expect(out?.properties.ok).toBe(false);
   });
 
   it('redacts an $elements_chain whose class names carry a path', () => {

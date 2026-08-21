@@ -122,12 +122,12 @@ describe('track()', () => {
   it('drops properties that are not allowlisted before they reach posthog', async () => {
     const { initAnalytics, track, ANALYTICS_EVENTS } = await loadModule();
     await initAnalytics();
-    track(ANALYTICS_EVENTS.skillEnabled, { skill: 'pdf', skillDescription: 'user text', is_builtin: true });
+    track(ANALYTICS_EVENTS.mcpConnected, { transport: 'stdio', serverName: 'my-private-server' });
 
     const [event, properties] = mocks.capture.mock.calls[0] as [string, Record<string, unknown>];
-    expect(event).toBe('skill_enabled');
-    expect(properties).toMatchObject({ skill: 'pdf', is_builtin: true });
-    expect(properties).not.toHaveProperty('skillDescription');
+    expect(event).toBe('mcp_connected');
+    expect(properties).toMatchObject({ transport: 'stdio' });
+    expect(properties).not.toHaveProperty('serverName');
   });
 
   it('captures nothing before init', async () => {

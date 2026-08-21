@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import useModeModeList from '@renderer/hooks/agent/useModeModeList';
 import useProtocolDetection from '@renderer/hooks/system/useProtocolDetection';
 import AionModal from '@/renderer/components/base/AionModal';
+import { ANALYTICS_EVENTS, track } from '@/renderer/services/analytics/posthog';
 import {
   DEFAULT_PLATFORM_VALUE,
   MODEL_PLATFORMS,
@@ -388,6 +389,11 @@ const AddPlatformModal = ModalHOC<{
           imageInput,
           showOpenAiApiMode ? openAiApiMode : 'auto'
         );
+
+        // Activation funnel: the app is unusable until a provider exists, so
+        // this is the step to measure drop-off against. Platform id only —
+        // never the key or the base URL.
+        track(ANALYTICS_EVENTS.providerConfigured, { provider: provider.platform });
 
         onSubmit(provider);
         modalCtrl.close();

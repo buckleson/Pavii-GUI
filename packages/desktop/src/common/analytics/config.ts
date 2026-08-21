@@ -51,20 +51,24 @@ export const analyticsEnvironment = (): 'development' | 'production' =>
  * Every event this app may send. Both processes import from here so a typo
  * cannot silently create a parallel event name that never shows on a dashboard.
  */
+/**
+ * Every event this app may send.
+ *
+ * Each name here must have a real call site — `tests/unit/analytics/
+ * eventCoverage.test.ts` fails the build otherwise. A declared-but-unwired
+ * event is worse than a missing one: the dashboard renders an empty chart and
+ * reads as "nobody uses this feature" rather than "nobody instrumented it".
+ * Add the name and the `track()` call in the same change.
+ */
 export const ANALYTICS_EVENTS = {
   appOpened: 'app_opened',
   appClosed: 'app_closed',
   backendStartFailed: 'backend_start_failed',
-  updateInstalled: 'update_installed',
   providerConfigured: 'provider_configured',
   conversationStarted: 'conversation_started',
   messageSent: 'message_sent',
   turnCompleted: 'turn_completed',
-  skillEnabled: 'skill_enabled',
   mcpConnected: 'mcp_connected',
-  assistantCreated: 'assistant_created',
-  teamCreated: 'team_created',
-  teamRunCompleted: 'team_run_completed',
 } as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];
@@ -78,34 +82,28 @@ export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTIC
  * is the review point.
  */
 export const ALLOWED_PROPERTY_KEYS: ReadonlySet<string> = new Set([
-  // identity / environment, registered as super properties
+  // Registered as super properties on every event.
   'environment',
   'app_version',
+  'route',
+  // app_opened
+  'version',
   'platform',
   'arch',
-  'route',
-  // event-specific dimensions, all low-cardinality or numeric
-  'agent_kind',
-  'arch',
-  'duration_bucket',
-  'from_template',
-  'from_version',
-  'has_files',
-  'is_builtin',
-  'is_catalog_entry',
   'is_first_run',
-  'is_free',
-  'mcp_count',
-  'member_count',
-  'model_platform',
-  'ok',
-  'ph_el',
-  'provider',
-  'reason',
+  // app_closed
   'session_seconds',
-  'skill',
-  'skill_count',
-  'to_version',
+  // backend_start_failed
+  'reason',
+  // provider_configured
+  'provider',
+  // conversation_started / message_sent / turn_completed
+  'agent_kind',
+  'has_files',
+  'mcp_count',
+  'ok',
+  // mcp_connected
   'transport',
-  'version',
+  // autocapture opt-in label (data-ph-capture-attribute-ph_el)
+  'ph_el',
 ]);

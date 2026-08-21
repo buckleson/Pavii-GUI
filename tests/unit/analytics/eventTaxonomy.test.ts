@@ -34,11 +34,11 @@ describe('event taxonomy', () => {
 
   it('drops a property key that was never allowlisted', () => {
     const out = scrubEvent({
-      event: ANALYTICS_EVENTS.skillEnabled,
-      properties: { skill: 'pdf', skillDescription: 'a user-authored description' },
+      event: ANALYTICS_EVENTS.mcpConnected,
+      properties: { transport: 'stdio', serverUrl: 'https://internal.example.com/mcp' },
     });
-    expect(out?.properties).toHaveProperty('skill');
-    expect(out?.properties).not.toHaveProperty('skillDescription');
+    expect(out?.properties).toHaveProperty('transport');
+    expect(out?.properties).not.toHaveProperty('serverUrl');
   });
 });
 

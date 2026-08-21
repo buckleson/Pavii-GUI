@@ -1,4 +1,5 @@
 import { ipcBridge } from '@/common';
+import { ANALYTICS_EVENTS, track } from '@/renderer/services/analytics/posthog';
 import type { IConversationMcpStatus } from '@/common/config/storage';
 import { isBackendHttpError } from '@/common/adapter/httpBridge';
 import { isSideQuestionSupported } from '@/common/chat/sideQuestion';
@@ -302,6 +303,7 @@ const AcpSendBox: React.FC<{
           conversation_id,
           files,
         });
+        track(ANALYTICS_EVENTS.messageSent, { agent_kind: 'acp', has_files: files.length > 0 });
         markSendAccepted(result.turn_id, result.runtime, result.msg_id);
         emitter.emit('chat.history.refresh');
       } catch (error: unknown) {
