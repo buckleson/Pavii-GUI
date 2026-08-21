@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.1.58](https://www.pavii.tech/products/Super-Assistant/) (2026-08-21)
+
+### Desktop
+
+#### Features
+
+- **models:** open the Models page on Free models, with the tabs ordered Free models / All providers / Your providers. Someone with nothing configured now lands on what they can actually use rather than an empty list; configured providers are one click away and unchanged.
+
+---
+
 ## [2.1.57](https://www.pavii.tech/products/Super-Assistant/) (2026-08-21)
 
 ### Desktop
