@@ -57,9 +57,10 @@ jobs:
           copy_channel() { [ -f "$1" ] && cp "$1" "release/$2" || echo "note: missing $1"; }
           copy_channel artifacts/windows-build-x64/latest.yml        latest.yml
           copy_channel artifacts/windows-build-arm64/latest.yml      latest-win-arm64.yml
-          # macOS ships arm64 only; latest-mac.yml is the channel file
-          # electron-updater looks for by default, so arm64 supplies it.
-          copy_channel artifacts/macos-build-arm64/latest-mac.yml    latest-mac.yml
+          # macOS x64 uses the default latest-mac.yml channel; macOS arm64
+          # uses the custom latest-arm64 channel, resolved as latest-arm64-mac.yml.
+          copy_channel artifacts/macos-build-x64/latest-mac.yml      latest-mac.yml
+          copy_channel artifacts/macos-build-arm64/latest-mac.yml    latest-arm64-mac.yml
           copy_channel artifacts/linux-build-x64/latest-linux.yml    latest-linux.yml
           copy_channel artifacts/linux-build-arm64/latest-linux-arm64.yml latest-linux-arm64.yml
 
@@ -69,6 +70,7 @@ jobs:
           alias_of() { [ -f "release/$1" ] && cp "release/$1" "release/$2" || true; }
           alias_of "Pavii.Ai-$V-win-x64.exe"       "Pavii.Ai-Windows-x64-Setup.exe"
           alias_of "Pavii.Ai-$V-win-arm64.exe"     "Pavii.Ai-Windows-arm64-Setup.exe"
+          alias_of "Pavii.Ai-$V-mac-x64.dmg"       "Pavii.Ai-macOS-x64.dmg"
           alias_of "Pavii.Ai-$V-mac-arm64.dmg"     "Pavii.Ai-macOS-arm64.dmg"
           # Linux x64 is NOT named `-linux-x64`. electron-builder resolves
           # `${arch}` to each target's own conventional arch name, so the x64
@@ -93,7 +95,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          for f in Pavii.Ai-Windows-x64-Setup.exe Pavii.Ai-Windows-arm64-Setup.exe                    Pavii.Ai-macOS-arm64.dmg                    Pavii.Ai-Linux-x64.AppImage Pavii.Ai-Linux-arm64.AppImage                    Pavii.Ai-Linux-x64.deb Pavii.Ai-Linux-arm64.deb; do
+          for f in Pavii.Ai-Windows-x64-Setup.exe Pavii.Ai-Windows-arm64-Setup.exe                    Pavii.Ai-macOS-x64.dmg Pavii.Ai-macOS-arm64.dmg                    Pavii.Ai-Linux-x64.AppImage Pavii.Ai-Linux-arm64.AppImage                    Pavii.Ai-Linux-x64.deb Pavii.Ai-Linux-arm64.deb; do
             if [ -f "release/$f" ]; then echo "ok      $f"; else echo "MISSING $f"; missing=1; fi
           done
           [ "$missing" -eq 0 ] || { echo "Refusing to publish: a download button would 404."; exit 1; }
@@ -110,3 +112,35 @@ jobs:
           fi
           gh release upload "$TAG" release/* --clobber
           gh release view "$TAG" --json assets -q '.assets[].name'
+
+      - name: Mirror release assets
+        env:
+          GH_TOKEN: ${{ secrets.PAVII_RELEASES_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          MIRROR_REPO: buckleson/Pavii-Gui-Releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "PAVII_RELEASES_TOKEN is required to mirror releases to $MIRROR_REPO." >&2
+            exit 1
+          fi
+
+          gh release view "$TAG" --repo "${{ github.repository }}" --json body -q '.body // ""' > release-notes.md
+
+          if ! gh release view "$TAG" --repo "$MIRROR_REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --repo "$MIRROR_REPO" \
+              --target main \
+              --title "Pavii.Ai $VERSION" \
+              --notes-file release-notes.md
+          else
+            gh release edit "$TAG" \
+              --repo "$MIRROR_REPO" \
+              --title "Pavii.Ai $VERSION" \
+              --notes-file release-notes.md
+          fi
+
+          gh release upload "$TAG" release/* --repo "$MIRROR_REPO" --clobber
+          gh release view "$TAG" --repo "$MIRROR_REPO" --json assets -q '.assets[].name'

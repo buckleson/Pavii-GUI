@@ -9,6 +9,7 @@ import { ProcessConfig } from './initStorage';
 
 const CLOSE_TO_TRAY_CONFIG_KEY = 'system.closeToTray';
 const LEGACY_BACKEND_CLOSE_TO_TRAY_KEY = 'closeToTray';
+const DEFAULT_CLOSE_TO_TRAY_ENABLED = true;
 
 const readBackendBoolean = async (key: string): Promise<boolean | undefined> => {
   try {
@@ -46,7 +47,7 @@ export const readCloseToTraySetting = async (): Promise<boolean> => {
     return backendValue;
   }
 
-  return false;
+  return DEFAULT_CLOSE_TO_TRAY_ENABLED;
 };
 
 export const writeCloseToTraySetting = async (enabled: boolean): Promise<void> => {

@@ -142,6 +142,29 @@ Use the Rust MSVC toolchain and install Microsoft C++ Build Tools. After install
 | `bun run build-deb`       | Build Linux (.deb) distributable                        |
 | `bun run build`           | Alias for `bun run build-mac`                           |
 
+### Release Manager
+
+Desktop releases are tag-driven. Push a semver tag such as `v2.1.60` to `buckleson/Pavii-GUI` or run the `Release` workflow manually with an existing tag. The workflow builds Windows x64/arm64, macOS Intel/Apple Silicon, and Linux x64/arm64 through `_build-reusable.yml`, stages installers plus `latest*.yml` channel metadata, publishes the primary GitHub Release in `buckleson/Pavii-GUI`, then mirrors the same assets to `buckleson/Pavii-Gui-Releases`.
+
+The installed app checks `buckleson/Pavii-GUI` for updates. Keep `packages/desktop/src/process/services/updateFeed.ts` and `packages/desktop/electron-builder.yml` pointed at that repo unless the updater source is deliberately migrated.
+
+The mirror repo is for website/download distribution and install-count tracking outside the app updater. It must have a `main` branch before the first mirrored release, and this repo must define a GitHub Actions secret named `PAVII_RELEASES_TOKEN` with write access to `buckleson/Pavii-Gui-Releases`.
+
+Published assets include:
+
+- `Pavii.Ai-Windows-x64-Setup.exe`
+- `Pavii.Ai-Windows-arm64-Setup.exe`
+- `Pavii.Ai-macOS-x64.dmg`
+- `Pavii.Ai-macOS-arm64.dmg`
+- `Pavii.Ai-Linux-x64.AppImage`
+- `Pavii.Ai-Linux-arm64.AppImage`
+- `Pavii.Ai-Linux-x64.deb`
+- `Pavii.Ai-Linux-arm64.deb`
+- `latest.yml`, `latest-win-arm64.yml`, `latest-mac.yml`, `latest-arm64-mac.yml`, `latest-linux.yml`, `latest-linux-arm64.yml`
+- `SHA256SUMS`
+
+When the website is updated later, use either the primary release URLs for updater-aligned downloads or the mirror release URLs for website-specific distribution. Do not replace the in-app updater source with the mirror repo unless release metadata, app config, tests, and docs are updated together.
+
 ### Standalone Server (non-Electron)
 
 | Command                            | Description                                                 |
