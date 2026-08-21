@@ -907,9 +907,9 @@ class AutoUpdaterService extends EventEmitter {
     try {
       this.moveCwdOutOfInstallDirForWindowsHandoff();
       // The first argument maps to electron-updater's silent installer flag.
-      // User-clicked "install now" should show NSIS progress/completion pages;
-      // autoInstallOnAppQuit remains true for background app-quit installs.
-      autoUpdater.quitAndInstall(false, true);
+      // Windows in-app updates should hand off to NSIS silently; manual website
+      // downloads still run the normal visible installer.
+      autoUpdater.quitAndInstall(process.platform === 'win32', true);
       recordAutoUpdateQuitAndInstall(this.getAutoUpdateDiagnosticOptions());
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

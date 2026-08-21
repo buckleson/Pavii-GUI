@@ -51,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release
-          find artifacts -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.deb' \
+          find artifacts -type f \( -name '*.exe' -o -name '*.exe.blockmap' -o -name '*.dmg' -o -name '*.deb' \
             -o -name '*.AppImage' -o -name 'Pavii.Ai-*-mac-*.zip' \) -exec cp -n {} release/ \;
 
           copy_channel() { [ -f "$1" ] && cp "$1" "release/$2" || echo "note: missing $1"; }
@@ -99,6 +99,17 @@ jobs:
             if [ -f "release/$f" ]; then echo "ok      $f"; else echo "MISSING $f"; missing=1; fi
           done
           [ "$missing" -eq 0 ] || { echo "Refusing to publish: a download button would 404."; exit 1; }
+
+      - name: Verify Windows differential update assets are present
+        shell: bash
+        run: |
+          set -euo pipefail
+          V="${{ steps.version.outputs.version }}"
+          missing=0
+          for f in "Pavii.Ai-$V-win-x64.exe.blockmap" "Pavii.Ai-$V-win-arm64.exe.blockmap"; do
+            if [ -f "release/$f" ]; then echo "ok      $f"; else echo "MISSING $f"; missing=1; fi
+          done
+          [ "$missing" -eq 0 ] || { echo "Refusing to publish: Windows differential update blockmaps are missing."; exit 1; }
 
       - name: Publish GitHub Release
         env:

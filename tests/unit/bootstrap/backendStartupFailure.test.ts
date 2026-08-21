@@ -402,7 +402,7 @@ describe('getInstallationIntegrityModalActions', () => {
     expect(onReportDiagnostics).toHaveBeenCalledOnce();
   });
 
-  it('uses data migration copy and diagnostics-only actions for local data migration failures', () => {
+  it('uses data migration copy with diagnostics and download-latest actions for local data migration failures', () => {
     const t = vi.fn((key: string) => key) as any;
     const failure = {
       reason: 'backend_data_migration_failed',
@@ -415,7 +415,7 @@ describe('getInstallationIntegrityModalActions', () => {
     } as any);
 
     expect(actions.reportText).toBe('common.backendStartup.dataMigration.sendDiagnostics');
-    expect(actions.downloadText).toBeUndefined();
+    expect(actions.downloadText).toBe('common.backendStartup.incompleteInstallation.downloadLatest');
     expect(failure.backendBoundaryStage).toBe('database.migration');
   });
 

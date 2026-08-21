@@ -40,11 +40,33 @@ describe('release packaging configuration', () => {
     expect(winBlock).not.toContain('    - zip');
   });
 
+  it('builds Windows differential update blockmaps', () => {
+    const config = readProjectFile('packages/desktop/electron-builder.yml');
+    const nsisBlock = yamlBlock(config, 'nsis');
+
+    expect(nsisBlock).toContain('  differentialPackage: true');
+  });
+
   itWithWorkflows('uploads mac zip artifacts without a stale Windows zip glob', () => {
     const workflow = readProjectFile('.github/workflows/_build-reusable.yml');
 
     expect(workflow).toContain('out/Pavii.Ai-*-mac-*.zip');
     expect(workflow).not.toContain('out/Pavii.Ai-*-win32-*.zip');
+  });
+
+  itWithWorkflows('uploads Windows blockmaps from build jobs', () => {
+    const workflow = readProjectFile('.github/workflows/_build-reusable.yml');
+
+    expect(workflow).toContain('out/Pavii.Ai-*.exe.blockmap');
+  });
+
+  itWithWorkflows('stages and verifies Windows blockmap release assets', () => {
+    const workflow = readProjectFile('.github/workflows/release.yml');
+
+    expect(workflow).toContain("-name '*.exe.blockmap'");
+    expect(workflow).toContain('Verify Windows differential update assets are present');
+    expect(workflow).toContain('Pavii.Ai-$V-win-x64.exe.blockmap');
+    expect(workflow).toContain('Pavii.Ai-$V-win-arm64.exe.blockmap');
   });
 
   it('retries mac prepackaged builds with both dmg and zip targets', () => {

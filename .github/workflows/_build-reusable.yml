@@ -148,6 +148,7 @@ jobs:
           retention-days: 7
           path: |
             out/Pavii.Ai-*.exe
+            out/Pavii.Ai-*.exe.blockmap
             out/Pavii.Ai-*.dmg
             out/Pavii.Ai-*-mac-*.zip
             out/Pavii.Ai-*.deb

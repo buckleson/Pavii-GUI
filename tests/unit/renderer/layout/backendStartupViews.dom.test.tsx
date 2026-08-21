@@ -89,6 +89,16 @@ describe('AC-5: backend_exited honest-failure wiring', () => {
   });
 });
 
+describe('data migration failure dialog wiring', () => {
+  it('keeps diagnostics and offers download-latest for version mismatch recovery', () => {
+    const actions = getInstallationIntegrityModalActions(echoT, { diagnosticsKind: 'data_migration' });
+
+    expect(actions.reportText).toBe('common.backendStartup.dataMigration.sendDiagnostics');
+    expect(actions.downloadText).toBe('common.backendStartup.incompleteInstallation.downloadLatest');
+    expect(actions.recoverText).toBeUndefined();
+  });
+});
+
 // Sentry 136646113 — dedicated port-report-timeout kind plus the neutralized
 // startup_failed fallback kind. Neither may expose the download/reinstall path.
 describe('port_report_timeout and startup_failed dialog wiring (Sentry 136646113)', () => {

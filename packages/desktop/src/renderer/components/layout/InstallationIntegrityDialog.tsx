@@ -169,7 +169,10 @@ export function getInstallationIntegrityModalActions(
 } {
   const diagnosticsKind = options.diagnosticsKind ?? 'incomplete_installation';
   return {
-    downloadText: diagnosticsKind === 'incomplete_installation' ? getInstallationIntegrityDownloadText(t) : undefined,
+    downloadText:
+      diagnosticsKind === 'incomplete_installation' || diagnosticsKind === 'data_migration'
+        ? getInstallationIntegrityDownloadText(t)
+        : undefined,
     onDownloadLatest: options.onDownloadLatest ?? openDownloadLatest,
     onRecoverCorruptedDatabase: options.onRecoverCorruptedDatabase ?? (() => Promise.resolve()),
     onReportDiagnostics: options.onReportDiagnostics ?? (() => Promise.resolve()),
