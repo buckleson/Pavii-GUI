@@ -508,16 +508,33 @@ fn log_mcp_transport_result(mcp_server_id: &str, transport_type: &str, result: &
     let status = if result.success { "success" } else { "error" };
     let tool_count = result.tools.as_ref().map_or(0, Vec::len);
     let error_class = result.code.map(classify_mcp_error_code).unwrap_or("none");
-    warn!(
-        target: "aionui_feedback_diagnostics",
-        diagnostic_event = "feedback.runtime.mcp_transport_result",
-        mcp_server_id = %mcp_server_id,
-        transport_type = %transport_type,
-        status = %status,
-        error_class = %error_class,
-        tool_count,
-        "feedback.runtime.mcp_transport_result"
-    );
+    // Level follows the outcome. A connection that came up is a lifecycle
+    // boundary, the same class of event as `mcp_transport_start` beside it, so
+    // it belongs at `info`; logging every success at `warn` made a healthy
+    // startup look like it had problems and buried the failures that matter.
+    if result.success {
+        info!(
+            target: "aionui_feedback_diagnostics",
+            diagnostic_event = "feedback.runtime.mcp_transport_result",
+            mcp_server_id = %mcp_server_id,
+            transport_type = %transport_type,
+            status = %status,
+            error_class = %error_class,
+            tool_count,
+            "feedback.runtime.mcp_transport_result"
+        );
+    } else {
+        warn!(
+            target: "aionui_feedback_diagnostics",
+            diagnostic_event = "feedback.runtime.mcp_transport_result",
+            mcp_server_id = %mcp_server_id,
+            transport_type = %transport_type,
+            status = %status,
+            error_class = %error_class,
+            tool_count,
+            "feedback.runtime.mcp_transport_result"
+        );
+    }
 }
 
 fn classify_mcp_error_code(code: McpConnectionTestErrorCode) -> &'static str {
@@ -632,6 +649,66 @@ mod tests {
         assert_eq!(events[0].name, "runtime.statusChanged");
         assert_eq!(events[0].data["user_id"], "user-1");
         assert_eq!(events[0].data["scope"]["id"], "mcp-1");
+    }
+
+    #[test]
+    fn a_successful_transport_result_is_info_not_warn() {
+        // A connection that came up is a lifecycle boundary, like the
+        // `mcp_transport_start` event beside it. Logging it at WARN made a
+        // healthy startup look like it had problems -- the reported
+        // `status=success error_class=none tool_count=29` warning -- and buried
+        // the failures that actually need attention.
+        let result = McpConnectionTestResult {
+            success: true,
+            tools: Some(Vec::new()),
+            error: None,
+            code: None,
+            details: None,
+            needs_auth: None,
+            auth_method: None,
+            www_authenticate: None,
+        };
+
+        let captured = capture_logs(Level::INFO, || {
+            log_mcp_transport_result("server-1", "stdio", &result);
+        });
+
+        assert!(captured.contains("feedback.runtime.mcp_transport_result"), "{captured}");
+        assert!(captured.contains("status=success"), "{captured}");
+        assert!(
+            captured.contains("INFO"),
+            "a successful result must log at INFO: {captured}"
+        );
+        assert!(
+            !captured.contains("WARN"),
+            "a successful result must not log at WARN: {captured}"
+        );
+    }
+
+    #[test]
+    fn a_failed_transport_result_stays_warn() {
+        // The other half of the same rule: a failure is exactly what WARN is
+        // for, and demoting it would hide it.
+        let result = McpConnectionTestResult {
+            success: false,
+            tools: None,
+            error: Some("boom".to_owned()),
+            code: Some(McpConnectionTestErrorCode::CommandNotFound),
+            details: None,
+            needs_auth: None,
+            auth_method: None,
+            www_authenticate: None,
+        };
+
+        let captured = capture_logs(Level::INFO, || {
+            log_mcp_transport_result("server-1", "stdio", &result);
+        });
+
+        assert!(captured.contains("status=error"), "{captured}");
+        assert!(
+            captured.contains("WARN"),
+            "a failed result must still log at WARN: {captured}"
+        );
     }
 
     #[test]

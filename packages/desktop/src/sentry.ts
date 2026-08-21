@@ -480,10 +480,17 @@ async function runStartupLogReport(): Promise<void> {
   }
 
   // DSN gate goes first so we don't read the disk for nothing.
-  // Don't write state — the next launch with a DSN should still fire.
+  //
+  // Returns rather than throws: no DSN is a configured state, not a failure.
+  // This build ships without one deliberately, so throwing here surfaced
+  // `[sentry] startup log report failed: no DSN` as an error on every single
+  // launch, right after the info line that already says the report was
+  // skipped. The throttle skip above returns for the same reason.
+  //
+  // Nothing is written to state, so a launch that does have a DSN still fires.
   if (!process.env.SENTRY_DSN) {
     console.info('[sentry] startup log report skipped (SENTRY_DSN not set)');
-    throw new UnretryableError('no DSN');
+    return;
   }
 
   const logsRoot = app.getPath('logs');
@@ -542,10 +549,12 @@ async function runStartupLogReport(): Promise<void> {
  * loading. Best-effort: any failure is logged to console only and never
  * affects app startup.
  *
- * Failure semantics: `UnretryableError` paths (other than missing DSN) update
- * `lastReportAt` before throwing so the skip persists for 24h. `RetryableError`
- * and the missing-DSN path leave `lastReportAt` untouched so the next launch
- * retries.
+ * Failure semantics: `UnretryableError` paths update `lastReportAt` before
+ * throwing so the skip persists for 24h. `RetryableError` leaves it untouched
+ * so the next launch retries.
+ *
+ * A missing DSN is neither — it returns quietly, because a build shipped
+ * without a DSN has nothing to report and is not failing.
  */
 export function scheduleStartupLogReport(window: BrowserWindow): void {
   const trigger = () => {

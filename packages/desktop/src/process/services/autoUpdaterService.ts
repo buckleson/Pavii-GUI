@@ -31,6 +31,36 @@ const DEBUG_AUTO_UPDATE_CURRENT_VERSION_ENV = 'AIONUI_DEBUG_AUTO_UPDATE_CURRENT_
 const MAC_NATIVE_INSTALL_READY_TIMEOUT_MS = 60_000;
 
 /**
+ * True when the update feed simply has no published release yet.
+ *
+ * GitHub answers `releases/latest` with 406 until a production release exists,
+ * and electron-updater surfaces that as "Cannot parse releases feed … please
+ * ensure a production release exists". That is a state, not a fault: a repo
+ * whose releases have not been published yet behaves exactly like this on every
+ * launch, and logging it at `error` buries real feed problems -- a network
+ * failure, a malformed feed, a bad channel -- under noise that can never be
+ * acted on from inside the app.
+ *
+ * Genuine failures still log at `error`; only this one condition is demoted.
+ */
+function isNoPublishedReleaseError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return (
+    message.includes('please ensure a production release exists') ||
+    message.includes('Unable to find latest version on GitHub')
+  );
+}
+
+/** Log an update-feed failure at the level its cause deserves. */
+function logUpdateFeedFailure(prefix: string, error: unknown): void {
+  if (isNoPublishedReleaseError(error)) {
+    log.info(`${prefix} no published release on the update feed yet; skipping until one is released`);
+    return;
+  }
+  log.error(prefix, error);
+}
+
+/**
  * Returns the appropriate update channel name based on the current platform and architecture.
  * Returns undefined for the default channel (Windows x64 / Linux x64).
  */
@@ -454,7 +484,7 @@ class AutoUpdaterService extends EventEmitter {
         log.debug('[auto-update] Ignoring error after cancellation');
         return;
       }
-      log.error('Auto-updater error:', error);
+      logUpdateFeedFailure('Auto-updater error:', error);
       this._activeDownloadPromise = null;
       this._activeDownloadCancellationToken = null;
       this.broadcastStatus({
@@ -654,7 +684,7 @@ class AutoUpdaterService extends EventEmitter {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      log.error('Check for updates failed:', message);
+      logUpdateFeedFailure('Check for updates failed:', message);
       return {
         success: false,
         error: message,
@@ -901,7 +931,7 @@ class AutoUpdaterService extends EventEmitter {
       autoUpdater.allowDowngrade = false;
       await autoUpdater.checkForUpdatesAndNotify();
     } catch (error) {
-      log.error('Auto-update check failed:', error);
+      logUpdateFeedFailure('Auto-update check failed:', error);
     }
   }
 }

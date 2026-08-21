@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.1.56](https://www.pavii.tech/products/Super-Assistant/) (2026-08-21)
+
+### Desktop
+
+#### Bug Fixes
+
+- **sentry:** stop reporting a missing DSN as a startup failure -- this build ships without one deliberately, so it logged an error on every launch right after the info line saying the report was skipped
+- **update:** log "no release published yet" at info instead of error -- GitHub answers `releases/latest` with 406 until a production release exists, and five error lines per launch buried the feed problems that are actually actionable
+- **mcp:** log a successful transport connection at info rather than warn, so a healthy startup stops looking like it had problems
+
+#### Notes
+
+- First release published through the tagged pipeline. The `macos-x64` leg that hung earlier runs on a retired Intel runner label has been removed, so `publish` can now complete.
+
+---
+
 ## [2.1.55](https://www.pavii.tech/products/Super-Assistant/) (2026-08-21)
 
 ### Desktop
