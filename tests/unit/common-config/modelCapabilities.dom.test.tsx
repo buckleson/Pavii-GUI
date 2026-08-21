@@ -60,6 +60,9 @@ vi.mock('@/renderer/components/base/AionModal', () => ({
 }));
 
 vi.mock('@icon-park/react', () => ({
+  // Tab icons on the Models page (configured / free / all).
+  Components: () => <span aria-hidden='true'>all-providers</span>,
+  Lightning: () => <span aria-hidden='true'>free-models</span>,
   DeleteFour: () => <span>delete</span>,
   Heartbeat: () => <span>health</span>,
   Info: () => <span>info</span>,

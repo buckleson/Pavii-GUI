@@ -7,11 +7,13 @@
 import { ipcBridge } from '@/common';
 import type { IProvider } from '@/common/config/storage';
 import { supportsOpenAiApiMode } from '@/common/utils/modelCapabilities';
-import { Button, Divider, Message, Popconfirm, Collapse, Tag, Switch, Tooltip } from '@arco-design/web-react';
+import { Button, Divider, Message, Popconfirm, Collapse, Tag, Switch, Tabs, Tooltip } from '@arco-design/web-react';
 import {
+  Components,
   DeleteFour,
   Heartbeat,
   Info,
+  Lightning,
   Minus,
   Plus,
   PreviewClose,
@@ -19,7 +21,7 @@ import {
   SettingTwo,
   Write,
 } from '@icon-park/react';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AddModelModal from '@/renderer/pages/settings/components/AddModelModal';
 import AddPlatformModal from '@/renderer/pages/settings/components/AddPlatformModal';
@@ -31,6 +33,9 @@ import { useProvidersQuery } from '@/renderer/hooks/agent/useModelProviderList';
 import { useSettingsViewMode } from '../settingsViewContext';
 import SettingsPageHeader from '@/renderer/pages/settings/components/SettingsPageHeader';
 import { consumePendingDeepLink } from '@/renderer/hooks/system/useDeepLink';
+import type { DeepLinkAddProviderDetail } from '@/renderer/hooks/system/useDeepLink';
+import FreeModelsPanel from './models/FreeModelsPanel';
+import AllProvidersPanel from './models/AllProvidersPanel';
 import '../model-provider.css';
 
 /**
@@ -105,6 +110,12 @@ const ModelModalContent: React.FC = () => {
   const viewMode = useSettingsViewMode();
   const isPageMode = viewMode === 'page';
   const [collapseKey, setCollapseKey] = useState<Record<string, boolean>>({});
+  /**
+   * Which view of the Models page is showing. `configured` is the default and is
+   * the page as it was before browsing was added -- the existing flow must not
+   * move for anyone who already has providers set up.
+   */
+  const [activeTab, setActiveTab] = useState<'configured' | 'free' | 'all'>('configured');
   const [healthCheckLoading, setHealthCheckLoading] = useState<Record<string, boolean>>({});
   const { data, mutate } = useProvidersQuery();
   const [message, messageContext] = Message.useMessage();
@@ -316,6 +327,20 @@ const ModelModalContent: React.FC = () => {
     }
   }, [addPlatformModalCtrl]);
 
+  /**
+   * Open the add-provider form pre-filled from a browse tab.
+   *
+   * Reuses the deep-link pre-fill path rather than adding a second one, so a
+   * provider picked from a card and one arriving via `pavii://add-provider` land
+   * in exactly the same form state.
+   */
+  const openPrefilledProvider = useCallback(
+    (prefill: DeepLinkAddProviderDetail) => {
+      addPlatformModalCtrl.open({ deepLinkData: prefill });
+    },
+    [addPlatformModalCtrl]
+  );
+
   const [addModelModalCtrl, addModelModalContext] = AddModelModal.useModal({
     onSubmit(platform) {
       updatePlatform(platform, () => {
@@ -394,9 +419,58 @@ const ModelModalContent: React.FC = () => {
         </div>
       )}
 
+      {/* Browse vs configured. Mirrors the tab pattern in WebuiModalContent. */}
+      <Tabs
+        activeTab={activeTab}
+        onChange={(key) => setActiveTab((key as 'configured' | 'free' | 'all') || 'configured')}
+        type='line'
+        className='mb-4px settings-model-tabs'
+      >
+        <Tabs.TabPane
+          key='configured'
+          title={
+            <span
+              data-model-tab='configured'
+              className={`inline-flex items-center gap-6px transition-colors ${activeTab === 'configured' ? 'text-t-primary font-600' : 'text-t-secondary'}`}
+            >
+              <SettingTwo theme='outline' size='15' />
+              <span>{t('settings.modelTabs.configured')}</span>
+            </span>
+          }
+        />
+        <Tabs.TabPane
+          key='free'
+          title={
+            <span
+              data-model-tab='free'
+              className={`inline-flex items-center gap-6px transition-colors ${activeTab === 'free' ? 'text-t-primary font-600' : 'text-t-secondary'}`}
+            >
+              <Lightning theme='outline' size='15' />
+              <span>{t('settings.modelTabs.free')}</span>
+            </span>
+          }
+        />
+        <Tabs.TabPane
+          key='all'
+          title={
+            <span
+              data-model-tab='all'
+              className={`inline-flex items-center gap-6px transition-colors ${activeTab === 'all' ? 'text-t-primary font-600' : 'text-t-secondary'}`}
+            >
+              <Components theme='outline' size='15' />
+              <span>{t('settings.modelTabs.all')}</span>
+            </span>
+          }
+        />
+      </Tabs>
+
       {/* Content Area */}
       <AionScrollArea className='flex-1 min-h-0' disableOverflow={isPageMode}>
-        {!data || data.length === 0 ? (
+        {activeTab === 'free' ? (
+          <FreeModelsPanel onConnect={openPrefilledProvider} />
+        ) : activeTab === 'all' ? (
+          <AllProvidersPanel onConnect={openPrefilledProvider} />
+        ) : !data || data.length === 0 ? (
           <div className='flex flex-col items-center justify-center py-40px'>
             <Info theme='outline' size='48' className='text-t-secondary mb-16px' />
             <h3 className='text-16px font-500 text-t-primary mb-8px'>{t('settings.noConfiguredModels')}</h3>

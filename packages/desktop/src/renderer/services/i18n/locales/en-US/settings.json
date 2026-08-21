@@ -1180,5 +1180,35 @@
   "channels.discordBotTokenPlaceholder": "Paste your bot token",
   "channels.discordConnected": "Connected as {{bot}}",
   "channels.discordTokenRequired": "Enter the bot token first.",
-  "channels.discordEnabled": "Discord connected."
+  "channels.discordEnabled": "Discord connected.",
+  "modelTabs": {
+    "configured": "Your providers",
+    "free": "Free models",
+    "all": "All providers"
+  },
+  "freeModels": {
+    "intro": "These providers offer a free tier that works without a credit card. Get a key from the provider, then connect it here - the endpoint is filled in for you.",
+    "getApiKey": "Get API key",
+    "connect": "Connect",
+    "baseUrl": "Base URL",
+    "modelCount": "{{count}} models",
+    "colModel": "Model",
+    "colContext": "Context",
+    "colModality": "Modality",
+    "colRateLimit": "Free tier limit",
+    "checkProtocol": "Check protocol",
+    "checkProtocolHint": "This provider's documented endpoint is its own API shape rather than an OpenAI-compatible one. Connect still works, but you may need to change the protocol after saving.",
+    "manualSetup": "Manual setup",
+    "manualSetupHint": "This provider's base URL contains a placeholder that only you can fill in, so it cannot be configured in one click. Get a key, then add the provider manually.",
+    "clipboardDetected": "Looks like you copied a key for {{provider}}. Use it?",
+    "useKey": "Use key",
+    "dismiss": "Not now"
+  },
+  "allProviders": {
+    "intro": "Every provider this app can configure. Pick one to open the form with its endpoint already set.",
+    "searchPlaceholder": "Search providers",
+    "noMatches": "No provider matches \"{{keyword}}\"",
+    "hasFreeTier": "Has a free tier",
+    "add": "Add"
+  }
 }
