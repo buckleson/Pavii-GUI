@@ -326,7 +326,7 @@ describe('SkillsHubSettings', () => {
     expect(screen.queryByText('Available')).not.toBeInTheDocument();
   });
 
-  it('splits custom and official skills into two tabs, with auto-injected under Official', async () => {
+  it('stacks official, auto-injected and custom skills on one page, official first', async () => {
     mocks.listAvailableSkills.mockResolvedValue([
       {
         name: 'cron',
@@ -362,24 +362,22 @@ describe('SkillsHubSettings', () => {
 
     render(<SkillsHubSettings withWrapper={false} />);
 
-    // Custom tab is active by default: shows the imported skill, not the builtin/auto ones.
+    // Every section is on the same page — no tabs to switch.
     await waitFor(() => expect(screen.getByTestId('my-skill-card-sample-single')).toBeInTheDocument());
-    expect(screen.queryByTestId('auto-skills-section')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('official-skill-card-officecli')).not.toBeInTheDocument();
-
-    // Switch to the Official tab: official builtin list + auto-injected section appear.
-    fireEvent.click(screen.getByTestId('settings-tab-official'));
+    expect(screen.queryByTestId('settings-tab-official')).not.toBeInTheDocument();
     expect(screen.getByTestId('official-skill-card-officecli')).toBeInTheDocument();
     expect(screen.getByTestId('auto-skills-section')).toBeInTheDocument();
     expect(screen.getByText('cron')).toBeInTheDocument();
     // cron-source skills are never listed.
     expect(screen.queryByText('job-generated')).not.toBeInTheDocument();
-    // The custom skill is not in the Official tab.
-    expect(screen.queryByTestId('my-skill-card-sample-single')).not.toBeInTheDocument();
+
+    // Official content is rendered ahead of the user's own imports.
+    const official = screen.getByTestId('official-skills-section');
+    const mine = screen.getByTestId('my-skills-section');
+    expect(official.compareDocumentPosition(mine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('restores the originating tab and preserves it when opening another skill', async () => {
-    searchParamsMock.state = { skillsTab: 'official' };
+  it('opens skill detail without carrying tab state', async () => {
     mocks.listAvailableSkills.mockResolvedValue([
       {
         name: 'officecli',
@@ -395,9 +393,47 @@ describe('SkillsHubSettings', () => {
 
     const card = await screen.findByTestId('official-skill-card-officecli');
     fireEvent.click(card);
-    expect(searchParamsMock.navigate).toHaveBeenCalledWith('/settings/skills/detail/officecli', {
-      state: { skillsTab: 'official' },
-    });
+    expect(searchParamsMock.navigate).toHaveBeenCalledWith('/settings/skills/detail/officecli');
+  });
+
+  it('groups skills under their topic categories', async () => {
+    mocks.listAvailableSkills.mockResolvedValue([
+      {
+        name: 'pdf',
+        description: 'Work with PDF files.',
+        location: '/tmp/builtin-skills/pdf/SKILL.md',
+        is_auto_inject: false,
+        is_custom: false,
+        source: 'builtin',
+      },
+      {
+        name: 'tdd',
+        description: 'Test-driven development.',
+        location: '/tmp/user-skills/tdd',
+        is_custom: true,
+        source: 'custom',
+        display_source: 'official',
+      },
+      {
+        name: 'sample-single',
+        description: 'An unrecognised user import.',
+        location: '/tmp/user-skills/sample-single',
+        is_custom: true,
+        source: 'custom',
+      },
+    ]);
+
+    render(<SkillsHubSettings withWrapper={false} />);
+
+    // Official section carries both a Documents and a Development category…
+    const official = await screen.findByTestId('official-skills-section');
+    expect(official.querySelector('[data-testid="skill-category-documents"]')).toBeTruthy();
+    expect(official.querySelector('[data-testid="skill-category-development"]')).toBeTruthy();
+    expect(screen.getByText('Documents & Slides')).toBeInTheDocument();
+
+    // …while an unmapped user import falls back to Other.
+    const mine = screen.getByTestId('my-skills-section');
+    expect(mine.querySelector('[data-testid="skill-category-other"]')).toBeTruthy();
   });
 
   it('renders the auto-injected skills hint without an Arco popup trigger', async () => {
@@ -414,9 +450,7 @@ describe('SkillsHubSettings', () => {
 
     render(<SkillsHubSettings withWrapper={false} />);
 
-    fireEvent.click(await screen.findByTestId('settings-tab-official'));
-
-    const autoSection = screen.getByTestId('auto-skills-section');
+    const autoSection = await screen.findByTestId('auto-skills-section');
     const nativeHint = Array.from(autoSection.querySelectorAll('[title]')).some(
       (el) =>
         el.getAttribute('title') ===
