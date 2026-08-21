@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.1.55](https://www.pavii.tech/products/Super-Assistant/) (2026-08-21)
+
+### Desktop
+
+#### Features
+
+- **skills:** rename the builtin skills so slash commands read Pavii -- `/aionui-config` is now `/pavii-config`, `/officecli` is now `/pavii-cli`, and the ten document skills are `pavii-cli-*`. The pre-rename names are filtered from the skills list so an existing install does not show both.
+
+#### Notes
+
+- The `officecli` executable the document skills invoke keeps its own name; only the skill wrapper is renamed.
+
+---
+
 ## [2.1.54](https://www.pavii.tech/products/Super-Assistant/) (2026-08-21)
 
 ### Desktop
