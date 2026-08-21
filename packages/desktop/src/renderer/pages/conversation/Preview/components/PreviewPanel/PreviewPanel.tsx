@@ -1007,7 +1007,9 @@ const PreviewPanel: React.FC = () => {
       {/* bg-1 is required: the panel must paint its own background rather than relying on the outer container
           bg-1 is required: the panel paints its own background rather than
           relying on an outer container, so no window backdrop shows through. */}
-      <div className='h-full flex flex-col bg-1'>
+      {/* ph-no-capture: tab titles are file names and the viewers render file
+          contents. */}
+      <div className='h-full flex flex-col bg-1 ph-no-capture'>
         {messageContextHolder}
 
         {/* Confirmation modals */}

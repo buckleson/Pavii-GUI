@@ -153,6 +153,9 @@ export default defineConfig(({ mode }) => {
         'process.env.NODE_ENV': JSON.stringify(mode),
         'process.env.env': JSON.stringify(process.env.env),
         'process.env.SENTRY_DSN': JSON.stringify(process.env.SENTRY_DSN ?? ''),
+        // PostHog analytics — see the renderer define block below.
+        'process.env.POSTHOG_KEY': JSON.stringify(process.env.POSTHOG_KEY ?? ''),
+        'process.env.POSTHOG_DISABLED': JSON.stringify(process.env.POSTHOG_DISABLED ?? ''),
         // Discontinued-build fork flag (see discontinuedBuild.ts). Only AionUi's
         // final `-final` tag build sets IS_DISCONTINUED_BUILD=true in CI.
         'process.env.IS_DISCONTINUED_BUILD': JSON.stringify(process.env.IS_DISCONTINUED_BUILD === 'true'),
@@ -296,6 +299,7 @@ export default defineConfig(({ mode }) => {
               if (id.includes('/katex/')) return 'vendor-katex';
               if (id.includes('/@icon-park/')) return 'vendor-icons';
               if (id.includes('/diff2html/')) return 'vendor-diff';
+              if (id.includes('/posthog-js/') || id.includes('/@posthog/')) return 'vendor-posthog';
               return undefined;
             },
           },
@@ -306,6 +310,10 @@ export default defineConfig(({ mode }) => {
         'process.env.env': JSON.stringify(process.env.env),
         'process.env.AIONUI_MULTI_INSTANCE': JSON.stringify(process.env.AIONUI_MULTI_INSTANCE ?? ''),
         'process.env.SENTRY_DSN': JSON.stringify(process.env.SENTRY_DSN ?? ''),
+        // PostHog analytics. The project key is a public write-only token and
+        // lives in common/analytics/config.ts; these only override or disable it.
+        'process.env.POSTHOG_KEY': JSON.stringify(process.env.POSTHOG_KEY ?? ''),
+        'process.env.POSTHOG_DISABLED': JSON.stringify(process.env.POSTHOG_DISABLED ?? ''),
         // Inject the real AionUi version (root package.json) so renderer code
         // can show it without importing packages/desktop/package.json, which is
         // a workspace-internal placeholder frozen at "0.0.0".
@@ -330,6 +338,7 @@ export default defineConfig(({ mode }) => {
           'classnames',
           'swr',
           'eventemitter3',
+          'posthog-js',
           'katex',
           'diff2html',
           'remark-gfm',

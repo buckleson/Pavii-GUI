@@ -744,7 +744,10 @@ const MessageList: React.FC<{ className?: string; emptySlot?: React.ReactNode }>
   }
 
   return (
-    <div className='relative flex-1 h-full'>
+    // ph-no-capture: every message body, tool output and artifact below this
+    // node is user/model content. PostHog autocapture skips any element with
+    // this class on itself or an ancestor.
+    <div className='relative flex-1 h-full ph-no-capture'>
       {/* Use PreviewGroup to wrap all messages for cross-message image preview */}
       <Image.PreviewGroup actionsLayout={['zoomIn', 'zoomOut', 'originalSize', 'rotateLeft', 'rotateRight']}>
         <ImagePreviewContext.Provider value={{ inPreviewGroup: true }}>

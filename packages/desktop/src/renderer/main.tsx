@@ -32,6 +32,14 @@ if ((window as { electronAPI?: unknown }).electronAPI) {
     .catch(() => {});
 }
 
+// PostHog product analytics. Deliberately outside the electronAPI guard above:
+// the WebUI build serves this same bundle and should report too. Async because
+// the per-install id comes over IPC; capture starts a few ms later, which no
+// event depends on.
+import { initAnalytics } from './services/analytics/posthog';
+
+void initAnalytics();
+
 // Runtime patches must be imported early
 import './utils/ui/runtimePatches';
 

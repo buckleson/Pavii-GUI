@@ -5,6 +5,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { ANALYTICS_EVENTS, track } from '@/renderer/services/analytics/posthog';
 import { isErrorTipMessage, normalizeTextMessageContent, transformMessage } from '@/common/chat/chatLib';
 import type { AvailableCommand, TMessage } from '@/common/chat/chatLib';
 import { mapAcpCommandsToSlashCommands } from '@/common/chat/slash/acpMapping';
@@ -509,6 +510,7 @@ export const useAcpMessage = (
               void ipcBridge.paviiUsage.record
                 .invoke({ tokens: turnInput + turnOutput, backend: 'acp' })
                 .catch(() => {});
+              track(ANALYTICS_EVENTS.turnCompleted, { agent_kind: 'acp', ok: true });
             }
             if (usageData.size > 0) {
               setContextLimit(usageData.size);

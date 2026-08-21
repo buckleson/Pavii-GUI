@@ -13,13 +13,28 @@ const FILE_NAME = 'analytics.json';
 
 type AnalyticsData = { id: string };
 
+const analyticsFilePath = (): string => path.join(app.getPath('userData'), FILE_NAME);
+
+/**
+ * Whether this install has an analytics id yet. Must be called *before*
+ * `getOrCreateAnalyticsId`, which creates the file — it is how `app_opened`
+ * knows it is a first run.
+ */
+export function hasAnalyticsId(): boolean {
+  try {
+    return fs.existsSync(analyticsFilePath());
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Returns a persistent anonymous analytics ID for this installation.
  * Stored in app.getPath('userData')/analytics.json.
  * No personal data is collected — the ID is a random UUID.
  */
 export function getOrCreateAnalyticsId(): string {
-  const file_path = path.join(app.getPath('userData'), FILE_NAME);
+  const file_path = analyticsFilePath();
   try {
     if (fs.existsSync(file_path)) {
       const data = JSON.parse(fs.readFileSync(file_path, 'utf8')) as AnalyticsData;

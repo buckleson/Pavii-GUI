@@ -48,8 +48,12 @@ being piped into a shell.
 ### PostHog download analytics
 
 `.github/workflows/track-downloads.yml` mirrored GitHub's release download
-counters into PostHog on a daily cron under an upstream key. CI-only, no user
+counters into PostHog on a daily cron under an **upstream** key. CI-only, no user
 data, but it is upstream's analytics pipeline aimed at a third party.
+
+Note: the app now ships its own PostHog integration under a Pavii-owned project
+— see "PostHog product analytics" under _Runtime, on every launch_. Removing
+upstream's workflow is unrelated to and unaffected by that.
 
 ## Dormant, and why that holds
 
@@ -78,6 +82,49 @@ which contain the Windows user name.
 fallback to `static.aionui.com` or iOfficeAI reappears.
 
 ## Runtime, on every launch
+
+### PostHog product analytics (added deliberately; read this first)
+
+The app now reports product usage to **PostHog EU** (`https://eu.i.posthog.com`,
+project `249810`) from both processes, on every launch, for every install.
+
+This is a **deliberate reversal** of the posture in the rest of this document,
+made by the product owner. It is **always on: there is no consent prompt and no
+user-facing opt-out.** The only switch is build-time `POSTHOG_DISABLED=1`
+(`common/analytics/config.ts`), which is an engineering control, not a user
+right. The project key is public and write-only, so it lives in source.
+
+What is sent: a per-install random UUID (`getOrCreateAnalyticsId`, shared with
+Sentry), the Pavii account `uid` once signed in (never the email), app version,
+platform, arch, and the curated events in `ANALYTICS_EVENTS` — app open/close,
+backend start failure reason, templatised pageview routes, conversation and turn
+counts, provider/skill/MCP configuration counts.
+
+What cannot be sent, and how that is enforced:
+
+- Autocapture runs in **allowlist** mode (`css_selector_allowlist:
+['[data-ph-capture]']`) with `mask_all_text` and
+  `mask_all_element_attributes` on, so element text and attributes never leave.
+- `ph-no-capture` marks the message list, composer, conversation history rows,
+  file tree, preview panel, every settings page and the shared markdown
+  renderer.
+- `scrubEvent` (`common/analytics/scrub.ts`) is the choke point: it rewrites
+  `$current_url`/`$pathname`/`$initial_*` to `app://pavii/<route>` — without it
+  the packaged `file://` build would ship the OS user name on every event —
+  drops non-allowlisted property keys, and redacts API-key shapes, absolute
+  paths, emails and over-long values. It fails closed: any throw drops the
+  event.
+- `disable_external_dependency_loading` stops PostHog pulling remote script into
+  the Electron renderer.
+
+Proven by `tests/unit/analytics/` (44 tests), of which
+`scrub.test.ts` is the actual guarantee — it asserts that a hostile event
+carrying a key, a Windows path, a prompt and an email survives with none of
+those substrings intact.
+
+**Outstanding, and not a code problem:** there is no privacy policy on the
+marketing site and no in-app disclosure. Always-on capture to an EU endpoint
+without either is the gap to close before wide distribution.
 
 ### The update check (this document previously missed it)
 

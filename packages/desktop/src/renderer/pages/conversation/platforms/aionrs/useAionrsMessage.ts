@@ -5,6 +5,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { ANALYTICS_EVENTS, track } from '@/renderer/services/analytics/posthog';
 import { isErrorTipMessage, transformMessage } from '@/common/chat/chatLib';
 import type { IResponseMessage } from '@/common/adapter/ipcBridge';
 import type { TChatConversation, TokenUsageData } from '@/common/config/storage';
@@ -285,6 +286,7 @@ export const useAionrsMessage = (
               void ipcBridge.paviiUsage.record
                 .invoke({ tokens: newTokenUsage.total_tokens, backend: 'aionrs' })
                 .catch(() => {});
+              track(ANALYTICS_EVENTS.turnCompleted, { agent_kind: 'aionrs', ok: true });
             }
             setStreamRunning(false);
             setWaitingResponse(false);

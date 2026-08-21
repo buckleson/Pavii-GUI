@@ -9,6 +9,7 @@ import { type ChatFileRef, chatFileRefPath } from '@/common/types/chatFile';
 import type { IMcpServer, TProviderWithModel } from '@/common/config/storage';
 import { toSessionMcpServer } from '@/renderer/hooks/mcp/catalog';
 import { emitter } from '@/renderer/utils/emitter';
+import { ANALYTICS_EVENTS, track } from '@/renderer/services/analytics/posthog';
 import { updateWorkspaceTime } from '@/renderer/utils/workspace/workspaceHistory';
 import { Message } from '@arco-design/web-react';
 import { useCallback, useRef } from 'react';
@@ -194,6 +195,12 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
           return;
         }
 
+        track(ANALYTICS_EVENTS.conversationStarted, {
+          agent_kind: 'aionrs',
+          has_files: files.length > 0,
+          mcp_count: selectedUserMcpServerIdsToSend?.length ?? 0,
+        });
+
         if (isCustomWorkspace) {
           updateWorkspaceTime(finalWorkspace);
         }
@@ -242,6 +249,12 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
         console.error('Failed to create ACP conversation - conversation object is null or missing id');
         return;
       }
+
+      track(ANALYTICS_EVENTS.conversationStarted, {
+        agent_kind: 'acp',
+        has_files: files.length > 0,
+        mcp_count: selectedUserMcpServerIdsToSend?.length ?? 0,
+      });
 
       if (isCustomWorkspace) {
         updateWorkspaceTime(finalWorkspace);

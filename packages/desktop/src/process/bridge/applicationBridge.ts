@@ -236,6 +236,14 @@ export function initApplicationBridge(): void {
     return restartApplication(app);
   });
 
+  // Electron-only: the id file lives under app.getPath('userData'). WebUI
+  // browser mode has no provider for this and falls back to PostHog's own
+  // anonymous id.
+  ipcBridge.application.analyticsId.provider(async () => {
+    const { getOrCreateAnalyticsId } = await import('../utils/analyticsId');
+    return getOrCreateAnalyticsId();
+  });
+
   ipcBridge.application.isDevToolsOpened.provider(() => {
     if (mainWindowRef && !mainWindowRef.isDestroyed()) {
       return Promise.resolve(mainWindowRef.webContents.isDevToolsOpened());
