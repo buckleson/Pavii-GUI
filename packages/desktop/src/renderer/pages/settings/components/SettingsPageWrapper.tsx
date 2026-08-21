@@ -143,6 +143,11 @@ const SettingsPageWrapper: React.FC<SettingsPageWrapperProps> = ({ children, cla
   // through the gap above it.
   const containerClass = classNames(
     'settings-page-wrapper w-full min-h-full box-border overflow-y-auto',
+    // ph-no-capture covers every settings page in one place: provider API keys,
+    // MCP URLs and headers, agent environment variables, workspace directories,
+    // user-imported skill names. Navigation is instrumented explicitly with
+    // data-ph-capture on the sider instead.
+    'ph-no-capture',
     isMobile ? 'px-16px' : 'px-12px md:px-40px',
     className
   );

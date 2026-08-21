@@ -143,7 +143,9 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
     const rehypePlugins = useMemo(() => (allowHtml ? [rehypeRaw, rehypeKatex] : [rehypeKatex]), [allowHtml]);
 
     return (
-      <div className={classNames('relative w-full', className)}>
+      // ph-no-capture: the shared renderer for message bodies, skill docs and
+      // file previews — always user or model content.
+      <div className={classNames('relative w-full ph-no-capture', className)}>
         <ShadowView>
           <div ref={onRef} className='markdown-shadow-body'>
             <ReactMarkdown

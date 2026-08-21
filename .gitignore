@@ -250,6 +250,13 @@ resources/*.png
 resources/**/*.gif
 resources/**/*.mp4
 resources/**/*.png
+# ...but not the shipped brand icons. This rule is aimed at screenshots and
+# demo media; it also swept up the app icons, so a fresh clone had no
+# `resources/app.png` — which is the Linux icon in electron-builder.yml and is
+# asserted by tests/unit/bootstrap/brandAssets.test.ts. Both failed on every CI
+# run until these negations were added.
+!resources/app.png
+!resources/app_dev.png
 .workspaces/
 dist-web-cli/
 

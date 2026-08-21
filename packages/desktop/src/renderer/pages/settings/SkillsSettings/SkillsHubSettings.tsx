@@ -13,6 +13,7 @@ import SettingsPageHeader from '../components/SettingsPageHeader';
 import TalkToButlerButton from '@/renderer/components/base/TalkToButlerButton';
 import { AionSearchInput } from '@/renderer/components/base';
 import { buildSkillImportNotice, getSkillImportErrorMessage } from './skillImportMessages';
+import { SKILL_CATEGORY_LABELS, groupSkillsByCategory } from './skillCategories';
 
 // Skill info type
 interface SkillInfo {
@@ -127,19 +128,30 @@ const buildImportHistoryGroups = (records: SkillImportRecord[]): SkillImportHist
 const hasImportedRecords = (group: SkillImportHistoryGroup): boolean =>
   group.records.some((r) => r.status !== 'failed');
 
+/** Section heading shared by the Official / Extension / Auto-injected / your-skills sections. */
+const sectionHeading = (
+  title: React.ReactNode,
+  count: number,
+  countClass: string,
+  icon?: React.ReactNode,
+  hint?: React.ReactNode
+) => (
+  <div className='flex items-center gap-10px mb-12px'>
+    {icon}
+    <span className='text-14px font-bold text-t-primary'>{title}</span>
+    {hint ? (
+      <span className='inline-flex shrink-0' title={typeof hint === 'string' ? hint : undefined}>
+        <Help theme='outline' size={14} className='text-t-tertiary hover:text-t-secondary cursor-help shrink-0' />
+      </span>
+    ) : null}
+    <span className={`text-12px px-10px py-2px rd-[100px] font-medium ${countClass}`}>{count}</span>
+  </div>
+);
+
 interface SkillsHubSettingsProps {
   /** When false, renders without SettingsPageWrapper — useful for embedding in a tab */
   withWrapper?: boolean;
 }
-
-type SkillsTab = 'custom' | 'official';
-
-const getSkillsTabFromState = (state: unknown): SkillsTab => {
-  if (typeof state === 'object' && state !== null && 'skillsTab' in state && state.skillsTab === 'official') {
-    return 'official';
-  }
-  return 'custom';
-};
 
 const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = true }) => {
   const { t } = useTranslation();
@@ -158,8 +170,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
   const [search_query, setSearchQuery] = useState('');
   const [importHistory, setImportHistory] = useState<SkillImportRecord[]>([]);
   const [importLimits, setImportLimits] = useState<SkillImportLimits | null>(null);
-  const [activeTab, setActiveTab] = useState<SkillsTab>(() => getSkillsTabFromState(location.state));
-  // Batch management (Custom tab only): multi-select skills for bulk deletion.
+  // Batch management ("Your skills" section only): multi-select for bulk deletion.
   const [batchMode, setBatchMode] = useState(false);
   const [selectedSkillNames, setSelectedSkillNames] = useState<Set<string>>(new Set());
   // Assistant catalog for the "used by" avatar stacks on skill cards.
@@ -167,19 +178,19 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
 
   const openSkillDetail = useCallback(
     (skillName: string) => {
-      void navigate(`/settings/skills/detail/${encodeURIComponent(skillName)}`, { state: { skillsTab: activeTab } });
+      void navigate(`/settings/skills/detail/${encodeURIComponent(skillName)}`);
     },
-    [activeTab, navigate]
+    [navigate]
   );
 
-  // "Custom" tab: only user-imported skills (the bundled Pavii pack is
-  // display-tagged official and lives on the Official tab instead).
+  // "Your skills": only user-imported skills (the bundled Pavii pack is
+  // display-tagged official and shows in the Official section instead).
   const mySkills = useMemo(
     () => availableSkills.filter((s) => s.source === 'custom' && s.display_source !== 'official'),
     [availableSkills]
   );
-  // "Official" tab: built-in non-auto-injected skills plus the bundled pack,
-  // with extension skills and auto-injected skills kept as separate read-only sections.
+  // "Official": built-in non-auto-injected skills plus the bundled pack, with
+  // extension skills and auto-injected skills kept as separate read-only sections.
   const officialSkills = useMemo(
     () =>
       availableSkills.filter((s) => (s.source === 'builtin' && !s.is_auto_inject) || s.display_source === 'official'),
@@ -230,16 +241,6 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
-
-  // When deep-linked to a specific skill, open the tab that actually contains it
-  // so the highlight/scroll below can find its rendered card.
-  useEffect(() => {
-    if (!highlightName || loading) return;
-    const target = availableSkills.find((s) => s.name === highlightName);
-    if (target) {
-      setActiveTab(target.source === 'custom' && target.display_source !== 'official' ? 'custom' : 'official');
-    }
-  }, [highlightName, loading, availableSkills]);
 
   // Scroll to and highlight a skill when navigated with ?highlight=skillName
   useEffect(() => {
@@ -710,6 +711,37 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
     />
   );
 
+  const emptyListNotice = (
+    <div className='text-center text-t-secondary text-13px py-32px bg-fill-1 rd-12px border border-border-2 border-dashed'>
+      {t('settings.skillsHub.noSearchResults', { defaultValue: 'No matching skills.' })}
+    </div>
+  );
+
+  /**
+   * Shared list container with the skills grouped under topic headings. The
+   * catalog is far too long to scan as one flat run, so both the Official and
+   * "Your skills" lists render through this.
+   */
+  const categorizedList = (skills: SkillInfo[], renderCard: (skill: SkillInfo) => React.ReactNode) => (
+    <div className='flex flex-col gap-8px rounded-12px border border-border-2 bg-2 p-8px md:rounded-16px md:p-10px'>
+      {skills.length === 0
+        ? emptyListNotice
+        : groupSkillsByCategory(skills).map((group) => (
+            <div key={group.id} data-testid={`skill-category-${group.id}`} className='flex flex-col gap-8px'>
+              <div className='flex items-center gap-8px px-6px pt-4px'>
+                <span className='text-12px font-semibold uppercase tracking-wide text-t-tertiary'>
+                  {t(SKILL_CATEGORY_LABELS[group.id].key, {
+                    defaultValue: SKILL_CATEGORY_LABELS[group.id].defaultValue,
+                  })}
+                </span>
+                <span className='text-11px text-t-quaternary'>{group.skills.length}</span>
+              </div>
+              {group.skills.map(renderCard)}
+            </div>
+          ))}
+    </div>
+  );
+
   // Read-only section wrapper (extension / auto-injected) using the shared list container.
   const readonlySection = (
     testId: string,
@@ -722,24 +754,9 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
     hint?: React.ReactNode
   ) => (
     <div data-testid={testId}>
-      <div className='flex items-center gap-10px mb-12px'>
-        {icon}
-        <span className='text-14px font-bold text-t-primary'>{title}</span>
-        {hint ? (
-          <span className='inline-flex shrink-0' title={typeof hint === 'string' ? hint : undefined}>
-            <Help theme='outline' size={14} className='text-t-tertiary hover:text-t-secondary cursor-help shrink-0' />
-          </span>
-        ) : null}
-        <span className={`text-12px px-10px py-2px rd-[100px] font-medium ${countClass}`}>{count}</span>
-      </div>
+      {sectionHeading(title, count, countClass, icon, hint)}
       <div className='flex flex-col gap-8px rounded-12px border border-border-2 bg-2 p-8px md:rounded-16px md:p-10px'>
-        {skills.length > 0 ? (
-          skills.map((skill) => renderReadonlySkillCard(skill, variant))
-        ) : (
-          <div className='text-center text-t-secondary text-13px py-32px bg-fill-1 rd-12px border border-border-2 border-dashed'>
-            {t('settings.skillsHub.noSearchResults', { defaultValue: 'No matching skills.' })}
-          </div>
-        )}
+        {skills.length > 0 ? skills.map((skill) => renderReadonlySkillCard(skill, variant)) : emptyListNotice}
       </div>
     </div>
   );
@@ -758,9 +775,14 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
     });
   };
 
-  // ======== Custom tab ========
+  // ======== Your skills (user imports) ========
   const customPane = (
     <div data-testid='my-skills-section' className='flex flex-col gap-12px'>
+      {sectionHeading(
+        t('settings.skillsHub.mySkillsTitle', { defaultValue: 'My Skills' }),
+        mySkills.length,
+        'bg-fill-2 text-t-secondary'
+      )}
       <div className='flex items-start justify-between gap-12px'>
         <p className='m-0 flex-1 min-w-0 text-12px leading-relaxed text-t-tertiary'>
           {t('settings.skillsHub.customHint', {
@@ -835,92 +857,85 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
         </div>
       )}
       {mySkills.length > 0 ? (
-        <div className='flex flex-col gap-8px rounded-12px border border-border-2 bg-2 p-8px md:rounded-16px md:p-10px'>
-          {filteredSkills.length === 0 && (
-            <div className='text-center text-t-secondary text-13px py-32px bg-fill-1 rd-12px border border-border-2 border-dashed'>
-              {t('settings.skillsHub.noSearchResults', { defaultValue: 'No matching skills.' })}
+        categorizedList(filteredSkills, (skill) => (
+          <div
+            key={skill.name}
+            data-testid={`my-skill-card-${normalizeTestId(skill.name)}`}
+            ref={(el) => {
+              skillRefs.current[skill.name] = el;
+            }}
+            onClick={batchMode ? () => toggleSkillSelected(skill.name) : () => openSkillDetail(skill.name)}
+            className={`group flex flex-col sm:flex-row gap-16px p-14px border rd-12px transition-all duration-200 cursor-pointer ${highlightedSkill === skill.name ? 'border-primary-5 bg-primary-1' : selectedSkillNames.has(skill.name) && batchMode ? 'border-transparent bg-[rgba(var(--primary-6),0.06)]' : 'border-transparent bg-base hover:border-border-2'}`}
+          >
+            {batchMode && (
+              <div className='shrink-0 flex items-center sm:self-center'>
+                <Checkbox
+                  data-testid={`checkbox-skill-${normalizeTestId(skill.name)}`}
+                  checked={selectedSkillNames.has(skill.name)}
+                  onChange={() => toggleSkillSelected(skill.name)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            )}
+            <div className='shrink-0 flex items-start sm:mt-2px'>
+              <div
+                className={`w-40px h-40px rd-10px flex items-center justify-center font-bold text-16px shadow-sm text-transform-uppercase ${getAvatarColorClass(skill.name)}`}
+              >
+                {(skill.display_name ?? skill.name).charAt(0).toUpperCase()}
+              </div>
             </div>
-          )}
-          {filteredSkills.map((skill) => (
-            <div
-              key={skill.name}
-              data-testid={`my-skill-card-${normalizeTestId(skill.name)}`}
-              ref={(el) => {
-                skillRefs.current[skill.name] = el;
-              }}
-              onClick={batchMode ? () => toggleSkillSelected(skill.name) : () => openSkillDetail(skill.name)}
-              className={`group flex flex-col sm:flex-row gap-16px p-14px border rd-12px transition-all duration-200 cursor-pointer ${highlightedSkill === skill.name ? 'border-primary-5 bg-primary-1' : selectedSkillNames.has(skill.name) && batchMode ? 'border-transparent bg-[rgba(var(--primary-6),0.06)]' : 'border-transparent bg-base hover:border-border-2'}`}
-            >
-              {batchMode && (
-                <div className='shrink-0 flex items-center sm:self-center'>
-                  <Checkbox
-                    data-testid={`checkbox-skill-${normalizeTestId(skill.name)}`}
-                    checked={selectedSkillNames.has(skill.name)}
-                    onChange={() => toggleSkillSelected(skill.name)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
+
+            <div className='flex-1 min-w-0 flex flex-col justify-center gap-4px'>
+              <h3 className='text-14px font-semibold text-t-primary/90 truncate m-0'>
+                {skill.display_name ?? skill.name}
+              </h3>
+              {skill.description && (
+                <p className='text-13px text-t-secondary leading-relaxed line-clamp-2 m-0' title={skill.description}>
+                  {skill.description}
+                </p>
               )}
-              <div className='shrink-0 flex items-start sm:mt-2px'>
-                <div
-                  className={`w-40px h-40px rd-10px flex items-center justify-center font-bold text-16px shadow-sm text-transform-uppercase ${getAvatarColorClass(skill.name)}`}
-                >
-                  {(skill.display_name ?? skill.name).charAt(0).toUpperCase()}
-                </div>
-              </div>
+            </div>
 
-              <div className='flex-1 min-w-0 flex flex-col justify-center gap-4px'>
-                <h3 className='text-14px font-semibold text-t-primary/90 truncate m-0'>
-                  {skill.display_name ?? skill.name}
-                </h3>
-                {skill.description && (
-                  <p className='text-13px text-t-secondary leading-relaxed line-clamp-2 m-0' title={skill.description}>
-                    {skill.description}
-                  </p>
-                )}
-              </div>
-
-              {!batchMode && (
-                <div className='shrink-0 sm:self-center flex items-center justify-end gap-10px mt-12px sm:mt-0 pl-4px'>
-                  <SkillUsedByStack assistants={getAssistantsUsingSkill(skill.name, assistantCatalog ?? [])} />
-                  <button
-                    data-testid={`btn-delete-${normalizeTestId(skill.name)}`}
-                    className='p-8px hover:bg-danger-1 hover:text-danger-6 text-t-tertiary rd-6px outline-none flex items-center justify-center border border-transparent cursor-pointer transition-colors shadow-sm bg-base sm:bg-transparent sm:shadow-none opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      Modal.confirm({
-                        title: t('settings.skillsHub.deleteConfirmTitle', { defaultValue: 'Delete Skill' }),
-                        content: (
+            {!batchMode && (
+              <div className='shrink-0 sm:self-center flex items-center justify-end gap-10px mt-12px sm:mt-0 pl-4px'>
+                <SkillUsedByStack assistants={getAssistantsUsingSkill(skill.name, assistantCatalog ?? [])} />
+                <button
+                  data-testid={`btn-delete-${normalizeTestId(skill.name)}`}
+                  className='p-8px hover:bg-danger-1 hover:text-danger-6 text-t-tertiary rd-6px outline-none flex items-center justify-center border border-transparent cursor-pointer transition-colors shadow-sm bg-base sm:bg-transparent sm:shadow-none opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    Modal.confirm({
+                      title: t('settings.skillsHub.deleteConfirmTitle', { defaultValue: 'Delete Skill' }),
+                      content: (
+                        <div>
                           <div>
-                            <div>
-                              {t('settings.skillsHub.deleteConfirmContent', {
-                                name: skill.display_name ?? skill.name,
-                                defaultValue: `Are you sure you want to delete "${skill.display_name ?? skill.name}"?`,
-                              })}
-                            </div>
-                            <div className='text-12px text-t-tertiary mt-8px'>
-                              {t('settings.skillsHub.deleteAffectsNewOnlyHint', {
-                                defaultValue:
-                                  'Deleting only affects new conversations. Skills already selected in existing conversations keep working.',
-                              })}
-                            </div>
+                            {t('settings.skillsHub.deleteConfirmContent', {
+                              name: skill.display_name ?? skill.name,
+                              defaultValue: `Are you sure you want to delete "${skill.display_name ?? skill.name}"?`,
+                            })}
                           </div>
-                        ),
-                        okButtonProps: { status: 'danger' },
-                        okText: t('common.delete', { defaultValue: 'Delete' }),
-                        onOk: () => void handleDelete(skill.name),
-                        wrapClassName: 'modal-delete-skill',
-                      });
-                    }}
-                    title={t('common.delete', { defaultValue: 'Delete' })}
-                  >
-                    <Delete size={16} />
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+                          <div className='text-12px text-t-tertiary mt-8px'>
+                            {t('settings.skillsHub.deleteAffectsNewOnlyHint', {
+                              defaultValue:
+                                'Deleting only affects new conversations. Skills already selected in existing conversations keep working.',
+                            })}
+                          </div>
+                        </div>
+                      ),
+                      okButtonProps: { status: 'danger' },
+                      okText: t('common.delete', { defaultValue: 'Delete' }),
+                      onOk: () => void handleDelete(skill.name),
+                      wrapClassName: 'modal-delete-skill',
+                    });
+                  }}
+                  title={t('common.delete', { defaultValue: 'Delete' })}
+                >
+                  <Delete size={16} />
+                </button>
+              </div>
+            )}
+          </div>
+        ))
       ) : (
         <div className='text-center text-t-secondary text-13px py-40px bg-fill-1 rd-12px border border-border-2 border-dashed'>
           {loading
@@ -933,26 +948,24 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
     </div>
   );
 
-  // ======== Official tab (official builtin list + extension + auto-injected sections) ========
+  // ======== Official section (official list + extension + auto-injected) ========
   const officialPane = (
     <div className='flex flex-col gap-24px'>
       <div data-testid='official-skills-section'>
+        {sectionHeading(
+          t('settings.skillsHub.officialSkillsTitle', { defaultValue: 'Official Skills' }),
+          officialSkills.length,
+          'bg-[rgba(var(--primary-6),0.08)] text-primary-6'
+        )}
         <p className='m-0 mb-12px text-12px leading-relaxed text-t-tertiary'>
           {t('settings.skillsHub.officialHint', {
             defaultValue: 'Built-in skills maintained by Pavii.Ai — read-only and updated with each release.',
           })}
         </p>
         {officialSkills.length > 0 ? (
-          <div className='flex flex-col gap-8px rounded-12px border border-border-2 bg-2 p-8px md:rounded-16px md:p-10px'>
-            {filteredOfficialSkills.length === 0 && (
-              <div className='text-center text-t-secondary text-13px py-32px bg-fill-1 rd-12px border border-border-2 border-dashed'>
-                {t('settings.skillsHub.noSearchResults', { defaultValue: 'No matching skills.' })}
-              </div>
-            )}
-            {filteredOfficialSkills.map((skill) =>
-              renderReadonlySkillCard(skill, 'official', `official-skill-card-${normalizeTestId(skill.name)}`)
-            )}
-          </div>
+          categorizedList(filteredOfficialSkills, (skill) =>
+            renderReadonlySkillCard(skill, 'official', `official-skill-card-${normalizeTestId(skill.name)}`)
+          )
         ) : (
           <div className='text-center text-t-secondary text-13px py-40px bg-fill-1 rd-12px border border-border-2 border-dashed'>
             {loading
@@ -993,7 +1006,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
   const mainContent = isImportHistoryView ? (
     importHistoryContent
   ) : (
-    <div className='flex flex-col gap-16px'>
+    <div className='flex flex-col gap-24px'>
       <SettingsPageHeader
         data-testid='skills-header'
         title={t('settings.skills', { defaultValue: 'Skills' })}
@@ -1025,25 +1038,10 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
             />
           </>
         }
-        tabs={[
-          {
-            key: 'custom',
-            label: t('settings.skillsHub.tabCustom', { defaultValue: 'Custom' }),
-            count: mySkills.length,
-          },
-          {
-            key: 'official',
-            label: t('settings.skillsHub.tabOfficial', { defaultValue: 'Official' }),
-            count: officialSkills.length + extensionSkills.length + builtinAutoSkills.length,
-          },
-        ]}
-        activeTab={activeTab}
-        onTabChange={(key) => {
-          setActiveTab(key as 'custom' | 'official');
-          exitBatchMode();
-        }}
       />
-      {activeTab === 'custom' ? customPane : officialPane}
+      {/* Official content first, then the user's own imports. */}
+      {officialPane}
+      {customPane}
     </div>
   );
 

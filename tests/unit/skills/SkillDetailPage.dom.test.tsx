@@ -248,13 +248,12 @@ describe('SkillDetailPage', () => {
     });
   });
 
-  it('back button restores the originating skills tab', async () => {
-    mocks.locationState.skillsTab = 'official';
+  it('back button returns to the single skills page', async () => {
     render(<SkillDetailPage />);
 
     await waitFor(() => expect(screen.getByTestId('btn-back-skill-detail')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('btn-back-skill-detail'));
-    expect(mocks.navigate).toHaveBeenCalledWith('/settings/skills', { state: { skillsTab: 'official' } });
+    expect(mocks.navigate).toHaveBeenCalledWith('/settings/skills');
   });
 
   it('opens the skill editing flow in chat with the skill name prefilled', async () => {

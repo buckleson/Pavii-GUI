@@ -9,6 +9,12 @@
 import './process/utils/configureChromium';
 import { installGpuCrashHandler } from './process/utils/gpuRecovery';
 import { captureBackendStartupFailure, initSentry, scheduleStartupLogReport, setSentryDeviceId } from './sentry';
+import {
+  captureAppClosed,
+  captureAppOpened,
+  initAnalytics as initProductAnalytics,
+  shutdownAnalytics,
+} from './process/services/analyticsService';
 
 initSentry();
 
@@ -801,6 +807,9 @@ const handleAppReady = async (): Promise<void> => {
 
   setSentryDeviceId();
 
+  initProductAnalytics();
+  captureAppOpened();
+
   try {
     await initializeProcess();
     rendererInitialLanguage = ProcessConfig.getSync('language') ?? null;
@@ -1215,6 +1224,14 @@ installQuitCleanup({
   logInfo: console.log,
   logWarn: console.warn,
   logError: console.error,
+});
+
+// Best-effort: quit is not held open for analytics, so `app_closed` is lost if
+// the process exits before the flush lands. Session counts are therefore a
+// lower bound, not exact.
+app.on('before-quit', () => {
+  captureAppClosed();
+  void shutdownAnalytics();
 });
 
 app.on('will-quit', () => {

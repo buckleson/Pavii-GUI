@@ -1,6 +1,6 @@
 {
   "name": "pavii-ai",
-  "version": "2.1.58",
+  "version": "2.1.59",
   "description": "Pavii.Ai — your personal AI workspace",
   "keywords": [],
   "license": "Apache-2.0",
@@ -147,6 +147,8 @@
     "officeparser": "^5.2.2",
     "openai": "^5.12.2",
     "postcss": "^8.5.8",
+    "posthog-js": "^1.418.10",
+    "posthog-node": "^5.50.0",
     "pptx2json": "^0.0.10",
     "process": "^0.11.10",
     "qrcode-terminal": "^0.12.0",

@@ -637,6 +637,13 @@ export const application = {
     })
   ),
   getPath: bridge.buildProvider<string, { name: 'desktop' | 'home' | 'downloads' }>('app.get-path'),
+  /**
+   * Per-install anonymous UUID (`userData/analytics.json`), shared by Sentry and
+   * PostHog so renderer and main-process events belong to one install. Never a
+   * personal identifier; absent in WebUI browser mode, where the renderer falls
+   * back to PostHog's own anonymous id.
+   */
+  analyticsId: bridge.buildProvider<string, void>('app.analytics-id'),
   // Electron-local: copies cache dir + persists to ProcessEnv, paired with restart.
   // The backend reads AIONUI_*_DIR env vars on boot, so it does not own this config.
   updateSystemInfo: bridge.buildProvider<void, { cacheDir: string; workDir: string; logDir?: string }>(

@@ -331,7 +331,8 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
     : {};
 
   return (
-    <div className='h-full' tabIndex={-1} ref={containerRef} {...containerProps}>
+    // ph-no-capture: the tree renders workspace file and folder names.
+    <div className='h-full ph-no-capture' tabIndex={-1} ref={containerRef} {...containerProps}>
       {/* `workspace-tree` opts into the full-row VSCode-style hover + selected
           backgrounds in arco-override.css (selected = --color-fill-3), so a
           revealed/selected node has a clearly visible highlight. */}

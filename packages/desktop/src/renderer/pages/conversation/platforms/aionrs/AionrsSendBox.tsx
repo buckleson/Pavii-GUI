@@ -5,6 +5,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { ANALYTICS_EVENTS, track } from '@/renderer/services/analytics/posthog';
 import type { IConversationMcpStatus } from '@/common/config/storage';
 import AgentModeSelector from '@/renderer/components/agent/AgentModeSelector';
 import CommandQueuePanel from '@/renderer/components/chat/CommandQueuePanel';
@@ -278,6 +279,7 @@ const AionrsSendBox: React.FC<{
           conversation_id,
           files,
         });
+        track(ANALYTICS_EVENTS.messageSent, { agent_kind: 'aionrs', has_files: files.length > 0 });
         setActiveMsgId(res.msg_id);
         markSendAccepted(res.turn_id, res.runtime, res.msg_id);
         emitter.emit('chat.history.refresh');

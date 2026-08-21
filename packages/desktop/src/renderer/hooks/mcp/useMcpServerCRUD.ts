@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { Message } from '@arco-design/web-react';
 import { useTranslation } from 'react-i18next';
 import { mcpService } from '@/common/adapter/ipcBridge';
+import { ANALYTICS_EVENTS, track } from '@/renderer/services/analytics/posthog';
 import { isBackendHttpError } from '@/common/adapter/httpBridge';
 import type { IMcpServer } from '@/common/config/storage';
 import { toBackendMcpPayload } from './catalog';
@@ -53,6 +54,8 @@ export const useMcpServerCRUD = (
 
         const nextServer = mergeServerState(persisted, serverData);
         await saveMcpServers((prevServers) => replaceUserServer(prevServers, nextServer));
+        // Transport only — server names and URLs are user-authored and never sent.
+        track(ANALYTICS_EVENTS.mcpConnected, { transport: nextServer.transport?.type ?? 'unknown' });
         return nextServer;
       } catch (error) {
         Message.error(getMcpRequestErrorMessage(error, t('settings.mcpImportFailed')));

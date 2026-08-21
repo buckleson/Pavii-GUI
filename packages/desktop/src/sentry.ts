@@ -10,6 +10,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { getOrCreateAnalyticsId } from './process/utils/analyticsId';
+import { ANALYTICS_EVENTS } from './common/analytics/config';
+import { captureAnalytics } from './process/services/analyticsService';
 import { readAutoUpdateDiagnostics } from './process/services/autoUpdateDiagnostics';
 import { collectBackendInstallDiagnostics } from './process/startup/backendInstallDiagnostics';
 import { classifyBackendStartupFailure } from './process/startup/backendStartupFailure';
@@ -240,6 +242,10 @@ export async function captureBackendStartupFailure(error: unknown): Promise<void
   const capturedError = error instanceof Error ? error : new Error(String(error));
   const details = getBackendStartupDetails(error);
   const failureInfo = classifyBackendStartupFailure(error);
+  // Mirror the classified reason into product analytics. Reported here rather
+  // than at the six call sites so both sinks share one classification, and
+  // reason-only so no path or error text leaves through this route.
+  captureAnalytics(ANALYTICS_EVENTS.backendStartFailed, { reason: failureInfo.reason });
   const installDiagnostics = collectBackendInstallDiagnostics(details, {
     appVersion: app.getVersion(),
     arch: process.arch,

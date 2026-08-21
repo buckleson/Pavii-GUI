@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import AppLoader from '@renderer/components/layout/AppLoader';
 import { useAuth } from '@renderer/hooks/context/AuthContext';
+import PostHogRouteTracker from '@renderer/services/analytics/PostHogRouteTracker';
 import { TEAM_MODE_ENABLED } from '@/common/config/constants';
 const Conversation = React.lazy(() => import('@renderer/pages/conversation'));
 const Guid = React.lazy(() => import('@renderer/pages/guid'));
@@ -60,6 +61,10 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
 
   return (
     <HashRouter>
+      {/* Inside the router so it can read useLocation; emits the templatised
+          route as $pageview (PostHog's own capture_pageview is off — see
+          services/analytics/posthog.ts). */}
+      <PostHogRouteTracker />
       <Routes>
         <Route
           path='/login'

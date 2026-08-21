@@ -22,6 +22,17 @@ import {
   registerManagedToolsOnPath,
 } from '@/process/startup/ensureOpencode';
 
+/**
+ * Absolute fixture path that survives PATH splitting on every platform.
+ *
+ * A Windows drive letter contains `:`, which is the PATH delimiter on
+ * linux/darwin — so `D:/pavii-data` splits into `D` and `/pavii-data` there,
+ * and any assertion that round-trips through `split(delimiter)` fails. The
+ * drive-letter form is only safe on win32.
+ */
+const absFixture = (...segments: string[]): string =>
+  process.platform === 'win32' ? join('D:', ...segments) : join('/', ...segments);
+
 describe('getManagedToolsDir', () => {
   it("joins the data dir with 'managed-tools'", () => {
     expect(getManagedToolsDir(join('D:', 'data'))).toBe(join('D:', 'data', 'managed-tools'));
@@ -43,20 +54,20 @@ describe('getManagedToolsPathEntries', () => {
 });
 
 describe('registerManagedToolsOnPath', () => {
-  const dataDir = join('D:', 'pavii-data');
+  const dataDir = absFixture('pavii-data');
   // The function reads process.platform internally; derive the expected entry
   // the same way so the test holds on every platform.
   const [expectedEntry] = getManagedToolsPathEntries(dataDir);
 
   it('prepends the missing entry to an existing PATH', () => {
-    const original = join('C:', 'somewhere', 'bin');
+    const original = absFixture('somewhere', 'bin');
     const env: NodeJS.ProcessEnv = { PATH: original };
     registerManagedToolsOnPath(dataDir, env);
     expect(env.PATH).toBe([expectedEntry, original].join(delimiter));
   });
 
   it('is idempotent — a second call adds no duplicate entries', () => {
-    const env: NodeJS.ProcessEnv = { PATH: join('C:', 'somewhere', 'bin') };
+    const env: NodeJS.ProcessEnv = { PATH: absFixture('somewhere', 'bin') };
     registerManagedToolsOnPath(dataDir, env);
     const afterFirst = env.PATH;
     registerManagedToolsOnPath(dataDir, env);
@@ -66,7 +77,7 @@ describe('registerManagedToolsOnPath', () => {
   });
 
   it('leaves PATH untouched when the entry is already present mid-list', () => {
-    const path = [join('C:', 'first'), expectedEntry, join('C:', 'last')].join(delimiter);
+    const path = [absFixture('first'), expectedEntry, absFixture('last')].join(delimiter);
     const env: NodeJS.ProcessEnv = { PATH: path };
     registerManagedToolsOnPath(dataDir, env);
     expect(env.PATH).toBe(path);
