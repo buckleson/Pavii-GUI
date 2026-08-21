@@ -111,11 +111,13 @@ const ModelModalContent: React.FC = () => {
   const isPageMode = viewMode === 'page';
   const [collapseKey, setCollapseKey] = useState<Record<string, boolean>>({});
   /**
-   * Which view of the Models page is showing. `configured` is the default and is
-   * the page as it was before browsing was added -- the existing flow must not
-   * move for anyone who already has providers set up.
+   * Which view of the Models page is showing.
+   *
+   * Opens on `free`: the page's job for someone with nothing set up is to show
+   * them what they can get, and a free tier needs no card. Configured providers
+   * are one click away on the third tab and are otherwise untouched.
    */
-  const [activeTab, setActiveTab] = useState<'configured' | 'free' | 'all'>('configured');
+  const [activeTab, setActiveTab] = useState<'configured' | 'free' | 'all'>('free');
   const [healthCheckLoading, setHealthCheckLoading] = useState<Record<string, boolean>>({});
   const { data, mutate } = useProvidersQuery();
   const [message, messageContext] = Message.useMessage();
@@ -427,18 +429,6 @@ const ModelModalContent: React.FC = () => {
         className='mb-4px settings-model-tabs'
       >
         <Tabs.TabPane
-          key='configured'
-          title={
-            <span
-              data-model-tab='configured'
-              className={`inline-flex items-center gap-6px transition-colors ${activeTab === 'configured' ? 'text-t-primary font-600' : 'text-t-secondary'}`}
-            >
-              <SettingTwo theme='outline' size='15' />
-              <span>{t('settings.modelTabs.configured')}</span>
-            </span>
-          }
-        />
-        <Tabs.TabPane
           key='free'
           title={
             <span
@@ -459,6 +449,18 @@ const ModelModalContent: React.FC = () => {
             >
               <Components theme='outline' size='15' />
               <span>{t('settings.modelTabs.all')}</span>
+            </span>
+          }
+        />
+        <Tabs.TabPane
+          key='configured'
+          title={
+            <span
+              data-model-tab='configured'
+              className={`inline-flex items-center gap-6px transition-colors ${activeTab === 'configured' ? 'text-t-primary font-600' : 'text-t-secondary'}`}
+            >
+              <SettingTwo theme='outline' size='15' />
+              <span>{t('settings.modelTabs.configured')}</span>
             </span>
           }
         />

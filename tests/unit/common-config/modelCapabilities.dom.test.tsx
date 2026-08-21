@@ -60,9 +60,12 @@ vi.mock('@/renderer/components/base/AionModal', () => ({
 }));
 
 vi.mock('@icon-park/react', () => ({
-  // Tab icons on the Models page (configured / free / all).
+  // Tab icons on the Models page (free / all / configured), plus the icons the
+  // Free models panel uses -- it is the default tab, so it mounts on render.
   Components: () => <span aria-hidden='true'>all-providers</span>,
   Lightning: () => <span aria-hidden='true'>free-models</span>,
+  Key: () => <span aria-hidden='true'>key</span>,
+  Link: () => <span aria-hidden='true'>external</span>,
   DeleteFour: () => <span>delete</span>,
   Heartbeat: () => <span>health</span>,
   Info: () => <span>info</span>,
@@ -604,8 +607,35 @@ describe('configured model list', () => {
     mocks.updateProvider.mockResolvedValue(configuredProvider);
   });
 
-  it('shows explicit and automatic Vision and API mode states', () => {
+  /**
+   * Render and switch to the configured-provider tab.
+   *
+   * The page opens on Free models, so the configured list these tests are about
+   * is one tab away. Clicking through is what a user does, and it keeps the
+   * assertions pointed at real rendered output rather than at a default that
+   * could change again.
+   */
+  const renderConfiguredTab = () => {
     render(<ModelModalContent />);
+    fireEvent.click(screen.getByText('settings.modelTabs.configured'));
+  };
+
+  it('opens on Free models, with the tabs in browse-first order', () => {
+    // The page leads with what a user can get for free, then everything
+    // available, then their own setup. Pinned because the order and the default
+    // are a product decision, not an implementation detail.
+    render(<ModelModalContent />);
+
+    const tabs = [...document.querySelectorAll('[data-model-tab]')].map((el) => el.getAttribute('data-model-tab'));
+    expect(tabs).toEqual(['free', 'all', 'configured']);
+
+    // Free models is what actually rendered, not merely the first tab.
+    expect(screen.getByText('settings.freeModels.intro')).toBeInTheDocument();
+    expect(screen.queryByTitle('settings.imageInputSupported')).toBeNull();
+  });
+
+  it('shows explicit and automatic Vision and API mode states', () => {
+    renderConfiguredTab();
 
     expect(screen.getAllByTitle('settings.imageInputSupported')).toHaveLength(2);
     expect(screen.getByTitle('settings.imageInputUnsupported')).toBeInTheDocument();
@@ -616,7 +646,7 @@ describe('configured model list', () => {
   });
 
   it('opens the selected model in the configuration dialog', async () => {
-    render(<ModelModalContent />);
+    renderConfiguredTab();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'configure' })[1]);
 
@@ -628,7 +658,7 @@ describe('configured model list', () => {
   });
 
   it('removes all per-model state when deleting a model', async () => {
-    render(<ModelModalContent />);
+    renderConfiguredTab();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'delete' })[0]);
 
