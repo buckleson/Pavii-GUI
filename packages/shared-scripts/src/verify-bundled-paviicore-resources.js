@@ -2,8 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const { readJsonFile } = require('./read-json-file.js');
 
-const REQUIRED_CLI_NAMES = ['claude', 'codex'];
-
 function backendBinaryName(platform) {
   return platform === 'win32' ? 'paviicore.exe' : 'paviicore';
 }
@@ -250,15 +248,6 @@ function verifyManagedClisFromContract(baseDir, runtimeKey, contract, checked, m
     }
     seen.add(cli.name);
     validClis.push(cli);
-  }
-
-  for (const requiredName of REQUIRED_CLI_NAMES) {
-    if (!seen.has(requiredName)) {
-      failures.push({
-        component: requiredName,
-        reason: 'missing_required_cli',
-      });
-    }
   }
 
   for (const cli of validClis) {

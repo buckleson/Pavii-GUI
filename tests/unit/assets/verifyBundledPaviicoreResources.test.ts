@@ -366,10 +366,29 @@ describe('verifyBundledPaviicoreResources', () => {
     expect(result.missing).toContain('bundled-paviicore/win32-x64/managed-resources/manifest.json<contract_failure>');
   });
 
-  it('fails when a required CLI is missing from the contract', () => {
+  it('passes when the managed resources contract has no bundled CLIs and valid node metadata', () => {
     const manifestPath = join(managedResourcesDir, 'manifest.json');
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-    manifest.clis = manifest.clis.filter((cli: { name: string }) => cli.name !== 'codex');
+    manifest.clis = [];
+    writeJson(manifestPath, manifest);
+
+    const result = verifyBundledPaviicoreResources({
+      resourcesDir,
+      electronPlatformName: 'win32',
+      targetArch: 'x64',
+    });
+
+    expect(result.missing).toEqual([]);
+    expect(result.failures).toEqual([]);
+    expect(result.checked).toContain(
+      'bundled-paviicore/win32-x64/managed-resources/node/node-v24.11.0-win-x64/node.exe'
+    );
+  });
+
+  it('fails when a present CLI contract entry is malformed', () => {
+    const manifestPath = join(managedResourcesDir, 'manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    manifest.clis = [{ ...manifest.clis[0], executable: '' }];
     writeJson(manifestPath, manifest);
 
     const result = verifyBundledPaviicoreResources({
@@ -380,10 +399,11 @@ describe('verifyBundledPaviicoreResources', () => {
 
     expect(result.failures).toContainEqual(
       expect.objectContaining({
-        component: 'codex',
-        reason: 'missing_required_cli',
+        component: 'claude',
+        reason: 'invalid_schema',
       })
     );
+    expect(result.missing).toContain('bundled-paviicore/win32-x64/managed-resources/manifest.json<invalid_schema>');
   });
 
   it('fails when the contract is invalid JSON', () => {
