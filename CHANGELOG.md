@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.59](https://www.pavii.tech/products/Super-Assistant/) (2026-08-21)
+
+### Desktop
+
+#### Features
+
+- **analytics:** report product usage to PostHog from both processes, with autocapture in allowlist mode and a single scrub function that rewrites file:// URLs, drops non-allowlisted properties and redacts keys, paths and emails
+- **skills:** replace the Custom/Official tabs with one categorised page, official content first
+- **skills:** bundle 62 curated MIT-licensed ECC skills as official pack content
+
+---
+
 ## [2.1.58](https://www.pavii.tech/products/Super-Assistant/) (2026-08-21)
 
 ### Desktop
