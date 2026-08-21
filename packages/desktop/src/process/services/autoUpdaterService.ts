@@ -54,7 +54,9 @@ function isNoPublishedReleaseError(error: unknown): boolean {
 /** Log an update-feed failure at the level its cause deserves. */
 function logUpdateFeedFailure(prefix: string, error: unknown): void {
   if (isNoPublishedReleaseError(error)) {
-    log.info(`${prefix} no published release on the update feed yet; skipping until one is released`);
+    // The caller's prefix is dropped on purpose: several of them say "error",
+    // which would contradict the line being demoted to info.
+    log.info('[auto-update] no published release on the update feed yet; skipping until one is released');
     return;
   }
   log.error(prefix, error);
@@ -153,9 +155,21 @@ class AutoUpdaterService extends EventEmitter {
 
   constructor() {
     super();
-    // Configure logging
-    autoUpdater.logger = log;
-    (autoUpdater.logger as typeof log).transports.file.level = 'debug';
+    // Configure logging.
+    //
+    // electron-updater logs its OWN failures through whatever logger it is
+    // given, so pointing it straight at `log` meant the no-release condition
+    // still arrived at `error` level from inside the library, bypassing
+    // `logUpdateFeedFailure` on our own call sites entirely. The wrapper below
+    // applies the same rule to the library's output; the transport level is set
+    // on `log` itself because the wrapper has no `transports`.
+    log.transports.file.level = 'debug';
+    autoUpdater.logger = {
+      info: (message?: unknown) => log.info(message),
+      warn: (message?: unknown) => log.warn(message),
+      error: (message?: unknown) => logUpdateFeedFailure('Auto-updater:', message),
+      debug: (message: string) => log.debug(message),
+    };
 
     // Disable auto-download for manual control
     autoUpdater.autoDownload = false;
