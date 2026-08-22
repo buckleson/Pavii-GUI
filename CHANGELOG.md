@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.1.65](https://www.pavii.tech/products/Super-Assistant/) (2026-08-22)
+
+### Desktop
+
+#### Features
+
+- **ui:** buttons now use the theme radius and shadow tokens (violet-bloom 1.4rem), and the outline variant follows the palette instead of a hardcoded grey
+
+#### Bug Fixes
+
+- **db:** pin migration bytes with  so locally built and CI-built engines compute the same checksums
+- **system:** mock the repo the update check actually requests, fixing nine check-update tests
+
+---
+
 ## [2.1.59](https://www.pavii.tech/products/Super-Assistant/) (2026-08-21)
 
 ### Desktop
