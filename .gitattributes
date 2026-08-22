@@ -14,6 +14,18 @@
 *.html text eol=lf
 *.patch text eol=lf
 
+# Database migrations are checksummed by sqlx over their RAW BYTES, so a line
+# ending is part of the identity of a migration. `-text` disables all
+# translation: every clone on every OS gets the blob verbatim.
+#
+# Without this, a Windows working tree can hold CRLF copies of files git stores
+# as LF (git normalises on `add` but never rewrites the working file), so a
+# locally built engine and a CI-built engine compute different checksums for
+# identical SQL. A database created by one is then rejected by the other with
+# "migration N was previously applied but has been modified". That shipped once;
+# see docs/agent-context/handoff.md.
+*.sql -text
+
 # Binary files
 *.png binary
 *.jpg binary

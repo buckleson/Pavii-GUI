@@ -10,7 +10,7 @@
  * - Packaging only: use --pack-only to skip electron-builder distributable creation
  */
 
-const { execSync, spawnSync } = require('child_process');
+const { execFileSync, execSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -628,6 +628,60 @@ const builderArgs = args
   .join(' ');
 
 // Get target architecture from electron-builder.yml
+/**
+ * Refuse to package if the migration files on disk differ from what git stores.
+ *
+ * `sqlx::migrate!()` checksums the raw bytes of each `.sql`, so a working tree
+ * that has drifted from the blob (git normalises on `add` but never rewrites
+ * the working file) produces an engine whose checksums disagree with every
+ * CI-built release. Shipping such an installer locks users out of their own
+ * database with "migration N was previously applied but has been modified".
+ *
+ * `.gitattributes` pins `*.sql -text` to prevent the drift; this is the
+ * backstop that stops a stale checkout being distributed anyway.
+ */
+function assertMigrationsMatchGit() {
+  const projectRoot = path.resolve(__dirname, '..');
+  const relDir = 'the-remaa/AionCore/crates/aionui-db/migrations';
+  const absDir = path.join(projectRoot, relDir);
+  if (!fs.existsSync(absDir)) return;
+
+  const sha384 = (buf) => crypto.createHash('sha384').update(buf).digest('hex');
+  const diverged = [];
+  const crlf = [];
+
+  for (const name of fs
+    .readdirSync(absDir)
+    .filter((n) => n.endsWith('.sql'))
+    .sort()) {
+    const onDisk = fs.readFileSync(path.join(absDir, name));
+    if (onDisk.includes('\r\n')) crlf.push(name);
+    let blob;
+    try {
+      blob = execFileSync('git', ['show', `HEAD:${relDir}/${name}`], {
+        cwd: projectRoot,
+        maxBuffer: 32 * 1024 * 1024,
+      });
+    } catch {
+      return; // no git (release tarball, shallow export) — nothing to compare against
+    }
+    if (sha384(blob) !== sha384(onDisk)) diverged.push(name);
+  }
+
+  if (diverged.length === 0 && crlf.length === 0) {
+    console.log('✓ Migrations match git (checksums will agree with CI builds)');
+    return;
+  }
+
+  console.error('\n❌ Refusing to package: database migrations differ from git.');
+  if (crlf.length > 0) console.error(`   CRLF line endings in: ${crlf.join(', ')}`);
+  if (diverged.length > 0) console.error(`   Bytes differ from HEAD: ${diverged.join(', ')}`);
+  console.error('   An engine built from these files rejects any database created by a CI build,');
+  console.error('   and vice versa. Restore them with:');
+  console.error(`     git checkout -- ${relDir}`);
+  throw new Error('migration files diverge from git; refusing to build a distributable');
+}
+
 function getTargetArchFromConfig(platform) {
   try {
     const configPath = path.resolve(__dirname, '../packages/desktop/electron-builder.yml');
@@ -796,6 +850,8 @@ try {
   console.log(
     `📦 Compression level: ${process.env.ELECTRON_BUILDER_COMPRESSION_LEVEL} (${isCI ? 'CI build' : 'local build'})`
   );
+
+  assertMigrationsMatchGit();
 
   // 根据模式添加架构标志
   // Add arch flags based on mode
