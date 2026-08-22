@@ -10,7 +10,7 @@
 
 #### Bug Fixes
 
-- **db:** pin migration bytes with  so locally built and CI-built engines compute the same checksums
+- **db:** pin migration bytes with `*.sql -text` so locally built and CI-built engines compute the same checksums
 - **system:** mock the repo the update check actually requests, fixing nine check-update tests
 
 ---
