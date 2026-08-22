@@ -132,11 +132,50 @@ html body .arco-popconfirm-arrow.arco-trigger-arrow {
   }
 } */
 
+/* Buttons follow the theme's shape and elevation tokens (tweakcn violet-bloom
+ * light / vercel dark). `--radius: 1.4rem` is the palette's own value, so an
+ * ordinary button is a lozenge and an icon-only button is a circle — that is
+ * the intended look, not an accident.
+ *
+ * Arco ships `border-radius` on `.arco-btn` itself and on shape modifiers, so
+ * the token has to be applied here rather than through a variable Arco reads. */
 .arco-btn {
+  border-radius: var(--radius);
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
+
   &.arco-btn-outline {
-    border-color: #86909c;
-    color: #86909c;
+    /* Was hardcoded #86909c, which ignored the palette and rendered identically
+     * in both themes. Tokens make it violet on light and neutral on dark. */
+    border-color: var(--aou-3);
+    color: var(--aou-7);
   }
+
+  &.arco-btn-outline:hover {
+    border-color: var(--aou-5);
+    color: var(--aou-6);
+  }
+
+  /* Filled variants carry the palette's contact shadow; text and outline
+   * buttons stay flat so toolbars do not turn into a field of floating pills. */
+  &.arco-btn-primary:not(.arco-btn-disabled),
+  &.arco-btn-status-danger:not(.arco-btn-disabled) {
+    box-shadow: var(--shadow-xs);
+  }
+
+  &.arco-btn-primary:not(.arco-btn-disabled):hover,
+  &.arco-btn-status-danger:not(.arco-btn-disabled):hover {
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+/* Arco's own round shape must win: a 50% radius on a circular icon button is
+ * more specific in intent than the token, and `--radius` would square it off
+ * slightly at larger sizes. */
+.arco-btn.arco-btn-shape-circle {
+  border-radius: 50%;
 }
 
 .arco-btn-primary.arco-btn-disabled {
