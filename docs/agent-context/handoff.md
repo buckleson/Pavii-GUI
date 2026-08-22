@@ -60,28 +60,52 @@ through `BUNDLED_SKILL_NAMES`.
 
 ## Open, in priority order
 
-### 1. Local builds package the wrong engine — this is the live bug
+### 1. CRLF migrations make locally-built and CI-built engines mutually incompatible
 
-A local `bun run build-win:x64` at 05:21 on 22 Aug produced a 2.1.64 that died on
-launch with:
+Every install fails on launch after switching between a local build and a
+release, with one of:
 
 ```
 BOOTSTRAP_DATA_INIT_FAILED stage="database.migration"
 error=Migration failed: migration 1 was previously applied but has been modified
+error=Migration failed: migration 38 was previously applied but is missing in the resolved migrations
 ```
 
-Diagnosed: **not** data corruption. All 39 migrations at `8a4b102` match the
-user's database byte-for-byte, and `resources/bundled-paviicore/win32-x64/paviicore.exe`
-(sha256 `c5bacd5e…`) boots that same DB to `AIONCORE_READY`. So `preparePaviicore`
-resolved a _different_ engine for the packaged build than the one in
-`resources/`. The CI-built `v2.1.64` release is unaffected — CI runs
-`cargo build --release --bin paviicore` from vendored source.
+**Root cause: line endings, not the engine and not data corruption.**
+`sqlx::migrate!()` checksums the raw bytes of each `.sql` file. The working tree
+on the dev machine has **CRLF**; git stores **LF** (`.gitattributes:2` —
+`* text=auto eol=lf`). So the same SQL compiles to two different checksum sets:
 
-Start at `packages/shared-scripts/src/prepare-paviicore.js` and the resolution
-order changed in `845c706`. Note the download fallback targets
-**`iOfficeAI/AionCore`** — the upstream vendor — which would ship an unbranded
-engine and reintroduce vendor contact; that path should probably be removed
-outright.
+```
+001_initial_schema.sql
+  working tree : 24850 bytes, 574 CRLF, sha384 d4dd4415…
+  git blob     : 24276 bytes,   0 CRLF, sha384 e18a4394…
+```
+
+Measured against a real user DB: **39/39 stored checksums matched the CRLF
+working tree, 0/39 matched the git blob.** A DB created by a local build is
+therefore rejected by every CI release, and vice versa. This is not specific to
+any version.
+
+Immediate repair for an affected DB (verified: the failing CI engine reached
+`AIONCORE_READY` on a repaired copy) — back up first, then rewrite
+`_sqlx_migrations.checksum` for each version to the SHA-384 of
+`git show HEAD:<migration path>`. The SQL is byte-identical apart from line
+endings, so this corrects a fingerprint rather than asserting false history.
+
+The real fix has a trap: renormalising the working tree to LF makes local builds
+agree with CI, but instantly breaks every existing DB created by a local build.
+Better is a startup path that detects a **line-ending-only** checksum mismatch —
+same content once `\r\n` is normalised — and self-heals the stored checksum
+instead of refusing to boot. Consider `.gitattributes` marking
+`*.sql binary`/`-text` so the bytes can never diverge again.
+
+**Superseded theory, recorded so nobody re-runs it:** this was first diagnosed as
+`preparePaviicore` packaging the wrong engine. That was wrong. The engine in
+`resources/` (sha256 `c5bacd5e…`) and the CI engine (`D3FE704C…`) are both
+legitimately built from vendored source; they simply compiled different bytes of
+the same migrations. Do not start in
+`packages/shared-scripts/src/prepare-paviicore.js`.
 
 ### 2. `ci.yml` is red and has been for every recent run
 
