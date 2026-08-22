@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.1.66](https://www.pavii.tech/products/Super-Assistant/) (2026-08-22)
+
+### Desktop
+
+#### Bug Fixes
+
+- **db:** a database whose migration checksums differ only by line endings now repairs itself and opens, instead of failing startup with "Local data migration failed" and advising a reinstall that could not help. A genuinely modified migration still refuses to open.
+
+### Core
+
+#### Bug Fixes
+
+- **system:** the update check now mocks the repository it actually requests, fixing nine `check-update` tests that returned 502 on every CI run
+
+---
+
 ## [2.1.65](https://www.pavii.tech/products/Super-Assistant/) (2026-08-22)
 
 ### Desktop
