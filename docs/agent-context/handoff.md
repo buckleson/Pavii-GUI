@@ -60,10 +60,26 @@ through `BUNDLED_SKILL_NAMES`.
 
 ## Open, in priority order
 
-### 1. CRLF migrations make locally-built and CI-built engines mutually incompatible
+### 1. CRLF migrations — PREVENTED in `7886917`; only the cure is left
 
-Every install fails on launch after switching between a local build and a
-release, with one of:
+Prevention is done and verified. Remaining optional work is the **self-heal**
+described at the end of this section, which is the only thing that helps a
+database that is _already_ broken. No released user is in that state — every
+release was CI-built, so every shipped database carries LF checksums — so this
+is defence, not a live incident.
+
+Landed in `7886917`:
+
+- `.gitattributes` pins `*.sql -text`, so no checkout can diverge again
+- `tests/unit/bootstrap/migrationChecksums.test.ts` pins all 39 SHA-384s and
+  asserts no CRLF plus byte-equality with `HEAD`
+- `scripts/build-with-builder.js` refuses to package a divergent working tree
+
+Both guards were verified by injecting CRLF into a migration and confirming each
+failed by filename. The dev machine's working tree was renormalised to LF and
+the local engine rebuilt (`c21a9773`), so local and CI builds now agree.
+
+The original symptom, for recognition:
 
 ```
 BOOTSTRAP_DATA_INIT_FAILED stage="database.migration"
