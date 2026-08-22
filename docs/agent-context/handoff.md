@@ -1,161 +1,134 @@
-# Handoff — channel session management
+# Handoff — PostHog analytics, categorised skills, and a broken local build
 
-All eight planned phases are closed: six implemented, two deliberately not done
-with the reasoning recorded. Next session's focus is a live walkthrough on the
-real bot, then the two follow-ups at the bottom.
-
-Read [`docs/adr/0001-channel-session-management.md`](../adr/0001-channel-session-management.md)
-first — decisions D1–D17, plus the places the original plan turned out to be
-wrong.
+Shipped in `v2.1.59` (merged as `8efc67c`); the repo has since moved to `v2.1.64`
+on top of it. Read
+[`docs/agent-context/architecture-record.md`](architecture-record.md) — the two
+new decisions are "PostHog analytics is always on…" and "Skills page is one
+categorised page…" — and
+[`docs/agent-context/privacy-audit.md`](privacy-audit.md), which now records the
+reversal of this project's telemetry-free posture.
 
 ## Where things stand
 
-**Run the channel tests with the platform features, always:**
+**PostHog product analytics**, renderer (`posthog-js`) + main (`posthog-node`),
+sharing the per-install UUID from `getOrCreateAnalyticsId()` via a new
+`ipcBridge.application.analyticsId` channel. Always on, no user-facing toggle —
+an explicit product-owner decision, made after being shown the GDPR and
+privacy-audit tension. `POSTHOG_DISABLED=1` is a build-time control only.
 
-```
-cargo test -p aionui-channel --features slack,discord,telegram,lark,dingtalk,weixin
-```
+Eight events, all with real call sites: `app_opened`, `app_closed`,
+`backend_start_failed`, `provider_configured`, `conversation_started`,
+`message_sent`, `turn_completed`, `mcp_connected`, plus a manual `$pageview`.
 
-Without them `aionui-channel` compiles **no plugins at all** (`default = []`) —
-358 tests instead of 694 — and reports green while every plugin test sits dark.
-That hid four real compile errors during this work. `just test` (`--workspace`)
-is fine: it builds `aionui-app`, whose defaults enable the features (verified:
-`cargo test -p aionui-channel -p aionui-app --lib` reports 694).
+**`scrubEvent` (`common/analytics/scrub.ts`) is the whole privacy guarantee.**
+Everything else is defence in depth. It rewrites the URL keys in `properties`,
+`$set` **and** `$set_once`, drops non-allowlisted property keys, and redacts
+API-key shapes, absolute paths, emails and over-long values. It fails **closed** —
+any throw returns `null` and the event is dropped.
+`tests/unit/analytics/scrub.test.ts` is the proof: a hostile event carrying a
+`file://` install path, an `sk-ant-` key, a Windows path, a 3000-char prompt and
+an email must survive with none of those substrings in the JSON.
 
-694 unit + integration, all green with features. Clippy clean at `-D warnings`,
-`cargo fmt --check` clean, `bun run check:encoding` clean.
-
-| Command                    | What it does                                                    |
-| -------------------------- | --------------------------------------------------------------- |
-| `/sessions`                | Flat list of every conversation, paged, tap to attach           |
-| `/projects`                | Projects (temp workspaces hidden), then that project's sessions |
-| `/active_works`            | Only sessions executing right now; tap to attach and interject  |
-| `/tasks`                   | Scheduled tasks, soonest first, next run relative to now        |
-| `/status`, `/new`, `/help` | Unchanged                                                       |
-
-Beyond commands:
-
-- **Approvals.** The agent now stops and asks. A request is parked in
-  `ApprovalService`, rendered as buttons, answered through `system.confirm`, and
-  denied automatically after `APPROVAL_TIMEOUT_MS` (10 min) with the chat told.
-- **Finish notifications.** `FinishNotifier` subscribes to `turn.completed` on
-  the event bus and tells paired chats, including for sessions started on the
-  desktop.
-- **Branding.** `aionrs` never reaches a chat; `branding.rs` rewrites it to
-  `paviirs` on the way out.
-- **Buttons on Slack and Discord.** Both plugins used to drop `message.buttons`
-  and could not receive a tap, so every picker arrived as unusable text. Both
-  now render (Block Kit / message components) and handle the inbound side
-  (`interactive` envelope / `INTERACTION_CREATE` with a deferred ack). One
-  shared encoding in `callback.rs`, sized to Telegram's 64-byte limit so the
-  same format is valid on all three.
-- **WeChat keeps auto-approving.** It cannot render buttons, so an approval
-  there would hang until expiry; `build_channel_extra` is platform-aware.
-
-## What to walk on the real bot
-
-The tests cover the state machines; these are the parts only a live run proves.
-
-1. Trigger a tool the agent needs permission for. Confirm buttons appear, that
-   **Allow resumes** and **Deny stops**, and that the deny button is last.
-2. Leave one unanswered for ten minutes. It should be denied automatically and
-   the chat should say so, rather than the session hanging.
-3. Answer a stale button (one already answered). It should say so, not no-op.
-4. Start a session **on the desktop**, let it finish. A paired chat should be
-   told, with an Open button. The chat attached to that same session should
-   **not** be told.
-5. Two sessions running at once, switch between them; neither should stop.
-6. Repeat the command checks on Slack and Discord.
-
-**Un-`yolo` only affects new conversations** — `extra` is written once at
-creation. An existing channel conversation keeps running unsupervised, so start
-a fresh one to see approvals at all.
-
-## The one thing not proven
-
-**Slack and Discord buttons have never touched a live app.** The payload shapes
-come from general knowledge of those APIs, not from captured traffic or a schema
-in this repo, and neither platform is configured here (`assistant_plugins` holds
-only `telegram`; no `pavii-channels.json`). The tests pin the shapes and prove a
-foreign tap is never treated as an action — they cannot prove Slack accepts the
-Block Kit or Discord the components.
-
-Connect one (Slack is the smaller setup) and check: `/sessions` renders tappable
-buttons, a tap attaches, an approval resolves. Until then the honest status is
-"implemented, shape-tested, unproven on the wire".
-
-## Follow-ups, in the order worth doing
-
-### 1. Migrate Slack/Discord credentials, then retire the TS bridges
-
-Refused for now, and why matters: the bridges read `pavii-channels.json`
-(`channelStore.ts`) while the Rust plugins read the engine DB via
-`IChannelRepository`. Deleting them would strand any credentials the user
-entered through the desktop. The Rust plugins _are_ shipped
-(`default = [... "slack", "discord"]`), so the missing piece is a one-way
-migration from that JSON file into the channel plugin table, then the deletion
-of `slackBridge.ts` / `discordBridge.ts`, their imports in `index.ts` (~399) and
-accessors in `applicationBridge.ts` (~151).
-
-### 2. Discord application-command registration
-
-Telegram registers over `setMyCommands`; Slack is declared in its app manifest,
-generated by `commands::slack_manifest_commands` with tests guarding drift in
-both directions. Discord needs registration over its HTTP API, which
-`plugins/discord/api.rs` has no application-id call for. There is no captured
-Discord traffic or schema in the repo to write it against, and the engine's
-rules forbid asserting an API contract from memory — so capture or cite a source
-first.
-
-### 3. Errored finishes
-
-`FinishNotifier` fires on `turn.completed`, which is emitted for a normal end.
-Whether a failed turn emits it, or emits something else, is **not yet checked**.
-Worth confirming before claiming errors are covered.
+**Skills page** is now one categorised page (Official → Extension →
+Auto-injected → user imports), grouped by a curated name→category map in
+`renderer/pages/settings/SkillsSettings/skillCategories.ts`. Plus 62 curated
+MIT-licensed ECC skills under `resources/bundled-skills/ecc/`, tagged official
+through `BUNDLED_SKILL_NAMES`.
 
 ## Traps worth knowing
 
-- **Green tests are not a wired feature.** The session directory passed every
-  test while production had no directory configured. `SessionDirectory::new`
-  now takes its dependencies as required parameters so the compiler catches it.
-  `ApprovalService` is the same shape and is easier to get wrong: **the relay
-  and the action executor must share one instance**, or every button presses
-  against an empty registry. `build_channel_state` builds it once.
-- **`IWorkerTaskManager::active_conversation_ids` has a default impl returning
-  an empty vec.** A double that forgets to override it makes every
-  running-state assertion vacuously pass.
-- **A test that asserts "no error" proves nothing about delivery.** The
-  approval tests use a `RecordingAgent` that captures what it was told; a mock
-  that just returns `Ok` would pass even if the answer never left the channel.
-- **The task manager and the event bus are both global.** Every id and event
-  must be checked against the owner before it is shown or acted on.
-- **Callback data is 64 bytes, and one over-long button makes Telegram reject
-  the whole message.** Three tests measure it (`project_callbacks_fit_…`,
-  `approval_buttons_fit_…`, `the_open_button_fits_…`). Add one for any new
-  button.
-- **Foreign keys and CHECK constraints bite in fixtures.**
-  `conversations.user_id` → `users`, `cron_jobs.conversation_id` →
-  `conversations`; `cron_jobs.execution_mode` is `existing|new_conversation`,
-  `last_status` is `ok|error|skipped|missed`, `schedule_kind` is
-  `at|every|cron`.
-- **Rust files here are CRLF.** Patch scripts matching on `\n` will fail to find
-  anchors that are plainly present.
-- **`check-encoding` does not catch control characters.** A mis-escaped patch
-  wrote literal `U+0008` into a TypeScript regex and the gate passed it. A task
-  chip is open to add the rule.
-- **Two pre-existing `aionui-conversation` failures** are unrelated and fail
-  identically on a clean tree (verified by stashing):
-  `create_rejects_unavailable_workspace_with_trailing_whitespace_in_request`
-  and `is_auto_workspace_matches_by_structure_across_user_and_date`. Both are
-  Windows path handling.
+- **`ph-no-capture` on an ancestor kills the whole autocapture event**, not just
+  its text. The marker on `SettingsPageWrapper` therefore makes every settings
+  screen invisible to autocapture by design — instrument those with `track()`,
+  never `data-ph-capture`.
+- **Autocapture is an allowlist** (`css_selector_allowlist: ['[data-ph-capture]']`)
+  with `mask_all_text` + `mask_all_element_attributes`. Do not relax that to a
+  denylist: this DOM is the user's prompts, file paths and API keys, and a
+  denylist fails open the first time someone adds a screen and forgets a marker.
+- **A declared-but-unwired event is worse than a missing one** — the chart
+  renders empty and reads as "nobody uses this feature".
+  `tests/unit/analytics/eventCoverage.test.ts` fails the build on either
+  direction of drift. Six of thirteen events were unwired before it existed.
+- **Verify posthog-js option names against the installed
+  `@posthog/types`, not the docs.** The docs pages were repeatedly truncated and
+  incomplete; the package types are authoritative. `sanitize_properties` is
+  `@deprecated` and logs an error — use `before_send`.
+- **Do not write these context docs with `node -e "…"` in double quotes.** Bash
+  expands `$current_url`, `$set_once` etc. to empty and silently corrupts the
+  prose. That happened to the architecture record in this session and had to be
+  repaired. Use the Edit/Write tools.
+
+## Open, in priority order
+
+### 1. Local builds package the wrong engine — this is the live bug
+
+A local `bun run build-win:x64` at 05:21 on 22 Aug produced a 2.1.64 that died on
+launch with:
+
+```
+BOOTSTRAP_DATA_INIT_FAILED stage="database.migration"
+error=Migration failed: migration 1 was previously applied but has been modified
+```
+
+Diagnosed: **not** data corruption. All 39 migrations at `8a4b102` match the
+user's database byte-for-byte, and `resources/bundled-paviicore/win32-x64/paviicore.exe`
+(sha256 `c5bacd5e…`) boots that same DB to `AIONCORE_READY`. So `preparePaviicore`
+resolved a _different_ engine for the packaged build than the one in
+`resources/`. The CI-built `v2.1.64` release is unaffected — CI runs
+`cargo build --release --bin paviicore` from vendored source.
+
+Start at `packages/shared-scripts/src/prepare-paviicore.js` and the resolution
+order changed in `845c706`. Note the download fallback targets
+**`iOfficeAI/AionCore`** — the upstream vendor — which would ship an unbranded
+engine and reintroduce vendor contact; that path should probably be removed
+outright.
+
+### 2. `ci.yml` is red and has been for every recent run
+
+Fixed this session: gitignored brand icons (`resources/app.png` is the Linux icon
+_and_ asserted by tests), stale `officecli` expectations in `office_e2e.rs`, and
+Windows drive letters in `ensureOpencode` PATH fixtures (`:` is the PATH
+delimiter on Linux).
+
+**Still failing: 9 `check_update` tests in `crates/aionui-system/tests/system_info_routes.rs`,
+all returning 502 instead of 200** against a local wiremock. Not investigated.
+Until that is fixed, do **not** enable "require status checks" in branch
+protection — it would block every merge.
+
+### 3. Branch protection is not set
+
+`main` has none. Requires the `buckleson` account; `vjk7989` has push but not
+admin. Enable force-push and deletion protection now; add required checks only
+after #2.
+
+### 4. Analytics has never been verified live
+
+No dashboards exist, and as far as anyone knows **zero events have reached
+PostHog** — the app was never run with this code. The `phc_` key is public and
+write-only, so creating insights needs a personal API key (`phx_…`).
+
+The check that matters, once installed: send a message containing a distinctive
+string, type a fake key into Models settings, then confirm neither appears in any
+PostHog property and no `$current_url` contains `file://` or the OS user name.
+Alert on `$scrub_secret_hit` / `$scrub_path_hit` — if either fires, something
+upstream is handing the scrub sensitive data and should be fixed at the source.
+
+### 5. No privacy policy
+
+The marketing site (`.workspaces/fluffy-lamp`) has none, and there is no in-app
+disclosure. Always-on capture to an EU endpoint without either is the gap a user
+or regulator would point at first.
 
 ## Standing constraints
 
-- The session listing exposes every conversation to anyone paired with the bot.
-  Pairing is the only gate.
-- Approvals change behaviour for anyone already using channels. Call it out in
-  release notes.
-- Engine changes need `node scripts/build-paviicore.js` (desktop app closed) and
-  then the six-target CI build. The release still has a **stuck macOS Intel
-  runner** — nothing is published yet.
-- All of this work is **uncommitted** in the working tree.
+- Installer size is dominated by bundled agent CLIs (`codex.exe` 325 MB,
+  `claude.exe` 244 MB). `resources/bundled-paviicore/win32-x64/data/` (105 MB,
+  mostly a duplicate Node runtime) is declared in neither `manifest.json` nor the
+  afterPack verifier but ships anyway, because `electron-builder.yml:111` copies
+  the whole directory.
+- `just` is **not installed** on this machine. The `push` recipe is
+  `lint-strict fmt-check typecheck encoding-check language-check test` then
+  `git push` — run those by hand.
+- `bun run lint:fix` sweeps unrelated files repo-wide (`.sort()`→`.toSorted()`,
+  array→`Set`, error `cause`). Revert them before committing, or the diff stops
+  being about your change.
