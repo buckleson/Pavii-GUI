@@ -38,6 +38,13 @@ const RECOVERABLE_DATABASE_CORRUPTION_STAGE: &str = "database.recoverable_corrup
 /// generic migration-failure one (Sentry ELECTRON-31Z).
 pub const DATABASE_NEWER_THAN_APP_STAGE: &str = "database.newer_than_app";
 
+/// Iterate the embedded migrations. Exposed so tests can reproduce a database
+/// written with the other line-ending rendering.
+#[doc(hidden)]
+pub fn migrator_iter() -> impl Iterator<Item = &'static sqlx::migrate::Migration> {
+    DB_MIGRATOR.iter()
+}
+
 /// Highest migration version embedded in this binary, i.e. the newest schema
 /// this build can open. `None` only if the migrations directory is empty.
 pub fn latest_known_migration_version() -> Option<i64> {
@@ -462,8 +469,92 @@ async fn run_migrations_with_retry(conn: &mut sqlx::SqliteConnection) -> Result<
                 )))
             }
         }
+        Err(sqlx::migrate::MigrateError::VersionMismatch(version)) => {
+            // A database written with the other line endings has EVERY row
+            // mismatched, not just the first one sqlx happens to report, so
+            // heal the whole table in one pass before retrying.
+            let healed = heal_line_ending_checksums(&mut *conn).await?;
+            if healed > 0 {
+                warn!(
+                    "Realigned {} migration checksum(s) that differed only by line endings \
+                     (first reported: {}); retrying",
+                    healed, version
+                );
+                DB_MIGRATOR.run(&mut *conn).await.map_err(DbError::Migration)
+            } else {
+                Err(DbError::Migration(sqlx::migrate::MigrateError::VersionMismatch(
+                    version,
+                )))
+            }
+        }
         Err(e) => Err(DbError::Migration(e)),
     }
+}
+
+/// SHA-384 of this SQL rendered with LF and with CRLF line endings.
+///
+/// A stored checksum is only ever a hash, so the other side's bytes cannot be
+/// recovered from it. Instead both line-ending renderings of the *embedded*
+/// SQL are hashed and compared, which covers either direction: a CRLF-built
+/// engine meeting an LF database, or an LF-built engine meeting a CRLF one.
+fn line_ending_variant_checksums(sql: &str) -> (Vec<u8>, Vec<u8>) {
+    use sha2::{Digest, Sha384};
+    let lf = sql.replace("\r\n", "\n");
+    let crlf = lf.replace('\n', "\r\n");
+    (
+        Sha384::digest(lf.as_bytes()).to_vec(),
+        Sha384::digest(crlf.as_bytes()).to_vec(),
+    )
+}
+
+/// Repair a stored checksum that differs from the embedded migration **only**
+/// by line endings, and report whether anything was repaired.
+///
+/// `sqlx::migrate!()` checksums the raw bytes of each `.sql` file, so a
+/// database written by an engine built from a CRLF checkout is rejected by one
+/// built from LF (and vice versa) even though the SQL is identical. Users saw
+/// "Local data migration failed" and were told to reinstall, which could not
+/// help: the schema was correct, only the fingerprint disagreed.
+///
+/// `.gitattributes` now pins `*.sql -text` so new divergence cannot occur, but
+/// databases already written with the other set of checksums exist in the wild.
+/// This heals those in place rather than refusing to boot.
+///
+/// Deliberately narrow: it realigns a row **only** when both sides hash
+/// identically once `\r\n` is normalised to `\n`. A migration whose SQL was
+/// genuinely edited still fails, which is the behaviour that protects data.
+async fn heal_line_ending_checksums(conn: &mut sqlx::SqliteConnection) -> Result<usize, DbError> {
+    let rows: Vec<(i64, Vec<u8>)> = sqlx::query_as("SELECT version, checksum FROM _sqlx_migrations")
+        .fetch_all(&mut *conn)
+        .await
+        .map_err(DbError::Query)?;
+
+    let mut healed = 0usize;
+    for (version, stored) in rows {
+        let Some(migration) = DB_MIGRATOR.iter().find(|m| m.version == version) else {
+            continue; // database is newer than this binary; handled elsewhere
+        };
+        if stored == *migration.checksum {
+            continue;
+        }
+
+        // Heal only when the stored hash is one of this SQL's line-ending
+        // renderings. Anything else is a genuine content change and must keep
+        // failing — that check is what protects the data.
+        let (lf, crlf) = line_ending_variant_checksums(&migration.sql);
+        if stored != lf && stored != crlf {
+            continue;
+        }
+
+        sqlx::query("UPDATE _sqlx_migrations SET checksum = ? WHERE version = ?")
+            .bind(&*migration.checksum)
+            .bind(version)
+            .execute(&mut *conn)
+            .await
+            .map_err(DbError::Query)?;
+        healed += 1;
+    }
+    Ok(healed)
 }
 
 /// Detect the specific "another process inserted this version first" error.
