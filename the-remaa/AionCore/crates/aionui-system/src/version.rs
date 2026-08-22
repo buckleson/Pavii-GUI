@@ -8,7 +8,12 @@ use crate::error::SystemError;
 // feed in packages/desktop/src/process/services/updateFeed.ts. But any other
 // client hitting this route would have been offered upstream AionUi builds as
 // updates, which is exactly what updateFeed.ts says must never happen.
-const DEFAULT_REPO: &str = "buckleson/Pavii-GUI";
+/// Repository whose releases back `POST /api/system/check-update`.
+///
+/// Public so tests mock the same path the service actually requests. When this
+/// was private, the tests kept mocking the upstream vendor path after the
+/// default moved to Pavii, so every request 404'd and surfaced as a 502.
+pub const DEFAULT_REPO: &str = "buckleson/Pavii-GUI";
 const GITHUB_API_BASE: &str = "https://api.github.com";
 
 /// Service that checks GitHub Releases for available updates.
