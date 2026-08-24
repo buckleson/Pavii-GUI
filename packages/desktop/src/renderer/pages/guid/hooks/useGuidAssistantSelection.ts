@@ -106,9 +106,16 @@ export function pickDefaultAssistantSelectionKey(assistants: Assistant[]): strin
   // OpenCode first: it is the only CLI that hands new users free keys, so it is
   // the launch default. The built-in engine CLI stays as the fallback.
   const isOpencodeAssistant = (assistant: Assistant) => assistantRuntimeKey(assistant) === 'opencode';
+  // The engine seeds the OpenCode row enabled whether or not the binary exists,
+  // so `enabled` alone would default new users onto an agent that cannot run.
+  // Only a *known* bad status disqualifies it — 'unchecked' and undefined still
+  // count, so a not-yet-probed agent is not punished on a cold start.
+  const isRunnable = (assistant: Assistant) =>
+    assistant.agent_status !== 'missing' && assistant.agent_status !== 'offline';
+  const runnableOpencode = (assistant: Assistant) => isOpencodeAssistant(assistant) && isRunnable(assistant);
   const preferred =
-    enabledAssistants.find((assistant) => assistant.source === 'generated' && isOpencodeAssistant(assistant)) ??
-    enabledAssistants.find(isOpencodeAssistant) ??
+    enabledAssistants.find((assistant) => assistant.source === 'generated' && runnableOpencode(assistant)) ??
+    enabledAssistants.find(runnableOpencode) ??
     enabledAssistants.find((assistant) => assistant.source === 'generated' && isAionrsAssistant(assistant)) ??
     enabledAssistants.find((assistant) => isAionrsAssistant(assistant)) ??
     enabledAssistants[0];

@@ -87,13 +87,13 @@
 - Affects: `packages/desktop/src/renderer/index.html`
 - Evidence: `tests/unit/renderer/splash.dom.test.ts`
 
-### Install OpenCode as a default agent at startup
+### Ship OpenCode in the installer and put it on PATH before the engine spawns
 
-- Status: accepted
-- Decision: `ensureOpencodeInstalled` registers `<dataDir>/managed-tools` on PATH before the engine spawns and installs `opencode-ai` with the bundled Node runtime's npm when `opencode` is absent; failures are logged, never fatal.
-- Rationale: Product requirement that every install ships OpenCode; the engine discovers agents via the inherited PATH.
-- Affects: `packages/desktop/src/index.ts`
-- Evidence: `packages/desktop/src/process/startup/ensureOpencode.ts`, `tests/unit/process/startup/ensureOpencode.test.ts`
+- Status: accepted (supersedes "install OpenCode at startup via npm")
+- Decision: `prepare-opencode.js` stages the pinned OpenCode binary into `resources/bundled-opencode/<runtimeKey>/` during the build (registry tarball, sha512 verified, idempotent), electron-builder ships it, and `registerOpencodeOnPath` **appends** that directory to PATH in the pre-spawn block of `index.ts` — before `backendManager.start`. The npm install of `opencode-ai` is demoted to a fallback for arches with no published binary. The bundle is a desktop-owned directory, deliberately not an engine managed-resource.
+- Rationale: The product requires OpenCode on every install, but the previous mechanism could not deliver it — the npm install needed the network, ran after `markBackendReady` (so the engine had already snapshotted PATH and probed availability), and failed silently, including an unquoted `shell: true` command line that broke on any install path containing a space. Measured with the developer's own OpenCode hidden from PATH: without the bundle the engine hydrates `available=5` and `/api/assistants` contains no OpenCode row; with it, `available=6` and the row appears. Appending rather than prepending keeps a user's own OpenCode in front. PATH-only means **no engine change**: the engine resolves agents solely through `which::which` on the inherited PATH, and its `prepare-managed-resources` deliberately emits `clis: []`.
+- Affects: `packages/shared-scripts/src/prepare-opencode.js`
+- Evidence: `tests/unit/process/startup/ensureOpencode.test.ts`, `tests/unit/assets/prepareOpencode.test.ts`, `scripts/afterPack.js`
 
 ### Issue reports leave through the reporter, not the app
 

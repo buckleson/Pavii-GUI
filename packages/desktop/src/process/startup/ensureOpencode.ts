@@ -7,13 +7,21 @@
 /**
  * Ensure the OpenCode CLI agent is available on every install.
  *
- * Pavii.Ai ships OpenCode as a default agent. The engine discovers agents via
- * PATH, so on startup we:
- *   1. prepend the app-managed tools directory to PATH (cheap, always), then
- *   2. if `opencode` is still not resolvable, install it into that directory
- *      with the bundled Node runtime's npm (`npm install -g --prefix <tools>`).
+ * Pavii.Ai ships OpenCode as the default agent, and the engine discovers agents
+ * purely by PATH lookup (`binary_name` -> `which::which`), never by inspecting
+ * bundle directories. So availability is entirely a PATH question:
  *
- * The install is best-effort and non-blocking: failures are logged, never fatal.
+ *   1. `registerOpencodeOnPath` runs BEFORE the engine spawns and adds the
+ *      bundled OpenCode directory (shipped in the installer by
+ *      packages/shared-scripts/src/prepare-opencode.js) plus the app-managed
+ *      tools dir. This is what makes a fresh install work in its FIRST session.
+ *   2. `ensureOpencodeInstalled` is now only a fallback for platforms with no
+ *      bundled binary: it npm-installs `opencode-ai` into the managed tools dir.
+ *      That path needs the network and only takes effect on the next launch, so
+ *      it must never be the primary mechanism.
+ *
+ * A user's own `opencode` on PATH always wins: the bundled directory is
+ * appended, not prepended.
  */
 
 import { execFile, execSync } from 'node:child_process';
@@ -25,6 +33,17 @@ const execFileAsync = promisify(execFile);
 
 const OPENCODE_NPM_PACKAGE = 'opencode-ai';
 const INSTALL_TIMEOUT_MS = 5 * 60_000;
+
+/** Directory holding the OpenCode binary shipped inside the installer. */
+export function getBundledOpencodeDir(
+  resourcesPath: string | undefined,
+  runtimeKey: string = `${process.platform}-${process.arch}`
+): string | null {
+  if (!resourcesPath) return null;
+  const dir = join(resourcesPath, 'bundled-opencode', runtimeKey);
+  const binary = join(dir, process.platform === 'win32' ? 'opencode.exe' : 'opencode');
+  return existsSync(binary) ? dir : null;
+}
 
 /** Directory that receives the npm-prefix install of managed CLI tools. */
 export function getManagedToolsDir(dataDir: string): string {
@@ -48,6 +67,38 @@ export function registerManagedToolsOnPath(dataDir: string, env: NodeJS.ProcessE
   const missing = entries.filter((entry) => !parts.includes(entry));
   if (missing.length === 0) return;
   env.PATH = [...missing, currentPath].join(delimiter);
+}
+
+type RegisterOpencodeOptions = {
+  dataDir: string;
+  resourcesPath?: string;
+  /** Repo-root fallback used in dev, where process.resourcesPath is Electron's own. */
+  devResourcesFallback?: string;
+  env?: NodeJS.ProcessEnv;
+  log?: (message: string) => void;
+};
+
+/**
+ * Put OpenCode on PATH for the engine. Must run BEFORE the engine is spawned —
+ * the engine snapshots PATH at spawn and probes agent availability immediately,
+ * so anything registered later only takes effect on the next launch.
+ *
+ * The bundled directory is **appended**, so a user's own OpenCode earlier on
+ * PATH keeps priority; we only guarantee that *some* OpenCode exists.
+ */
+export function registerOpencodeOnPath(options: RegisterOpencodeOptions): void {
+  const { dataDir, resourcesPath, devResourcesFallback, env = process.env, log = () => {} } = options;
+
+  // npm-installed fallback copies live here; prepended (they are app-managed).
+  registerManagedToolsOnPath(dataDir, env);
+
+  const bundledDir = getBundledOpencodeDir(resourcesPath) ?? getBundledOpencodeDir(devResourcesFallback);
+  if (!bundledDir) return;
+
+  const currentPath = env.PATH ?? '';
+  if (currentPath.split(delimiter).includes(bundledDir)) return;
+  env.PATH = currentPath ? [currentPath, bundledDir].join(delimiter) : bundledDir;
+  log(`[opencode] bundled CLI registered on PATH: ${bundledDir}`);
 }
 
 function isOpencodeOnPath(): boolean {
@@ -87,12 +138,19 @@ type EnsureOpencodeOptions = {
 };
 
 /**
- * Install OpenCode into the managed tools dir when it is not already available.
+ * Fallback acquisition for platforms with no bundled OpenCode binary.
+ *
+ * The primary mechanism is the bundled CLI registered by
+ * `registerOpencodeOnPath` before the engine spawns. This npm install only
+ * matters when that bundle is absent (an unsupported arch), and it cannot help
+ * the current session — the engine already snapshotted PATH — so it is
+ * deliberately best-effort and non-fatal.
+ *
  * Resolves to true when opencode is available (already present or installed).
  */
 export async function ensureOpencodeInstalled(options: EnsureOpencodeOptions): Promise<boolean> {
   const { dataDir, resourcesPath, devResourcesFallback, log = () => {}, logError = () => {} } = options;
-  registerManagedToolsOnPath(dataDir);
+  registerOpencodeOnPath({ dataDir, resourcesPath, devResourcesFallback, log });
 
   if (isOpencodeOnPath()) {
     log('[opencode] already available on PATH');
@@ -112,9 +170,17 @@ export async function ensureOpencodeInstalled(options: EnsureOpencodeOptions): P
   mkdirSync(toolsDir, { recursive: true });
   log(`[opencode] installing ${OPENCODE_NPM_PACKAGE} into ${toolsDir}`);
   try {
-    await execFileAsync(npm, ['install', '-g', OPENCODE_NPM_PACKAGE, '--prefix', toolsDir], {
+    // Windows needs a shell to run npm.cmd, but `execFile` with `shell: true`
+    // joins file and args with plain spaces and no quoting — so an install path
+    // containing a space (`C:\Program Files\Pavii.Ai\...`, an offered default)
+    // was silently truncated at `C:\Program` and every install failed. Quote
+    // both the executable and any argument that contains a space.
+    const useShell = process.platform === 'win32';
+    const quote = (value: string) => (useShell && value.includes(' ') ? `"${value}"` : value);
+    const args = ['install', '-g', OPENCODE_NPM_PACKAGE, '--prefix', toolsDir];
+    await execFileAsync(useShell ? quote(npm) : npm, useShell ? args.map(quote) : args, {
       timeout: INSTALL_TIMEOUT_MS,
-      shell: process.platform === 'win32',
+      shell: useShell,
       windowsHide: true,
     });
   } catch (error) {

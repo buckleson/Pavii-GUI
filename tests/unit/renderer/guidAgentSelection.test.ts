@@ -34,6 +34,58 @@ describe('guid assistant selection helpers', () => {
     expect(pickDefaultAssistantSelectionKey(list)).toBe('gen-opencode');
   });
 
+  /**
+   * The engine seeds the OpenCode row enabled whether or not the binary is
+   * present, so selecting on `enabled` alone defaulted fresh installs onto an
+   * agent that could not run — the user saw a "missing" badge and no way
+   * forward. Falling back to Pavii CLI is what makes a missing OpenCode
+   * survivable.
+   */
+  it.each(['missing', 'offline'] as const)('falls back to Pavii CLI when opencode is %s', (status) => {
+    const list = [
+      ...assistants,
+      assistant({
+        id: 'gen-opencode',
+        source: 'generated',
+        runtimeKey: 'opencode',
+        sort_order: 40,
+        agent_status: status,
+      }),
+    ];
+    expect(pickDefaultAssistantSelectionKey(list)).toBe('bare-aionrs');
+  });
+
+  it('still prefers opencode when its status has not been probed yet', () => {
+    // A cold start can report 'unchecked' before the probe lands; treating that
+    // as unavailable would flip the default away from OpenCode on every launch.
+    const list = [
+      ...assistants,
+      assistant({
+        id: 'gen-opencode',
+        source: 'generated',
+        runtimeKey: 'opencode',
+        sort_order: 40,
+        agent_status: 'unchecked',
+      }),
+    ];
+    expect(pickDefaultAssistantSelectionKey(list)).toBe('gen-opencode');
+  });
+
+  it('prefers a runnable opencode over a missing generated one', () => {
+    const list = [
+      ...assistants,
+      assistant({
+        id: 'gen-opencode',
+        source: 'generated',
+        runtimeKey: 'opencode',
+        sort_order: 40,
+        agent_status: 'missing',
+      }),
+      assistant({ id: 'builtin-opencode', source: 'builtin', runtimeKey: 'opencode', sort_order: 50 }),
+    ];
+    expect(pickDefaultAssistantSelectionKey(list)).toBe('builtin-opencode');
+  });
+
   it('prefers a non-generated opencode assistant over a generated aionrs one', () => {
     const list = [
       ...assistants,

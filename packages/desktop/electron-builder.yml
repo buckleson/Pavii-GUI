@@ -110,6 +110,11 @@ extraResources:
   # Engine binary (pre-compiled per platform/arch, ships its own bun runtime)
   - from: resources/bundled-paviicore
     to: bundled-paviicore
+  # OpenCode CLI, the default agent. Staged by prepare-opencode.js and put on
+  # PATH before the engine spawns, so a fresh install has a working default
+  # without a network round-trip. See packages/shared-scripts/src/prepare-opencode.js.
+  - from: resources/bundled-opencode
+    to: bundled-opencode
   - from: resources/hub
     to: hub
   # Pavii-curated skills auto-imported into the user skills dir on first boot

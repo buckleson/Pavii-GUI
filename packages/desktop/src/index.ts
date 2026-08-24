@@ -908,9 +908,16 @@ const handleAppReady = async (): Promise<void> => {
         const { getSystemDir } = await import('./process/utils/initStorage');
         // Must run before the backend spawn: aioncore inherits a snapshot of
         // process.env, and agent detection (incl. the default OpenCode agent)
-        // resolves CLIs from that PATH.
-        const { registerManagedToolsOnPath } = await import('./process/startup/ensureOpencode');
-        registerManagedToolsOnPath(getDataPath());
+        // resolves CLIs from that PATH. Registering the bundled OpenCode here
+        // rather than after markBackendReady is what makes it usable in the
+        // FIRST session instead of only after a restart.
+        const { registerOpencodeOnPath } = await import('./process/startup/ensureOpencode');
+        registerOpencodeOnPath({
+          dataDir: getDataPath(),
+          resourcesPath: process.resourcesPath,
+          devResourcesFallback: app.isPackaged ? undefined : path.join(process.cwd(), 'resources'),
+          log: (message) => console.log(message),
+        });
         const sysDir = getSystemDir();
         return backendManager.start(
           getDataPath(),

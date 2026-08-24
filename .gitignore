@@ -209,6 +209,7 @@ worktrees/
 docs/superpowers/
 resources/bundled-bun
 resources/bundled-paviicore
+resources/bundled-opencode
 resources/hub
 /resources/windows/support/_sentry-dsn.generated.nsh
 

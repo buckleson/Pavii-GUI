@@ -17,9 +17,11 @@ import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import {
   findBundledNpm,
+  getBundledOpencodeDir,
   getManagedToolsDir,
   getManagedToolsPathEntries,
   registerManagedToolsOnPath,
+  registerOpencodeOnPath,
 } from '@/process/startup/ensureOpencode';
 
 /**
@@ -133,5 +135,94 @@ describe('findBundledNpm', () => {
     mkdirSync(join(versionDir, ...npmSegments.slice(0, -1)), { recursive: true });
     writeFileSync(join(versionDir, ...npmSegments), '');
     expect(findBundledNpm(resourcesRoot, 'other-platform-arch')).toBeNull();
+  });
+});
+
+/**
+ * The bundled OpenCode binary is the primary mechanism: the engine resolves
+ * agents only through PATH, and it snapshots PATH at spawn. If this directory
+ * is not registered before the engine starts, a fresh install defaults to an
+ * agent that cannot run for the whole first session — which is the bug the
+ * bundle exists to fix.
+ */
+describe('bundled opencode', () => {
+  const binaryName = process.platform === 'win32' ? 'opencode.exe' : 'opencode';
+  const runtimeKey = `${process.platform}-${process.arch}`;
+  let resourcesRoot: string;
+
+  const stageBundle = (key = runtimeKey) => {
+    const dir = join(resourcesRoot, 'bundled-opencode', key);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, binaryName), '');
+    return dir;
+  };
+
+  beforeEach(() => {
+    resourcesRoot = mkdtempSync(join(tmpdir(), 'pavii-bundled-opencode-'));
+  });
+  afterEach(() => {
+    rmSync(resourcesRoot, { recursive: true, force: true });
+  });
+
+  it('finds the bundled directory when the binary is present', () => {
+    const dir = stageBundle();
+    expect(getBundledOpencodeDir(resourcesRoot, runtimeKey)).toBe(dir);
+  });
+
+  it('returns null when the directory exists but holds no binary', () => {
+    mkdirSync(join(resourcesRoot, 'bundled-opencode', runtimeKey), { recursive: true });
+    expect(getBundledOpencodeDir(resourcesRoot, runtimeKey)).toBeNull();
+  });
+
+  it('returns null for an unbundled runtime key or missing resources path', () => {
+    stageBundle();
+    expect(getBundledOpencodeDir(resourcesRoot, 'other-platform-arch')).toBeNull();
+    expect(getBundledOpencodeDir(undefined, runtimeKey)).toBeNull();
+  });
+
+  it('adds the bundled directory to PATH', () => {
+    const dir = stageBundle();
+    const env: NodeJS.ProcessEnv = { PATH: absFixture('existing', 'bin') };
+    registerOpencodeOnPath({ dataDir: absFixture('pavii-data'), resourcesPath: resourcesRoot, env });
+    expect((env.PATH ?? '').split(delimiter)).toContain(dir);
+  });
+
+  it("appends it, so a user's own opencode earlier on PATH still wins", () => {
+    const dir = stageBundle();
+    const userDir = absFixture('user', 'npm-global');
+    const env: NodeJS.ProcessEnv = { PATH: userDir };
+    registerOpencodeOnPath({ dataDir: absFixture('pavii-data'), resourcesPath: resourcesRoot, env });
+    const parts = (env.PATH ?? '').split(delimiter);
+    expect(parts.indexOf(userDir)).toBeLessThan(parts.indexOf(dir));
+  });
+
+  it('is idempotent across repeated registrations', () => {
+    const dir = stageBundle();
+    const env: NodeJS.ProcessEnv = { PATH: absFixture('existing', 'bin') };
+    const opts = { dataDir: absFixture('pavii-data'), resourcesPath: resourcesRoot, env };
+    registerOpencodeOnPath(opts);
+    registerOpencodeOnPath(opts);
+    const occurrences = (env.PATH ?? '').split(delimiter).filter((part) => part === dir);
+    expect(occurrences).toHaveLength(1);
+  });
+
+  it('falls back to the dev resources root when the packaged path has no bundle', () => {
+    const dir = stageBundle();
+    const env: NodeJS.ProcessEnv = { PATH: absFixture('existing', 'bin') };
+    registerOpencodeOnPath({
+      dataDir: absFixture('pavii-data'),
+      resourcesPath: join(resourcesRoot, 'does-not-exist'),
+      devResourcesFallback: resourcesRoot,
+      env,
+    });
+    expect((env.PATH ?? '').split(delimiter)).toContain(dir);
+  });
+
+  it('still registers the managed tools dir when no bundle exists', () => {
+    const dataDir = absFixture('pavii-data');
+    const env: NodeJS.ProcessEnv = { PATH: absFixture('existing', 'bin') };
+    registerOpencodeOnPath({ dataDir, resourcesPath: resourcesRoot, env });
+    const [managedEntry] = getManagedToolsPathEntries(dataDir);
+    expect((env.PATH ?? '').split(delimiter)).toContain(managedEntry);
   });
 });

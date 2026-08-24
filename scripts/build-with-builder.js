@@ -830,6 +830,12 @@ try {
     version: resolvePaviicoreVersion(projectRoot),
   });
 
+  // 5b. Stage the OpenCode CLI so a fresh install has the default agent on disk.
+  // The engine resolves agents by PATH lookup only, so this binary plus the
+  // pre-spawn PATH entry in ensureOpencode.ts is the whole mechanism.
+  const { prepareOpencode } = require('../packages/shared-scripts/src/prepare-opencode.js');
+  prepareOpencode({ projectRoot, platform: process.platform, arch: targetArch });
+
   // 6. Prepare hub resources (index.json + extension zips for offline fallback)
   execSync('node scripts/prepareHubResources.js', { stdio: 'inherit', env: process.env });
 

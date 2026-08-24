@@ -129,6 +129,49 @@ function verifyBundledResources(resourcesDir, electronPlatformName, targetArch) 
   console.log(`   ✓ Bundled resources verified for ${result.runtimeKey} (${result.checked.length} checks)`);
 }
 
+/**
+ * Refuse to ship an installer whose bundled OpenCode is missing or mismatched.
+ *
+ * OpenCode is the default agent, and the engine only ever finds it via PATH, so
+ * a silently absent binary produces exactly the bug this bundle exists to fix:
+ * a fresh install defaulting to an agent that cannot run. A platform with no
+ * published binary is allowed through — `prepare-opencode.js` skips those by
+ * design and `ensureOpencode.ts` still has the npm fallback.
+ */
+function verifyBundledOpencode(resourcesDir, electronPlatformName, targetArch) {
+  const {
+    OPENCODE_VERSION,
+    PACKAGE_BY_RUNTIME_KEY,
+    binaryNameFor,
+  } = require('../packages/shared-scripts/src/prepare-opencode.js');
+
+  const platform = electronPlatformName === 'darwin' ? 'darwin' : electronPlatformName;
+  const runtimeKey = `${platform}-${targetArch}`;
+  if (!PACKAGE_BY_RUNTIME_KEY[runtimeKey]) {
+    console.log(`   ℹ️  OpenCode: no published binary for ${runtimeKey}; bundle intentionally absent`);
+    return;
+  }
+
+  const dir = path.join(resourcesDir, 'bundled-opencode', runtimeKey);
+  const binary = path.join(dir, binaryNameFor(platform));
+  const manifestPath = path.join(dir, 'manifest.json');
+
+  if (!fs.existsSync(binary)) {
+    throw new Error(`Packaged app is missing the bundled OpenCode binary for ${runtimeKey}: ${binary}`);
+  }
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(`Packaged app is missing bundled-opencode/${runtimeKey}/manifest.json`);
+  }
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  if (manifest.version !== OPENCODE_VERSION) {
+    throw new Error(
+      `Bundled OpenCode version mismatch for ${runtimeKey}: manifest says ${manifest.version}, expected ${OPENCODE_VERSION}`
+    );
+  }
+  const sizeMb = (fs.statSync(binary).size / (1024 * 1024)).toFixed(1);
+  console.log(`   ✓ Bundled OpenCode ${OPENCODE_VERSION} verified for ${runtimeKey} (${sizeMb} MB)`);
+}
+
 module.exports = async function afterPack(context) {
   const { arch, electronPlatformName, appOutDir, packager } = context;
   const targetArch = normalizeArch(typeof arch === 'string' ? arch : Arch[arch] || process.arch);
@@ -165,6 +208,7 @@ module.exports = async function afterPack(context) {
     }
 
     verifyBundledResources(resourcesDir, electronPlatformName, targetArch);
+    verifyBundledOpencode(resourcesDir, electronPlatformName, targetArch);
   } else {
     throw new Error(`resources directory not found: ${resourcesDir}`);
   }
