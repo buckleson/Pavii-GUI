@@ -209,6 +209,9 @@ worktrees/
 docs/superpowers/
 resources/bundled-bun
 resources/bundled-paviicore
+# Engine bundles for targets not currently being built, parked out of the
+# shipped tree by prepare-paviicore.js so they do not ride along in installers.
+resources/.paviicore-cache
 resources/bundled-opencode
 resources/hub
 /resources/windows/support/_sentry-dsn.generated.nsh

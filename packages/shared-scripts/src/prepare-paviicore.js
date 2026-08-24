@@ -66,6 +66,77 @@ function removeDirectorySafe(dirPath) {
   fs.rmSync(dirPath, { recursive: true, force: true });
 }
 
+const PAVIICORE_BUNDLE_ROOT = 'bundled-paviicore';
+
+/**
+ * Where bundles for targets we are not currently building are parked.
+ *
+ * Lives beside `bundled-paviicore` rather than inside it because
+ * electron-builder ships that whole directory; anything left in there rides
+ * along inside every installer.
+ */
+const PAVIICORE_CACHE_ROOT = '.paviicore-cache';
+
+function paviicoreBundleRoot(projectRoot) {
+  return path.join(projectRoot, 'resources', PAVIICORE_BUNDLE_ROOT);
+}
+
+function paviicoreCacheRoot(projectRoot) {
+  return path.join(projectRoot, 'resources', PAVIICORE_CACHE_ROOT);
+}
+
+/** Rename when we can; fall back to copy+delete across filesystems. */
+function moveDirectorySafe(sourcePath, targetPath) {
+  ensureDirectory(path.dirname(targetPath));
+  removeDirectorySafe(targetPath);
+  try {
+    fs.renameSync(sourcePath, targetPath);
+  } catch {
+    fs.cpSync(sourcePath, targetPath, { recursive: true });
+    removeDirectorySafe(sourcePath);
+  }
+}
+
+/**
+ * Move bundles for every target except the one being built out of the shipped
+ * tree.
+ *
+ * electron-builder copies all of `resources/bundled-paviicore`, so a bundle
+ * left over from a build for another arch ships inside the installer — close to
+ * a gigabyte of an engine that machine can never execute.
+ *
+ * They are parked rather than deleted, which is the difference from the
+ * OpenCode bundle: an engine with a `local-source-build` manifest was compiled
+ * from the vendored source and carries the Pavii rebrand. It cannot be
+ * re-downloaded, only rebuilt, so destroying it to save disk would be a bad
+ * trade. `restoreCachedPaviicoreBundle` brings it back when that target is
+ * next built.
+ */
+function stashOtherPaviicoreBundles(projectRoot, keepRuntimeKey) {
+  const root = paviicoreBundleRoot(projectRoot);
+  if (!fs.existsSync(root)) return [];
+  const stashed = [];
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name === keepRuntimeKey) continue;
+    moveDirectorySafe(path.join(root, entry.name), path.join(paviicoreCacheRoot(projectRoot), entry.name));
+    stashed.push(entry.name);
+  }
+  if (stashed.length > 0) {
+    console.log(`  Parked engine bundles for other targets (not shipped): ${stashed.join(', ')}`);
+  }
+  return stashed;
+}
+
+/** Bring a previously parked bundle back, so switching targets is not a rebuild. */
+function restoreCachedPaviicoreBundle(projectRoot, runtimeKey) {
+  const cached = path.join(paviicoreCacheRoot(projectRoot), runtimeKey);
+  const target = path.join(paviicoreBundleRoot(projectRoot), runtimeKey);
+  if (!fs.existsSync(cached) || fs.existsSync(target)) return false;
+  moveDirectorySafe(cached, target);
+  console.log(`  Restored the parked engine bundle for ${runtimeKey}`);
+  return true;
+}
+
 function copyFileSafe(sourcePath, targetPath) {
   ensureDirectory(path.dirname(targetPath));
   fs.copyFileSync(sourcePath, targetPath);
@@ -460,6 +531,12 @@ function preparePaviicore(options) {
   const runtimeKey = `${platform}-${arch}`;
   const actionsRunId = (process.env.AIONUI_BACKEND_RUN_ID || '').trim();
 
+  // Before anything else, make the shipped tree hold exactly this target: bring
+  // back a parked bundle for it, and park everything else. Doing it here covers
+  // every exit path below, including the local-source-build early return.
+  restoreCachedPaviicoreBundle(projectRoot, runtimeKey);
+  stashOtherPaviicoreBundles(projectRoot, runtimeKey);
+
   // Engines built from the vendored source (the-remaa/AionCore) are deployed
   // in place with a `local-source-build` manifest. Never overwrite them with
   // an upstream download — that would silently strip the Pavii rebrand.
@@ -632,5 +709,7 @@ module.exports = {
   getActionsArtifactMissingMessage,
   getActionsArtifactName,
   preparePaviicore,
+  restoreCachedPaviicoreBundle,
+  stashOtherPaviicoreBundles,
   verifyPreparedPaviicoreBundle,
 };
