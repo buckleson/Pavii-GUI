@@ -15,8 +15,9 @@
  * running the script during a build, not here.
  */
 
-import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { afterEach, beforeEach, describe, it, expect } from 'vitest';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -25,10 +26,12 @@ const prepareOpencode = require('../../../packages/shared-scripts/src/prepare-op
   PACKAGE_BY_RUNTIME_KEY: Record<string, string>;
   binaryNameFor: (platform: string) => string;
   bundleDirFor: (projectRoot: string, runtimeKey: string) => string;
+  pruneOtherRuntimeKeys: (projectRoot: string, keepRuntimeKey: string) => string[];
   runtimeKeyFor: (platform: string, arch: string) => string;
 };
 
-const { OPENCODE_VERSION, PACKAGE_BY_RUNTIME_KEY, binaryNameFor, bundleDirFor, runtimeKeyFor } = prepareOpencode;
+const { OPENCODE_VERSION, PACKAGE_BY_RUNTIME_KEY, binaryNameFor, bundleDirFor, pruneOtherRuntimeKeys, runtimeKeyFor } =
+  prepareOpencode;
 
 /** Every platform/arch the release workflow builds an installer for. */
 const SHIPPED_TARGETS: Array<[string, string]> = [
@@ -81,5 +84,59 @@ describe('prepare-opencode', () => {
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as { version: string; runtimeKey: string };
     expect(manifest.version).toBe(OPENCODE_VERSION);
     expect(manifest.runtimeKey).toBe('win32-x64');
+  });
+});
+
+/**
+ * electron-builder ships the whole `resources/bundled-opencode` directory, so a
+ * leftover bundle from a build for another arch rides along inside every
+ * installer — ~170 MB of a binary the target machine cannot run. Pruning is the
+ * only thing keeping the installer to one binary.
+ */
+describe('pruneOtherRuntimeKeys', () => {
+  let projectRoot: string;
+
+  const stage = (runtimeKey: string) => {
+    const dir = bundleDirFor(projectRoot, runtimeKey);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'manifest.json'), '{}');
+    return dir;
+  };
+
+  beforeEach(() => {
+    projectRoot = mkdtempSync(join(tmpdir(), 'pavii-opencode-prune-'));
+  });
+  afterEach(() => {
+    rmSync(projectRoot, { recursive: true, force: true });
+  });
+
+  it('removes bundles for every runtime key except the one being built', () => {
+    const keep = stage('win32-x64');
+    const drop = stage('win32-arm64');
+    const alsoDrop = stage('linux-x64');
+
+    // A Set, not a sorted array: readdir order is not part of the contract.
+    expect(new Set(pruneOtherRuntimeKeys(projectRoot, 'win32-x64'))).toEqual(new Set(['win32-arm64', 'linux-x64']));
+    expect(existsSync(keep)).toBe(true);
+    expect(existsSync(drop)).toBe(false);
+    expect(existsSync(alsoDrop)).toBe(false);
+  });
+
+  it('is a no-op when only the target bundle is staged', () => {
+    const keep = stage('darwin-arm64');
+    expect(pruneOtherRuntimeKeys(projectRoot, 'darwin-arm64')).toEqual([]);
+    expect(existsSync(keep)).toBe(true);
+  });
+
+  it('prunes everything for an arch we publish no binary for', () => {
+    // The unsupported-arch path returns early, but must still not ship some
+    // other platform's binary; that installer relies on the npm fallback.
+    const drop = stage('win32-x64');
+    expect(pruneOtherRuntimeKeys(projectRoot, 'linux-riscv64')).toEqual(['win32-x64']);
+    expect(existsSync(drop)).toBe(false);
+  });
+
+  it('tolerates a project that has never staged a bundle', () => {
+    expect(pruneOtherRuntimeKeys(projectRoot, 'win32-x64')).toEqual([]);
   });
 });

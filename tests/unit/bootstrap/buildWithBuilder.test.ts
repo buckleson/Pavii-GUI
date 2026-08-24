@@ -370,6 +370,14 @@ Module._load = function patchedLoad(request, parent, isMain) {
     return { preparePaviicore: recordPrepareCall };
   }
 
+  // Stub the OpenCode bundle too. Unmocked it downloads ~170 MB per parametrised
+  // case and writes into the real resources/ tree — and since it prunes bundles
+  // for other runtime keys, two cases building different arches delete each
+  // other's output.
+  if (request.endsWith('packages/shared-scripts/src/prepare-opencode.js')) {
+    return { prepareOpencode: () => ({ skipped: true, runtimeKey: 'mock' }) };
+  }
+
   if (request === './resolvePaviicoreVersion.js' || request.endsWith('/resolvePaviicoreVersion.js')) {
     return { resolvePaviicoreVersion: () => 'v-test' };
   }

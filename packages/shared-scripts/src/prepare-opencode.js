@@ -152,6 +152,31 @@ function findExtractedBinary(extractRoot, binaryName) {
 }
 
 /**
+ * Keep only the runtime key we are building for.
+ *
+ * electron-builder copies the whole `resources/bundled-opencode` directory into
+ * the app, so a stale sibling from an earlier build for another arch would ship
+ * inside every installer — ~170 MB of a binary that machine can never run. The
+ * runtime only ever looks in its own `<platform>-<arch>` subdirectory, so
+ * anything else is pure payload. Pruning costs a re-download when a developer
+ * alternates arches locally; CI builds one arch per runner and never notices.
+ */
+function pruneOtherRuntimeKeys(projectRoot, keepRuntimeKey) {
+  const root = path.join(projectRoot, 'resources', BUNDLE_ROOT_NAME);
+  if (!fs.existsSync(root)) return [];
+  const pruned = [];
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name === keepRuntimeKey) continue;
+    fs.rmSync(path.join(root, entry.name), { recursive: true, force: true });
+    pruned.push(entry.name);
+  }
+  if (pruned.length > 0) {
+    console.log(`  OpenCode: pruned bundles not built for this target: ${pruned.join(', ')}`);
+  }
+  return pruned;
+}
+
+/**
  * Ensure `resources/bundled-opencode/<runtimeKey>/` holds the pinned OpenCode
  * binary. Idempotent: a manifest already pinning this version short-circuits,
  * so repeat builds do not re-download ~60 MB.
@@ -166,6 +191,7 @@ function prepareOpencode(options = {}) {
   if (!packageName) {
     // Not fatal: ensureOpencode.ts still has the npm fallback for odd arches.
     console.warn(`  OpenCode: no published binary for ${runtimeKey}; skipping bundle (runtime npm install will apply)`);
+    pruneOtherRuntimeKeys(projectRoot, runtimeKey);
     return { skipped: true, runtimeKey };
   }
 
@@ -179,6 +205,7 @@ function prepareOpencode(options = {}) {
       const existing = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
       if (existing.version === OPENCODE_VERSION && existing.runtimeKey === runtimeKey) {
         console.log(`  OpenCode ${OPENCODE_VERSION} already staged for ${runtimeKey}; skipping download`);
+        pruneOtherRuntimeKeys(projectRoot, runtimeKey);
         return { skipped: true, runtimeKey, version: OPENCODE_VERSION, binaryPath };
       }
     } catch {
@@ -214,6 +241,8 @@ function prepareOpencode(options = {}) {
       files: [binaryName],
     });
 
+    pruneOtherRuntimeKeys(projectRoot, runtimeKey);
+
     const sizeMb = (fs.statSync(binaryPath).size / (1024 * 1024)).toFixed(1);
     console.log(`  OpenCode ${OPENCODE_VERSION} staged for ${runtimeKey} (${sizeMb} MB)`);
     return { skipped: false, runtimeKey, version: OPENCODE_VERSION, binaryPath };
@@ -229,6 +258,7 @@ module.exports = {
   binaryNameFor,
   bundleDirFor,
   prepareOpencode,
+  pruneOtherRuntimeKeys,
   runtimeKeyFor,
 };
 
