@@ -168,6 +168,105 @@ describe('startWebHost handle shape', () => {
   });
 
   test.todo('Backend port conflict: throws and does not leak resources');
-  test.todo('Static-server port conflict: cleans up backend before throwing');
   test.todo('Stop cleanup: stops static-server then backend in sequence');
+});
+
+/**
+ * The paths that only run when something is unusual: an externally managed
+ * backend, or a failure partway through startup. These are exactly the paths a
+ * developer never exercises by hand, so nothing but a test pins them.
+ */
+describe('startWebHost non-default and failure paths', () => {
+  const staticHandle = () => ({
+    port: 33000,
+    url: 'http://127.0.0.1:33000',
+    localUrl: 'http://127.0.0.1:33000',
+    stop: vi.fn().mockResolvedValue(undefined),
+  });
+
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.doUnmock('./ensure-opencode.js');
+    vi.doUnmock('./backend-launcher.js');
+    vi.doUnmock('./static-server.js');
+  });
+
+  test('registers OpenCode on PATH even when attaching to an existing backend', async () => {
+    // `useExistingBackend` is how `bun run webui` attaches to a backend started
+    // separately. Registration is unconditional today, which is harmless and
+    // idempotent — but note it cannot help that backend, which snapshotted PATH
+    // when it was spawned elsewhere. Pinned so the ordering fix is not quietly
+    // moved inside the `ownBackend` branch, where the CLI path would lose it.
+    const registerOpencodeOnPath = vi.fn();
+    const startBackend = vi.fn();
+    vi.doMock('./ensure-opencode.js', () => ({ registerOpencodeOnPath }));
+    vi.doMock('./backend-launcher.js', () => ({ startBackend }));
+    vi.doMock('./static-server.js', () => ({ startStaticServer: vi.fn().mockResolvedValue(staticHandle()) }));
+
+    const { startWebHost } = await import('./index.js');
+    const handle = await startWebHost({
+      app: { version: '1.0.0', isPackaged: false, resourcesPath: '/app', userDataPath: '/home/.pavii-web' },
+      staticDir: '/tmp/static',
+      backend: { kind: 'useExistingBackend', port: 4096 },
+    });
+
+    expect(registerOpencodeOnPath).toHaveBeenCalledTimes(1);
+    expect(startBackend).not.toHaveBeenCalled();
+    expect(handle.backendPort).toBe(4096);
+    await handle.stop();
+  });
+
+  test('fails loudly when PATH registration throws, without spawning a backend behind it', async () => {
+    // Registration touches the filesystem (managed-tools dir, bundled binary
+    // probe), so an unwritable or missing data dir can throw. Swallowing that
+    // would start the host with no default agent and no signal — every session
+    // silently agentless. Failing here also guarantees no orphaned engine
+    // process is left behind, since the spawn never happens.
+    const startBackend = vi.fn();
+    vi.doMock('./ensure-opencode.js', () => ({
+      registerOpencodeOnPath: vi.fn(() => {
+        throw new Error('managed tools dir is not writable');
+      }),
+    }));
+    vi.doMock('./backend-launcher.js', () => ({ startBackend }));
+    vi.doMock('./static-server.js', () => ({ startStaticServer: vi.fn().mockResolvedValue(staticHandle()) }));
+
+    const { startWebHost } = await import('./index.js');
+    const start = startWebHost({
+      app: { version: '1.0.0', isPackaged: false, resourcesPath: '/app', userDataPath: '/home/.pavii-web' },
+      staticDir: '/tmp/static',
+      backend: { kind: 'ownBackend', resolveBackend: () => '/bin/backend' },
+    });
+
+    await expect(start).rejects.toThrow('managed tools dir is not writable');
+    expect(startBackend).not.toHaveBeenCalled();
+  });
+
+  test('stops the backend when the static server fails to start', async () => {
+    // The backend is already spawned by this point. Rethrowing without stopping
+    // it would leave an orphaned engine holding its port and the data dir lock,
+    // so the retry the user immediately attempts fails too.
+    const stop = vi.fn().mockResolvedValue(undefined);
+    vi.doMock('./ensure-opencode.js', () => ({ registerOpencodeOnPath: vi.fn() }));
+    vi.doMock('./backend-launcher.js', () => ({
+      startBackend: vi.fn().mockResolvedValue({ port: 55555, stop }),
+    }));
+    vi.doMock('./static-server.js', () => ({
+      startStaticServer: vi.fn().mockRejectedValue(new Error('listen EADDRINUSE 33000')),
+    }));
+
+    const { startWebHost } = await import('./index.js');
+    const start = startWebHost({
+      app: { version: '1.0.0', isPackaged: false, resourcesPath: '/app', userDataPath: '/home/.pavii-web' },
+      staticDir: '/tmp/static',
+      backend: { kind: 'ownBackend', resolveBackend: () => '/bin/backend' },
+    });
+
+    await expect(start).rejects.toThrow('listen EADDRINUSE 33000');
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
 });

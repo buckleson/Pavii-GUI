@@ -1,4 +1,5 @@
 const { Arch } = require('builder-util');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -138,6 +139,111 @@ function verifyBundledResources(resourcesDir, electronPlatformName, targetArch) 
  * published binary is allowed through — `prepare-opencode.js` skips those by
  * design and `ensureOpencode.ts` still has the npm fallback.
  */
+/**
+ * Refuse to ship an app.asar whose contents do not match its own header.
+ *
+ * electron-builder stats and hashes every file to build the asar header, then
+ * streams the file contents in a second pass. If a source file CHANGES between
+ * those two passes — an editor saving, a watcher, an agent, a concurrent build
+ * — the header records the old size while the archive holds the new bytes, and
+ * every entry after it is displaced by the difference.
+ *
+ * The result packages and signs cleanly and is completely dead: Electron reads
+ * `package.json` at its recorded offset, gets whatever now sits there, cannot
+ * find the main script, and exits 1 before running a line of app code. No
+ * stdout, no stderr (the exe is GUI-subsystem), nothing written to userData.
+ * A build was shipped in exactly this state and looked healthy at every step.
+ *
+ * The asar-integrity fuse is deliberately OFF here, so nothing validates this
+ * at runtime either. Checking at pack time is the only place it gets caught.
+ *
+ * Verifying all ~40k entries would be slow, so this checks the entries that
+ * decide whether the app can boot at all, plus the last entry in the archive —
+ * displacement propagates to the end, so the tail catches drift introduced
+ * anywhere earlier.
+ */
+function verifyAsarIntegrity(resourcesDir) {
+  const asarPath = path.join(resourcesDir, 'app.asar');
+  if (!fs.existsSync(asarPath)) {
+    throw new Error(`asar integrity check: app.asar not found at ${asarPath}`);
+  }
+
+  const fd = fs.openSync(asarPath, 'r');
+  try {
+    const head = Buffer.alloc(16);
+    fs.readSync(fd, head, 0, 16, 0);
+    const headerJsonSize = head.readUInt32LE(12);
+    const dataBase = 8 + head.readUInt32LE(4);
+
+    const headerBuf = Buffer.alloc(headerJsonSize);
+    fs.readSync(fd, headerBuf, 0, headerJsonSize, 16);
+    const header = JSON.parse(headerBuf.toString('utf8'));
+
+    /** Walk the tree, yielding [posixPath, entry] for real files only. */
+    const files = [];
+    const walk = (node, prefix) => {
+      for (const [name, entry] of Object.entries(node.files || {})) {
+        const full = prefix ? `${prefix}/${name}` : name;
+        if (entry.files) walk(entry, full);
+        else if (!entry.unpacked && entry.size > 0) files.push([full, entry]);
+      }
+    };
+    walk(header, '');
+    if (files.length === 0) throw new Error('asar integrity check: header lists no packed files');
+
+    const readEntry = (entry) => {
+      const buf = Buffer.alloc(Number(entry.size));
+      fs.readSync(fd, buf, 0, Number(entry.size), dataBase + Number(entry.offset));
+      return buf;
+    };
+
+    // 1. package.json must parse — this is the first thing Electron reads, and
+    //    the single cheapest proof that offsets still line up.
+    const pkgEntry = header.files['package.json'];
+    if (!pkgEntry || pkgEntry.files) throw new Error('asar integrity check: package.json missing from app.asar');
+    let mainField;
+    try {
+      mainField = JSON.parse(readEntry(pkgEntry).toString('utf8')).main;
+    } catch {
+      throw new Error(
+        'asar integrity check FAILED: package.json inside app.asar is not valid JSON at its recorded offset. ' +
+          'The archive contents are displaced from its header, which usually means a source file changed while ' +
+          'electron-builder was packing. Rebuild on a tree that nothing else is writing to.'
+      );
+    }
+
+    // 2. The main script must exist where the header says it does.
+    if (typeof mainField === 'string' && mainField.length > 0) {
+      const mainPath = mainField.startsWith('./') ? mainField.slice(2) : mainField;
+      const mainEntry = mainPath.split('/').reduce((node, part) => node?.files?.[part], header);
+      if (mainEntry && !mainEntry.files && mainEntry.integrity?.hash) {
+        const actual = crypto.createHash('sha256').update(readEntry(mainEntry)).digest('hex');
+        if (actual !== mainEntry.integrity.hash) {
+          throw new Error(
+            `asar integrity check FAILED: ${mainPath} does not match its header hash. The app would not boot.`
+          );
+        }
+      }
+    }
+
+    // 3. The last packed entry — drift anywhere earlier displaces the tail.
+    const [lastPath, lastEntry] = files[files.length - 1];
+    if (lastEntry.integrity?.hash) {
+      const actual = crypto.createHash('sha256').update(readEntry(lastEntry)).digest('hex');
+      if (actual !== lastEntry.integrity.hash) {
+        throw new Error(
+          `asar integrity check FAILED: the final archive entry (${lastPath}) does not match its header hash. ` +
+            'Contents are displaced from the header — rebuild on a tree that nothing else is writing to.'
+        );
+      }
+    }
+
+    console.log(`   ✓ app.asar integrity verified (${files.length} packed entries, boot path + tail)`);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
 function verifyBundledOpencode(resourcesDir, electronPlatformName, targetArch) {
   const {
     OPENCODE_VERSION,
@@ -207,6 +313,7 @@ module.exports = async function afterPack(context) {
       console.warn(`   ⚠️  app.asar.unpacked not found`);
     }
 
+    verifyAsarIntegrity(resourcesDir);
     verifyBundledResources(resourcesDir, electronPlatformName, targetArch);
     verifyBundledOpencode(resourcesDir, electronPlatformName, targetArch);
   } else {
@@ -366,3 +473,7 @@ module.exports = async function afterPack(context) {
 
   console.log(`✅ All native modules rebuilt successfully for ${targetArch}\n`);
 };
+
+// Attached after the default export assignment, which would otherwise clobber it.
+// Exposed so the guard can be tested without running a full electron-builder pack.
+module.exports.verifyAsarIntegrity = verifyAsarIntegrity;

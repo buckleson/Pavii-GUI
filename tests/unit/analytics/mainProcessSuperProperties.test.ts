@@ -21,6 +21,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   capture: vi.fn(),
+  construct: vi.fn(),
   getVersion: vi.fn(() => '2.1.66'),
   hasAnalyticsId: vi.fn(() => false),
   getOrCreateAnalyticsId: vi.fn(() => 'install-uuid'),
@@ -28,6 +29,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('posthog-node', () => ({
   PostHog: class {
+    constructor(...args: unknown[]) {
+      mocks.construct(...args);
+    }
     capture = mocks.capture;
     shutdown = vi.fn(async () => undefined);
   },
@@ -40,9 +44,14 @@ vi.mock('@/process/utils/analyticsId', () => ({
   getOrCreateAnalyticsId: mocks.getOrCreateAnalyticsId,
 }));
 
-const loadModule = async () => {
+/** Fresh module state without `initAnalytics()` — for tests that own the init call. */
+const loadModuleRaw = async () => {
   vi.resetModules();
-  const mod = await import('@/process/services/analyticsService');
+  return import('@/process/services/analyticsService');
+};
+
+const loadModule = async () => {
+  const mod = await loadModuleRaw();
   mod.initAnalytics();
   return mod;
 };
@@ -116,5 +125,133 @@ describe('main-process events carry super properties', () => {
       (key) => !key.startsWith('$') && !config.ALLOWED_PROPERTY_KEYS.has(key)
     );
     expect(offAllowlist).toEqual([]);
+  });
+});
+
+/**
+ * The main-process client has a lifecycle the renderer's does not: it is
+ * created after `app.whenReady()` and destroyed on `will-quit`, while
+ * `captureAnalytics` is called from module-scope code paths (backend launch,
+ * update install) that can run on either side of those two moments.
+ */
+describe('main-process analytics lifecycle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.POSTHOG_DISABLED;
+    mocks.getVersion.mockReturnValue('2.1.66');
+    mocks.hasAnalyticsId.mockReturnValue(false);
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  it('ignores a capture made before initAnalytics rather than throwing', async () => {
+    // `backend_start_failed` fires from the backend launcher, which on a fast
+    // machine can lose the race with `app.whenReady()`. A throw here would turn
+    // a recoverable backend failure into an unhandled rejection at startup.
+    const { captureAnalytics } = await loadModuleRaw();
+
+    expect(() => captureAnalytics('backend_start_failed', { reason: 'spawn_failed' })).not.toThrow();
+    expect(mocks.capture).not.toHaveBeenCalled();
+  });
+
+  it('captures nothing after shutdownAnalytics, so a flushed client is never reused', async () => {
+    // `shutdownAnalytics` runs on `will-quit`; anything that captures during the
+    // remaining teardown would enqueue onto a client that will never flush
+    // again, and posthog-node throws on a shut-down client.
+    const { captureAnalytics, shutdownAnalytics } = await loadModule();
+    await shutdownAnalytics();
+
+    expect(() => captureAnalytics('app_closed', { session_seconds: 12 })).not.toThrow();
+    expect(mocks.capture).not.toHaveBeenCalled();
+  });
+
+  it('keeps a single client when initAnalytics is called twice', async () => {
+    // A second client would double-send every subsequent event, inflating every
+    // count in PostHog by exactly 2x with no way to tell from the data.
+    const mod = await loadModule();
+    mod.initAnalytics();
+
+    expect(mocks.construct).toHaveBeenCalledTimes(1);
+    expect(mocks.getOrCreateAnalyticsId).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not flip is_first_run when initAnalytics is called twice', async () => {
+    // The id file exists after the first init, so re-running the first-run probe
+    // would report `false` for a genuinely new install and silently zero out the
+    // activation funnel.
+    mocks.hasAnalyticsId.mockReturnValueOnce(false).mockReturnValue(true);
+    const mod = await loadModule();
+    mod.initAnalytics();
+    mod.captureAppOpened();
+
+    expect(capturedProperties()).toMatchObject({ is_first_run: true });
+  });
+
+  it('creates no client and sends nothing when analytics is disabled', async () => {
+    // POSTHOG_DISABLED is the opt-out honoured for forks and privacy-sensitive
+    // installs. Constructing the client at all would open the connection and
+    // write the analytics id file, which is the thing being opted out of.
+    process.env.POSTHOG_DISABLED = '1';
+    const mod = await loadModuleRaw();
+    mod.initAnalytics();
+    mod.captureAppOpened();
+
+    expect(mocks.construct).not.toHaveBeenCalled();
+    expect(mocks.capture).not.toHaveBeenCalled();
+  });
+
+  it('survives app.getVersion() throwing while resolving super properties', async () => {
+    // `initAnalytics` is called from main-process bootstrap; `app.getVersion()`
+    // throws if Electron is not ready yet. Analytics failing to start must never
+    // be able to abort the boot sequence.
+    mocks.getVersion.mockImplementation(() => {
+      throw new Error('app is not ready');
+    });
+    const mod = await loadModuleRaw();
+
+    expect(() => mod.initAnalytics()).not.toThrow();
+    expect(mocks.capture).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The super-property merge happens before `scrubEvent`, so the merged bag is
+ * what the allowlist and the value rules actually see.
+ */
+describe('main-process properties at the scrub boundary', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.POSTHOG_DISABLED;
+    mocks.getVersion.mockReturnValue('2.1.66');
+    mocks.hasAnalyticsId.mockReturnValue(false);
+  });
+
+  it('keeps falsy-but-real dimensions and drops only undefined ones', async () => {
+    // `ok: false` and `mcp_count: 0` are the failure tail these events exist to
+    // measure. Dropping them would leave PostHog with only the successes, so
+    // every rate would read as 100%.
+    const { captureAnalytics } = await loadModule();
+
+    captureAnalytics('turn_completed', {
+      ok: false,
+      mcp_count: 0,
+      agent_kind: '',
+      has_files: null,
+      transport: undefined,
+    });
+
+    expect(capturedProperties()).toMatchObject({ ok: false, mcp_count: 0, agent_kind: '', has_files: null });
+    expect('transport' in capturedProperties()).toBe(false);
+  });
+
+  it('drops a property key that is not on the allowlist even when passed explicitly', async () => {
+    // The allowlist is the only thing standing between a future call site and
+    // shipping user prose to PostHog; merging super properties must not turn the
+    // caller's bag into a trusted one.
+    const { captureAnalytics } = await loadModule();
+
+    captureAnalytics('message_sent', { agent_kind: 'acp', prompt: 'summarise my medical records' });
+
+    expect(capturedProperties().prompt).toBeUndefined();
+    expect(capturedProperties().agent_kind).toBe('acp');
   });
 });

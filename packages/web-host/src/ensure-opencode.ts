@@ -31,7 +31,7 @@
  */
 
 import { execFile, execSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { delimiter, join } from 'node:path';
 import { promisify } from 'node:util';
 
@@ -39,6 +39,15 @@ const execFileAsync = promisify(execFile);
 
 const OPENCODE_NPM_PACKAGE = 'opencode-ai';
 const INSTALL_TIMEOUT_MS = 5 * 60_000;
+
+/** True only for a real file — a directory of the same name must not count. */
+function isExecutableFile(candidate: string): boolean {
+  try {
+    return existsSync(candidate) && statSync(candidate).isFile();
+  } catch {
+    return false;
+  }
+}
 
 /** Directory holding the OpenCode binary shipped inside the installer. */
 export function getBundledOpencodeDir(
@@ -48,7 +57,10 @@ export function getBundledOpencodeDir(
   if (!resourcesPath) return null;
   const dir = join(resourcesPath, 'bundled-opencode', runtimeKey);
   const binary = join(dir, process.platform === 'win32' ? 'opencode.exe' : 'opencode');
-  return existsSync(binary) ? dir : null;
+  // isFile, not just exists: a directory named `opencode.exe` would satisfy
+  // existsSync, put a non-executable path on PATH, and suppress the npm
+  // fallback — the app would advertise a bundled agent that cannot run.
+  return isExecutableFile(binary) ? dir : null;
 }
 
 /** Directory that receives the npm-prefix install of managed CLI tools. */

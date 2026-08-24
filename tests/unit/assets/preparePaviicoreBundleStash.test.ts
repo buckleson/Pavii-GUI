@@ -108,3 +108,79 @@ describe('paviicore bundle stash/restore', () => {
     expect(restoreCachedPaviicoreBundle(projectRoot, 'win32-x64')).toBe(false);
   });
 });
+
+/**
+ * The parking area is long-lived: a developer who alternates between targets
+ * accumulates months of parked engines there. Every one of them is a candidate
+ * for being restored into a shipped installer later, so a parked copy that is
+ * half old engine and half new is worse than no cache at all.
+ */
+describe('paviicore stash on an already-populated cache', () => {
+  let projectRoot: string;
+
+  const bundleDir = (runtimeKey: string) => join(projectRoot, 'resources', 'bundled-paviicore', runtimeKey);
+  const cacheDir = (runtimeKey: string) => join(projectRoot, 'resources', '.paviicore-cache', runtimeKey);
+
+  const stage = (dir: string, marker: string) => {
+    mkdirSync(join(dir, 'managed-resources'), { recursive: true });
+    writeFileSync(join(dir, 'manifest.json'), JSON.stringify({ sourceType: marker }));
+    writeFileSync(join(dir, 'managed-resources', 'payload.bin'), marker);
+    return dir;
+  };
+
+  beforeEach(() => {
+    projectRoot = mkdtempSync(join(tmpdir(), 'pavii-paviicore-stash-cache-'));
+  });
+  afterEach(() => {
+    rmSync(projectRoot, { recursive: true, force: true });
+  });
+
+  it('replaces a parked copy wholesale rather than merging into it', () => {
+    // A merge leaves files from an engine build that no manifest describes.
+    // Restored later, that bundle passes the manifest check while carrying
+    // pieces of a different engine version.
+    stage(cacheDir('linux-arm64'), 'older');
+    writeFileSync(join(cacheDir('linux-arm64'), 'managed-resources', 'orphan-from-older.bin'), 'older');
+    stage(bundleDir('linux-arm64'), 'newer');
+
+    stashOtherPaviicoreBundles(projectRoot, 'win32-x64');
+
+    expect(existsSync(join(cacheDir('linux-arm64'), 'managed-resources', 'orphan-from-older.bin'))).toBe(false);
+  });
+
+  it('parks every staged bundle when nothing is staged for the target being built', () => {
+    // The first build of a new target starts with an empty slot; if the other
+    // targets stayed put, that installer would ship two engines.
+    stage(bundleDir('win32-x64'), 'github-release');
+    stage(bundleDir('darwin-arm64'), 'local-source-build');
+
+    expect(new Set(stashOtherPaviicoreBundles(projectRoot, 'linux-x64'))).toEqual(
+      new Set(['win32-x64', 'darwin-arm64'])
+    );
+    expect(existsSync(cacheDir('win32-x64'))).toBe(true);
+    expect(existsSync(cacheDir('darwin-arm64'))).toBe(true);
+  });
+
+  it('leaves loose files in the bundle root where they are', () => {
+    // Only `<platform>-<arch>` directories are bundles. Moving a file out of
+    // the shipped tree would drop it from the installer with no way back short
+    // of a checkout.
+    const bundleRoot = join(projectRoot, 'resources', 'bundled-paviicore');
+    mkdirSync(bundleRoot, { recursive: true });
+    const keepFile = join(bundleRoot, '.gitkeep');
+    writeFileSync(keepFile, '');
+
+    expect(stashOtherPaviicoreBundles(projectRoot, 'win32-x64')).toEqual([]);
+    expect(existsSync(keepFile)).toBe(true);
+  });
+
+  it('creates no empty bundle directory when the cache holds nothing for that target', () => {
+    // The bundle directory is treated as evidence that an engine is staged; an
+    // empty one turns a missing engine into an installer that only fails at
+    // runtime, on the user's machine.
+    stage(cacheDir('darwin-arm64'), 'local-source-build');
+
+    expect(restoreCachedPaviicoreBundle(projectRoot, 'win32-x64')).toBe(false);
+    expect(existsSync(bundleDir('win32-x64'))).toBe(false);
+  });
+});

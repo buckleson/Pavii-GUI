@@ -226,3 +226,190 @@ describe('bundled opencode', () => {
     expect((env.PATH ?? '').split(delimiter)).toContain(managedEntry);
   });
 });
+
+/**
+ * PATH is the whole contract with the engine, and the environment we are handed
+ * is not always the tidy one from an interactive shell: a service launcher, a CI
+ * runner, or a `pavii-web` process started from a stripped env can hand us an
+ * empty, absent, or malformed PATH. Corrupting it here disables not just
+ * OpenCode but every tool the engine shells out to.
+ */
+describe('registerOpencodeOnPath against malformed environments', () => {
+  const binaryName = process.platform === 'win32' ? 'opencode.exe' : 'opencode';
+  const runtimeKey = `${process.platform}-${process.arch}`;
+  const dataDir = absFixture('pavii-data');
+  let resourcesRoot: string;
+
+  const stageBundle = () => {
+    const dir = join(resourcesRoot, 'bundled-opencode', runtimeKey);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, binaryName), '');
+    return dir;
+  };
+
+  const emptyEntries = (value: string) => value.split(delimiter).filter((part) => part === '').length;
+
+  beforeEach(() => {
+    resourcesRoot = mkdtempSync(join(tmpdir(), 'pavii-opencode-path-'));
+  });
+  afterEach(() => {
+    rmSync(resourcesRoot, { recursive: true, force: true });
+  });
+
+  it('registers the bundle when PATH is an empty string', () => {
+    const dir = stageBundle();
+    const env: NodeJS.ProcessEnv = { PATH: '' };
+    registerOpencodeOnPath({ dataDir, resourcesPath: resourcesRoot, env });
+    expect((env.PATH ?? '').split(delimiter)).toContain(dir);
+  });
+
+  it('adds no empty PATH entry when PATH is an empty string', () => {
+    // An empty PATH element means "the current directory" on POSIX, so a stray
+    // `opencode` in whatever directory the app was launched from would be
+    // picked up ahead of the bundled one.
+    stageBundle();
+    const env: NodeJS.ProcessEnv = { PATH: '' };
+    registerOpencodeOnPath({ dataDir, resourcesPath: resourcesRoot, env });
+    expect(emptyEntries(env.PATH ?? '')).toBeLessThanOrEqual(emptyEntries(''));
+  });
+
+  it('adds no empty PATH entry when PATH already ends with a delimiter', () => {
+    // Same current-directory risk, reached by the far more common route of a
+    // PATH assembled by string concatenation somewhere upstream.
+    stageBundle();
+    const original = `${absFixture('existing', 'bin')}${delimiter}`;
+    const env: NodeJS.ProcessEnv = { PATH: original };
+    registerOpencodeOnPath({ dataDir, resourcesPath: resourcesRoot, env });
+    expect(emptyEntries(env.PATH ?? '')).toBeLessThanOrEqual(emptyEntries(original));
+  });
+
+  it('does not grow a PATH that already lists the bundle twice', () => {
+    // Registration runs on every launch and, in dev, on every reload. Appending
+    // regardless of what is already there makes PATH grow until the OS length
+    // limit truncates it and unrelated tools stop resolving.
+    const dir = stageBundle();
+    const env: NodeJS.ProcessEnv = { PATH: [dir, absFixture('existing', 'bin'), dir].join(delimiter) };
+    registerOpencodeOnPath({ dataDir, resourcesPath: resourcesRoot, env });
+    expect((env.PATH ?? '').split(delimiter).filter((part) => part === dir)).toHaveLength(2);
+  });
+
+  it('still registers the managed tools dir with neither a packaged nor a dev resources path', () => {
+    // web-host also runs outside Electron, where `process.resourcesPath` is
+    // undefined; the npm-installed fallback is then the only OpenCode there is.
+    const env: NodeJS.ProcessEnv = { PATH: absFixture('existing', 'bin') };
+    registerOpencodeOnPath({ dataDir, env });
+    const [managedEntry] = getManagedToolsPathEntries(dataDir);
+    expect((env.PATH ?? '').split(delimiter)).toContain(managedEntry);
+  });
+
+  it('keeps the managed tools dir ahead of the user PATH and the bundle behind it', () => {
+    // The two directories have opposite priorities and one call sets both: an
+    // app-managed install must beat a stale system copy, while the user's own
+    // build must still beat the bundled one. A refactor that treats them alike
+    // silently changes which OpenCode every user runs.
+    const dir = stageBundle();
+    const userDir = absFixture('user', 'npm-global');
+    const env: NodeJS.ProcessEnv = { PATH: userDir };
+    registerOpencodeOnPath({ dataDir, resourcesPath: resourcesRoot, env });
+    const parts = (env.PATH ?? '').split(delimiter);
+    const [managedEntry] = getManagedToolsPathEntries(dataDir);
+    expect(parts.indexOf(managedEntry)).toBeLessThan(parts.indexOf(userDir));
+    expect(parts.indexOf(userDir)).toBeLessThan(parts.indexOf(dir));
+  });
+});
+
+/**
+ * `dataDir` arrives from user configuration and from installer defaults, so it
+ * can be blank long before anyone notices. What must never happen is a blank
+ * value turning into an empty PATH entry.
+ */
+describe('getManagedToolsPathEntries with a blank data dir', () => {
+  it('never yields an empty PATH entry for an empty data dir', () => {
+    // An empty entry is the current directory on POSIX — a working directory
+    // holding an `opencode` binary would hijack the default agent.
+    for (const entry of getManagedToolsPathEntries('')) {
+      expect(entry).not.toBe('');
+    }
+  });
+
+  it('never yields a blank PATH entry for a whitespace-only data dir', () => {
+    for (const entry of getManagedToolsPathEntries('   ')) {
+      expect(entry.trim()).not.toBe('');
+    }
+  });
+});
+
+/**
+ * A bundle directory is only worth putting on PATH if the binary is really in
+ * it. Reporting one that is not means the app believes OpenCode shipped and
+ * never falls back to the npm install — the symptom is a default agent that
+ * does not exist, with nothing in the logs.
+ */
+describe('getBundledOpencodeDir on a partially staged bundle', () => {
+  const runtimeKey = `${process.platform}-${process.arch}`;
+  let resourcesRoot: string;
+  let bundleDir: string;
+
+  beforeEach(() => {
+    resourcesRoot = mkdtempSync(join(tmpdir(), 'pavii-opencode-partial-'));
+    bundleDir = join(resourcesRoot, 'bundled-opencode', runtimeKey);
+    mkdirSync(bundleDir, { recursive: true });
+  });
+  afterEach(() => {
+    rmSync(resourcesRoot, { recursive: true, force: true });
+  });
+
+  it('returns null when only the manifest was written', () => {
+    // prepare-opencode writes the manifest after copying the binary, so a build
+    // interrupted mid-copy — or an installer that dropped the one large file —
+    // leaves exactly this shape on disk.
+    writeFileSync(join(bundleDir, 'manifest.json'), '{}');
+    expect(getBundledOpencodeDir(resourcesRoot, runtimeKey)).toBeNull();
+  });
+
+  it('returns null for an empty-string resources path', () => {
+    // `process.resourcesPath` is typed as a string and reads empty rather than
+    // undefined outside a packaged app; treating it as a root would search for
+    // the bundle relative to the working directory.
+    expect(getBundledOpencodeDir('', runtimeKey)).toBeNull();
+  });
+
+  it('returns null for a whitespace-only resources path', () => {
+    expect(getBundledOpencodeDir('   ', runtimeKey)).toBeNull();
+  });
+});
+
+/**
+ * A directory named `opencode.exe` satisfies `existsSync`. Before this was
+ * hardened the app would advertise a bundled agent, append a directory holding
+ * no executable to PATH, and suppress the npm fallback that would otherwise
+ * have recovered — a default agent that cannot run, with nothing logged.
+ *
+ * Contrived to reach by hand, but it is the same `existsSync`-means-usable
+ * assumption that has to hold for every partially written bundle.
+ */
+describe('getBundledOpencodeDir rejects a non-file binary', () => {
+  const binaryName = process.platform === 'win32' ? 'opencode.exe' : 'opencode';
+  const runtimeKey = `${process.platform}-${process.arch}`;
+  let resourcesRoot: string;
+
+  beforeEach(() => {
+    resourcesRoot = mkdtempSync(join(tmpdir(), 'pavii-opencode-nonfile-'));
+  });
+  afterEach(() => {
+    rmSync(resourcesRoot, { recursive: true, force: true });
+  });
+
+  it('returns null when the binary path is a directory', () => {
+    mkdirSync(join(resourcesRoot, 'bundled-opencode', runtimeKey, binaryName), { recursive: true });
+    expect(getBundledOpencodeDir(resourcesRoot, runtimeKey)).toBeNull();
+  });
+
+  it('still returns the directory for a real binary file', () => {
+    // The inverse, so the hardening cannot be "fixed" by rejecting everything.
+    const dir = join(resourcesRoot, 'bundled-opencode', runtimeKey);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, binaryName), '');
+    expect(getBundledOpencodeDir(resourcesRoot, runtimeKey)).toBe(dir);
+  });
+});

@@ -30,6 +30,8 @@ const prepareOpencode = require('../../../packages/shared-scripts/src/prepare-op
     skipped: boolean;
     unsupported?: boolean;
     runtimeKey: string;
+    version?: string;
+    binaryPath?: string;
   };
   pruneOtherRuntimeKeys: (projectRoot: string, keepRuntimeKey: string) => string[];
   runtimeKeyFor: (platform: string, arch: string) => string;
@@ -169,5 +171,79 @@ describe('prepareOpencode unsupported-arch contract', () => {
     for (const key of Object.keys(PACKAGE_BY_RUNTIME_KEY)) {
       expect(PACKAGE_BY_RUNTIME_KEY[key], key).toBeTruthy();
     }
+  });
+});
+
+/**
+ * The bundle root is not guaranteed to contain only runtime-key directories:
+ * a `.gitkeep`, a `.DS_Store`, or a half-written download can sit beside them.
+ * Pruning walks that root with `rm -rf` semantics, so anything it misreads as a
+ * stale bundle is destroyed and reported to the build log as one.
+ */
+describe('pruneOtherRuntimeKeys on a bundle root that is not only bundles', () => {
+  let projectRoot: string;
+  let bundleRoot: string;
+
+  beforeEach(() => {
+    projectRoot = mkdtempSync(join(tmpdir(), 'pavii-opencode-prune-mixed-'));
+    bundleRoot = join(projectRoot, 'resources', 'bundled-opencode');
+    mkdirSync(bundleRoot, { recursive: true });
+  });
+  afterEach(() => {
+    rmSync(projectRoot, { recursive: true, force: true });
+  });
+
+  it('leaves loose files in the bundle root alone', () => {
+    // A file is not a bundle. Deleting it would silently drop whatever the
+    // repository keeps there to make the directory exist for electron-builder.
+    const keepFile = join(bundleRoot, '.gitkeep');
+    writeFileSync(keepFile, '');
+    mkdirSync(join(bundleRoot, 'linux-x64'), { recursive: true });
+
+    expect(pruneOtherRuntimeKeys(projectRoot, 'win32-x64')).toEqual(['linux-x64']);
+    expect(existsSync(keepFile)).toBe(true);
+  });
+
+  it('never reports a loose file as a pruned runtime key', () => {
+    // The returned list is what the build log claims was removed; a file in it
+    // sends a developer hunting for a bundle that never existed.
+    writeFileSync(join(bundleRoot, 'README.md'), 'not a bundle');
+    expect(pruneOtherRuntimeKeys(projectRoot, 'win32-x64')).toEqual([]);
+  });
+});
+
+/**
+ * The unsupported-arch branch returns before any download, which makes it the
+ * one prepareOpencode path safe to exercise offline — and the one most likely
+ * to be forgotten, because nobody builds riscv64 by hand.
+ */
+describe('prepareOpencode on an arch with no published binary', () => {
+  let projectRoot: string;
+
+  beforeEach(() => {
+    projectRoot = mkdtempSync(join(tmpdir(), 'pavii-opencode-unsupported-prune-'));
+  });
+  afterEach(() => {
+    rmSync(projectRoot, { recursive: true, force: true });
+  });
+
+  it('still prunes a bundle staged for a different arch', () => {
+    // Skipping the download must not also skip the prune: the installer would
+    // then ship the previous build's binary, which this machine cannot run.
+    const stale = bundleDirFor(projectRoot, 'win32-x64');
+    mkdirSync(stale, { recursive: true });
+    writeFileSync(join(stale, 'manifest.json'), '{}');
+
+    prepareOpencode.prepareOpencode({ projectRoot, platform: 'linux', arch: 'riscv64' });
+
+    expect(existsSync(stale)).toBe(false);
+  });
+
+  it('reports no binary path for the bundle it did not stage', () => {
+    // `scripts/pack-web-cli.js` copies `binaryPath` into the tarball; a
+    // leftover value here would make it copy some other arch's binary.
+    const result = prepareOpencode.prepareOpencode({ projectRoot, platform: 'linux', arch: 'riscv64' });
+    expect(result.binaryPath).toBeUndefined();
+    expect(result.version).toBeUndefined();
   });
 });
