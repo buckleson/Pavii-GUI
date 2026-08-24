@@ -38,6 +38,7 @@ import {
   mergeSlashCommands,
   orderSlashCommandsForDisplay,
 } from '@/common/chat/slash/mergeSlashCommands';
+import { buildAppSlashCommands } from '@/common/chat/slash/appSlashCommands';
 import { useAssistantSlashSkills } from '@/renderer/hooks/chat/useAssistantSlashSkills';
 import React, { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -448,21 +449,8 @@ const SendBox: React.FC<{
 
   const builtinSlashCommands = useMemo<SlashCommandItem[]>(() => {
     const commands: SlashCommandItem[] = [];
-    // App-level equivalents of commands users know from agent TUIs. The CLIs
-    // do not expose these over ACP (they are terminal-UI features), so the
-    // app maps them onto its own real actions instead of showing nothing.
-    commands.push({
-      name: 'new',
-      description: t('messages.slash.newConversation', { defaultValue: 'Start a new conversation' }),
-      kind: 'builtin',
-      source: 'builtin',
-    });
-    commands.push({
-      name: 'agents',
-      description: t('messages.slash.switchAssistant', { defaultValue: 'Choose an assistant' }),
-      kind: 'builtin',
-      source: 'builtin',
-    });
+    // Shared with the new-conversation composer so the two lists cannot drift.
+    commands.push(...buildAppSlashCommands(t));
     if (enableBtw) {
       commands.push({
         name: 'btw',

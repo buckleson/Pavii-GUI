@@ -5,6 +5,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { buildAppSlashCommands } from '@/common/chat/slash/appSlashCommands';
 import { buildGuidSlashCommands } from '@/common/chat/slash/guidSlashCommands';
 import type { SlashCommandItem } from '@/common/chat/slash/types';
 import type { IMcpServer, TProviderWithModel } from '@/common/config/storage';
@@ -159,6 +160,8 @@ const GuidPage: React.FC = () => {
   // send path (useGuidSend).
   const displayFilePaths = useMemo(() => guidInput.files.map(chatFileRefPath), [guidInput.files]);
 
+  const assistantSectionRef = useRef<HTMLDivElement | null>(null);
+
   const resetMentionOpen = useCallback<React.Dispatch<React.SetStateAction<boolean>>>(() => {}, []);
   const resetMentionQuery = useCallback<React.Dispatch<React.SetStateAction<string | null>>>(() => {}, []);
   const resetMentionActiveIndex = useCallback<React.Dispatch<React.SetStateAction<number>>>(() => {}, []);
@@ -204,6 +207,9 @@ const GuidPage: React.FC = () => {
         kind: 'builtin',
         source: 'builtin',
       },
+      // Shared with the conversation composer. Registering them here is what
+      // stops `/agents` being sent to the agent as unrecognised text.
+      ...buildAppSlashCommands(t),
     ],
     [t]
   );
@@ -228,6 +234,19 @@ const GuidPage: React.FC = () => {
     input: guidInput.input,
     commands: guidSlashCommands,
     onExecuteBuiltin: (name) => {
+      if (name === 'new') {
+        // Already on the new-conversation screen: the useful action is to
+        // clear the draft, not to navigate here again.
+        guidInput.setInput('');
+        return;
+      }
+      if (name === 'agents') {
+        // The assistant picker is on this screen — bring it into view rather
+        // than navigating away from the conversation being started.
+        guidInput.setInput('');
+        assistantSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
       onSlashBuiltinCommand(name);
       guidInput.setInput('');
     },
@@ -679,12 +698,14 @@ const GuidPage: React.FC = () => {
             <p className='text-2xl font-semibold mb-0 text-0 text-center'>{t('conversation.welcome.title')}</p>
           </div>
 
-          <AssistantSelectionArea
-            selectedAssistantId={agentSelection.selectedAssistantId}
-            assistants={agentSelection.assistants}
-            localeKey={localeKey}
-            onSelectAssistant={handleSelectAssistant}
-          />
+          <div ref={assistantSectionRef}>
+            <AssistantSelectionArea
+              selectedAssistantId={agentSelection.selectedAssistantId}
+              assistants={agentSelection.assistants}
+              localeKey={localeKey}
+              onSelectAssistant={handleSelectAssistant}
+            />
+          </div>
 
           <GuidInputCard
             focusRequestKey={navState?.focusPrefill && navState.prefillPrompt ? location.key : undefined}
