@@ -1244,6 +1244,8 @@ export type I18nKey =
   | 'messages.scrollToBottom'
   | 'messages.slash.empty'
   | 'messages.slash.hint'
+  | 'messages.slash.newConversation'
+  | 'messages.slash.switchAssistant'
   | 'messages.slash.title'
   | 'messages.unknownMessageType'
   | 'preview.addToChat'

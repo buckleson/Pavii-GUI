@@ -513,6 +513,22 @@ fn slash_command_items(commands: &[AvailableCommand]) -> Vec<SlashCommandItem> {
     commands.iter().map(slash_command_item).collect()
 }
 
+/// Convert the persisted `agent_metadata.available_commands` JSON back into
+/// slash-command items.
+///
+/// The stored value is what `CatalogForwarder` wrote: a JSON array of ACP
+/// `AvailableCommand`s run through `normalize_keys_to_snake_case`, which
+/// preserves `_meta` verbatim — so a plain deserialize round-trips and the
+/// completion-behavior / empty-turn-tip metadata survives.
+///
+/// Returns `None` for missing, malformed, or non-array payloads. Callers use
+/// this as a cache read: absence of a cache must degrade to "no commands",
+/// never to an error, because it feeds a menu, not a turn.
+pub fn cached_slash_command_items(raw: &str) -> Option<Vec<SlashCommandItem>> {
+    let commands: Vec<AvailableCommand> = serde_json::from_str(raw).ok()?;
+    Some(slash_command_items(&commands))
+}
+
 fn leading_slash_token(raw_user_input: &str) -> Option<&str> {
     raw_user_input
         .split_whitespace()

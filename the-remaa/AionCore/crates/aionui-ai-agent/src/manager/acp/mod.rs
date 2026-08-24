@@ -15,6 +15,7 @@ pub mod session;
 mod stderr_error_extractor;
 
 pub use agent::AcpAgentManager;
+pub use agent::cached_slash_command_items;
 pub use agent::RequiredFullAutoApplication;
 pub use agent_event_tracker::AcpSessionEvent;
 pub use agent_reconcile::ReconcileAction;

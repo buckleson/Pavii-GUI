@@ -41,6 +41,7 @@ import {
 import { useAssistantSlashSkills } from '@/renderer/hooks/chat/useAssistantSlashSkills';
 import React, { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import useSWR from 'swr';
 import { useCompositionInput } from '@renderer/hooks/chat/useCompositionInput';
 import { useConversationExport } from '@renderer/hooks/file/useConversationExport';
@@ -248,6 +249,7 @@ const SendBox: React.FC<{
   const effectiveLockMultiLine = lockMultiLine && !isMobileCompact;
   const effectiveDefaultMultiLine = defaultMultiLine && !isMobileCompact;
   const conversationContext = useConversationContextSafe();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [isSingleLine, setIsSingleLine] = useState(!effectiveDefaultMultiLine);
@@ -446,6 +448,21 @@ const SendBox: React.FC<{
 
   const builtinSlashCommands = useMemo<SlashCommandItem[]>(() => {
     const commands: SlashCommandItem[] = [];
+    // App-level equivalents of commands users know from agent TUIs. The CLIs
+    // do not expose these over ACP (they are terminal-UI features), so the
+    // app maps them onto its own real actions instead of showing nothing.
+    commands.push({
+      name: 'new',
+      description: t('messages.slash.newConversation', { defaultValue: 'Start a new conversation' }),
+      kind: 'builtin',
+      source: 'builtin',
+    });
+    commands.push({
+      name: 'agents',
+      description: t('messages.slash.switchAssistant', { defaultValue: 'Choose an assistant' }),
+      kind: 'builtin',
+      source: 'builtin',
+    });
     if (enableBtw) {
       commands.push({
         name: 'btw',
@@ -520,6 +537,17 @@ const SendBox: React.FC<{
               Message.error(t('messages.copyFailed'));
             });
         }
+      } else if (name === 'new') {
+        // Same navigation as the sider's new-conversation button.
+        void Promise.resolve(navigate('/guid', { state: { resetAssistant: true } })).catch((error) =>
+          console.error('Failed to open a new conversation:', error)
+        );
+      } else if (name === 'agents') {
+        // There is no in-conversation assistant switcher; the assistants page
+        // is the real surface for choosing one.
+        void Promise.resolve(navigate('/assistants')).catch((error) =>
+          console.error('Failed to open assistants:', error)
+        );
       } else if (name === 'export') {
         void conversationExport.openExportFlow();
       } else {

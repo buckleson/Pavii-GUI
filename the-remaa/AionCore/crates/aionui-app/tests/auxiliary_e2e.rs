@@ -254,14 +254,114 @@ async fn slash_commands_requires_auth() {
 }
 
 #[tokio::test]
-async fn slash_commands_no_active_task() {
+async fn slash_commands_no_active_task_returns_empty_list() {
     let (mut app, services) = build_app().await;
-    let (token, _csrf) = setup_and_login(&mut app, &services, "user1", "pass123").await;
-    let conv_id = create_conversation(&mut app, &token, &_csrf, "Slash Test", "acp").await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "user1", "pass123").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Slash Test", "acp").await;
 
     let req = get_with_token(&format!("/api/conversations/{conv_id}/slash-commands"), &token);
     let resp = app.oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    // This used to be a 404 (ActiveAgentNotFound), which was wrong: the
+    // endpoint feeds the composer's slash-command menu, and an idle
+    // conversation is not a missing one — 404ing here blanked the menu the
+    // moment a turn finished. With no live task and no cached agent catalog
+    // the endpoint now degrades to 200 with an empty list.
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert!(json["data"].as_array().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn slash_commands_no_active_task_serves_cached_agent_catalog() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "user1", "pass123").await;
+
+    // Seed the persisted catalog exactly as `CatalogForwarder` writes it into
+    // `agent_metadata.available_commands`: a JSON array of ACP
+    // `AvailableCommand`s, snake_cased, with `_meta` preserved verbatim.
+    let cached_commands = serde_json::json!([
+        { "name": "init", "description": "Set up the project" },
+        {
+            "name": "compact",
+            "description": "Compact the conversation history",
+            "_meta": { "completion_behavior": "normal" }
+        },
+    ])
+    .to_string();
+
+    services
+        .agent_registry
+        .repo_handle()
+        .upsert(&aionui_db::UpsertAgentMetadataParams {
+            id: "cached-slash-agent",
+            icon: None,
+            name: "cached-slash-agent",
+            name_i18n: None,
+            description: None,
+            description_i18n: None,
+            backend: Some("cached-slash-backend"),
+            agent_type: "acp",
+            agent_source: "builtin",
+            agent_source_info: Some("{}"),
+            enabled: true,
+            command: None,
+            args: Some("[]"),
+            env: Some("[]"),
+            native_skills_dirs: None,
+            behavior_policy: Some("{}"),
+            yolo_id: Some("yolo"),
+            agent_capabilities: None,
+            auth_methods: None,
+            config_options: None,
+            available_modes: None,
+            available_models: None,
+            available_commands: Some(&cached_commands),
+            sort_order: 1,
+        })
+        .await
+        .unwrap();
+
+    // Link conversation → agent via `extra.backend`: with no acp_session row
+    // and no assistant snapshot, `resolve_agent_metadata_row` falls back to
+    // `find_builtin_by_backend_for_user`.
+    let req = json_with_token(
+        "POST",
+        "/api/conversations",
+        json!({
+            "type": "acp",
+            "name": "Cached Slash Test",
+            "extra": { "backend": "cached-slash-backend" }
+        }),
+        &token,
+        &csrf,
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    let conv_id = body_json(resp).await["data"]["id"].as_str().unwrap().to_owned();
+
+    let req = get_with_token(&format!("/api/conversations/{conv_id}/slash-commands"), &token);
+    let resp = app.oneshot(req).await.unwrap();
+    // No live task exists, so this response can only come from the cached
+    // `agent_metadata.available_commands` snapshot.
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    let items = json["data"].as_array().unwrap();
+    assert_eq!(items.len(), 2, "both cached commands should be served: {items:?}");
+
+    assert_eq!(items[0]["command"], "init");
+    assert_eq!(items[0]["description"], "Set up the project");
+    // No `_meta` on the first command → completion_behavior is omitted
+    // (skip_serializing_if on SlashCommandItem).
+    assert!(items[0].get("completion_behavior").is_none());
+
+    assert_eq!(items[1]["command"], "compact");
+    assert_eq!(items[1]["description"], "Compact the conversation history");
+    // `_meta` is the serde-renamed `meta` field on the SDK's AvailableCommand.
+    // This asserts, against the real deserializer, that a persisted `_meta`
+    // key round-trips into completion_behavior — the only test doing so.
+    assert_eq!(
+        items[1]["completion_behavior"], "normal",
+        "_meta.completion_behavior should survive the cache round-trip: {items:?}"
+    );
 }
 
 // ── Confirmation routes (no active task → graceful defaults) ─────

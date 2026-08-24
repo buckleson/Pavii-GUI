@@ -18,6 +18,12 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+// SendBox now calls useNavigate() for the /new and /agents builtin commands;
+// this harness renders it without a Router, so the hook must be stubbed.
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+}));
+
 vi.mock('@/common', () => ({
   ipcBridge: {
     fs: {

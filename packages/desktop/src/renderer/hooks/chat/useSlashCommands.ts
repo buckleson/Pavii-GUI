@@ -102,7 +102,12 @@ export function useSlashCommands(conversation_id: string, options: UseSlashComma
           return;
         }
         console.error('[useSlashCommands] Failed to load slash commands:', error);
-        setCommands([]);
+        // Keep the last known commands rather than clearing. A transient fetch
+        // failure (or the pre-warmup 404) used to blank the menu even though
+        // the LRU cache above still held a good list — the clear immediately
+        // overwrote it. A genuinely empty catalog still clears via the empty
+        // success branch, and switching conversations re-seeds from the cache
+        // keyed by the new id.
       });
 
     return () => {

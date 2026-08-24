@@ -660,6 +660,10 @@ impl ConversationService {
         &self.acp_session_repo
     }
 
+    pub(crate) fn agent_metadata_repo(&self) -> &Arc<dyn IAgentMetadataRepository> {
+        &self.agent_metadata_repo
+    }
+
     pub fn runtime_state(&self) -> Arc<ConversationRuntimeStateService> {
         self.runtime_state.clone()
     }

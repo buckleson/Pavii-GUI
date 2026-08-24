@@ -290,10 +290,89 @@ impl ConversationService {
         conversation_id: &str,
     ) -> Result<Vec<SlashCommandItem>, ConversationError> {
         self.ensure_owned_conversation(user_id, conversation_id).await?;
-        self.task(conversation_id)?
-            .get_slash_commands()
+
+        // Live session first: it may have advertised commands this snapshot
+        // has not caught up with yet.
+        if let Ok(task) = self.task(conversation_id) {
+            return task.get_slash_commands().await.map_err(ConversationError::from);
+        }
+
+        // No live task. Serve the catalog the agent advertised the last time
+        // it ran, so the composer menu does not go blank between turns — the
+        // conversation is idle, not gone, and sending a message revives the
+        // session anyway. An idle conversation with nothing cached is an
+        // empty list, not an error: this feeds a menu, not a turn.
+        Ok(self
+            .cached_slash_commands(user_id, conversation_id)
             .await
-            .map_err(ConversationError::from)
+            .unwrap_or_default())
+    }
+
+    /// Cached slash commands for a conversation whose agent is not running.
+    ///
+    /// Resolution mirrors the existing conversation→agent resolvers
+    /// (`session_context::resolve_acp_identity`, team adapters):
+    /// acp_session row → assistant snapshot → `extra.agent_id` →
+    /// `extra.backend` builtin. Any failure along the way degrades to `None`;
+    /// nothing here may surface an error to the menu.
+    async fn cached_slash_commands(
+        &self,
+        user_id: &str,
+        conversation_id: &str,
+    ) -> Option<Vec<SlashCommandItem>> {
+        let agent_row = self.resolve_agent_metadata_row(user_id, conversation_id).await?;
+        let raw = agent_row.available_commands.as_deref()?;
+        let items = aionui_ai_agent::manager::acp::cached_slash_command_items(raw);
+        if items.is_none() {
+            warn!(conversation_id, agent_id = %agent_row.id, "cached available_commands is not a valid command array; ignoring");
+        }
+        items
+    }
+
+    async fn resolve_agent_metadata_row(
+        &self,
+        user_id: &str,
+        conversation_id: &str,
+    ) -> Option<aionui_db::AgentMetadataRow> {
+        // 1. The acp_session row is the primary identity source for ACP
+        //    conversations (see session_context::resolve_acp_identity).
+        if let Ok(Some(session)) = self.acp_session_repo().get_for_user(user_id, conversation_id).await {
+            if !session.agent_id.is_empty() {
+                if let Ok(Some(row)) = self.agent_metadata_repo().get_for_user(user_id, &session.agent_id).await {
+                    return Some(row);
+                }
+            }
+        }
+
+        // 2. The assistant snapshot carries the agent id for every
+        //    assistant-backed conversation.
+        if let Ok(Some(snapshot)) = self
+            .conversation_repo()
+            .get_assistant_snapshot(user_id, conversation_id)
+            .await
+        {
+            if !snapshot.agent_id.is_empty() {
+                if let Ok(Some(row)) = self.agent_metadata_repo().get_for_user(user_id, &snapshot.agent_id).await {
+                    return Some(row);
+                }
+            }
+        }
+
+        // 3. Fall back to the conversation row extras, mirroring the team
+        //    adapter: an explicit agent_id first, then the backend builtin.
+        let row = self.conversation_repo().get(user_id, conversation_id).await.ok()??;
+        let extra: serde_json::Value = serde_json::from_str(&row.extra).ok()?;
+        if let Some(agent_id) = extra.get("agent_id").and_then(serde_json::Value::as_str) {
+            if let Ok(Some(metadata)) = self.agent_metadata_repo().get_for_user(user_id, agent_id).await {
+                return Some(metadata);
+            }
+        }
+        let backend = extra.get("backend").and_then(serde_json::Value::as_str)?;
+        self.agent_metadata_repo()
+            .find_builtin_by_backend_for_user(user_id, backend)
+            .await
+            .ok()
+            .flatten()
     }
 
     // ── Side question ───────────────────────────────────────────────

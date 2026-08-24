@@ -26,6 +26,8 @@
   "atFile.menuLabel": "File mentions",
   "atFile.loading": "Loading...",
   "slash.title": "Commands",
+  "slash.newConversation": "Start a new conversation",
+  "slash.switchAssistant": "Choose an assistant",
   "slash.hint": "Type / to open command menu",
   "slash.empty": "No commands found",
   "export.commandDescription": "Export the current conversation to a file or clipboard",
