@@ -5,7 +5,7 @@
  */
 
 import { mapAcpCommandsToSlashCommands } from './acpMapping';
-import { buildSkillSlashCommands, mergeSlashCommands } from './mergeSlashCommands';
+import { buildSkillSlashCommands, mergeSlashCommands, orderSlashCommandsForDisplay } from './mergeSlashCommands';
 import type { AcpAvailableCommand, AcpSlashCommandApiItem, SlashCommandItem } from './types';
 
 type AcpSlashCommandLike = AcpAvailableCommand | AcpSlashCommandApiItem;
@@ -79,10 +79,11 @@ export const buildGuidSlashCommands = ({
   skillFallbackDescription,
 }: BuildGuidSlashCommandsInput): SlashCommandItem[] => {
   const safeAgentCommands = agentCommands ?? [];
-  const skillCommands =
-    safeAgentCommands.length > 0
-      ? []
-      : buildSkillSlashCommands(selectedSkills, descriptionByName, skillFallbackDescription);
+  // Skills used to be dropped entirely whenever the agent advertised any
+  // command, so on every real agent the skills half of the menu was empty.
+  // Both belong in the list; name collisions are already resolved by
+  // mergeSlashCommands (builtin > agent > skill).
+  const skillCommands = buildSkillSlashCommands(selectedSkills, descriptionByName, skillFallbackDescription);
 
-  return mergeSlashCommands(builtinCommands, safeAgentCommands, skillCommands);
+  return orderSlashCommandsForDisplay(mergeSlashCommands(builtinCommands, safeAgentCommands, skillCommands));
 };

@@ -33,7 +33,12 @@ import { blurActiveElement, shouldBlockMobileInputFocus } from '@/renderer/utils
 import { Button, Input, Message, Tag } from '@arco-design/web-react';
 import { ArrowUp, CloseSmall, Plus, Quote } from '@icon-park/react';
 import type { SlashCommandItem } from '@/common/chat/slash/types';
-import { buildSkillSlashCommands, mergeSlashCommands } from '@/common/chat/slash/mergeSlashCommands';
+import {
+  buildSkillSlashCommands,
+  mergeSlashCommands,
+  orderSlashCommandsForDisplay,
+} from '@/common/chat/slash/mergeSlashCommands';
+import { useAssistantSlashSkills } from '@/renderer/hooks/chat/useAssistantSlashSkills';
 import React, { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
@@ -181,6 +186,12 @@ const SendBox: React.FC<{
   sendButtonPrefix?: React.ReactNode;
   slash_commands?: SlashCommandItem[];
   onSlashBuiltinCommand?: (name: string) => void;
+  /**
+   * A skill was chosen from the slash menu. The platform send box records it so
+   * the next send can pass `inject_skills` — inserting `/name` as text alone
+   * never actually loaded the skill.
+   */
+  onSlashSkillSelected?: (name: string) => void;
   hasPendingAttachments?: boolean;
   enableBtw?: boolean;
   allowSendWhileLoading?: boolean;
@@ -217,6 +228,7 @@ const SendBox: React.FC<{
   sendButtonPrefix,
   slash_commands = [],
   onSlashBuiltinCommand,
+  onSlashSkillSelected,
   hasPendingAttachments = false,
   enableBtw = false,
   allowSendWhileLoading = false,
@@ -466,25 +478,28 @@ const SendBox: React.FC<{
     return commands;
   }, [conversationContext?.conversation_id, enableBtw, onSlashBuiltinCommand, t]);
 
-  // Skills loaded into this conversation are also invokable via slash. We reuse
-  // the global skills index (shared SWR key `skills-index`) purely to attach a
-  // human-readable description; the loadedSkills snapshot decides which appear.
+  // The assistant's enabled skills are invokable via slash, not just the ones
+  // already mounted on this conversation — that older rule left the menu's
+  // skills section empty in almost every session.
   const loadedSkills = conversationContext?.loadedSkills;
-  const { data: skillIndex } = useSWR(loadedSkills && loadedSkills.length > 0 ? 'skills-index' : null, () =>
-    ipcBridge.fs.listAvailableSkills.invoke()
+  const { names: slashSkillNames, descriptionByName: slashSkillDescriptions } = useAssistantSlashSkills(
+    conversationContext?.assistantId,
+    loadedSkills
   );
-  const skillSlashCommands = useMemo<SlashCommandItem[]>(() => {
-    const descriptionByName = new Map((skillIndex ?? []).map((s) => [s.name, s.description]));
-    return buildSkillSlashCommands(
-      loadedSkills,
-      descriptionByName,
-      t('conversation.skills.slashHint', { defaultValue: 'Skill' })
-    );
-  }, [loadedSkills, skillIndex, t]);
+  const skillSlashCommands = useMemo<SlashCommandItem[]>(
+    () =>
+      buildSkillSlashCommands(
+        slashSkillNames,
+        slashSkillDescriptions,
+        t('conversation.skills.slashHint', { defaultValue: 'Skill' })
+      ),
+    [slashSkillNames, slashSkillDescriptions, t]
+  );
 
-  // Priority on name collisions: builtin > ACP agent commands > session skills.
+  // Precedence on name collisions stays builtin > ACP > skill; display order is
+  // a separate concern, and users look for the agent's own commands first.
   const mergedSlashCommands = useMemo(
-    () => mergeSlashCommands(builtinSlashCommands, slash_commands, skillSlashCommands),
+    () => orderSlashCommandsForDisplay(mergeSlashCommands(builtinSlashCommands, slash_commands, skillSlashCommands)),
     [builtinSlashCommands, slash_commands, skillSlashCommands]
   );
 
@@ -512,7 +527,10 @@ const SendBox: React.FC<{
       }
       setInput('');
     },
-    onSelectTemplate: (name) => {
+    onSelectTemplate: (name, command) => {
+      if (command.source === 'skill') {
+        onSlashSkillSelected?.(name);
+      }
       setInput(`/${name} `);
     },
   });

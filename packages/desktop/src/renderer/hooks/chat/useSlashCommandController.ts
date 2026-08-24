@@ -74,7 +74,7 @@ interface UseSlashCommandControllerOptions {
   input: string;
   commands: SlashCommandItem[];
   onExecuteBuiltin?: (name: string) => void;
-  onSelectTemplate?: (name: string) => void;
+  onSelectTemplate?: (name: string, command: SlashCommandItem) => void;
 }
 
 export function useSlashCommandController(options: UseSlashCommandControllerOptions) {
@@ -107,11 +107,11 @@ export function useSlashCommandController(options: UseSlashCommandControllerOpti
         return false;
       }
       if (getSelectionBehavior(command) === 'insert') {
-        onSelectTemplate?.(command.name);
+        onSelectTemplate?.(command.name, command);
       } else if (command.kind === 'builtin') {
         onExecuteBuiltin?.(command.name);
       } else {
-        onSelectTemplate?.(command.name);
+        onSelectTemplate?.(command.name, command);
       }
       setDismissed(true);
       return true;

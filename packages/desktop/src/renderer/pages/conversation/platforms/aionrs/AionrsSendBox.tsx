@@ -21,6 +21,7 @@ import FilePreview from '@/renderer/components/media/FilePreview';
 import HorizontalFileList from '@/renderer/components/media/HorizontalFileList';
 import { classifyConfigSetError, useAcpConfigOptions } from '@/renderer/hooks/agent/useAcpConfigOptions';
 import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
+import { resolvePendingInjectSkills } from '@/common/chat/slash/injectSkills';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { useAutoTitle } from '@/renderer/hooks/chat/useAutoTitle';
 import { getSendBoxDraftHook, type FileOrFolderItem } from '@/renderer/hooks/chat/useSendBoxDraft';
@@ -49,7 +50,7 @@ import { collectChatFileRefs, splitChatFileRefs } from '@/renderer/utils/file/me
 import type { AgentModeOption } from '@/renderer/utils/model/agentTypes';
 import { Message, Tag } from '@arco-design/web-react';
 import { Brain, MagicHat, Shield } from '@icon-park/react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { classifyConversationBusyError } from '../conversationBusyError';
 import { useAionrsMessage } from './useAionrsMessage';
@@ -137,6 +138,10 @@ const AionrsSendBox: React.FC<{
       name,
       status: 'loaded',
     }));
+  // Skills picked from the slash menu since the last send. A ref, not state:
+  // picking must not re-render the composer.
+  const pendingSlashSkillsRef = useRef<Set<string>>(new Set());
+
   const { t } = useTranslation();
   const { checkAndUpdateTitle } = useAutoTitle();
   const { current_model } = modelSelection;
@@ -274,10 +279,19 @@ const AionrsSendBox: React.FC<{
 
         markSendStarted();
         setWaitingResponse(true);
+        // Slash-menu skill picks only inserted text; the agent loads skills via
+        // inject_skills, so resolve the picks still present in the message.
+        const inject_skills = resolvePendingInjectSkills(
+          input,
+          pendingSlashSkillsRef.current,
+          conversationContext?.loadedSkills
+        );
+        pendingSlashSkillsRef.current = new Set();
         const res = await ipcBridge.conversation.sendMessage.invoke({
           input,
           conversation_id,
           files,
+          inject_skills,
         });
         track(ANALYTICS_EVENTS.messageSent, { agent_kind: 'aionrs', has_files: files.length > 0 });
         setActiveMsgId(res.msg_id);
@@ -799,6 +813,7 @@ const AionrsSendBox: React.FC<{
           </>
         }
         onSend={onSendHandler}
+        onSlashSkillSelected={(name) => pendingSlashSkillsRef.current.add(name)}
         slash_commands={slash_commands}
         onSlashBuiltinCommand={onSlashBuiltinCommand}
         allowSendWhileLoading

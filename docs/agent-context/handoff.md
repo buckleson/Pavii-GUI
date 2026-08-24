@@ -1,222 +1,163 @@
-# Handoff — PostHog analytics, categorised skills, and a broken local build
+# Handoff — verify a clean Windows build, then cut the release
 
-Shipped in `v2.1.59` (merged as `8efc67c`); the repo has since moved to `v2.1.64`
-on top of it. Read
-[`docs/agent-context/architecture-record.md`](architecture-record.md) — the two
-new decisions are "PostHog analytics is always on…" and "Skills page is one
-categorised page…" — and
-[`docs/agent-context/privacy-audit.md`](privacy-audit.md), which now records the
-reversal of this project's telemetry-free posture.
+Next session's focus: **finish verifying a clean Windows x64 build of `v2.1.66`,
+then cut a release.** Everything the release depends on is already merged to
+`main`; nothing is on a feature branch.
 
-## Where things stand
+Repo state at handoff: branch `main`, working tree clean, version `2.1.66`
+(`package.json`). Head is `87fff2b`.
 
-**PostHog product analytics**, renderer (`posthog-js`) + main (`posthog-node`),
-sharing the per-install UUID from `getOrCreateAnalyticsId()` via a new
-`ipcBridge.application.analyticsId` channel. Always on, no user-facing toggle —
-an explicit product-owner decision, made after being shown the GDPR and
-privacy-audit tension. `POSTHOG_DISABLED=1` is a build-time control only.
+## Read this first — the trap that cost a build cycle
 
-Eight events, all with real call sites: `app_opened`, `app_closed`,
-`backend_start_failed`, `provider_configured`, `conversation_started`,
-`message_sent`, `turn_completed`, `mcp_connected`, plus a manual `$pageview`.
+**Never edit any file in the working tree while a packaging build is running.**
 
-**`scrubEvent` (`common/analytics/scrub.ts`) is the whole privacy guarantee.**
-Everything else is defence in depth. It rewrites the URL keys in `properties`,
-`$set` **and** `$set_once`, drops non-allowlisted property keys, and redacts
-API-key shapes, absolute paths, emails and over-long values. It fails **closed** —
-any throw returns `null` and the event is dropped.
-`tests/unit/analytics/scrub.test.ts` is the proof: a hostile event carrying a
-`file://` install path, an `sk-ant-` key, a Windows path, a 3000-char prompt and
-an email must survive with none of those substrings in the JSON.
+`electron-builder` stats and hashes every file to build the asar header, then
+streams contents in a _second_ pass. A file edited between the two passes
+displaces every later entry in `app.asar`. The result packages and code-signs
+cleanly and is completely dead: Electron exits 1 during bootstrap with no
+stdout, no stderr (the exe is GUI-subsystem, so silence carries no
+information) and nothing written to userData. The
+`EnableEmbeddedAsarIntegrityValidation` fuse is deliberately **off** (see the
+comment at `scripts/afterPack.js:45`), so nothing catches this at runtime.
 
-**Skills page** is now one categorised page (Official → Extension →
-Auto-injected → user imports), grouped by a curated name→category map in
-`renderer/pages/settings/SkillsSettings/skillCategories.ts`. Plus 62 curated
-MIT-licensed ECC skills under `resources/bundled-skills/ecc/`, tagged official
-through `BUNDLED_SKILL_NAMES`.
+`verifyAsarIntegrity` in `scripts/afterPack.js` (defined ~line 165, invoked at
+line 316) now catches it at _pack_ time by re-reading the boot path and the
+archive tail against their header hashes. Regression coverage:
+`tests/unit/bootstrap/asarIntegrityGuard.test.ts`. The full diagnosis is in
+commit `87fff2b` — read that message rather than re-deriving it.
 
-## Traps worth knowing
+Practical rule for the next session: start the build, then **stop touching the
+tree** until it finishes. Do docs and planning work only after the artifact
+exists.
 
-- **`ph-no-capture` on an ancestor kills the whole autocapture event**, not just
-  its text. The marker on `SettingsPageWrapper` therefore makes every settings
-  screen invisible to autocapture by design — instrument those with `track()`,
-  never `data-ph-capture`.
-- **Autocapture is an allowlist** (`css_selector_allowlist: ['[data-ph-capture]']`)
-  with `mask_all_text` + `mask_all_element_attributes`. Do not relax that to a
-  denylist: this DOM is the user's prompts, file paths and API keys, and a
-  denylist fails open the first time someone adds a screen and forgets a marker.
-- **A declared-but-unwired event is worse than a missing one** — the chart
-  renders empty and reads as "nobody uses this feature".
-  `tests/unit/analytics/eventCoverage.test.ts` fails the build on either
-  direction of drift. Six of thirteen events were unwired before it existed.
-- **Verify posthog-js option names against the installed
-  `@posthog/types`, not the docs.** The docs pages were repeatedly truncated and
-  incomplete; the package types are authoritative. `sanitize_properties` is
-  `@deprecated` and logs an error — use `before_send`.
-- **Do not write these context docs with `node -e "…"` in double quotes.** Bash
-  expands `$current_url`, `$set_once` etc. to empty and silently corrupts the
-  prose. That happened to the architecture record in this session and had to be
-  repaired. Use the Edit/Write tools.
+## What is done and merged
 
-## Open, in priority order
+Reference the commits; do not re-read the diffs unless something fails.
 
-### 0. OpenCode now ships in the installer — untested as a real installer
+| Commit    | What it settled                                                             |
+| --------- | --------------------------------------------------------------------------- |
+| `87fff2b` | asar integrity guard at pack time (`scripts/afterPack.js`)                  |
+| `af28486` | web-host tests that were silently never running                             |
+| `e4f8e1a` | OpenCode ships in the web-cli tarball too                                   |
+| `8dd55c3` | multi-arch build invocations refused instead of shipping the wrong binaries |
+| `789da7f` | every main-process analytics event carries `app_version`/`platform`/`arch`  |
 
-`d102583` + `0ab601a` + `d0efbb6` are on `main`, **untagged on purpose**: no
-release build exists yet and the user tests locally first.
+Also in place from the preceding commits (`d102583`, `0ab601a`, `d0efbb6`):
+OpenCode ships inside the desktop installer, and `bundled-opencode/` /
+`bundled-paviicore/` are scoped to the single target arch per build.
+`verifyBundledOpencode` (`scripts/afterPack.js:247`) fails the pack if the
+bundle for the target runtime key is missing or its `manifest.json` version
+does not match `OPENCODE_VERSION`.
 
-- The binary is staged at build time by
-  `packages/shared-scripts/src/prepare-opencode.js` (version pinned there;
-  bumping OpenCode means editing `OPENCODE_VERSION` and cutting a release) and
-  put on PATH by `registerOpencodeOnPath` in the **pre-spawn** block of
-  `packages/desktop/src/index.ts`. Pre-spawn is the whole point — the engine
-  snapshots PATH when it starts, so registering later only works next launch.
-- Proven by A/B with the developer's own OpenCode hidden from PATH:
-  `available=5` and no OpenCode row in `/api/assistants` without the bundle;
-  `available=6` with the row present with it.
-- Installer grows ~50-80 MB compressed per platform. The **actual** installer
-  size has never been measured — only the staged payload (172 MB). Run
-  `bun run build-win:x64` before promising anyone a number.
-- Closed: the web distribution has parity. The PATH helper now lives at
-  `packages/web-host/src/ensure-opencode.ts`, `startWebHost` registers it
-  before spawning the engine, and `scripts/pack-web-cli.js` stages the binary
-  into the `pavii-web` tarball. Each web tarball grows by one OpenCode binary
-  (~170 MB unpacked), and on macOS it inherits the existing unsigned/quarantine
-  problem.
-- Trap: vitest only includes `packages/web-host/src/**` for that package, so
-  anything under `packages/web-host/tests/` never runs. Two files sit there
-  today passing by never executing.
-- Still unproven: `scripts/pack-web-cli.js` was not executed end to end (it
-  compiles a ~100 MB binary). Its OpenCode staging is covered by unit tests on
-  the contract it depends on, not by a real pack run.
-- Live telemetry baseline for judging the change: `message_sent` by
-  `agent_kind` currently shows only `aionrs`. If bundling worked, `opencode`
-  should appear after the first release.
+Analytics honesty pass: `readme.md` (the `## Privacy` section — the tracked
+filename is lowercase) and the About
+modal
+(`packages/desktop/src/renderer/components/settings/SettingsModal/contents/AboutModalContent.tsx`,
+lines 223-233, keys `settings.analyticsNoticeTitle` /
+`settings.analyticsNoticeBody`) both state plainly that analytics is always on
+and that there is no in-app switch.
 
-### 1. CRLF migrations — PREVENTED in `7886917`; only the cure is left
+**Test suite:** the last full run reported 4549 passed / 6 skipped / 2 todo
+across 496 files. _Not re-run in this session_ — the packaging build was
+occupying the machine. Treat it as the last known-good number, not a fresh
+result.
 
-Prevention is done and verified. Remaining optional work is the **self-heal**
-described at the end of this section, which is the only thing that helps a
-database that is _already_ broken. No released user is in that state — every
-release was CI-built, so every shipped database carries LF checksums — so this
-is defence, not a live incident.
+## Still open — nothing below is proven
 
-Landed in `7886917`:
+- **The clean Windows build had not finished at handoff time.** The previous one
+  was corrupt (see above). Neither `dist/` nor `release/` existed when this
+  handoff was written.
+- **Installer size is unconfirmed.** 437.2 MB was measured on the _corrupt_
+  build, against a 316.5 MB `v2.1.58` baseline. A jump of roughly 120 MB is
+  plausible now that OpenCode ships inside the installer, but it must be
+  re-measured on a clean build before it means anything.
+- **No release has been cut.**
+- **The afterPack OpenCode guard has never run on macOS or Linux.** Only a
+  tagged CI build proves it. Note that `verifyBundledOpencode` intentionally
+  passes when no published binary exists for a runtime key.
+- **`scripts/pack-web-cli.js` has never been run end to end.** Its OpenCode
+  staging is covered only by contract-level unit tests in
+  `tests/unit/assets/prepareOpencode.test.ts`.
+- **Branch protection on `main` is still off.** It needs the user's `buckleson`
+  admin account and is **explicitly out of scope** by the user's instruction —
+  do not attempt it.
+- **No runtime analytics opt-out.** `POSTHOG_DISABLED` is a build-time flag read
+  in `packages/desktop/src/common/analytics/config.ts:42` and injected as a Vite
+  define (`packages/desktop/electron.vite.config.ts`, lines 158 and 316).
+  `readme.md` and the About modal both say so; this is a product-owner decision,
+  not an oversight.
+- **A privacy policy page is NOT in this repo.** It lives at
+  `.workspaces/fluffy-lamp/src/pages/privacy.astro`, linked from the site
+  footer, verified rendering locally — but `.workspaces/` is gitignored, so it
+  is neither committed nor deployed.
 
-- `.gitattributes` pins `*.sql -text`, so no checkout can diverge again
-- `tests/unit/bootstrap/migrationChecksums.test.ts` pins all 39 SHA-384s and
-  asserts no CRLF plus byte-equality with `HEAD`
-- `scripts/build-with-builder.js` refuses to package a divergent working tree
+## Two pinned-but-undecided behaviours
 
-Both guards were verified by injecting CRLF into a migration and confirming each
-failed by filename. The dev machine's working tree was renormalised to LF and
-the local engine rebuilt (`c21a9773`), so local and CI builds now agree.
+Both in `packages/web-host/src/`. Neither is a bug today; both were noticed and
+deliberately left alone.
 
-The original symptom, for recognition:
+1. `registerOpencodeOnPath` is called unconditionally in `startWebHost`
+   (`packages/web-host/src/index.ts`, before the `ownBackend` /
+   `useExistingBackend` branch). For `useExistingBackend` the PATH mutation is
+   ineffective — the engine is someone else's process. The desktop main process
+   also calls it independently at `packages/desktop/src/index.ts:914`;
+   registration is idempotent, so the double call is harmless.
+2. That call is not wrapped in a `try`, so a PATH-registration failure aborts
+   the whole web host rather than degrading to "no bundled OpenCode".
+   `registerOpencodeOnPath` itself (`packages/web-host/src/ensure-opencode.ts`,
+   line 107) has no explicit throw path, so this is latent rather than observed.
 
-```
-BOOTSTRAP_DATA_INIT_FAILED stage="database.migration"
-error=Migration failed: migration 1 was previously applied but has been modified
-error=Migration failed: migration 38 was previously applied but is missing in the resolved migrations
-```
+## Environment traps
 
-**Root cause: line endings, not the engine and not data corruption.**
-`sqlx::migrate!()` checksums the raw bytes of each `.sql` file. The working tree
-on the dev machine has **CRLF**; git stores **LF** (`.gitattributes:2` —
-`* text=auto eol=lf`). So the same SQL compiles to two different checksum sets:
+- **`just` is NOT installed on this machine** (verified: not on `PATH`). The
+  `just push` recipe steps must be run by hand: `bun run lint:fix` →
+  `bun run format` → `bunx tsc --noEmit` → `bun run test` → `git push`. Judge
+  lint by exit code — the repo has many pre-existing _warnings_.
+- **vitest only includes `packages/web-host/src/` `*.test.ts` files** for that
+  package (`vitest.config.ts`, the `node` project's `include` list). A test
+  placed anywhere else inside `packages/web-host` never runs and never reports.
+  That is what `af28486` fixed.
+- **Never write prose through `node -e "..."` or an unquoted heredoc.** It
+  silently eats backslashes and dollar-sequences; it has corrupted regexes and
+  docs more than once. Use quoted heredocs or the editor tools. Never use
+  PowerShell text cmdlets on repo files either (BOM and cp1252 damage) — see
+  `AGENTS.md`.
+- **Never run `git checkout`, `git restore`, `git stash`, or `git reset`.** A
+  subagent once ran `git checkout --` on files it assumed the formatter had
+  touched and destroyed roughly 311 lines of another agent's uncommitted tests.
+  Any instruction you give a subagent must forbid working-tree-discarding git
+  commands explicitly.
 
-```
-001_initial_schema.sql
-  working tree : 24850 bytes, 574 CRLF, sha384 d4dd4415…
-  git blob     : 24276 bytes,   0 CRLF, sha384 e18a4394…
-```
+## Next steps, in dependency order
 
-Measured against a real user DB: **39/39 stored checksums matched the CRLF
-working tree, 0/39 matched the git blob.** A DB created by a local build is
-therefore rejected by every CI release, and vice versa. This is not specific to
-any version.
+1. Confirm the in-flight `bun run build-win:x64` finished. Look for the
+   afterPack lines reporting `app.asar integrity verified` and
+   `Bundled OpenCode ... verified for win32-x64`. If the guard threw, it is the
+   corrupt-asar case again — rebuild from a quiescent tree.
+2. Measure the produced installer and compare against the 316.5 MB `v2.1.58`
+   baseline. Record the real number; retire the 437.2 MB figure either way.
+3. Install and launch the artifact. The failure mode to rule out is a silent
+   exit 1 with nothing written to userData. Confirm OpenCode resolves on first
+   launch without a network fetch.
+4. Re-run `bun run test` and `bun run check:encoding` on the now-quiet machine
+   to re-confirm the 4549-passing baseline before tagging.
+5. Cut the release via the `bump-version` skill. The tagged CI build is what
+   finally exercises the afterPack OpenCode guard on macOS and Linux — watch
+   those two jobs specifically, they have never run this code.
+6. Optionally, run `scripts/pack-web-cli.js` end to end once. It has only ever
+   been unit-tested.
 
-Immediate repair for an affected DB (verified: the failing CI engine reached
-`AIONCORE_READY` on a repaired copy) — back up first, then rewrite
-`_sqlx_migrations.checksum` for each version to the SHA-384 of
-`git show HEAD:<migration path>`. The SQL is byte-identical apart from line
-endings, so this corrects a fingerprint rather than asserting false history.
+## Suggested skills
 
-The real fix has a trap: renormalising the working tree to LF makes local builds
-agree with CI, but instantly breaks every existing DB created by a local build.
-Better is a startup path that detects a **line-ending-only** checksum mismatch —
-same content once `\r\n` is normalised — and self-heals the stored checksum
-instead of refusing to boot. Consider `.gitattributes` marking
-`*.sql binary`/`-text` so the bytes can never diverge again.
+- **`bump-version`** — owns the release cut: version bump, checks, branch, PR,
+  tag. Step 5 above is its job; do not hand-roll it.
+- **`testing`** — before claiming any behaviour is verified, and for the
+  test-runner / failure-analyst wave separation `AGENTS.md` requires.
+- **`architecture-recorder`** — after the build verifies and the release lands,
+  to fold the outcome into `docs/agent-context/architecture-record.md` (owned by
+  a different agent than this one).
 
-**Superseded theory, recorded so nobody re-runs it:** this was first diagnosed as
-`preparePaviicore` packaging the wrong engine. That was wrong. The engine in
-`resources/` (sha256 `c5bacd5e…`) and the CI engine (`D3FE704C…`) are both
-legitimately built from vendored source; they simply compiled different bytes of
-the same migrations. Do not start in
-`packages/shared-scripts/src/prepare-paviicore.js`.
+## Related context documents
 
-### 2. `ci.yml` is red and has been for every recent run
-
-Fixed this session: gitignored brand icons (`resources/app.png` is the Linux icon
-_and_ asserted by tests), stale `officecli` expectations in `office_e2e.rs`, and
-Windows drive letters in `ensureOpencode` PATH fixtures (`:` is the PATH
-delimiter on Linux).
-
-**Still failing: 9 `check_update` tests in `crates/aionui-system/tests/system_info_routes.rs`,
-all returning 502 instead of 200** against a local wiremock. Not investigated.
-Until that is fixed, do **not** enable "require status checks" in branch
-protection — it would block every merge.
-
-### 3. Branch protection is not set
-
-`main` has none. Requires the `buckleson` account; `vjk7989` has push but not
-admin. Enable force-push and deletion protection now; add required checks only
-after #2.
-
-### 4. Analytics — DONE live; one attribution gap left
-
-Superseded by an audit against real production data. Events **are** flowing
-(project 249810, EU). 400 live events were scanned across every property for
-`file://` URLs, Windows paths, home directories, emails, and credential-shaped
-strings: **zero hits**. `$current_url` arrives already normalised
-(`app://pavii/conversation/:id`), so `normaliseRoute` demonstrably runs before
-send. `token` and `distinct_id` show up in stored properties only because
-PostHog's ingestion echoes them back; `token` is the public `phc_` write key.
-
-Dashboards exist: "Pavii.Ai — Product Health" (912262, 7 tiles) and
-"Pavii.Ai — Activation & Usage" (912263, 7 tiles). Creating more needs a
-personal API key (`phx_…`); the `phc_` key is write-only.
-
-Closed: main-process events now carry `environment`, `app_version`, `platform`
-and `arch` on every capture (`analyticsService.ts`), so a start failure can be
-pinned to a release and an OS. Historical events keep `version` instead of
-`app_version`; both stay allowlisted. All five recorded failures are
-`backend_data_migration_failed` on 21-22 Aug 2026, before the CRLF fix shipped;
-none since.
-
-Still worth doing by hand once installed: send a message containing a
-distinctive string and type a fake key into Models settings, then confirm
-neither reaches PostHog. Alert on `$scrub_secret_hit` / `$scrub_path_hit` — if
-either fires, something upstream is handing the scrub sensitive data and should
-be fixed at the source.
-
-### 5. No privacy policy
-
-The marketing site (`.workspaces/fluffy-lamp`) has none, and there is no in-app
-disclosure. Always-on capture to an EU endpoint without either is the gap a user
-or regulator would point at first.
-
-## Standing constraints
-
-- Installer size is dominated by bundled agent CLIs (`codex.exe` 325 MB,
-  `claude.exe` 244 MB). `resources/bundled-paviicore/win32-x64/data/` (105 MB,
-  mostly a duplicate Node runtime) is declared in neither `manifest.json` nor the
-  afterPack verifier but ships anyway, because `electron-builder.yml:111` copies
-  the whole directory.
-- `just` is **not installed** on this machine. The `push` recipe is
-  `lint-strict fmt-check typecheck encoding-check language-check test` then
-  `git push` — run those by hand.
-- `bun run lint:fix` sweeps unrelated files repo-wide (`.sort()`→`.toSorted()`,
-  array→`Set`, error `cause`). Revert them before committing, or the diff stops
-  being about your change.
+- `docs/agent-context/architecture-record.md` — decisions and codebase map.
+- `docs/agent-context/privacy-audit.md` — the telemetry posture reversal.

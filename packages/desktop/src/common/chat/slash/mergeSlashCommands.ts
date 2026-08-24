@@ -54,3 +54,26 @@ export function mergeSlashCommands(
   }
   return Array.from(map.values());
 }
+
+/**
+ * Display order for the merged list: the agent's own commands first, then
+ * Pavii builtins, then skills.
+ *
+ * Deliberately separate from `mergeSlashCommands`, which resolves NAME
+ * COLLISIONS in the opposite direction (builtin wins, so a skill cannot shadow
+ * `/copy`). Conflating the two would mean either the wrong command runs or the
+ * list is ordered wrongly; they are different questions.
+ *
+ * Stable within each group, so the agent's own ordering is preserved.
+ */
+export function orderSlashCommandsForDisplay(commands: readonly SlashCommandItem[]): SlashCommandItem[] {
+  const rank = (command: SlashCommandItem): number => {
+    if (command.source === 'acp') return 0;
+    if (command.source === 'builtin') return 1;
+    return 2;
+  };
+  return commands
+    .map((command, index) => ({ command, index }))
+    .sort((a, b) => rank(a.command) - rank(b.command) || a.index - b.index)
+    .map((entry) => entry.command);
+}

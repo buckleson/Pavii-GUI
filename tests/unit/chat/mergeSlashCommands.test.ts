@@ -6,7 +6,11 @@
 
 import { describe, expect, it } from 'vitest';
 import { buildGuidSlashCommands } from '@/common/chat/slash/guidSlashCommands';
-import { buildSkillSlashCommands, mergeSlashCommands } from '@/common/chat/slash/mergeSlashCommands';
+import {
+  buildSkillSlashCommands,
+  mergeSlashCommands,
+  orderSlashCommandsForDisplay,
+} from '@/common/chat/slash/mergeSlashCommands';
 import type { SlashCommandItem } from '@/common/chat/slash/types';
 
 const builtin = (name: string): SlashCommandItem => ({
@@ -16,6 +20,13 @@ const builtin = (name: string): SlashCommandItem => ({
   source: 'builtin',
 });
 const acp = (name: string): SlashCommandItem => ({ name, description: `acp ${name}`, kind: 'template', source: 'acp' });
+const skill = (name: string): SlashCommandItem => ({
+  name,
+  description: `skill ${name}`,
+  kind: 'template',
+  source: 'skill',
+  selectionBehavior: 'insert',
+});
 
 describe('buildSkillSlashCommands', () => {
   it('returns nothing when no skills are loaded', () => {
@@ -58,8 +69,62 @@ describe('mergeSlashCommands', () => {
   });
 });
 
+describe('orderSlashCommandsForDisplay', () => {
+  it('puts the agent commands first, then builtins, then skills', () => {
+    const ordered = orderSlashCommandsForDisplay([builtin('open'), skill('cron'), acp('review')]);
+
+    // The agent's own commands are what users reach for; burying them under
+    // builtins and skills is what made the menu feel wrong.
+    expect(ordered.map((command) => `${command.source}:${command.name}`)).toEqual([
+      'acp:review',
+      'builtin:open',
+      'skill:cron',
+    ]);
+  });
+
+  it('keeps the incoming order within each source group', () => {
+    // The agent advertises its commands in a deliberate order. An unstable sort
+    // would shuffle the menu between renders for no reason.
+    const ordered = orderSlashCommandsForDisplay([
+      acp('review'),
+      builtin('open'),
+      acp('cron'),
+      skill('tdd'),
+      builtin('copy'),
+      skill('pavii-cli'),
+    ]);
+
+    expect(ordered.map((command) => command.name)).toEqual(['review', 'cron', 'open', 'copy', 'tdd', 'pavii-cli']);
+  });
+
+  it('returns an empty list unchanged and does not mutate its input', () => {
+    // Called on every keystroke that opens the menu; mutating the merged array
+    // in place would corrupt the caller's snapshot.
+    const commands = [skill('cron'), acp('review')];
+    const ordered = orderSlashCommandsForDisplay(commands);
+
+    expect(orderSlashCommandsForDisplay([])).toEqual([]);
+    expect(commands.map((command) => command.name)).toEqual(['cron', 'review']);
+    expect(ordered).not.toBe(commands);
+  });
+
+  it('orders display by source while merge still resolves collisions builtin-first', () => {
+    // The two rules point in opposite directions on purpose. If ordering ever
+    // leaked into merging, a skill named `copy` would shadow the builtin `/copy`
+    // and the wrong command would run.
+    const merged = mergeSlashCommands([builtin('copy')], [acp('review')], [skill('copy'), skill('cron')]);
+    const ordered = orderSlashCommandsForDisplay(merged);
+
+    expect(ordered.map((command) => `${command.source}:${command.name}`)).toEqual([
+      'acp:review',
+      'builtin:copy',
+      'skill:cron',
+    ]);
+  });
+});
+
 describe('buildGuidSlashCommands', () => {
-  it('uses agent metadata commands before selected skill fallbacks', () => {
+  it('lists agent commands first and still keeps the non-colliding skills', () => {
     const commands = buildGuidSlashCommands({
       builtinCommands: [builtin('open')],
       agentCommands: [acp('review'), acp('cron')],
@@ -71,10 +136,14 @@ describe('buildGuidSlashCommands', () => {
       skillFallbackDescription: 'Skill',
     });
 
+    // Skills used to be dropped entirely whenever the agent advertised any
+    // command, so on every real agent the skills half of the menu was empty.
+    // `cron` collides with an agent command and loses; `pavii-cli` must survive.
     expect(commands.map((command) => `${command.source}:${command.name}`)).toEqual([
-      'builtin:open',
       'acp:review',
       'acp:cron',
+      'builtin:open',
+      'skill:pavii-cli',
     ]);
   });
 

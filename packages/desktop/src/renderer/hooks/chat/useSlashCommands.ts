@@ -1,5 +1,5 @@
 import { mapAcpCommandsToSlashCommands } from '@/common/chat/slash/acpMapping';
-import { isSlashCommandListEnabled } from '@/common/chat/slash/availability';
+import { isSlashCommandFetchEnabled } from '@/common/chat/slash/availability';
 import type { SlashCommandItem } from '@/common/chat/slash/types';
 import { ipcBridge } from '@/common';
 import { ensureConversationRuntime } from '@/renderer/pages/conversation/utils/ensureConversationRuntime';
@@ -48,7 +48,7 @@ interface UseSlashCommandsOptions {
 
 export function useSlashCommands(conversation_id: string, options: UseSlashCommandsOptions = {}) {
   const { conversation_type, codexStatus, agentStatus, prepareRuntime } = options;
-  const canUseCachedCommands = isSlashCommandListEnabled({ conversation_type, codexStatus });
+  const canUseCachedCommands = isSlashCommandFetchEnabled({ conversation_type, codexStatus });
   const requestIdRef = useRef(0);
   const [commands, setCommands] = useState<SlashCommandItem[]>(() => {
     if (!canUseCachedCommands) {

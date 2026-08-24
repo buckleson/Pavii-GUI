@@ -24,6 +24,7 @@ import { useAutoTitle } from '@/renderer/hooks/chat/useAutoTitle';
 import { getSendBoxDraftHook, type FileOrFolderItem } from '@/renderer/hooks/chat/useSendBoxDraft';
 import { createSetUploadFile, useSendBoxFiles } from '@/renderer/hooks/chat/useSendBoxFiles';
 import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
+import { resolvePendingInjectSkills } from '@/common/chat/slash/injectSkills';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { useOpenFileSelector } from '@/renderer/hooks/file/useOpenFileSelector';
 import { useLatestRef } from '@/renderer/hooks/ui/useLatestRef';
@@ -47,7 +48,7 @@ import { collectChatFileRefs, splitChatFileRefs } from '@/renderer/utils/file/me
 import type { ChatFileRef } from '@/common/types/chatFile';
 import { Message, Tag } from '@arco-design/web-react';
 import { Brain, MagicHat, Shield } from '@icon-park/react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { classifyConversationBusyError } from '../conversationBusyError';
 import { buildSendFailureError } from './buildSendFailureError';
@@ -123,6 +124,10 @@ const AcpSendBox: React.FC<{
     tokenUsage,
     context_limit,
   } = messageState;
+  // Skills picked from the slash menu since the last send. Held in a ref, not
+  // state, because it must not re-render the composer on every pick.
+  const pendingSlashSkillsRef = useRef<Set<string>>(new Set());
+
   const { t } = useTranslation();
   const teamPermission = useTeamPermission();
   // In team mode, all agents show the permission mode selector (members don't propagate)
@@ -298,10 +303,20 @@ const AcpSendBox: React.FC<{
 
         markSendStarted();
         setAiProcessing(true);
+        // A skill picked from the "/" menu only inserted text; the agent loads
+        // skills through inject_skills, so resolve the picks that survived in
+        // the final message.
+        const inject_skills = resolvePendingInjectSkills(
+          input,
+          pendingSlashSkillsRef.current,
+          conversationContext?.loadedSkills
+        );
+        pendingSlashSkillsRef.current = new Set();
         const result = await ipcBridge.acpConversation.sendMessage.invoke({
           input,
           conversation_id,
           files,
+          inject_skills,
         });
         track(ANALYTICS_EVENTS.messageSent, { agent_kind: 'acp', has_files: files.length > 0 });
         markSendAccepted(result.turn_id, result.runtime, result.msg_id);
@@ -815,6 +830,7 @@ Please check your local CLI tool authentication status`,
           </>
         }
         onSend={onSendHandler}
+        onSlashSkillSelected={(name) => pendingSlashSkillsRef.current.add(name)}
         slash_commands={slashCommands}
         onSlashBuiltinCommand={onSlashBuiltinCommand}
         allowSendWhileLoading
