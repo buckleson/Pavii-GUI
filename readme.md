@@ -58,7 +58,13 @@ Requirements: Windows 10+, macOS 12+, or a modern Linux desktop - 4 GB RAM - ~1 
 
 ## Privacy
 
-Pavii.Ai runs on your machine. Conversations go only to the model provider you configure and the CLI agents you connect. The app ships **no analytics or telemetry**, and update checks contact only this repository's releases.
+Pavii.Ai runs on your machine. Conversations go only to the model provider you configure and the CLI agents you connect, and update checks contact only this repository's releases.
+
+The app does send **product analytics** to PostHog (EU region) so we can see which features get used and when something breaks. What is sent: an id, app version, OS and architecture, and a fixed list of event names such as `app_opened`, `message_sent` and `turn_completed`. The id is random and per-install while you are signed out; once you sign in to a Pavii account, events are linked to that account's id instead. Your email address is never sent either way.
+
+What is never sent: your conversations, prompts or model responses; file names, file contents or any filesystem path; API keys or credentials; your email or account name. Screen names are normalised before they leave the app, so a conversation appears as `/conversation/:id` and never as its real id. Anything not on the allowed list is dropped rather than sent, and an event that cannot be cleaned is discarded entirely.
+
+There is currently **no in-app switch to turn analytics off** — it is compiled in at build time. If you need a build without it, set `POSTHOG_DISABLED=1` when building from source.
 
 ## Development
 

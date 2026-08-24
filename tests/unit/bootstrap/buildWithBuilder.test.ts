@@ -442,3 +442,51 @@ childProcess.execSync = function mockedExecSync(command) {
     expect(calls).toContainEqual(expect.objectContaining({ arch: expectedArch }));
   });
 });
+
+/**
+ * A single invocation cannot correctly produce two architectures, and the ways
+ * it fails silently are worse than the ways it fails loudly.
+ *
+ * `preparePaviicore` stages one arch per call and `AIONUI_BACKEND_LOCAL_BINARY`
+ * carries no arch information, so looping it would copy one engine into both
+ * bundle directories — an arm64 engine inside the x64 installer, packaged
+ * successfully. Without that variable the second arch silently downloads the
+ * upstream AionCore engine instead of the locally built rebranded one.
+ *
+ * Before this guard, `bun run build-mac` got as far as afterPack and died on a
+ * missing-bundle error that named neither the cause nor the cure.
+ */
+describe('build-with-builder rejects multi-arch invocations', () => {
+  const runBuild = (args: string[]) =>
+    spawnSync(process.execPath, ['scripts/build-with-builder.js', ...args], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      // Exit happens during argument parsing, long before any build work.
+      env: { ...process.env },
+    });
+
+  it('exits non-zero and points at the per-arch scripts', () => {
+    const result = runBuild(['auto', '--mac', '--arm64', '--x64']);
+
+    expect(result.status).toBe(1);
+    const output = `${result.stderr}${result.stdout}`;
+    expect(output).toContain('cannot target multiple architectures');
+    expect(output).toContain('build-mac:arm64');
+  });
+
+  it('refuses before doing any staging work', () => {
+    const result = runBuild(['auto', '--win', '--arm64', '--x64']);
+
+    expect(result.status).toBe(1);
+    // Nothing that touches the filesystem or network may have run yet.
+    const output = `${result.stderr}${result.stdout}`;
+    expect(output).not.toContain('Preparing the engine');
+    expect(output).not.toContain('Downloading OpenCode');
+  });
+
+  // The deduplicated "x64 --win --x64" form — which every CI matrix leg uses —
+  // must NOT trip this guard. That is already covered by the
+  // "prepares bundled Pavii Engine for 'arm64'" case above, which passes
+  // ['arm64', '--win', '--arm64'] and reaches the staging step. Re-asserting it
+  // here would mean spawning a real build.
+});

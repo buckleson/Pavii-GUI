@@ -1477,6 +1477,8 @@ export type I18nKey =
   | 'settings.allProviders.intro'
   | 'settings.allProviders.noMatches'
   | 'settings.allProviders.searchPlaceholder'
+  | 'settings.analyticsNoticeBody'
+  | 'settings.analyticsNoticeTitle'
   | 'settings.apiEndpoint'
   | 'settings.apiKey'
   | 'settings.apiKeyCount'

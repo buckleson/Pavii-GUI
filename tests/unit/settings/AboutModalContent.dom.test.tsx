@@ -188,3 +188,52 @@ describe('AboutModalContent update ready state', () => {
     window.removeEventListener('aionui-update-available', availableListener);
   });
 });
+
+/**
+ * The About page is the only place inside the app that tells a user analytics
+ * exist. `readme.md` previously claimed the opposite ("ships no analytics or
+ * telemetry") while PostHog shipped in every build, so this guards both that the
+ * notice renders and that it keeps saying the things that make it honest.
+ *
+ * It is inline text rather than a "learn more" link on purpose: this repository
+ * is private, so a GitHub link would 404 for every user, and the marketing site
+ * has no privacy page.
+ */
+describe('AboutModalContent analytics disclosure', () => {
+  beforeEach(() => {
+    vi.stubGlobal('__APP_VERSION__', '2.1.66');
+    mocks.autoUpdateCheckMock.mockResolvedValue({ success: true });
+    mocks.updateCheckMock.mockResolvedValue({
+      success: true,
+      data: { currentVersion: '2.1.66', updateAvailable: false, latest: null },
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('renders the notice', () => {
+    render(<AboutModalContent />);
+    // The i18n mock echoes keys back, so presence of the key is presence of the text.
+    expect(screen.getByText('settings.analyticsNoticeTitle')).toBeInTheDocument();
+    expect(screen.getByText('settings.analyticsNoticeBody')).toBeInTheDocument();
+  });
+
+  it('keeps the shipped English copy truthful about what is and is not sent', async () => {
+    const catalogue = (await import('@/renderer/services/i18n/locales/en-US/settings.json')) as unknown as {
+      default: Record<string, string>;
+    };
+    const body = (catalogue.default ?? (catalogue as unknown as Record<string, string>))['analyticsNoticeBody'];
+
+    expect(body, 'analyticsNoticeBody must exist in en-US').toBeTruthy();
+    // The three claims that make the notice honest rather than decorative.
+    expect(body.toLowerCase()).toContain('conversations');
+    expect(body.toLowerCase()).toContain('api key');
+    // There is genuinely no runtime opt-out — POSTHOG_DISABLED is a build-time
+    // Vite define. The copy must not imply otherwise.
+    expect(body.toLowerCase()).toContain('no way to turn this off');
+  });
+});

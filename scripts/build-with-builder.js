@@ -708,7 +708,6 @@ function getTargetArchFromConfig(platform) {
 // Determine target architecture
 const buildMachineArch = process.arch;
 let targetArch;
-let multiArch = false;
 
 // Check if multiple architectures are specified (support both --x64 and x64 formats)
 const rawArchArgs = args
@@ -723,10 +722,28 @@ const rawArchArgs = args
 const archArgs = [...new Set(rawArchArgs)];
 
 if (archArgs.length > 1) {
-  // Multiple unique architectures specified - let electron-builder handle it
-  multiArch = true;
-  targetArch = archArgs[0]; // Use first arch for webpack build
-  console.log(`🔨 Multi-architecture build detected: ${archArgs.join(', ')}`);
+  // A single invocation cannot correctly produce two architectures, and failing
+  // here is much better than the ways it fails otherwise.
+  //
+  // `preparePaviicore` stages one arch per call, and `AIONUI_BACKEND_LOCAL_BINARY`
+  // is a single path with no arch awareness — looping it over both arches would
+  // copy the SAME engine into both bundle directories, shipping (say) an arm64
+  // engine inside the x64 installer. Without that variable set, the second arch
+  // silently downloads the upstream AionCore engine instead of the locally built
+  // rebranded one. Both outcomes are broken apps that package successfully.
+  //
+  // Previously this printed a hopeful message and then died later inside
+  // afterPack with a missing-bundle error that named neither cause nor cure.
+  //
+  // `.github/workflows/_build-reusable.yml` states the same rule for CI: one job
+  // per platform+arch, mandatory.
+  console.error('❌ A single build cannot target multiple architectures.');
+  console.error(`   Requested: ${archArgs.join(', ')}`);
+  console.error('   Native payloads (engine, OpenCode) are staged one arch at a time,');
+  console.error('   so a multi-arch invocation would ship the wrong binaries.');
+  console.error('   Run the per-arch scripts instead, e.g.:');
+  console.error('     bun run build-mac:arm64 && bun run build-mac:x64');
+  process.exit(1);
 } else if (args[0] === 'auto') {
   if (archArgs.length === 1) {
     targetArch = archArgs[0];
@@ -861,18 +878,9 @@ try {
 
   // 根据模式添加架构标志
   // Add arch flags based on mode
-  let archFlag = '';
-  if (multiArch) {
-    // 多架构模式：将所有架构标志传递给 electron-builder
-    // Multi-arch mode: pass all arch flags to electron-builder
-    archFlag = archArgs.map((arch) => `--${arch}`).join(' ');
-    console.log(`🚀 Packaging for multiple architectures: ${archArgs.join(', ')}...`);
-  } else {
-    // 单架构模式：使用确定的目标架构
-    // Single arch mode: use the determined target arch
-    archFlag = `--${targetArch}`;
-    console.log(`🚀 Creating distributables for ${targetArch}...`);
-  }
+  // Multi-arch invocations exit above, so exactly one arch reaches this point.
+  const archFlag = `--${targetArch}`;
+  console.log(`🚀 Creating distributables for ${targetArch}...`);
 
   // 为 Windows 构建添加架构检测脚本
   // Add architecture detection scripts for Windows builds
@@ -880,27 +888,22 @@ try {
   // Use .onVerifyInstDir to avoid conflicts with electron-builder
   let nsisInclude = '';
   if (builderArgs.includes('--win') || builderArgs.includes('--all')) {
-    if (!multiArch) {
-      // 单架构构建：添加对应架构的检测脚本
-      // Single-arch build: Add architecture-specific detection script
-      if (targetArch === 'arm64') {
-        const arm64Script = 'resources/windows/windows-installer-arm64.nsh';
-        if (fs.existsSync(path.resolve(__dirname, '..', arm64Script))) {
-          nsisInclude += ` --config.nsis.include="${arm64Script}"`;
-          console.log(`📋 Including Windows ARM64 architecture check script`);
-        }
-        nsisInclude += ' --config.nsis.useZip=true';
-        console.log('📋 Using ZIP payload for Windows ARM64 NSIS installer');
-      } else if (targetArch === 'x64') {
-        const x64Script = 'resources/windows/windows-installer-x64.nsh';
-        if (fs.existsSync(path.resolve(__dirname, '..', x64Script))) {
-          nsisInclude += ` --config.nsis.include="${x64Script}"`;
-          console.log(`📋 Including Windows x64 architecture check script`);
-        }
+    // Add the architecture check script for the arch being built.
+    if (targetArch === 'arm64') {
+      const arm64Script = 'resources/windows/windows-installer-arm64.nsh';
+      if (fs.existsSync(path.resolve(__dirname, '..', arm64Script))) {
+        nsisInclude += ` --config.nsis.include="${arm64Script}"`;
+        console.log(`📋 Including Windows ARM64 architecture check script`);
+      }
+      nsisInclude += ' --config.nsis.useZip=true';
+      console.log('📋 Using ZIP payload for Windows ARM64 NSIS installer');
+    } else if (targetArch === 'x64') {
+      const x64Script = 'resources/windows/windows-installer-x64.nsh';
+      if (fs.existsSync(path.resolve(__dirname, '..', x64Script))) {
+        nsisInclude += ` --config.nsis.include="${x64Script}"`;
+        console.log(`📋 Including Windows x64 architecture check script`);
       }
     }
-    // 多架构构建：暂不支持架构检测脚本
-    // Multi-arch builds: Architecture detection not supported yet
   }
 
   if (process.platform === 'win32' && builderArgs.includes('--win')) {

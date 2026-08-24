@@ -818,6 +818,8 @@
   "bugReportModuleAgentTeam": "Team Collaboration",
   "bugReportModuleOther": "Other",
   "contactMe": "Contact Me",
+  "analyticsNoticeTitle": "Product analytics",
+  "analyticsNoticeBody": "Pavii.Ai sends anonymous usage events (app opened, message sent, and similar) plus your app version and operating system, so we can see what gets used and when something breaks. Your conversations, file paths, and API keys are never sent. There is currently no way to turn this off from inside the app.",
   "officialWebsite": "Official Website",
   "checkForUpdates": "Check for updates",
   "checkingForUpdates": "Checking for updates...",

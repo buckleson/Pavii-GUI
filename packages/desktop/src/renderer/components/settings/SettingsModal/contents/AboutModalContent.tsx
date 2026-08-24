@@ -218,6 +218,21 @@ const AboutModalContent: React.FC = () => {
               </div>
             ))}
           </div>
+
+          {/*
+            Analytics disclosure. Deliberately inline rather than a link: this
+            repository is private, so a "read more on GitHub" link would 404 for
+            every user, and the marketing site has no privacy page yet.
+          */}
+          <Divider className='my-16px' />
+          <div className='flex flex-col gap-4px pb-8px px-16px'>
+            <Typography.Text className='text-13px text-t-primary font-500'>
+              {t('settings.analyticsNoticeTitle')}
+            </Typography.Text>
+            <Typography.Text className='text-12px text-t-secondary'>
+              {t('settings.analyticsNoticeBody')}
+            </Typography.Text>
+          </div>
         </div>
       </div>
       <FeedbackReportModal visible={showFeedbackModal} onCancel={() => setShowFeedbackModal(false)} />
