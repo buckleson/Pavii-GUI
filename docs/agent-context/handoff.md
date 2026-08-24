@@ -179,10 +179,10 @@ Dashboards exist: "Pavii.Ai — Product Health" (912262, 7 tiles) and
 "Pavii.Ai — Activation & Usage" (912263, 7 tiles). Creating more needs a
 personal API key (`phx_…`); the `phc_` key is write-only.
 
-Still open: `backend_start_failed` arrives with `app_version`, `version`, and
-`platform` **null**, because the main-process client registers no super
-properties. A start failure therefore cannot be pinned to a release — worth
-fixing before the next incident. All five recorded failures are
+Closed: main-process events now carry `environment`, `app_version`, `platform`
+and `arch` on every capture (`analyticsService.ts`), so a start failure can be
+pinned to a release and an OS. Historical events keep `version` instead of
+`app_version`; both stay allowlisted. All five recorded failures are
 `backend_data_migration_failed` on 21-22 Aug 2026, before the CRLF fix shipped;
 none since.
 

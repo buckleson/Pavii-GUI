@@ -34,6 +34,7 @@ let client: PostHog | null = null;
 let distinctId = '';
 let startedAt = 0;
 let firstRun = false;
+let superProperties: Record<string, unknown> = {};
 
 export function initAnalytics(): void {
   if (client || isAnalyticsDisabled()) return;
@@ -42,6 +43,20 @@ export function initAnalytics(): void {
     firstRun = !hasAnalyticsId();
     distinctId = getOrCreateAnalyticsId();
     startedAt = Date.now();
+    // The node client has no equivalent of posthog-js `register`, so the
+    // renderer's super properties have to be merged in by hand on every event.
+    // Resolved once: `app.getVersion()` is stable for the process lifetime.
+    //
+    // `platform`/`arch` matter more here than in the renderer. Browser events
+    // get `$os` derived from the user agent; node events get nothing, so
+    // without these a main-process event cannot be attributed to a platform at
+    // all — which is what made `backend_start_failed` untriageable.
+    superProperties = {
+      environment: analyticsEnvironment(),
+      app_version: app.getVersion(),
+      platform: process.platform,
+      arch: process.arch,
+    };
     client = new PostHog(posthogKey(), {
       host: POSTHOG_API_HOST,
       // Small batches: a desktop app can be killed at any moment, and a lost
@@ -64,7 +79,9 @@ export function captureAnalytics(event: AnalyticsEventName, properties: Record<s
   try {
     const scrubbed = scrubEvent<AnalyticsCaptureResult>({
       event,
-      properties: { ...properties, environment: analyticsEnvironment() },
+      // Explicit event properties win, matching posthog-js, where a property
+      // passed to `capture` overrides a registered one of the same name.
+      properties: { ...superProperties, ...properties },
     });
     if (!scrubbed) return;
     client.capture({ distinctId, event: scrubbed.event, properties: scrubbed.properties });
@@ -73,14 +90,13 @@ export function captureAnalytics(event: AnalyticsEventName, properties: Record<s
   }
 }
 
-/** `app_opened`, with the coarse environment facts a product dashboard needs. */
+/**
+ * `app_opened`. Version, platform and arch now ride on every main-process
+ * event as super properties, so only the fact that cannot be derived elsewhere
+ * stays here.
+ */
 export function captureAppOpened(): void {
-  captureAnalytics(ANALYTICS_EVENTS.appOpened, {
-    version: app.getVersion(),
-    platform: process.platform,
-    arch: process.arch,
-    is_first_run: firstRun,
-  });
+  captureAnalytics(ANALYTICS_EVENTS.appOpened, { is_first_run: firstRun });
 }
 
 /** `app_closed`, carrying session length so retention is measurable. */

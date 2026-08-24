@@ -86,10 +86,14 @@ export const ALLOWED_PROPERTY_KEYS: ReadonlySet<string> = new Set([
   'environment',
   'app_version',
   'route',
-  // app_opened
-  'version',
+  // Super properties on every main-process event. The renderer gets `$os` from
+  // the user agent; node events would otherwise carry no platform at all.
   'platform',
   'arch',
+  // Legacy: main-process `app_opened` sent `version` before `app_version`
+  // became a super property there. Kept so historical events stay queryable.
+  'version',
+  // app_opened
   'is_first_run',
   // app_closed
   'session_seconds',
