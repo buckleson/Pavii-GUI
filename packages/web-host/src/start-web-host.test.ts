@@ -100,3 +100,74 @@ describe('startWebHost registers OpenCode before spawning the engine', () => {
     await handle.stop();
   });
 });
+
+/**
+ * Rescued from `packages/web-host/tests/start-web-host.test.ts`, which vitest
+ * never executed — it had been passing by not running.
+ */
+describe('startWebHost handle shape', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    // startWebHost now registers OpenCode on PATH for real unless stubbed, and
+    // that mutates process.env for every later test in the run.
+    vi.doMock('./ensure-opencode.js', () => ({ registerOpencodeOnPath: vi.fn() }));
+  });
+
+  afterEach(() => {
+    vi.doUnmock('./ensure-opencode.js');
+    vi.doUnmock('./backend-launcher.js');
+    vi.doUnmock('./static-server.js');
+  });
+
+  test('Returns handle without initialPassword', async () => {
+    // Mock backend-launcher
+    vi.doMock('./backend-launcher.js', () => ({
+      startBackend: vi.fn().mockResolvedValue({
+        port: 55555,
+        stop: vi.fn().mockResolvedValue(undefined),
+      }),
+    }));
+
+    // Mock static-server
+    vi.doMock('./static-server.js', () => ({
+      startStaticServer: vi.fn().mockResolvedValue({
+        port: 33000,
+        url: 'http://127.0.0.1:33000',
+        localUrl: 'http://127.0.0.1:33000',
+        stop: vi.fn().mockResolvedValue(undefined),
+      }),
+    }));
+
+    const { startWebHost } = await import('./index.js');
+
+    const handle = await startWebHost({
+      app: {
+        version: '1.0.0',
+        isPackaged: false,
+        resourcesPath: '/app',
+        userDataPath: '/tmp/test-data',
+      },
+      staticDir: '/tmp/static',
+      backend: {
+        kind: 'ownBackend',
+        resolveBackend: () => '/bin/backend',
+      },
+    });
+
+    // No initialPassword field on the handle — admin credentials flow through
+    // backend's /api/webui/reset-password, not through startWebHost.
+    expect('initialPassword' in handle).toBe(false);
+    expect(handle.port).toBe(33000);
+    expect(handle.backendPort).toBe(55555);
+
+    await handle.stop();
+
+    vi.doUnmock('./backend-launcher.js');
+    vi.doUnmock('./static-server.js');
+  });
+
+  test.todo('Backend port conflict: throws and does not leak resources');
+  test.todo('Static-server port conflict: cleans up backend before throwing');
+  test.todo('Stop cleanup: stops static-server then backend in sequence');
+});
