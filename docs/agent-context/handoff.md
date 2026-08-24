@@ -60,6 +60,30 @@ through `BUNDLED_SKILL_NAMES`.
 
 ## Open, in priority order
 
+### 0. OpenCode now ships in the installer — untested as a real installer
+
+`d102583` + `0ab601a` + `d0efbb6` are on `main`, **untagged on purpose**: no
+release build exists yet and the user tests locally first.
+
+- The binary is staged at build time by
+  `packages/shared-scripts/src/prepare-opencode.js` (version pinned there;
+  bumping OpenCode means editing `OPENCODE_VERSION` and cutting a release) and
+  put on PATH by `registerOpencodeOnPath` in the **pre-spawn** block of
+  `packages/desktop/src/index.ts`. Pre-spawn is the whole point — the engine
+  snapshots PATH when it starts, so registering later only works next launch.
+- Proven by A/B with the developer's own OpenCode hidden from PATH:
+  `available=5` and no OpenCode row in `/api/assistants` without the bundle;
+  `available=6` with the row present with it.
+- Installer grows ~50-80 MB compressed per platform. The **actual** installer
+  size has never been measured — only the staged payload (172 MB). Run
+  `bun run build-win:x64` before promising anyone a number.
+- Gap: `packages/web-host/src/backend-launcher.ts` has no managed-tools or
+  OpenCode handling at all, so the web-cli/web-host distribution still only
+  gets OpenCode if the user already has it. Untouched by this work.
+- Live telemetry baseline for judging the change: `message_sent` by
+  `agent_kind` currently shows only `aionrs`. If bundling worked, `opencode`
+  should appear after the first release.
+
 ### 1. CRLF migrations — PREVENTED in `7886917`; only the cure is left
 
 Prevention is done and verified. Remaining optional work is the **self-heal**

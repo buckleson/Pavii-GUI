@@ -239,6 +239,14 @@
 - Affects: `packages/shared-scripts/src/prepare-paviicore.js`
 - Evidence: `tests/unit/bootstrap/osIdentityConfig.test.ts`
 
+### The shipped resources tree holds exactly one target's binaries
+
+- Status: accepted
+- Decision: electron-builder copies whole `extraResources` directories, so both bundle preparers now scope `resources/` to the target being built. `prepare-opencode.js` deletes bundles for other runtime keys; `prepare-paviicore.js` **moves** them to `resources/.paviicore-cache/<key>/` and restores them when that target is next built.
+- Rationale: Neither preparer removed the previous target's output, so a machine that built two arches shipped both inside each installer — ~170 MB for OpenCode and ~939 MB for the engine, none of it executable on the receiving machine. The delete/move asymmetry is deliberate: OpenCode is re-fetchable from the npm registry, while an engine bundle whose manifest reads `local-source-build` was compiled from vendored AionCore source, carries the Pavii rebrand, and can only be rebuilt (see "The locally built engine is pinned against upstream re-download"). Both calls sit at the top of their preparer so every exit path is covered, including the local-source-build early return and the unsupported-arch return — the latter must ship nothing rather than another platform's binary.
+- Affects: `packages/shared-scripts/src/prepare-paviicore.js`
+- Evidence: `tests/unit/assets/prepareOpencode.test.ts`, `tests/unit/assets/preparePaviicoreBundleStash.test.ts`
+
 ### Token statistics come from a local per-day usage ledger
 
 - Status: accepted
@@ -308,6 +316,8 @@
 - Full gate: oxlint 0 errors, format clean, tsc clean, `scripts/check-i18n.js` passes, vitest 4127 passed / 0 assertion failures (2 known environmental preview module-load timeouts, plus the `/profile` feedback-module test which was fixed and passes standalone); focused suites: `tests/unit/bootstrap/brandAssets.test.ts`, `tests/unit/common/assistantBranding.test.ts`, `tests/unit/feedback/resolveFeedbackModule.test.ts`, `tests/unit/process/services/paviiAuthCallbackServer.test.ts`, `tests/unit/process/services/usageLedger.test.ts`, `tests/unit/process/startup/ensureOpencode.test.ts`, `tests/unit/renderer/PaviiSignInGate.dom.test.tsx`, `tests/unit/renderer/profileStats.test.ts`, `tests/unit/renderer/splash.dom.test.ts`.
 - Channels/WebUI change gate: tsc clean, oxlint 0 errors; focused suites green — `tests/unit/process/channels/` (6 files, 53 tests incl. Slack and Discord simulated round-trips), configMigration + channelAssistantBinding suites (26 tests; see `tests/unit/common-config/configMigration.test.ts`, `tests/unit/renderer/channelAssistantBinding.test.ts`).
 - Skills-overhaul gate: tsc clean, oxlint 0 errors, `scripts/check-i18n.js` passes; `tests/unit/common/skillBranding.test.ts` (10), `tests/unit/process/startup/ensureBundledSkills.test.ts` (8), `tests/unit/renderer/assistantDefaults.test.ts` (6), `packages/web-host/src/static-server.unit.test.ts` (13 incl. anonymous-WS 401); full suite 454/456 files passed with only the known environmental preview module-load timeout (passes standalone); live dev backend verified 36 imported custom skills including `token-optimizer`.
+- Analytics privacy, verified against production: 400 live events pulled from PostHog EU (project 249810) and scanned across every property for file:// URLs, Windows paths, home directories, emails, and credential-shaped strings — zero hits. `$current_url` arrives normalised (`app://pavii/conversation/:id`, `.../detail/:skillName`), confirming `normaliseRoute` runs before send. `token` and `distinct_id` appear in stored properties because PostHog's ingestion echoes them; `token` is the public `phc_` write key, not a secret. Dashboards: "Pavii.Ai — Product Health" (912262) and "Pavii.Ai — Activation & Usage" (912263).
+- Known analytics gap: `backend_start_failed` arrives with `app_version`, `version`, and `platform` null — the main-process client does not register super properties, so start failures cannot be attributed to a release. All five recorded failures are `backend_data_migration_failed` on 21-22 Aug 2026, before the CRLF fix shipped; none since.
 - Runtime verification: WebUI login page renders at `bun run webui` (post chunk fix); desktop app reaches `backendManager.start ready` with engine detection including OpenCode; live end-to-end sign-in confirmed via loopback callback (`[PaviiAuth] signed in as <user>` in main-process logs).
 
 ## Referenced Artifacts
