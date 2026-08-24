@@ -165,17 +165,32 @@ protection — it would block every merge.
 admin. Enable force-push and deletion protection now; add required checks only
 after #2.
 
-### 4. Analytics has never been verified live
+### 4. Analytics — DONE live; one attribution gap left
 
-No dashboards exist, and as far as anyone knows **zero events have reached
-PostHog** — the app was never run with this code. The `phc_` key is public and
-write-only, so creating insights needs a personal API key (`phx_…`).
+Superseded by an audit against real production data. Events **are** flowing
+(project 249810, EU). 400 live events were scanned across every property for
+`file://` URLs, Windows paths, home directories, emails, and credential-shaped
+strings: **zero hits**. `$current_url` arrives already normalised
+(`app://pavii/conversation/:id`), so `normaliseRoute` demonstrably runs before
+send. `token` and `distinct_id` show up in stored properties only because
+PostHog's ingestion echoes them back; `token` is the public `phc_` write key.
 
-The check that matters, once installed: send a message containing a distinctive
-string, type a fake key into Models settings, then confirm neither appears in any
-PostHog property and no `$current_url` contains `file://` or the OS user name.
-Alert on `$scrub_secret_hit` / `$scrub_path_hit` — if either fires, something
-upstream is handing the scrub sensitive data and should be fixed at the source.
+Dashboards exist: "Pavii.Ai — Product Health" (912262, 7 tiles) and
+"Pavii.Ai — Activation & Usage" (912263, 7 tiles). Creating more needs a
+personal API key (`phx_…`); the `phc_` key is write-only.
+
+Still open: `backend_start_failed` arrives with `app_version`, `version`, and
+`platform` **null**, because the main-process client registers no super
+properties. A start failure therefore cannot be pinned to a release — worth
+fixing before the next incident. All five recorded failures are
+`backend_data_migration_failed` on 21-22 Aug 2026, before the CRLF fix shipped;
+none since.
+
+Still worth doing by hand once installed: send a message containing a
+distinctive string and type a fake key into Models settings, then confirm
+neither reaches PostHog. Alert on `$scrub_secret_hit` / `$scrub_path_hit` — if
+either fires, something upstream is handing the scrub sensitive data and should
+be fixed at the source.
 
 ### 5. No privacy policy
 
