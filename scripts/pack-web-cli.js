@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
 const { preparePaviicore } = require('../packages/shared-scripts/src/prepare-paviicore.js');
+const { prepareOpencode, binaryNameFor } = require('../packages/shared-scripts/src/prepare-opencode.js');
 const { resolvePaviicoreVersion } = require('./resolvePaviicoreVersion.js');
 
 const projectRoot = path.resolve(__dirname, '..');
@@ -31,6 +32,13 @@ preparePaviicore({
   arch,
   version: resolvePaviicoreVersion(projectRoot),
 });
+
+// 1b. Stage the OpenCode CLI. The engine resolves agents only through PATH, and
+// startWebHost registers this directory before spawning it — so without this
+// step a `pavii-web` install has the default agent missing, exactly the bug the
+// desktop installer bundle fixed.
+console.log('1b. Preparing OpenCode...');
+const opencodeResult = prepareOpencode({ projectRoot, platform, arch });
 
 // 2. Create staging dir
 console.log('3. Creating staging dir...');
@@ -85,6 +93,24 @@ if (!fs.existsSync(backendSrc)) {
 }
 fs.mkdirSync(path.dirname(backendDest), { recursive: true });
 fs.cpSync(backendSrc, backendDest, { recursive: true });
+
+// 7b. Copy bundled-opencode
+// Unlike the engine, a missing bundle here is not fatal: prepareOpencode skips
+// arches with no published OpenCode binary, and those builds fall back to the
+// runtime npm install rather than shipping nothing usable.
+if (opencodeResult && !opencodeResult.unsupported) {
+  const opencodeSrc = path.join(projectRoot, 'resources/bundled-opencode', `${platform}-${arch}`);
+  const opencodeDest = path.join(tarballContentDir, 'bundled-opencode', `${platform}-${arch}`);
+  if (fs.existsSync(path.join(opencodeSrc, binaryNameFor(platform)))) {
+    fs.mkdirSync(path.dirname(opencodeDest), { recursive: true });
+    fs.cpSync(opencodeSrc, opencodeDest, { recursive: true });
+    console.log(`7b. Bundled OpenCode for ${platform}-${arch}`);
+  } else {
+    throw new Error(`OpenCode bundle missing at ${opencodeSrc}. prepareOpencode reported success but staged nothing.`);
+  }
+} else {
+  console.warn(`7b. No OpenCode binary published for ${platform}-${arch}; tarball ships without it.`);
+}
 
 // 8. Create tarball
 fs.mkdirSync(distDir, { recursive: true });

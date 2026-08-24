@@ -22,6 +22,12 @@
  *
  * A user's own `opencode` on PATH always wins: the bundled directory is
  * appended, not prepended.
+ *
+ * This lives in web-host rather than in the desktop app because both
+ * distributions need it and web-host is the only package both depend on: the
+ * Electron main process registers PATH before it spawns the engine, and
+ * `startWebHost` does the same for the `pavii-web` tarball. It imports nothing
+ * beyond node builtins, so neither runtime is dragged into the other.
  */
 
 import { execFile, execSync } from 'node:child_process';

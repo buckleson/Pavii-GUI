@@ -24,7 +24,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { startWebHost } from '@pavii/web-host';
+import { registerOpencodeOnPath, startWebHost } from '@pavii/web-host';
 import { openBrowserUrl, shouldAutoOpenBrowser } from '../packages/web-cli/src/browser.js';
 
 // Aligned with packages/desktop/src/common/config/constants.ts WEBUI_DEFAULT_PORT.
@@ -201,6 +201,14 @@ async function fetchAdminUsername(backendPort: number): Promise<string> {
 
 async function main(): Promise<void> {
   augmentPathWithNvm();
+  // startWebHost registers this itself, but it is given `resourcesPath: repoRoot`
+  // below and the dev bundles live one level down under `resources/`. Register
+  // explicitly with the real location so `bun run webui` sees the same OpenCode
+  // a shipped build would. Idempotent, so the later call is a no-op.
+  registerOpencodeOnPath({
+    dataDir: resolveBackendDataDir(),
+    resourcesPath: path.join(repoRoot, 'resources'),
+  });
   runPackageIfNeeded();
   const port = resolvePort();
   const allowRemote = resolveAllowRemote();

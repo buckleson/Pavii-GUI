@@ -420,7 +420,7 @@ function markBackendReady(backendPort: number, source: string): void {
  */
 async function ensureDefaultOpencodeAgent(): Promise<void> {
   try {
-    const { ensureOpencodeInstalled } = await import('./process/startup/ensureOpencode');
+    const { ensureOpencodeInstalled } = await import('@pavii/web-host');
     const { getDataPath } = await import('./process/utils/utils');
     const installed = await ensureOpencodeInstalled({
       dataDir: getDataPath(),
@@ -911,7 +911,7 @@ const handleAppReady = async (): Promise<void> => {
         // resolves CLIs from that PATH. Registering the bundled OpenCode here
         // rather than after markBackendReady is what makes it usable in the
         // FIRST session instead of only after a restart.
-        const { registerOpencodeOnPath } = await import('./process/startup/ensureOpencode');
+        const { registerOpencodeOnPath } = await import('@pavii/web-host');
         registerOpencodeOnPath({
           dataDir: getDataPath(),
           resourcesPath: process.resourcesPath,

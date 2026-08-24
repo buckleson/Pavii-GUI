@@ -26,6 +26,11 @@ const prepareOpencode = require('../../../packages/shared-scripts/src/prepare-op
   PACKAGE_BY_RUNTIME_KEY: Record<string, string>;
   binaryNameFor: (platform: string) => string;
   bundleDirFor: (projectRoot: string, runtimeKey: string) => string;
+  prepareOpencode: (options: { projectRoot: string; platform: string; arch: string }) => {
+    skipped: boolean;
+    unsupported?: boolean;
+    runtimeKey: string;
+  };
   pruneOtherRuntimeKeys: (projectRoot: string, keepRuntimeKey: string) => string[];
   runtimeKeyFor: (platform: string, arch: string) => string;
 };
@@ -138,5 +143,31 @@ describe('pruneOtherRuntimeKeys', () => {
 
   it('tolerates a project that has never staged a bundle', () => {
     expect(pruneOtherRuntimeKeys(projectRoot, 'win32-x64')).toEqual([]);
+  });
+});
+
+/**
+ * `skipped` alone cannot answer "is there a binary on disk?" — a cache hit also
+ * reports skipped while leaving one staged. `scripts/pack-web-cli.js` copies the
+ * bundle into the web tarball and has to tell those apart: treating a cache hit
+ * as unsupported would silently ship a tarball with no OpenCode.
+ */
+describe('prepareOpencode unsupported-arch contract', () => {
+  it('flags an arch with no published binary as unsupported, not merely skipped', () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), 'pavii-opencode-unsupported-'));
+    try {
+      const result = prepareOpencode.prepareOpencode({ projectRoot, platform: 'linux', arch: 'riscv64' });
+      expect(result.skipped).toBe(true);
+      expect(result.unsupported).toBe(true);
+      expect(PACKAGE_BY_RUNTIME_KEY[result.runtimeKey]).toBeUndefined();
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('maps every shipped target to a package, so none of them take that path', () => {
+    for (const key of Object.keys(PACKAGE_BY_RUNTIME_KEY)) {
+      expect(PACKAGE_BY_RUNTIME_KEY[key], key).toBeTruthy();
+    }
   });
 });

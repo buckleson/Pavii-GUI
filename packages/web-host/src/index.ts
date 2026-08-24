@@ -16,6 +16,17 @@ export {
 } from './backend-launcher.js';
 export type { BackendDirConfig, BackendLaunchOptions, BackendHandle, BackendStartOptions } from './backend-launcher.js';
 
+// OpenCode CLI availability — PATH registration shared by both distributions.
+export {
+  ensureOpencodeInstalled,
+  findBundledNpm,
+  getBundledOpencodeDir,
+  getManagedToolsDir,
+  getManagedToolsPathEntries,
+  registerManagedToolsOnPath,
+  registerOpencodeOnPath,
+} from './ensure-opencode.js';
+
 /**
  * Start WebHost (main entry point).
  *
@@ -27,6 +38,22 @@ export type { BackendDirConfig, BackendLaunchOptions, BackendHandle, BackendStar
 export async function startWebHost(opts: WebHostOptions): Promise<WebHostHandle> {
   const { startBackend } = await import('./backend-launcher.js');
   const { startStaticServer } = await import('./static-server.js');
+  const { registerOpencodeOnPath } = await import('./ensure-opencode.js');
+
+  // OpenCode is the default agent, and the engine resolves agents only through
+  // the PATH it inherits at spawn — so this must happen before startBackend,
+  // not after. Registering later leaves the whole first session without a
+  // usable default.
+  //
+  // `process.env` is mutated deliberately rather than a constructed env object:
+  // `buildSpawnEnv` passes `process.env` straight through by reference when no
+  // `dirs` are supplied, so mutating a copy would miss that path entirely.
+  // Registration is idempotent, so the desktop app doing this itself before
+  // reaching here costs nothing.
+  registerOpencodeOnPath({
+    dataDir: opts.dataDir ?? opts.app.userDataPath,
+    resourcesPath: opts.app.resourcesPath,
+  });
 
   // 1. Start backend (M4)
   let backendHandle;

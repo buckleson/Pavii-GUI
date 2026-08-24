@@ -247,6 +247,30 @@
 - Affects: `packages/shared-scripts/src/prepare-paviicore.js`
 - Evidence: `tests/unit/assets/prepareOpencode.test.ts`, `tests/unit/assets/preparePaviicoreBundleStash.test.ts`
 
+### One architecture per build invocation, enforced
+
+- Status: accepted
+- Decision: `scripts/build-with-builder.js` exits 1 when more than one architecture is requested, naming the per-arch scripts; `build-mac` and `build` chain `build-mac:arm64 && build-mac:x64` instead of passing both flags at once.
+- Rationale: The script only ever staged `archArgs[0]`, so a multi-arch invocation packaged an app whose second arch had no engine. Staging both in one pass is not a fix: `AIONUI_BACKEND_LOCAL_BINARY` is a single path with no arch information, so looping `preparePaviicore` would copy one engine into both bundle directories (an arm64 engine inside the x64 installer), and without that variable the second arch silently downloads the upstream AionCore engine, stripping the rebrand. Both outcomes package successfully and fail in the user's hands, so refusing is the only safe behaviour. `.github/workflows/_build-reusable.yml` already mandates one job per platform+arch for the same reason.
+- Affects: `scripts/build-with-builder.js`
+- Evidence: `tests/unit/bootstrap/buildWithBuilder.test.ts`
+
+### OpenCode PATH registration lives in web-host and serves both distributions
+
+- Status: accepted
+- Decision: `ensureOpencode.ts` moved from the desktop main process to `packages/web-host/src/ensure-opencode.ts` and is exported from the package index. `startWebHost` registers PATH before `startBackend`; the Electron main process keeps its own pre-spawn call. `scripts/pack-web-cli.js` stages and copies the binary into the `pavii-web` tarball, tolerating an arch with no published binary via the `unsupported` flag on `prepareOpencode`'s result.
+- Rationale: The desktop installer bundled OpenCode while the `curl | bash` web distribution shipped none, so `pavii-web` users had a default agent that only worked if they already had OpenCode. The helper imports nothing but node builtins, and web-host is the only package both `@pavii/desktop` and `@pavii/web-cli` depend on, so moving it there adds no dependency edge and drags neither runtime into the other. Registration mutates `process.env` rather than a constructed env object because `buildSpawnEnv` passes `process.env` through by reference when no `dirs` are supplied. `skipped` on `prepareOpencode` was ambiguous — a cache hit also skips — hence the separate `unsupported` flag for callers that copy the bundle elsewhere.
+- Affects: `packages/web-host/src/ensure-opencode.ts`
+- Evidence: `packages/web-host/src/start-web-host.test.ts`, `packages/web-host/src/ensure-opencode.test.ts`
+
+### The About page carries the analytics disclosure
+
+- Status: accepted
+- Decision: `readme.md` states what analytics are actually collected, and `AboutModalContent.tsx` repeats it in-app as inline text behind i18n keys `settings.analyticsNotice*`.
+- Rationale: The README previously claimed the app ships "no analytics or telemetry" while PostHog shipped in every build — the repository's only public privacy statement, and false. The notice is inline rather than a link because this repository is private (a GitHub link 404s for users) and the marketing site has no privacy page. Two details the copy must keep: `identify()` links events to a Pavii account id once signed in, so the id is not purely per-install; and `POSTHOG_DISABLED` is a build-time Vite define, so there is genuinely no in-app opt-out.
+- Affects: `packages/desktop/src/renderer/components/settings/SettingsModal/contents/AboutModalContent.tsx`
+- Evidence: `tests/unit/settings/AboutModalContent.dom.test.tsx`, `readme.md`
+
 ### Token statistics come from a local per-day usage ledger
 
 - Status: accepted
@@ -319,6 +343,8 @@
 - Analytics privacy, verified against production: 400 live events pulled from PostHog EU (project 249810) and scanned across every property for file:// URLs, Windows paths, home directories, emails, and credential-shaped strings — zero hits. `$current_url` arrives normalised (`app://pavii/conversation/:id`, `.../detail/:skillName`), confirming `normaliseRoute` runs before send. `token` and `distinct_id` appear in stored properties because PostHog's ingestion echoes them; `token` is the public `phc_` write key, not a secret. Dashboards: "Pavii.Ai — Product Health" (912262) and "Pavii.Ai — Activation & Usage" (912263).
 - Main-process analytics attribution: `posthog-node` has no `register`, so `analyticsService` merges `environment`/`app_version`/`platform`/`arch` into every capture by hand; explicit event properties win, matching posthog-js. Regression-tested in `tests/unit/analytics/mainProcessSuperProperties.test.ts`, which fails on 3 of 5 cases without the merge. Fixes production events that arrived unattributable to any release or OS. All five recorded failures are `backend_data_migration_failed` on 21-22 Aug 2026, before the CRLF fix shipped; none since.
 - Runtime verification: WebUI login page renders at `bun run webui` (post chunk fix); desktop app reaches `backendManager.start ready` with engine detection including OpenCode; live end-to-end sign-in confirmed via loopback callback (`[PaviiAuth] signed in as <user>` in main-process logs).
+
+- Test discovery trap: vitest only includes `packages/web-host/src/**` for that package, so `packages/web-host/tests/` (`start-web-host.test.ts`, `equivalence.test.ts`) is never executed by `bun run test`. New web-host tests must live in `src/`.
 
 ## Referenced Artifacts
 

@@ -5,7 +5,7 @@
  */
 
 /**
- * ensureOpencode — startup helpers that expose the app-managed tools dir on
+ * ensure-opencode — startup helpers that expose the app-managed tools dir on
  * PATH and locate the bundled Node runtime's npm. The actual install flow
  * (ensureOpencodeInstalled) spawns real processes and is intentionally not
  * unit-tested here.
@@ -22,7 +22,7 @@ import {
   getManagedToolsPathEntries,
   registerManagedToolsOnPath,
   registerOpencodeOnPath,
-} from '@/process/startup/ensureOpencode';
+} from './ensure-opencode.js';
 
 /**
  * Absolute fixture path that survives PATH splitting on every platform.

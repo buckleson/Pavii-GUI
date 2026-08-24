@@ -192,7 +192,10 @@ function prepareOpencode(options = {}) {
     // Not fatal: ensureOpencode.ts still has the npm fallback for odd arches.
     console.warn(`  OpenCode: no published binary for ${runtimeKey}; skipping bundle (runtime npm install will apply)`);
     pruneOtherRuntimeKeys(projectRoot, runtimeKey);
-    return { skipped: true, runtimeKey };
+    // `unsupported` rather than `skipped` alone: a cache hit also reports
+    // skipped, but leaves a usable binary staged. Callers that copy the bundle
+    // elsewhere have to tell those two apart.
+    return { skipped: true, unsupported: true, runtimeKey };
   }
 
   const targetDir = bundleDirFor(projectRoot, runtimeKey);

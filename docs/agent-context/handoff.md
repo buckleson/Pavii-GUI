@@ -77,9 +77,18 @@ release build exists yet and the user tests locally first.
 - Installer grows ~50-80 MB compressed per platform. The **actual** installer
   size has never been measured — only the staged payload (172 MB). Run
   `bun run build-win:x64` before promising anyone a number.
-- Gap: `packages/web-host/src/backend-launcher.ts` has no managed-tools or
-  OpenCode handling at all, so the web-cli/web-host distribution still only
-  gets OpenCode if the user already has it. Untouched by this work.
+- Closed: the web distribution has parity. The PATH helper now lives at
+  `packages/web-host/src/ensure-opencode.ts`, `startWebHost` registers it
+  before spawning the engine, and `scripts/pack-web-cli.js` stages the binary
+  into the `pavii-web` tarball. Each web tarball grows by one OpenCode binary
+  (~170 MB unpacked), and on macOS it inherits the existing unsigned/quarantine
+  problem.
+- Trap: vitest only includes `packages/web-host/src/**` for that package, so
+  anything under `packages/web-host/tests/` never runs. Two files sit there
+  today passing by never executing.
+- Still unproven: `scripts/pack-web-cli.js` was not executed end to end (it
+  compiles a ~100 MB binary). Its OpenCode staging is covered by unit tests on
+  the contract it depends on, not by a real pack run.
 - Live telemetry baseline for judging the change: `message_sent` by
   `agent_kind` currently shows only `aionrs`. If bundling worked, `opencode`
   should appear after the first release.
