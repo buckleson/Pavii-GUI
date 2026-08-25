@@ -1,0 +1,31 @@
+name: Artifact quota probe
+
+# The release pipeline is artifact-mediated end to end: every build job uploads
+# its installers as workflow artifacts and the publish job downloads them. When
+# the account's artifact storage quota is exhausted, the uploads fail and a
+# tag wastes six platform builds (~90 min) publishing nothing.
+#
+# GitHub recalculates quota usage "every 6-12 hours", and the billing API needs
+# a token scope the CLI auth does not carry — so the only reliable check is an
+# actual upload. Before this workflow, the cheapest probe was a cold
+# ~50-minute engine build that failed at its final step. This one answers in
+# about 30 seconds: dispatch it, and if its upload succeeds the release train
+# is safe to tag.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Make a minimal artifact
+        run: echo "quota probe $(date -u +%FT%TZ)" > probe.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quota-probe
+          path: probe.txt
+          if-no-files-found: error
+          retention-days: 1
