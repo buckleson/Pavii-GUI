@@ -14,8 +14,27 @@ import { SOCIAL_LINKS } from '@/renderer/components/settings/SettingsModal/conte
 const urlFor = (label: string): string => SOCIAL_LINKS.find((link) => link.label === label)?.url ?? '';
 
 describe('About panel social links', () => {
-  it('offers GitHub, X and LinkedIn', () => {
-    expect(SOCIAL_LINKS.map((link) => link.label)).toEqual(['GitHub', 'X', 'LinkedIn']);
+  it('offers every profile the website footer lists', () => {
+    expect(SOCIAL_LINKS.map((link) => link.label)).toEqual([
+      'GitHub',
+      'X',
+      'LinkedIn',
+      'Instagram',
+      'Medium',
+      'Substack',
+    ]);
+  });
+
+  it('matches the site on the profiles it shares with it', () => {
+    // Two places name the same accounts; if they drift, one of them is wrong.
+    expect(urlFor('Instagram')).toBe('https://www.instagram.com/pavii.ai/');
+    expect(urlFor('Medium')).toBe('https://medium.com/@pavii.ai');
+    expect(urlFor('Substack')).toBe('https://substack.com/@paviiai');
+  });
+
+  it('gives every entry a distinct destination', () => {
+    const urls = SOCIAL_LINKS.map((link) => link.url);
+    expect(new Set(urls).size).toBe(urls.length);
   });
 
   it('sends X to the profile rather than the site front door', () => {

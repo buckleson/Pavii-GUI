@@ -46,6 +46,13 @@ type LinkItem =
  * private, so a real GitHub link would 404 for everyone (see the note further
  * down this file).
  */
+/** Fixed-width wordmark so the row stays evenly spaced whatever the letters. */
+const wordmark = (text: string, size: number): React.ReactNode => (
+  <span className='inline-block w-20px text-center font-700 leading-none' style={{ fontSize: size }}>
+    {text}
+  </span>
+);
+
 export const SOCIAL_LINKS: Array<{ label: string; url: string; glyph: React.ReactNode }> = [
   {
     label: 'GitHub',
@@ -55,12 +62,27 @@ export const SOCIAL_LINKS: Array<{ label: string; url: string; glyph: React.Reac
   {
     label: 'X',
     url: 'https://x.com/Bucklesongroup',
-    glyph: <span className='inline-block w-20px text-center text-16px font-600 leading-none'>X</span>,
+    glyph: wordmark('X', 16),
   },
   {
     label: 'LinkedIn',
     url: 'https://www.linkedin.com/company/thepavii/',
-    glyph: <span className='inline-block w-20px text-center text-14px font-700 leading-none'>in</span>,
+    glyph: wordmark('in', 14),
+  },
+  {
+    label: 'Instagram',
+    url: 'https://www.instagram.com/pavii.ai/',
+    glyph: wordmark('IG', 13),
+  },
+  {
+    label: 'Medium',
+    url: 'https://medium.com/@pavii.ai',
+    glyph: wordmark('M', 16),
+  },
+  {
+    label: 'Substack',
+    url: 'https://substack.com/@paviiai',
+    glyph: wordmark('S', 16),
   },
 ];
 
@@ -142,7 +164,8 @@ const AboutModalContent: React.FC = () => {
   const linkItems: LinkItem[] = [
     {
       title: t('settings.helpDocumentation'),
-      url: 'https://www.pavii.tech/products/Super-Assistant/',
+      // The actual documentation, not the product landing page.
+      url: 'https://www.pavii.tech/products/dev-tools/docs/',
       icon: <Right theme='outline' size='16' />,
     },
     {
@@ -190,6 +213,7 @@ const AboutModalContent: React.FC = () => {
                   role='link'
                   tabIndex={0}
                   aria-label={social.label}
+                  title={social.label}
                   className='text-t-primary cursor-pointer hover:text-t-secondary transition-colors p-4px'
                   onClick={() => openLink(social.url).catch((error) => console.error('Failed to open link:', error))}
                 >
