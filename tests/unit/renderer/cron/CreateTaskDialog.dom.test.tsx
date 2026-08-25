@@ -8,6 +8,12 @@ import userEvent from '@testing-library/user-event';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// These tests spawn real subprocesses / render full dialogs, so their runtime
+// is load-dependent: each passes alone in seconds but has timed out at the
+// 10 s default when the whole suite runs on a saturated machine. The raised
+// budget covers contention, not slower logic.
+vi.setConfig({ testTimeout: 30_000 });
 import type { Assistant } from '@/common/types/agent/assistantTypes';
 import type { ICronJob } from '@/common/adapter/ipcBridge';
 import type { TChatConversation } from '@/common/config/storage';

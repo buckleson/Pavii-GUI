@@ -10,6 +10,12 @@
  * created → turn.completed reply → REST message back to the channel.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+// These tests spawn real subprocesses / render full dialogs, so their runtime
+// is load-dependent: each passes alone in seconds but has timed out at the
+// 10 s default when the whole suite runs on a saturated machine. The raised
+// budget covers contention, not slower logic.
+vi.setConfig({ testTimeout: 30_000 });
 import http from 'node:http';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -170,7 +176,7 @@ describe('discord bridge round-trip (simulated Discord + backend)', () => {
       () => {
         expect(postedMessages.length).toBeGreaterThan(0);
       },
-      { timeout: 10_000, interval: 50 }
+      { timeout: 25_000, interval: 50 }
     );
 
     expect(postedMessages[0].channel).toBe('C1');

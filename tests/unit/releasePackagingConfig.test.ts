@@ -1,4 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// These tests spawn real subprocesses / render full dialogs, so their runtime
+// is load-dependent: each passes alone in seconds but has timed out at the
+// 10 s default when the whole suite runs on a saturated machine. The raised
+// budget covers contention, not slower logic.
+vi.setConfig({ testTimeout: 30_000 });
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
