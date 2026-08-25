@@ -12,7 +12,8 @@ import {
   buildShareIntentUrl,
   buildShareSummary,
   buildShareText,
-  SHARE_LINK_URL,
+  SHARE_DOWNLOAD_URL,
+  SHARE_SITE_URL,
   renderShareCard,
   type ShareCardData,
 } from '@/renderer/pages/profile/shareCard';
@@ -147,18 +148,38 @@ describe('buildShareIntentUrl', () => {
     // render as a link.
     const intent = buildShareIntentUrl('reddit', data);
 
-    expect(intent).toContain(`url=${encodeURIComponent(SHARE_LINK_URL)}`);
+    expect(intent).toContain(`url=${encodeURIComponent(SHARE_DOWNLOAD_URL)}`);
     // The title carries the headline only; the link lives in `url`.
     expect(intent).toContain(encodeURIComponent(buildShareSummary(data)));
     const title = new URL(intent).searchParams.get('title') ?? '';
     expect(title).not.toContain('http');
   });
 
+  it('carries both destinations for the networks that take prose', () => {
+    // Two audiences: someone who wants the app, and someone who wants to see
+    // the rest of the range. Both links must survive into the post text.
+    for (const network of ['x', 'linkedin'] as const) {
+      const posted = decodeURIComponent(buildShareIntentUrl(network, data));
+      expect(posted).toContain(SHARE_DOWNLOAD_URL);
+      expect(posted).toContain(SHARE_SITE_URL);
+    }
+  });
+
+  it('gives Reddit the download link, the one it can actually carry', () => {
+    // Reddit takes a single `url` and has no body, so the second destination
+    // has nowhere to go — the app link is the one worth keeping.
+    const intent = buildShareIntentUrl('reddit', data);
+
+    expect(intent).toContain(encodeURIComponent(SHARE_DOWNLOAD_URL));
+    const title = new URL(intent).searchParams.get('title') ?? '';
+    expect(title).not.toContain(SHARE_SITE_URL);
+  });
+
   it('keeps the link inside the prose for X and LinkedIn', () => {
     // Those composers take one block of text, so the link has to be in it.
     for (const network of ['x', 'linkedin'] as const) {
       const intent = buildShareIntentUrl(network, data);
-      expect(decodeURIComponent(intent)).toContain(SHARE_LINK_URL);
+      expect(decodeURIComponent(intent)).toContain(SHARE_DOWNLOAD_URL);
       expect(intent).not.toContain('&url=');
     }
   });
@@ -187,8 +208,8 @@ describe('share link target', () => {
       daily: [],
     });
 
-    expect(text).toContain(SHARE_LINK_URL);
-    expect(SHARE_LINK_URL).toBe('https://www.pavii.tech/products/dev-tools/');
+    expect(text).toContain(SHARE_DOWNLOAD_URL);
+    expect(SHARE_DOWNLOAD_URL).toBe('https://www.pavii.tech/products/dev-tools/');
     // A full URL, not a bare domain: X only linkifies something it can resolve.
     expect(text).toContain('https://');
   });

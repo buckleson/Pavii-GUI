@@ -16,7 +16,7 @@ import {
   type LedgerDays,
 } from '@renderer/pages/profile/profileStats';
 import {
-  SHARE_LINK_URL,
+  SHARE_DOWNLOAD_URL,
   buildShareIntentUrl,
   buildShareSummary,
   buildShareText,
@@ -291,7 +291,7 @@ describe('shareCard', () => {
       // Reddit prefills only `title` and `url`; a URL inside the title does
       // not render as a link, which is where the whole summary used to go.
       expect(buildShareIntentUrl('reddit', data)).toBe(
-        `https://www.reddit.com/submit?title=${encodeURIComponent(buildShareSummary(data))}&url=${encodeURIComponent(SHARE_LINK_URL)}`
+        `https://www.reddit.com/submit?title=${encodeURIComponent(buildShareSummary(data))}&url=${encodeURIComponent(SHARE_DOWNLOAD_URL)}`
       );
     });
 

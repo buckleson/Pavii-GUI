@@ -9,9 +9,9 @@ import { formatCompactNumber } from './profileStats';
 
 /**
  * Canvas rendering for the shareable activity card, plus the social intent
- * URLs. The image itself cannot be attached to web intents; like other
- * activity cards, the user saves the PNG and attaches it manually, while the
- * intent carries a text summary.
+ * URLs. No web intent can attach a file, so the intent carries only the text
+ * summary and the card goes to the clipboard for the user to paste into the
+ * composer (see ShareModal); saving the PNG stays available as the fallback.
  */
 
 export type ShareCardData = {
@@ -207,14 +207,17 @@ export function renderShareCard(
 }
 
 /**
- * Where the shared post points. The Dev Tools page rather than the site root:
- * it is the product the card is actually about.
+ * Where someone reading the post goes to get the app. The Dev Tools page
+ * rather than the site root: it is the product the card is about.
  *
- * Posted as a full URL because X renders a link as its domain plus a truncated
- * path — there is no way to give it custom anchor text, and a bare `pavii.tech`
- * token only ever landed on the marketing homepage.
+ * A full URL, not a bare domain — X renders a link as its domain plus a
+ * truncated path and gives no way to set custom anchor text, so a bare
+ * `pavii.tech` token only ever landed on the marketing homepage.
  */
-export const SHARE_LINK_URL = 'https://www.pavii.tech/products/dev-tools/';
+export const SHARE_DOWNLOAD_URL = 'https://www.pavii.tech/products/dev-tools/';
+
+/** The rest of the range, for readers who want the company rather than the app. */
+export const SHARE_SITE_URL = 'https://pavii.tech';
 
 export type ShareNetwork = 'x' | 'linkedin' | 'reddit';
 
@@ -238,7 +241,7 @@ export function buildShareIntentUrl(network: ShareNetwork, data: ShareCardData):
       // the title therefore buried the link somewhere it does not even render
       // as a link. Splitting it makes this a normal link post: headline in
       // `title`, destination in `url`, which Reddit renders and unfurls.
-      return `https://www.reddit.com/submit?title=${encodeURIComponent(buildShareSummary(data))}&url=${encodeURIComponent(SHARE_LINK_URL)}`;
+      return `https://www.reddit.com/submit?title=${encodeURIComponent(buildShareSummary(data))}&url=${encodeURIComponent(SHARE_DOWNLOAD_URL)}`;
   }
 }
 
@@ -247,9 +250,17 @@ export function buildShareSummary(data: ShareCardData): string {
   return `${formatCompactNumber(data.totalTokens)} lifetime tokens, ${data.currentStreak}-day streak on Pavii.Ai — my personal AI workspace.`;
 }
 
-/** Text summary used by the share intents that post one block of prose. */
+/**
+ * Text summary for the intents that post one block of prose.
+ *
+ * Carries both destinations on their own lines: the download link for readers
+ * who want the app, and the site for anyone after the wider range. Reddit gets
+ * only the first — its submit page takes a single `url` and has no body.
+ */
 export function buildShareText(data: ShareCardData): string {
-  return `${buildShareSummary(data)} ${SHARE_LINK_URL}`;
+  return [buildShareSummary(data), ``, `Download: ${SHARE_DOWNLOAD_URL}`, `More products: ${SHARE_SITE_URL}`].join(
+    '\n'
+  );
 }
 
 /**
