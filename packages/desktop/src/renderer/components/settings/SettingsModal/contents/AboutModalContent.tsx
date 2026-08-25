@@ -34,6 +34,36 @@ type LinkItem =
   | { title: string; url: string; icon: React.ReactNode; onClick?: never }
   | { title: string; onClick: () => void; icon: React.ReactNode; url?: never };
 
+/**
+ * Social destinations shown beside the version badge.
+ *
+ * X and LinkedIn use typographic glyphs rather than icons: @icon-park ships no
+ * LinkedIn mark and only the retired Twitter bird, and both brands are
+ * wordmarks anyway — the same call the share modal already makes. Labels stay
+ * untranslated, as brand names are everywhere else in the app.
+ *
+ * The GitHub glyph keeps pointing at the product page: the repository is
+ * private, so a real GitHub link would 404 for everyone (see the note further
+ * down this file).
+ */
+export const SOCIAL_LINKS: Array<{ label: string; url: string; glyph: React.ReactNode }> = [
+  {
+    label: 'GitHub',
+    url: 'https://www.pavii.tech/products/Super-Assistant/',
+    glyph: <Github theme='outline' size='20' />,
+  },
+  {
+    label: 'X',
+    url: 'https://x.com/Bucklesongroup',
+    glyph: <span className='inline-block w-20px text-center text-16px font-600 leading-none'>X</span>,
+  },
+  {
+    label: 'LinkedIn',
+    url: 'https://www.linkedin.com/company/thepavii/',
+    glyph: <span className='inline-block w-20px text-center text-14px font-700 leading-none'>in</span>,
+  },
+];
+
 const AboutModalContent: React.FC = () => {
   const { t } = useTranslation();
   const viewMode = useSettingsViewMode();
@@ -154,16 +184,18 @@ const AboutModalContent: React.FC = () => {
               <span className='px-10px py-4px rd-6px text-13px bg-fill-2 text-t-primary font-500'>
                 v{__APP_VERSION__}
               </span>
-              <div
-                className='text-t-primary cursor-pointer hover:text-t-secondary transition-colors p-4px'
-                onClick={() =>
-                  openLink('https://www.pavii.tech/products/Super-Assistant/').catch((error) =>
-                    console.error('Failed to open link:', error)
-                  )
-                }
-              >
-                <Github theme='outline' size='20' />
-              </div>
+              {SOCIAL_LINKS.map((social) => (
+                <div
+                  key={social.label}
+                  role='link'
+                  tabIndex={0}
+                  aria-label={social.label}
+                  className='text-t-primary cursor-pointer hover:text-t-secondary transition-colors p-4px'
+                  onClick={() => openLink(social.url).catch((error) => console.error('Failed to open link:', error))}
+                >
+                  {social.glyph}
+                </div>
+              ))}
             </div>
 
             {/* Check Update Section */}
