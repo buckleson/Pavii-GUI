@@ -56,10 +56,10 @@ describe('renderer control surface', () => {
    * McpServerHeader, so the handlers are unreachable by construction rather
    * than dead.
    */
-  const ALLOWED_EMPTY_HANDLERS = [
+  const ALLOWED_EMPTY_HANDLERS = new Set([
     'pages/settings/ToolsSettings/McpManagement.tsx',
     'components/settings/SettingsModal/contents/ToolsModalContent.tsx',
-  ];
+  ]);
 
   it('has no interactive handler that silently does nothing', () => {
     const emptyArrow = /on[A-Z]\w*=\{\s*\(\s*\)\s*=>\s*\{\s*\}\s*\}/;
@@ -68,7 +68,7 @@ describe('renderer control surface', () => {
     const offenders: string[] = [];
     for (const file of rendererFiles) {
       const rel = relative(rendererDir, file).replace(/\\/g, '/');
-      if (ALLOWED_EMPTY_HANDLERS.includes(rel)) continue;
+      if (ALLOWED_EMPTY_HANDLERS.has(rel)) continue;
       const source = readFileSync(file, 'utf-8');
       if (emptyArrow.test(source) || consoleOnly.test(source)) offenders.push(rel);
     }
@@ -106,7 +106,10 @@ describe('e2e testid coverage', () => {
   // a configured agent to produce an image path.
   // 147 → 149: same reasoning for the document chip (inline-file-chip /
   // inline-file-open), driven by the same DOM suite.
-  const ORPHAN_BUDGET = 149;
+  // 149 → 151: the chip's reveal-in-Explorer link and copy-path button
+  // (inline-file-reveal / inline-file-copy), also driven end-to-end by
+  // tests/unit/renderer/inlineImageCard.dom.test.tsx.
+  const ORPHAN_BUDGET = 151;
 
   function collectTestIds(): Set<string> {
     const ids = new Set<string>();

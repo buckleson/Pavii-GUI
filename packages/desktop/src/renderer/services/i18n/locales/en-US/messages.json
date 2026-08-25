@@ -93,5 +93,9 @@
   "showImage": "Show image",
   "imageRetry": "Retry",
   "openFile": "Open",
-  "openFileFailed": "Could not open the file"
+  "openFileFailed": "Could not open the file",
+  "revealFile": "Click here",
+  "revealFileFailed": "Could not open File Explorer",
+  "filePathCopied": "File location copied",
+  "copyFilePath": "Copy file location"
 }

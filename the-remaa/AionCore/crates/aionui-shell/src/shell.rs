@@ -34,8 +34,9 @@ impl ShellService {
         if cfg!(target_os = "macos") {
             self.opener.run_command("open", &["-R", &path.to_string_lossy()]).await
         } else if cfg!(target_os = "windows") {
-            let parent = path.parent().unwrap_or(&path);
-            self.opener.run_command("explorer", &[&parent.to_string_lossy()]).await
+            self.opener
+                .run_command("explorer", &[&windows_show_item_arg(&path)])
+                .await
         } else {
             // Linux: prefer the freedesktop D-Bus FileManager1.ShowItems method,
             // which opens the file manager *and* highlights the target file. Fall
@@ -171,6 +172,30 @@ fn validate_directory_exists(dir_path: &str) -> Result<std::path::PathBuf, Shell
 
 fn build_windows_terminal_command(path: &str) -> String {
     format!(r#"pushd "{path}""#)
+}
+
+/// Explorer's `/select,<path>` opens the containing folder with the file
+/// highlighted — the Windows equivalent of `open -R` / FileManager1.ShowItems.
+/// Explorer only honours `/select,` with backslash separators, and clients may
+/// send forward slashes; '\\' is illegal in Windows file names, so the replace
+/// cannot corrupt a name. Explorer also exits non-zero on success, which
+/// `run_command` already tolerates (warn, not error).
+///
+/// The caller canonicalizes first, and on Windows `fs::canonicalize` yields
+/// extended-length verbatim paths (`\\?\C:\...`), which Explorer's `/select,`
+/// does not honour either — same failure class as aionui-file's
+/// `strip_verbatim_prefix` (path_safety.rs, iOfficeAI/AionUi#3191), whose
+/// logic is replicated here because it is `pub(crate)` there.
+fn windows_show_item_arg(path: &Path) -> String {
+    let raw = path.to_string_lossy();
+    let unverbatim = if let Some(rest) = raw.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{rest}")
+    } else if let Some(rest) = raw.strip_prefix(r"\\?\") {
+        rest.to_owned()
+    } else {
+        raw.into_owned()
+    };
+    format!("/select,{}", unverbatim.replace('/', "\\"))
 }
 
 /// Build the `(program, args)` used to reveal `path` in the Linux file manager.
@@ -385,11 +410,18 @@ mod tests {
 
     #[test]
     fn linux_show_item_percent_encodes_spaces_in_uri() {
-        let path = Path::new("/home/user/My Downloads/AionUi.deb");
+        // `Url::from_file_path` needs a platform-absolute path, so the fixture
+        // differs per host OS; the property under test — spaces are
+        // percent-encoded in the emitted URI — is the same everywhere.
+        let path = if cfg!(windows) {
+            Path::new(r"C:\home\user\My Downloads\AionUi.deb")
+        } else {
+            Path::new("/home/user/My Downloads/AionUi.deb")
+        };
         let (program, args) = linux_show_item_command(path, true);
         assert_eq!(program, "gdbus");
         assert!(
-            args.contains(&"['file:///home/user/My%20Downloads/AionUi.deb']".to_owned()),
+            args.iter().any(|a| a.contains("My%20Downloads/AionUi.deb']")),
             "space must be percent-encoded, got: {args:?}"
         );
     }
@@ -402,6 +434,25 @@ mod tests {
         // Fallback opens the parent directory, never the file (whose MIME
         // handler may be a text editor) — that was the original bug.
         assert_eq!(args, vec!["/home/user/Downloads".to_owned()]);
+    }
+
+    #[test]
+    fn windows_show_item_selects_the_file_with_backslash_separators() {
+        // The renderer's inline file chip sends forward-slash paths; Explorer
+        // only honours `/select,` with backslashes.
+        let arg = windows_show_item_arg(Path::new("C:/Users/v/My Documents/report.docx"));
+        assert_eq!(arg, r"/select,C:\Users\v\My Documents\report.docx");
+    }
+
+    #[test]
+    fn windows_show_item_strips_the_verbatim_prefix() {
+        // The service canonicalizes before building the argument, and Windows
+        // canonicalize yields `\\?\`-prefixed paths that Explorer rejects.
+        let arg = windows_show_item_arg(Path::new(r"\\?\C:\Users\v\report.docx"));
+        assert_eq!(arg, r"/select,C:\Users\v\report.docx");
+
+        let unc = windows_show_item_arg(Path::new(r"\\?\UNC\server\share\report.docx"));
+        assert_eq!(unc, r"/select,\\server\share\report.docx");
     }
 
     #[tokio::test]

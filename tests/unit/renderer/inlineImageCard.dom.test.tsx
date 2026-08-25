@@ -18,9 +18,13 @@ import { linkifyBareImagePaths } from '@/renderer/utils/chat/inlineImagePaths';
 
 const getImageBase64 = vi.hoisted(() => vi.fn());
 const openSystem = vi.hoisted(() => vi.fn());
+const showItemInFolder = vi.hoisted(() => vi.fn());
 
 vi.mock('@/common', () => ({
-  ipcBridge: { fs: { getImageBase64: { invoke: getImageBase64 }, openSystem: { invoke: openSystem } } },
+  ipcBridge: {
+    fs: { getImageBase64: { invoke: getImageBase64 }, openSystem: { invoke: openSystem } },
+    shell: { showItemInFolder: { invoke: showItemInFolder } },
+  },
 }));
 
 vi.mock('@/renderer/components/Markdown/ShadowView', () => ({
@@ -46,8 +50,10 @@ vi.mock('@/renderer/utils/platform', () => ({
   openExternalUrl: vi.fn(),
 }));
 
+const copyText = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
 vi.mock('@/renderer/utils/ui/clipboard', () => ({
-  copyText: vi.fn().mockResolvedValue(undefined),
+  copyText,
 }));
 
 vi.mock('@arco-design/web-react', () => ({
@@ -67,16 +73,14 @@ vi.mock('@arco-design/web-react', () => ({
     error: vi.fn(),
     // The hook form the components actually use (Arco's static helpers mount
     // via the legacy ReactDOM.render, which React 19 removed).
-    useMessage: () => [
-      {
-        error: (text: string) => {
-          const node = document.createElement('div');
-          node.textContent = text;
-          document.body.appendChild(node);
-        },
-      },
-      null,
-    ],
+    useMessage: () => {
+      const toast = (text: string) => {
+        const node = document.createElement('div');
+        node.textContent = text;
+        document.body.appendChild(node);
+      };
+      return [{ error: toast, success: toast }, null];
+    },
   },
   Tooltip: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
@@ -103,21 +107,11 @@ describe('inline image cards in markdown', () => {
 
   const renderTransformed = (prose: string) => render(<MarkdownView>{linkifyBareImagePaths(prose)}</MarkdownView>);
 
-  it('renders a card and defers the disk read until asked', () => {
-    renderTransformed(`Saved at:\n${codexPath}\n`);
-
-    expect(screen.getByTestId('inline-image-card')).toBeInTheDocument();
-    expect(screen.getByText('call_x.png')).toBeInTheDocument();
-    // Deferred means deferred: nothing is read just because a path was mentioned.
-    expect(getImageBase64).not.toHaveBeenCalled();
-  });
-
-  it('loads and shows the image on click, via the sandboxed endpoint', async () => {
+  it('shows the image immediately without a click, via the sandboxed endpoint', async () => {
     getImageBase64.mockResolvedValue('data:image/png;base64,abc');
     renderTransformed(`Saved at:\n${codexPath}\n`);
 
-    fireEvent.click(screen.getByTestId('inline-image-show'));
-
+    // No interaction: the card loads on mount.
     await waitFor(() => {
       expect(screen.getByTestId('inline-image-shown')).toBeInTheDocument();
     });
@@ -132,11 +126,10 @@ describe('inline image cards in markdown', () => {
     getImageBase64.mockResolvedValue(null);
     renderTransformed(`Saved at:\n${codexPath}\n`);
 
-    fireEvent.click(screen.getByTestId('inline-image-show'));
-
     await waitFor(() => {
       expect(screen.getByText('Could not load')).toBeInTheDocument();
     });
+    expect(screen.getByText('call_x.png')).toBeInTheDocument();
     expect(screen.getByText('Retry')).toBeInTheDocument();
 
     // Retry actually retries.
@@ -173,6 +166,53 @@ describe('inline image cards in markdown', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Could not open the file')).toBeInTheDocument();
+    });
+  });
+
+  it('reveals the file selected in the OS file manager from the "Click here" link', async () => {
+    showItemInFolder.mockResolvedValue(undefined);
+    renderTransformed('Report at `C:\\work\\q3\\summary.pdf` done.');
+
+    const reveal = screen.getByTestId('inline-file-reveal');
+    expect(reveal).toHaveTextContent('Click here');
+    fireEvent.click(reveal);
+
+    await waitFor(() => {
+      expect(showItemInFolder).toHaveBeenCalledWith('C:/work/q3/summary.pdf');
+    });
+  });
+
+  it('toasts when the file manager cannot be opened', async () => {
+    showItemInFolder.mockRejectedValue(new Error('no shell'));
+    renderTransformed('Report at `C:\\work\\q3\\summary.pdf` done.');
+
+    fireEvent.click(screen.getByTestId('inline-file-reveal'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Could not open File Explorer')).toBeInTheDocument();
+    });
+  });
+
+  it('copies the file location and confirms with a toast', async () => {
+    copyText.mockResolvedValue(undefined);
+    renderTransformed('Sheet at `C:\\work\\budget.xlsx` saved.');
+
+    fireEvent.click(screen.getByTestId('inline-file-copy'));
+
+    await waitFor(() => {
+      expect(screen.getByText('File location copied')).toBeInTheDocument();
+    });
+    expect(copyText).toHaveBeenCalledWith('C:/work/budget.xlsx');
+  });
+
+  it('toasts a failure when the clipboard write is refused', async () => {
+    copyText.mockRejectedValueOnce(new Error('denied'));
+    renderTransformed('Sheet at `C:\\work\\budget.xlsx` saved.');
+
+    fireEvent.click(screen.getByTestId('inline-file-copy'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Copy failed')).toBeInTheDocument();
     });
   });
 

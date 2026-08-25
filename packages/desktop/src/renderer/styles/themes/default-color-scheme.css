@@ -56,6 +56,7 @@
   --brand: #7033ff; /* brand */
   --brand-light: #f2f2ff; /* light brand background */
   --brand-hover: #886cff; /* brand hover */
+  --electric-violet: #8f00ff; /* inline file-chip reveal link */
 
   /* Message & UI Component Colors - Light Mode */
   --message-user-bg: #eeeeff; /* user message background (pale purple) */
@@ -152,6 +153,7 @@
   --brand: #e4e4e4; /* brand, in a monochrome Vercel style */
   --brand-light: #222222; /* dark brand background */
   --brand-hover: #424242; /* brand hover */
+  --electric-violet: #a970ff; /* inline file-chip reveal link (readable on dark) */
 
   /* Message & UI Component Colors - Dark Mode */
   --message-user-bg: #1d1d1d; /* user message background (neutral dark grey) */

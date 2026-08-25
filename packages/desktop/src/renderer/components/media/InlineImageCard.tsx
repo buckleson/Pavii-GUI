@@ -7,14 +7,12 @@
 import { ipcBridge } from '@/common';
 import { Button, Image } from '@arco-design/web-react';
 import { Pic } from '@icon-park/react';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
- * Click-to-view card for an image an agent referenced by bare file path.
- *
- * Deliberately deferred: the image loads when the user asks for it, not the
- * moment a message mentions a path. It owns its own fetch instead of reusing
+ * Inline card for an image an agent referenced by bare file path; the image
+ * loads as soon as the card mounts. It owns its own fetch instead of reusing
  * LocalImageView because that component's failure mode is a broken <img> with
  * no error state — a card whose path may point anywhere (or at a since-deleted
  * temp file) needs a visible failure with a retry.
@@ -26,7 +24,7 @@ import { useTranslation } from 'react-i18next';
  */
 const InlineImageCard: React.FC<{ path: string }> = ({ path }) => {
   const { t } = useTranslation();
-  const [state, setState] = useState<'idle' | 'loading' | 'shown' | 'failed'>('idle');
+  const [state, setState] = useState<'loading' | 'shown' | 'failed'>('loading');
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
   const basename = path.split(/[\\/]/).pop() || path;
@@ -48,6 +46,10 @@ const InlineImageCard: React.FC<{ path: string }> = ({ path }) => {
         setState('failed');
       });
   }, [path]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (state === 'shown' && dataUrl) {
     return (
@@ -71,10 +73,15 @@ const InlineImageCard: React.FC<{ path: string }> = ({ path }) => {
           {t('messages.imageLoadFailed', { defaultValue: 'Could not load' })}
         </span>
       )}
-      <Button size='mini' type='secondary' loading={state === 'loading'} onClick={load} data-testid='inline-image-show'>
-        {state === 'failed'
-          ? t('messages.imageRetry', { defaultValue: 'Retry' })
-          : t('messages.showImage', { defaultValue: 'Show image' })}
+      <Button
+        size='mini'
+        type='secondary'
+        loading={state === 'loading'}
+        disabled={state === 'loading'}
+        onClick={load}
+        data-testid='inline-image-show'
+      >
+        {state === 'failed' ? t('messages.imageRetry', { defaultValue: 'Retry' }) : null}
       </Button>
     </span>
   );
