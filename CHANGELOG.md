@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.2.0](https://www.pavii.tech/products/dev-tools/) (2026-08-26)
+
+### Desktop
+
+#### Features
+
+- **usage:** token statistics are recorded by the engine, once per turn, whatever drove it — desktop chats, background conversations, scheduled tasks, channel messages and WebUI all count, served from the new `/api/usage/ledger` endpoint
+- **chat:** images an agent references by bare file path render as click-to-view cards; nothing is read from disk until asked, and a refused read fails visibly with a retry
+- **profile:** sharing the activity card copies it to the clipboard for pasting into the composer, and the post carries both the download link and the site
+- **models:** every provider shows its own logo, and Hugging Face joins the provider list with its router endpoint preset
+- **about:** X, LinkedIn, Instagram, Medium and Substack profiles beside the version badge; Help documentation, Update log and Official website each open what their label says
+- **ci:** a dispatchable Windows engine build, so testing an engine change no longer needs a local release build
+
+#### Bug Fixes
+
+- **brand:** the codex version-drift notice (and every other backend fallback string) no longer names AionUi — chat notices are translated via the codes the engine actually emits, and scrubbed as a safety net
+- **usage:** the old renderer-side counter added a session running total every turn, double-counted duplicated frames and dropped claude cache tokens; the recorded history could not be repaired and restarts from zero
+- **usage:** a ledger day without breakdowns no longer crashes the Profile page, and a backend that spent nothing can no longer be crowned most-used
+- **profile:** the share card is written to the clipboard by the main process — the renderer clipboard API rejected image writes with no visible cause
+- **profile:** sharing to Reddit posts a link post, with the destination in the URL field where Reddit renders it as a link
+- **profile:** skills attached before the rebrand are counted under their Pavii names instead of splitting the tally
+- **build:** engine-test and E2E CI jobs no longer die on runner disk space and Node heap limits
+
+#### Notes
+
+- The engine is built from vendored source, so `aioncoreVersion` is unused for this release.
+
+---
+
 ## [2.1.66](https://www.pavii.tech/products/Super-Assistant/) (2026-08-22)
 
 ### Desktop

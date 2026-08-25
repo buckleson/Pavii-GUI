@@ -90,9 +90,9 @@ async fn handle_hook(
 
     Json(match decision {
         aionui_session::PermissionDecision::Approved | aionui_session::PermissionDecision::AllowAlways => {
-            AntigravityHookOutput::allow("approved in AionUi")
+            AntigravityHookOutput::allow("approved in Pavii.Ai")
         }
-        aionui_session::PermissionDecision::Denied => AntigravityHookOutput::deny("rejected in AionUi"),
+        aionui_session::PermissionDecision::Denied => AntigravityHookOutput::deny("rejected in Pavii.Ai"),
     })
 }
 

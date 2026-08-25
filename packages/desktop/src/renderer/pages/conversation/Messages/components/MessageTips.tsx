@@ -10,6 +10,7 @@ import { Attention, CheckOne, Info } from '@icon-park/react';
 import classNames from 'classnames';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { scrubBrandText } from '@/common/utils/assistantBranding';
 import MarkdownView from '@renderer/components/Markdown';
 import ButlerDiagnoseButton from '@renderer/components/base/ButlerDiagnoseButton';
 import FeedbackButton from '@renderer/components/base/FeedbackButton';
@@ -65,7 +66,11 @@ const MessageTips: React.FC<{ message: IMessageTips }> = ({ message }) => {
   const { t } = useTranslation();
   const { content, type, code, params } = message.content;
   const structuredError = type === 'error' ? message.content.error : undefined;
-  const localizedTipBody = resolveAgentTipBody(content, code, params, t);
+  // Tips are app-generated notices, never model prose — and the backend's
+  // English fallback strings shipped with the old brand name once (the codex
+  // version-drift notice, live 2026-08-26). Scrubbing here protects against
+  // any engine/frontend skew reintroducing one.
+  const localizedTipBody = scrubBrandText(resolveAgentTipBody(content, code, params, t));
   const { json, data } = useFormatContent(localizedTipBody);
 
   const displayContent = json ? '' : localizedTipBody;
@@ -113,7 +118,9 @@ const MessageTips: React.FC<{ message: IMessageTips }> = ({ message }) => {
       : null;
     const detailParts = [
       errorCode ? `${t('conversation.agentError.errorCode')}: ${errorCode}` : '',
-      structuredError.detail || structuredError.message,
+      // The backend's untranslated fallback message lands here when `detail`
+      // is empty — the one card surface that renders raw backend English.
+      scrubBrandText(structuredError.detail || structuredError.message || ''),
     ].filter(Boolean);
     const feedbackTags: Record<string, string> = {};
     if (errorCode) {
