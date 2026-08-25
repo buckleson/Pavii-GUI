@@ -74,6 +74,6 @@ export function orderSlashCommandsForDisplay(commands: readonly SlashCommandItem
   };
   return commands
     .map((command, index) => ({ command, index }))
-    .sort((a, b) => rank(a.command) - rank(b.command) || a.index - b.index)
+    .toSorted((a, b) => rank(a.command) - rank(b.command) || a.index - b.index)
     .map((entry) => entry.command);
 }

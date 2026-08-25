@@ -22,12 +22,12 @@ const compareByNextRun = (a: { next?: number }, b: { next?: number }): number =>
 describe('scheduled task ordering', () => {
   it('puts the soonest run first', () => {
     const jobs = [{ next: 300 }, { next: 100 }, { next: 200 }];
-    expect([...jobs].sort(compareByNextRun)).toEqual([{ next: 100 }, { next: 200 }, { next: 300 }]);
+    expect([...jobs].toSorted(compareByNextRun)).toEqual([{ next: 100 }, { next: 200 }, { next: 300 }]);
   });
 
   it('sorts jobs with no scheduled run to the end', () => {
     const jobs = [{ next: undefined }, { next: 200 }, { next: undefined }, { next: 100 }];
-    const sorted = [...jobs].sort(compareByNextRun);
+    const sorted = [...jobs].toSorted(compareByNextRun);
     expect(sorted.slice(0, 2)).toEqual([{ next: 100 }, { next: 200 }]);
     expect(sorted.slice(2).every((job) => job.next === undefined)).toBe(true);
   });
@@ -37,10 +37,10 @@ describe('scheduled task ordering', () => {
       { next: 100, id: 'a' },
       { next: 100, id: 'b' },
     ];
-    expect([...jobs].sort(compareByNextRun).map((job) => job.id)).toEqual(['a', 'b']);
+    expect([...jobs].toSorted(compareByNextRun).map((job) => job.id)).toEqual(['a', 'b']);
   });
 
   it('handles an empty list', () => {
-    expect([].sort(compareByNextRun)).toEqual([]);
+    expect([].toSorted(compareByNextRun)).toEqual([]);
   });
 });

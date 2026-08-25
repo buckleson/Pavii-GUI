@@ -29,7 +29,7 @@ function readJsonFile(filePath) {
   try {
     raw = fs.readFileSync(filePath, 'utf-8');
   } catch (error) {
-    throw new Error(`Failed to read JSON file ${filePath}: ${error.message}`);
+    throw new Error(`Failed to read JSON file ${filePath}: ${error.message}`, { cause: error });
   }
 
   const hadBom = raw.startsWith(UTF8_BOM);
@@ -40,7 +40,7 @@ function readJsonFile(filePath) {
   } catch (error) {
     const preview = JSON.stringify(text.slice(0, 80));
     const bomNote = hadBom ? ' (a UTF-8 BOM was stripped before parsing)' : '';
-    throw new Error(`Failed to parse JSON file ${filePath}${bomNote}: ${error.message}. First bytes: ${preview}`);
+    throw new Error(`Failed to parse JSON file ${filePath}${bomNote}: ${error.message}. First bytes: ${preview}`, { cause: error });
   }
 }
 

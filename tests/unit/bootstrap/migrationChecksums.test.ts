@@ -57,7 +57,7 @@ describe('migration checksums', () => {
 
   it('has a pinned entry for every migration on disk, and vice versa', () => {
     const onDisk = migrationFiles();
-    const pinnedNames = Object.keys(PINNED).sort();
+    const pinnedNames = Object.keys(PINNED).toSorted();
     expect(
       onDisk.filter((n) => !PINNED[n]),
       'new migration not added to the manifest'

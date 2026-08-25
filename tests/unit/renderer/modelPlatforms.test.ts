@@ -79,8 +79,8 @@ describe('getProviderLogo', () => {
 
     const shared = [...byLogo.values()]
       .filter((names) => names.length > 1)
-      .map((names) => [...names].sort())
-      .sort((a, b) => a[0].localeCompare(b[0]));
+      .map((names) => [...names].toSorted())
+      .toSorted((a, b) => a[0].localeCompare(b[0]));
 
     // Brand families, not lookup collisions.
     expect(shared).toEqual([

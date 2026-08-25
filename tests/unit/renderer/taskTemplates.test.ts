@@ -66,7 +66,7 @@ describe('TASK_TEMPLATES', () => {
     // The app ships no email integration, and Slack is only a channel bridge -
     // these three cannot run on a fresh install and must say so.
     const gated = TASK_TEMPLATES.filter((template) => template.requiresKey).map((template) => template.id);
-    expect(gated.sort()).toEqual(['growthReport', 'inboxSummary', 'slackCatchUp']);
+    expect(gated.toSorted()).toEqual(['growthReport', 'inboxSummary', 'slackCatchUp']);
   });
 
   it('resolves every referenced key in en-US', () => {

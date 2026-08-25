@@ -227,7 +227,7 @@ describe('stubbed bridge calls', () => {
     // Scan past the type arguments rather than trying to match them: they nest
     // (`stubProvider<IBridgeResponse<{...}>, ...>`), so a `[^>]*` bound stops at
     // the inner `>` and silently misses that declaration.
-    const found = [...text.matchAll(/stubProvider[\s\S]{0,200}?\(\s*'([^']+)'/g)].map((match) => match[1]).sort();
-    expect(found).toEqual([...KNOWN_STUBS].sort());
+    const found = [...text.matchAll(/stubProvider[\s\S]{0,200}?\(\s*'([^']+)'/g)].map((match) => match[1]).toSorted();
+    expect(found).toEqual([...KNOWN_STUBS].toSorted());
   });
 });
