@@ -48,6 +48,14 @@
 - Affects: `the-remaa/AionCore/crates/aionui-office/src/officecli_runtime.rs`
 - Evidence: `docs/agent-context/privacy-audit.md`, `the-remaa/AionCore/crates/aionui-office/tests/watch_manager_integration.rs`
 
+### Brand purge is complete and guarded; remaining old-brand tokens are classified keeps
+
+- Status: accepted
+- Decision: Three escalating rebrand passes (grep-driven, render-sink inventory, full term census) removed every user-visible `AionUi`/`Aion` string; ~15k occurrences remain by design and fall into exactly five keep classes — wire/storage identifiers (`AIONUI_*` env vars, `aionui-` ids, crate names, NSIS variables), tests pinning legacy data or the branding chokepoints themselves, scrubber rule definitions that must name what they scrub, legacy-data matchers (`BUILTIN_IMAGE_GEN_LEGACY_NAMES`), and internal dev docs/tracing. Do not re-litigate or "clean up" these classes: renaming identifiers breaks saved configs, and renaming legacy matchers breaks the migrations they serve.
+- Rationale: The leak mechanism was engine-emitted English fallbacks and asset prose reaching render sinks unscrubbed; those sinks are now covered by display-layer scrub functions plus locale definitions for every engine `LocalizedText` code, and regressions are pinned by a dedicated guard suite.
+- Affects: `packages/desktop/src/common/utils/assistantBranding.ts`
+- Evidence: `tests/unit/renderer/brandLeakGuard.test.ts`, `packages/desktop/src/common/utils/skillBranding.ts`, `packages/desktop/src/renderer/utils/chat/toolTextBranding.ts`, `the-remaa/AionCore/crates/aionui-session/src/backend/cli_version.rs`
+
 ### CJK punctuation is inside the language gate
 
 - Status: accepted
