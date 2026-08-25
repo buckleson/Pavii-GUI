@@ -5,8 +5,9 @@
  */
 
 import { ipcBridge } from '@/common';
-import { Button, Image } from '@arco-design/web-react';
-import { Pic } from '@icon-park/react';
+import { copyText } from '@/renderer/utils/ui/clipboard';
+import { Button, Image, Message } from '@arco-design/web-react';
+import { Copy, Pic } from '@icon-park/react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -26,8 +27,15 @@ const InlineImageCard: React.FC<{ path: string }> = ({ path }) => {
   const { t } = useTranslation();
   const [state, setState] = useState<'loading' | 'shown' | 'failed'>('loading');
   const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const [messageApi, messageContext] = Message.useMessage();
 
   const basename = path.split(/[\\/]/).pop() || path;
+
+  const copy = useCallback(() => {
+    copyText(path)
+      .then(() => messageApi.success(t('messages.imagePathCopied', { defaultValue: 'Image location copied to clipboard' })))
+      .catch(() => messageApi.error(t('common.copyFailed', { defaultValue: 'Copy failed' })));
+  }, [path, messageApi, t]);
 
   const load = useCallback(() => {
     setState('loading');
@@ -54,7 +62,22 @@ const InlineImageCard: React.FC<{ path: string }> = ({ path }) => {
   if (state === 'shown' && dataUrl) {
     return (
       <span className='block my-8px' data-testid='inline-image-shown'>
+        {messageContext}
         <Image src={dataUrl} alt={basename} className='max-w-full rounded-8px' style={{ maxHeight: 420 }} />
+        <span className='flex items-center gap-8px mt-4px'>
+          <span className='text-12px text-t-tertiary truncate' title={path}>
+            {basename}
+          </span>
+          <Button
+            size='mini'
+            type='secondary'
+            onClick={copy}
+            icon={<Copy theme='outline' size='13' />}
+            data-testid='inline-image-copy'
+          >
+            {t('messages.copyImagePath', { defaultValue: 'Click to copy the location' })}
+          </Button>
+        </span>
       </span>
     );
   }

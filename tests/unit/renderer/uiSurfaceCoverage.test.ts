@@ -109,7 +109,9 @@ describe('e2e testid coverage', () => {
   // 149 → 151: the chip's reveal-in-Explorer link and copy-path button
   // (inline-file-reveal / inline-file-copy), also driven end-to-end by
   // tests/unit/renderer/inlineImageCard.dom.test.tsx.
-  const ORPHAN_BUDGET = 151;
+  // 151 → 152: the shown image's copy-location button (inline-image-copy),
+  // driven by the same DOM suite.
+  const ORPHAN_BUDGET = 152;
 
   function collectTestIds(): Set<string> {
     const ids = new Set<string>();

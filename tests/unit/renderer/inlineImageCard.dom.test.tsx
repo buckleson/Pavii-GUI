@@ -120,6 +120,25 @@ describe('inline image cards in markdown', () => {
     });
   });
 
+  it('offers a copy-location button under the shown image, with a toast', async () => {
+    getImageBase64.mockResolvedValue('data:image/png;base64,abc');
+    copyText.mockResolvedValue(undefined);
+    renderTransformed(`Separate cover photo saved at:\n${codexPath}\n`);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('inline-image-shown')).toBeInTheDocument();
+    });
+
+    const copyBtn = screen.getByTestId('inline-image-copy');
+    expect(copyBtn).toHaveTextContent('Click to copy the location');
+    fireEvent.click(copyBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Image location copied to clipboard')).toBeInTheDocument();
+    });
+    expect(copyText).toHaveBeenCalledWith('C:/Users/vijay/.codex/generated_images/abc/call_x.png');
+  });
+
   it('fails visibly with a retry when the read is refused', async () => {
     // A path outside the image-base64 sandbox (another drive, a deleted temp
     // file) must fail closed into an error state, not a broken <img>.

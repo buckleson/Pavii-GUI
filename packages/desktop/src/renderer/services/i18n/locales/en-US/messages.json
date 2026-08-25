@@ -97,5 +97,7 @@
   "revealFile": "Click here",
   "revealFileFailed": "Could not open File Explorer",
   "filePathCopied": "File location copied",
-  "copyFilePath": "Copy file location"
+  "copyFilePath": "Copy file location",
+  "imagePathCopied": "Image location copied to clipboard",
+  "copyImagePath": "Click to copy the location"
 }
