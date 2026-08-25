@@ -19,7 +19,7 @@ pub enum ExtensionError {
     #[error("Path traversal detected: {0}")]
     PathTraversal(String),
 
-    #[error("Engine incompatible: extension '{name}' requires aionui {required}, got {actual}")]
+    #[error("Engine incompatible: extension '{name}' requires engines.aionui {required}, got {actual}")]
     EngineIncompatible {
         name: String,
         required: String,

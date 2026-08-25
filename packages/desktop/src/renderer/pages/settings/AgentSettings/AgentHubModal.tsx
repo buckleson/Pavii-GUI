@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Typography, Tooltip, Link } from '@arco-design/web-react';
 import { IconDownload, IconRefresh } from '@arco-design/web-react/icon';
 import { useTranslation } from 'react-i18next';
+import { scrubBrandText } from '@/common/utils/assistantBranding';
 import AionModal from '@/renderer/components/base/AionModal';
 import { useHubAgents } from '@/renderer/hooks/agent/useHubAgents';
 import type { IHubAgentItem } from '@/common/types/agent/hub';
@@ -53,7 +54,7 @@ export const AgentHubModal: React.FC<AgentHubModalProps> = ({ visible, onCancel 
         );
       case 'install_failed':
         return (
-          <Tooltip content={agent.installError || t('common.failed', { defaultValue: 'Failed' })}>
+          <Tooltip content={scrubBrandText(agent.installError || '') || t('common.failed', { defaultValue: 'Failed' })}>
             <Button
               status='danger'
               size='small'

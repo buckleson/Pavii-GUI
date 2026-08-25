@@ -35,17 +35,17 @@ pub(crate) async fn run_antigravity_hook() -> ExitCode {
 async fn decide() -> AntigravityHookOutput {
     let mut raw = String::new();
     if let Err(e) = tokio::io::stdin().read_to_string(&mut raw).await {
-        return AntigravityHookOutput::deny(format!("aionui hook could not read the request: {e}"));
+        return AntigravityHookOutput::deny(format!("Pavii.Ai hook could not read the request: {e}"));
     }
     let input: AntigravityHookInput = match serde_json::from_str(&raw) {
         Ok(v) => v,
-        Err(e) => return AntigravityHookOutput::deny(format!("aionui hook could not parse the request: {e}")),
+        Err(e) => return AntigravityHookOutput::deny(format!("Pavii.Ai hook could not parse the request: {e}")),
     };
 
     let base_url = match std::env::var(AntigravityHookConfig::ENV_BASE_URL) {
         Ok(v) if !v.trim().is_empty() => v,
         _ => {
-            return AntigravityHookOutput::deny("aionui hook is not configured (missing callback address)");
+            return AntigravityHookOutput::deny("Pavii.Ai hook is not configured (missing callback address)");
         }
     };
     let token = std::env::var(AntigravityHookConfig::ENV_TOKEN).unwrap_or_default();
@@ -60,7 +60,7 @@ async fn decide() -> AntigravityHookOutput {
     );
     let client = match reqwest::Client::builder().timeout(CALLBACK_TIMEOUT).build() {
         Ok(c) => c,
-        Err(e) => return AntigravityHookOutput::deny(format!("aionui hook could not build its client: {e}")),
+        Err(e) => return AntigravityHookOutput::deny(format!("Pavii.Ai hook could not build its client: {e}")),
     };
 
     match client
@@ -78,7 +78,7 @@ async fn decide() -> AntigravityHookOutput {
         }
         // The user closed AionUi, the turn was cancelled, or nobody answered in
         // time. Denying is the only safe reading of "no answer".
-        Err(e) => AntigravityHookOutput::deny(format!("aionui did not answer: {e}")),
+        Err(e) => AntigravityHookOutput::deny(format!("Pavii.Ai did not answer: {e}")),
     }
 }
 
@@ -88,7 +88,7 @@ async fn decide() -> AntigravityHookOutput {
 /// not an `AntigravityHookOutput`, so handing it to the decision parser reports
 /// a rejection as a parse failure. That is what users saw when CSRF was blocking
 /// this endpoint (fixed in #860): the reply carried
-/// `aionui returned an unreadable decision: error decoding response body`,
+/// `Pavii.Ai returned an unreadable decision: error decoding response body`,
 /// which names the wrong thing to go looking at — the body was perfectly
 /// readable, the request had been refused.
 ///
@@ -105,13 +105,13 @@ fn decision_from_response(status: reqwest::StatusCode, body: &str) -> Antigravit
             .ok()
             .and_then(|v| v["code"].as_str().map(str::to_owned));
         return match code {
-            Some(code) => AntigravityHookOutput::deny(format!("aionui refused the request: HTTP {status} ({code})")),
-            None => AntigravityHookOutput::deny(format!("aionui refused the request: HTTP {status}")),
+            Some(code) => AntigravityHookOutput::deny(format!("Pavii.Ai refused the request: HTTP {status} ({code})")),
+            None => AntigravityHookOutput::deny(format!("Pavii.Ai refused the request: HTTP {status}")),
         };
     }
     match serde_json::from_str::<AntigravityHookOutput>(body) {
         Ok(out) => out,
-        Err(e) => AntigravityHookOutput::deny(format!("aionui returned an unreadable decision: {e}")),
+        Err(e) => AntigravityHookOutput::deny(format!("Pavii.Ai returned an unreadable decision: {e}")),
     }
 }
 
@@ -131,9 +131,26 @@ mod tests {
         assert_eq!(out.decision, AntigravityHookDecision::Deny);
     }
 
+    /// The deny reasons render inside the agent's transcript, where nothing
+    /// scrubs — and this file shipped half-branded once: its sibling was
+    /// fixed while eight reasons here kept the old name.
+    #[test]
+    fn deny_reasons_carry_the_product_brand_not_the_old_one() {
+        let refused = decision_from_response(reqwest::StatusCode::FORBIDDEN, "{}");
+        let unreadable = decision_from_response(reqwest::StatusCode::OK, "not json");
+        for out in [refused, unreadable] {
+            let reason = serde_json::to_value(&out).unwrap()["reason"]
+                .as_str()
+                .unwrap_or_default()
+                .to_lowercase();
+            assert!(!reason.contains("aion"), "old brand leaked into a deny reason: {reason}");
+            assert!(reason.contains("pavii.ai"), "the reason should name the product: {reason}");
+        }
+    }
+
     /// The bug this split exists for: a refusal used to be reported as a parse
     /// failure. Live 2026-08-17, while CSRF was blocking this endpoint, the user
-    /// saw `aionui returned an unreadable decision: error decoding response
+    /// saw `Pavii.Ai returned an unreadable decision: error decoding response
     /// body` — which points at the body when the problem was the status.
     #[test]
     fn a_refusal_is_named_as_one_not_as_an_unreadable_body() {

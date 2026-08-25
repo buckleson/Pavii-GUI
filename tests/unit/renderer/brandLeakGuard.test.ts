@@ -8,7 +8,7 @@
  * raw English fallback — "verified by AionUi" — rendered in chat (reported
  * live 2026-08-26). These guards pin the two halves of that failure.
  */
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -52,6 +52,83 @@ describe('brand leak guards', () => {
     }
     expect(codes.ANTIGRAVITY_VERSION_OLDER).toBeUndefined();
     expect(codes.ANTIGRAVITY_VERSION_NEWER).toBeUndefined();
+  });
+
+  it('keeps the engine-bundled assets an agent can quote free of the old brand', () => {
+    // Agents read these files and repeat them verbatim to the user — this is
+    // where a mandatory "Powered by @aionui" tweet template and "I use
+    // officecli" self-introductions hid through two rebrand passes.
+    const assetsRoots = [
+      resolve(__dirname, '../../../the-remaa/AionCore/crates/aionui-app/assets'),
+      resolve(__dirname, '../../../the-remaa/AionCore/crates/aionui-ai-agent/assets'),
+    ];
+    // Known-internal forms that may legitimately appear in assets.
+    const allowed = [
+      /AIONUI_(?:[A-Z_]+|\.\.\.)/g, // env var contract names (incl. `AIONUI_...` in prose)
+      /~\/\.aionui[\w/.-]*/g, // real data-dir paths
+      /aionui-assistant\.[\w.{}-]+/g, // rule/avatar filename contract (incl. {locale})
+      /avatars\/aionui-assistant\.\w+/g, // avatar asset path contract
+      /\baionrs\b/g, // agent-type wire token, display-mapped downstream
+      /\.aionui\b/g, // dotfile/dir names
+      // The identity rule must NAME the forbidden brands to forbid them.
+      /Never describe yourself as AionUi, AionCore/g,
+    ];
+    const offenders: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(full);
+        } else if (/\.(md|json|txt|yaml|yml)$/.test(entry.name)) {
+          let text = readFileSync(full, 'utf-8');
+          for (const pattern of allowed) text = text.replace(pattern, '');
+          if (/aion/i.test(text)) {
+            const line = text.split('\n').find((l) => /aion/i.test(l)) ?? '';
+            offenders.push(`${full.slice(full.indexOf('assets'))}: ${line.trim().slice(0, 90)}`);
+          }
+        }
+      }
+    };
+    for (const root of assetsRoots) walk(root);
+    expect(offenders, offenders.join('\n')).toEqual([]);
+  });
+
+  it('keeps the installer message strings on the new brand', () => {
+    // resources/messages.yml sat dead-but-branded for the whole rebrand; a
+    // packaging change away from shipping "AionUi could not finish closing…".
+    const resourcesDir = resolve(__dirname, '../../../resources');
+    // messages.yml was a decoy: never read (electron-builder resolves that
+    // filename against its own templates dir), but sitting in buildResources
+    // under the exact name that WOULD be honoured if resolution ever changed,
+    // pre-loaded with the pre-rebrand English and Chinese text. Deleted; must
+    // stay deleted.
+    expect(existsSync(join(resourcesDir, 'messages.yml'))).toBe(false);
+    const winDir = join(resourcesDir, 'windows');
+    for (const file of readdirSync(winDir).filter((f) => f.endsWith('.nsh'))) {
+      const text = readFileSync(join(winDir, file), 'utf-8');
+      // Internal identifiers: AIONUI_* macros, $AionUi* NSIS variables, and
+      // the bundled reporter script's filename. User-visible text only.
+      const stripped = text
+        .replace(/AIONUI_[A-Z_]+/g, '')
+        // NSIS variable identifiers are AionUi + UpperCamel (AionUiStopResult,
+        // $AionUiSessionLogPath…). Prose is never "AionUi" glued to an
+        // uppercase letter, so this strips identifiers and only identifiers.
+        .replace(/\$?AionUi[A-Z]\w*/g, '')
+        .replace(/aionui-report-installer-failure\.ps1/g, '');
+      expect(stripped, file).not.toMatch(/Aion[Uu]i/);
+    }
+  });
+
+  it('keeps the broken weixin-file-send skill retired', async () => {
+    // It instructed agents to emit [AIONUI_CHANNEL_SEND] blocks nothing
+    // consumes — the raw tag rendered in the user's WeChat and the skill
+    // authorized claiming a send that never happened.
+    const { brandSkills } = await import('@/common/utils/skillBranding');
+    const rows = brandSkills([
+      { name: 'weixin-file-send', description: 'x', source: 'builtin' },
+      { name: 'pavii-config', description: 'y', source: 'builtin' },
+    ]);
+    expect(rows.map((row) => row.name)).toEqual(['pavii-config']);
   });
 
   it('keeps the settings drift copy CLI-agnostic', () => {

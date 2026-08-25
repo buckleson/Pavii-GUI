@@ -593,6 +593,9 @@
       "ANTIGRAVITY_STEPS_FAILED": {
         "body": "{{count}} step(s) failed and did NOT take effect. agy ends such turns as successful, so check the result rather than the reply."
       },
+      "CODEX_RETRYING": {
+        "body": "codex is retrying: {{detail}} ({{attempts}} attempts over {{elapsed}})"
+      },
       "CLI_VERSION_OLDER": {
         "body": "{{cli}} {{reported}} is older than the {{verified}} this integration was verified against; some features may be missing. Consider upgrading {{cli}}."
       },

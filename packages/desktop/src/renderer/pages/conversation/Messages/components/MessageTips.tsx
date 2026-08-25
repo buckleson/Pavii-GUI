@@ -96,10 +96,10 @@ const MessageTips: React.FC<{ message: IMessageTips }> = ({ message }) => {
             : `conversation.agentError.codes.${errorCode}.body`,
           {
             workspacePath: structuredError.workspacePath,
-            defaultValue: structuredError.message || content,
+            defaultValue: scrubBrandText(structuredError.message || content),
           }
         )
-      : structuredError.message || content;
+      : scrubBrandText(structuredError.message || content);
     const ownershipLabel = ownership
       ? t(`conversation.agentError.ownership.${ownership}`, {
           defaultValue: t('conversation.agentError.ownership.unknown_upstream'),

@@ -11,6 +11,7 @@ import { Alert, Button, Image, Message, Radio, Tag, Tooltip } from '@arco-design
 import { Copy, Download, LoadingOne } from '@icon-park/react';
 import React, { useCallback, useContext, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { brandToolLabel, brandToolText } from '@/renderer/utils/chat/toolTextBranding';
 import ButlerDiagnoseButton from '@/renderer/components/base/ButlerDiagnoseButton';
 import FeedbackButton from '@/renderer/components/base/FeedbackButton';
 import FileChangesPanel from '@/renderer/components/base/FileChangesPanel';
@@ -99,8 +100,8 @@ const useConfirmationButtons = (
       default: {
         const mcpProps = confirmationDetails;
         question = t('messages.confirmation.allowMCPTool', {
-          toolName: mcpProps.tool_name,
-          serverName: mcpProps.server_name,
+          toolName: brandToolLabel(mcpProps.tool_name),
+          serverName: brandToolLabel(mcpProps.server_name),
         });
         options.push(
           {
@@ -109,14 +110,14 @@ const useConfirmationButtons = (
           },
           {
             label: t('messages.confirmation.yesAlwaysAllowTool', {
-              toolName: mcpProps.tool_name,
-              serverName: mcpProps.server_name,
+              toolName: brandToolLabel(mcpProps.tool_name),
+              serverName: brandToolLabel(mcpProps.server_name),
             }),
             value: ToolConfirmationOutcome.ProceedAlwaysTool,
           },
           {
             label: t('messages.confirmation.yesAlwaysAllowServer', {
-              serverName: mcpProps.server_name,
+              serverName: brandToolLabel(mcpProps.server_name),
             }),
             value: ToolConfirmationOutcome.ProceedAlwaysServer,
           },
@@ -179,7 +180,7 @@ const ConfirmationDetails: React.FC<{
       case 'info':
         return <span className='text-t-primary'>{confirmationDetails.prompt}</span>;
       case 'mcp':
-        return <span className='text-t-primary'>{confirmationDetails.tool_display_name}</span>;
+        return <span className='text-t-primary'>{brandToolLabel(confirmationDetails.tool_display_name)}</span>;
     }
   }, [confirmationDetails]);
 
@@ -556,7 +557,7 @@ const MessageToolGroup: React.FC<IMessageToolGroupProps> = ({ message }) => {
               content={
                 <div>
                   <Tag className={'mr-4px'}>
-                    {name}
+                    {brandToolLabel(name)}
                     {status === 'Canceled' ? `(${t('messages.canceledExecution')})` : ''}
                   </Tag>
                 </div>

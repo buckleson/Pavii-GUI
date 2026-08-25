@@ -45,8 +45,12 @@ describe('brandSkillDescription', () => {
     );
   });
 
-  it('replaces Chinese builtin descriptions with English overrides', () => {
-    expect(brandSkillDescription('weixin-file-send', '发给我')).toMatch(/send me the file/);
+  it('passes a description through unchanged when no override is registered', () => {
+    // weixin-file-send — the last skill with a Chinese-copy override — was
+    // removed from the bundle (its [AIONUI_CHANNEL_SEND] protocol had no
+    // consumer), so the override map is empty; the mechanism stays for the
+    // next builtin that ships with non-English copy.
+    expect(brandSkillDescription('some-skill', '发给我')).toBe('发给我');
   });
 
   it('passes undefined through when there is no override', () => {

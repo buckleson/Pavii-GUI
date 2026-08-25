@@ -17,6 +17,7 @@ import { Download } from '@icon-park/react';
 import { createTwoFilesPatch } from 'diff';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { brandToolLabel, brandToolText } from '@/renderer/utils/chat/toolTextBranding';
 import MarkdownView from '@renderer/components/Markdown';
 
 const StatusTag: React.FC<{ status: string }> = ({ status }) => {
@@ -110,7 +111,7 @@ const MessageAcpToolCall: React.FC<{ message: IMessageAcpToolCall }> = ({ messag
   const { tool_call_id, kind, title, status, rawInput, content: diffContent } = update;
   // See MessageToolGroupSummary: the same raw Team MCP ids surface here.
   const teamLabel = teamToolDisplayLabel(title);
-  const toolTitle = teamLabel ? t(teamLabel.key, { defaultValue: teamLabel.defaultValue }) : title;
+  const toolTitle = teamLabel ? t(teamLabel.key, { defaultValue: teamLabel.defaultValue }) : brandToolLabel(title);
   const hasOnlyDiffs =
     Array.isArray(diffContent) &&
     diffContent.length > 0 &&

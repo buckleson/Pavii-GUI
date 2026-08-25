@@ -35,7 +35,7 @@ Follow the `morph-ppt-3d` skill strictly. It extends `morph-ppt`, so all design 
 
 **Model compatibility check first:**
 
-- officecli requires `.glb` format. If the user provides `.fbx` / `.obj` / `.blend` / `.gltf`, ask them to convert.
+- Pavii CLI requires `.glb` format. If the user provides `.fbx` / `.obj` / `.blend` / `.gltf`, ask them to convert.
 
 **Key creative principles:**
 

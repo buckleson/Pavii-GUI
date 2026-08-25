@@ -4,6 +4,7 @@ import { IconDown, IconRight } from '@arco-design/web-react/icon';
 import { Checklist, Download, Right } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { brandToolLabel, brandToolText } from '@/renderer/utils/chat/toolTextBranding';
 import { ipcBridge } from '@/common';
 import { getAcpImageFileName } from '@/common/chat/acpToolCallOutput';
 import type { NormalizedToolCall, NormalizedToolStatus, ToolMessage } from '@/common/chat/normalizeToolCall';
@@ -39,15 +40,11 @@ const ToolItemDetail: React.FC<{ item: NormalizedToolCall }> = ({ item }) => {
   // Team MCP tools arrive as raw ids (`aionui-team_team_task_update`); show the
   // action instead. Tools from other servers keep the name the agent reported.
   const teamLabel = teamToolDisplayLabel(displayItem.name);
-  // The builtin image tool keeps its stored id (renaming it would orphan
-  // saved configs) but the id carries the pre-rebrand name, so it gets a
-  // display label the same way team tools do.
-  const builtinLabel = displayItem.name?.startsWith('aionui-image-generation')
-    ? displayItem.name.replace('aionui-image-generation', 'Image Generation')
-    : null;
+  // Builtin ids keep their stored names (renaming would orphan configs) but
+  // must not display the pre-rebrand prefix; same convention as skills.
   const toolLabel = teamLabel
     ? t(teamLabel.key, { defaultValue: teamLabel.defaultValue })
-    : (builtinLabel ?? displayItem.name);
+    : brandToolLabel(displayItem.name);
   const hasDetail = displayItem.input || displayItem.output || item.truncated || item.imagePath;
   const [messageApi, messageContext] = Message.useMessage();
   const handleDownloadImage = useCallback(
@@ -102,7 +99,7 @@ const ToolItemDetail: React.FC<{ item: NormalizedToolCall }> = ({ item }) => {
         >
           <span className='font-medium text-13px'>{toolLabel}</span>
           {displayItem.description && displayItem.description !== displayItem.name && (
-            <span className='m-l-4px opacity-80 text-13px'>{displayItem.description}</span>
+            <span className='m-l-4px opacity-80 text-13px'>{brandToolText(displayItem.description)}</span>
           )}
         </span>
         {hasDetail && (
@@ -118,7 +115,7 @@ const ToolItemDetail: React.FC<{ item: NormalizedToolCall }> = ({ item }) => {
           {displayItem.input && (
             <div className='tool-detail-section'>
               <div className='tool-detail-label'>Input</div>
-              <pre className='tool-detail-content'>{displayItem.input}</pre>
+              <pre className='tool-detail-content'>{brandToolText(displayItem.input)}</pre>
             </div>
           )}
           {displayItem.output && (

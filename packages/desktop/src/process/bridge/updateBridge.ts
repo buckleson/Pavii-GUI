@@ -359,7 +359,9 @@ const fetchGitHubReleases = async (repo: string, timeoutMs = 30000): Promise<Git
   if (!repo) {
     // Guard: without a configured Pavii repo there is nothing to query, and we
     // must not fall back to the upstream vendor's releases.
-    throw new Error('update-repo-not-configured');
+    // Rendered verbatim in the update card, so it has to be a sentence, not
+    // an internal token like its former self ('update-repo-not-configured').
+    throw new Error('The update service is not configured for this build.');
   }
   const url = `https://api.github.com/repos/${repo}/releases`;
 

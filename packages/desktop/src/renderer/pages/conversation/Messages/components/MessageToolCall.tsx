@@ -14,6 +14,7 @@ import { Badge } from '@arco-design/web-react';
 import { IconDown, IconRight } from '@arco-design/web-react/icon';
 import { createTwoFilesPatch } from 'diff';
 import React, { useMemo, useState } from 'react';
+import { brandToolLabel, brandToolText } from '@/renderer/utils/chat/toolTextBranding';
 import type { BadgeProps } from '@arco-design/web-react';
 import './MessageToolGroupSummary.css';
 
@@ -64,7 +65,7 @@ const MessageToolCall: React.FC<{ message: IMessageToolCall }> = ({ message }) =
 
   const normalized = normalizeToolCall(message);
   if (!normalized) {
-    return <div className='text-t-primary'>{name}</div>;
+    return <div className='text-t-primary'>{brandToolLabel(name)}</div>;
   }
 
   const hasDetail = normalized.input || normalized.output;
@@ -84,8 +85,10 @@ const MessageToolCall: React.FC<{ message: IMessageToolCall }> = ({ message }) =
           }
           onClick={hasDetail ? () => setExpanded(!expanded) : undefined}
         >
-          <span className='font-medium text-13px'>{normalized.name}</span>
-          {normalized.description && <span className='m-l-4px opacity-80 text-13px'>{normalized.description}</span>}
+          <span className='font-medium text-13px'>{brandToolLabel(normalized.name)}</span>
+          {normalized.description && (
+            <span className='m-l-4px opacity-80 text-13px'>{brandToolText(normalized.description)}</span>
+          )}
         </span>
         {hasDetail && (
           <span

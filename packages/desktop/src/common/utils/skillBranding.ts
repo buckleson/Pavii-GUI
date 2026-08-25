@@ -32,9 +32,8 @@ const SKILL_TEXT_RULES: ReadonlyArray<readonly [RegExp, string]> = [
  * Chinese. Keyed by the raw backend skill name.
  */
 const SKILL_DESCRIPTION_OVERRIDES: Readonly<Record<string, string>> = {
-  // x-recruiter / xiaohongshu-recruiter were removed from the engine's builtin
-  // skills entirely; only weixin-file-send still ships with Chinese copy.
-  'weixin-file-send': "Send a local file or image back to the user in chat, e.g. when they ask 'send me the file'.",
+  // Every builtin that shipped with Chinese-only copy has since been removed
+  // from the bundle; the map stays for the next one that needs it.
 };
 
 const applySkillTextRules = (text: string): string => {
@@ -96,6 +95,10 @@ export const applySkillBranding = <T extends SkillRowLike>(skill: T): T & Brande
  * it branded is better than rendering it raw.
  */
 const RETIRED_BUILTIN_SKILL_NAMES: ReadonlySet<string> = new Set([
+  // Removed 2.2.0: instructed agents to emit [AIONUI_CHANNEL_SEND] blocks no
+  // engine code consumes — the raw tag rendered in WeChat and the skill
+  // authorized claiming a send that never happened.
+  'weixin-file-send',
   'x-recruiter',
   'xiaohongshu-recruiter',
   // Renamed in the Pavii rebrand; the folders now ship as `pavii-*`.
