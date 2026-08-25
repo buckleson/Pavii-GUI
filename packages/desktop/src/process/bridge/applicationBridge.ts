@@ -216,19 +216,6 @@ export function initApplicationBridge(): void {
     await writeTunnelEnabledPreference(false);
   });
 
-  // Usage ledger (Profile page stats)
-  ipcBridge.paviiUsage.record.provider(async (entry) => {
-    const { recordUsage } = await import('../services/usageLedger');
-    const { getConfigPath } = await import('../utils/utils');
-    await recordUsage(getConfigPath(), entry);
-  });
-
-  ipcBridge.paviiUsage.get.provider(async () => {
-    const { readUsageLedger } = await import('../services/usageLedger');
-    const { getConfigPath } = await import('../utils/utils');
-    return readUsageLedger(getConfigPath());
-  });
-
   ipcBridge.application.restart.provider(async () => {
     // Backend subprocess shutdown is handled by backendManager.stop() in the
     // main window's before-quit hook; agent children are killed transitively

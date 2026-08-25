@@ -338,6 +338,20 @@ pub enum SessionEvent {
         context_window: Option<u64>,
     },
 
+    /// Session-cumulative token counters, for backends that report a running
+    /// total rather than what a turn just used.
+    ///
+    /// Separate from [`SessionEvent::UsageDelta`] on purpose: the indicator
+    /// wants the current turn, while the usage ledger needs to tell "50 more
+    /// tokens" from "50 tokens in total". Summing a running total once per
+    /// turn counts the same tokens over and over, which is what this variant
+    /// exists to prevent. Only backends that actually publish such a counter
+    /// emit it (codex `tokenUsage.total`); everyone else simply does not.
+    ///
+    /// `input_tokens` carries whatever the backend counts as input INCLUDING
+    /// any cached part, so consumers add input + output and nothing else.
+    SessionUsageTotals { input_tokens: u64, output_tokens: u64 },
+
     /// MCP / tool provisioning as a LIVE event (Addendum 5 / U16). Reducer no-op.
     Provisioning { phase: ProvisioningPhase },
 
@@ -964,6 +978,7 @@ pub fn classify(event: &SessionEvent) -> EventClass {
         | AskResolved { .. }
         | PromptAccepted { .. }
         | UsageDelta { .. }
+        | SessionUsageTotals { .. }
         | Provisioning { .. }
         | Rewound { .. }
         | ConfigChanged { .. }
@@ -1020,6 +1035,9 @@ pub fn persist_tier(event: &SessionEvent) -> PersistTier {
             // Task 2: a pure liveness/correlation signal (queued→started→completed/
             // cancelled), re-derivable from the next turn's own frames — not history.
             MessageLifecycle { .. } => PersistTier::Ephemeral,
+            // Accounting only: the usage ledger consumes it as it arrives and
+            // nothing renders it back from history.
+            SessionUsageTotals { .. } => PersistTier::Ephemeral,
             ToolCall { .. }
             | ToolResult { .. }
             | UsageDelta { .. }

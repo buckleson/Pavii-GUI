@@ -140,6 +140,7 @@ pub(super) async fn build(
             catalog_writeback: Some((meta.id.clone(), deps.agent_registry.catalog_sender())),
             // Persists the resume anchor + observed mode/model from the pump.
             acp_session_repo: Some(deps.acp_agent_service.repo()),
+            usage_recorder: deps.usage_recorder.clone(),
             prompt_dump_dir: None,
             permission_hook_body,
         },

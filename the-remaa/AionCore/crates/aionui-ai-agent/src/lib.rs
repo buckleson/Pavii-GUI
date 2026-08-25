@@ -33,6 +33,7 @@ pub mod shared_kernel;
 pub mod task_manager;
 pub mod terminal;
 pub mod types;
+pub mod usage_recorder;
 mod workflow_progress;
 
 pub use active_lease::{ACTIVE_LEASE_TTL_MS, ActiveLeaseRegistry};

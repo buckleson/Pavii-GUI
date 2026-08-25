@@ -54,14 +54,14 @@ pub use repository::{
     IAssistantOverrideRepository, IAssistantPreferenceRepository, IAssistantRepository, IChannelRepository,
     IClientPreferenceRepository, IConversationRepository, ICronRepository, IFeedbackDiagnosticsRepository,
     IMcpServerRepository, IOAuthTokenRepository, IProjectStore, IProviderRepository, IRemoteAgentRepository,
-    ISettingsRepository, ISkillRepository, ITeamRepository, IUserRepository, PageDirection, PersistedSessionState,
-    SaveRuntimeStateParams, SqliteAcpSessionRepository, SqliteAgentMetadataRepository,
+    ISettingsRepository, ISkillRepository, ITeamRepository, IUsageLedgerRepository, IUserRepository, PageDirection,
+    PersistedSessionState, SaveRuntimeStateParams, SqliteAcpSessionRepository, SqliteAgentMetadataRepository,
     SqliteAssistantDefinitionRepository, SqliteAssistantOverlayRepository, SqliteAssistantOverrideRepository,
     SqliteAssistantPreferenceRepository, SqliteAssistantRepository, SqliteChannelRepository,
     SqliteClientPreferenceRepository, SqliteConversationRepository, SqliteCronRepository,
     SqliteFeedbackDiagnosticsRepository, SqliteMcpServerRepository, SqliteOAuthTokenRepository, SqliteProjectStore,
     SqliteProviderRepository, SqliteRemoteAgentRepository, SqliteSettingsRepository, SqliteSkillRepository,
-    SqliteTeamRepository, SqliteUserRepository,
+    SqliteTeamRepository, SqliteUsageLedgerRepository, SqliteUserRepository, TurnTokens, UsageDayTotals, UsageEntry,
 };
 
 // Re-export sqlx pool type for downstream crates

@@ -112,7 +112,7 @@ fn make_aionrs_config() -> AionrsResolvedConfig {
 
 #[tokio::test]
 async fn aionrs_agent_kill_succeeds() {
-    let agent = AionrsAgentManager::new("conv-1".into(), "/proj".into(), make_aionrs_config(), None)
+    let agent = AionrsAgentManager::new("conv-1".into(), "/proj".into(), make_aionrs_config(), None, None)
         .await
         .unwrap();
     assert!(agent.kill(None).is_ok());
@@ -121,7 +121,7 @@ async fn aionrs_agent_kill_succeeds() {
 
 #[tokio::test]
 async fn aionrs_agent_confirm_succeeds() {
-    let agent = AionrsAgentManager::new("conv-1".into(), "/proj".into(), make_aionrs_config(), None)
+    let agent = AionrsAgentManager::new("conv-1".into(), "/proj".into(), make_aionrs_config(), None, None)
         .await
         .unwrap();
     // `confirm` is an inherent method on `AionrsAgentManager` (reached via
@@ -133,7 +133,7 @@ async fn aionrs_agent_confirm_succeeds() {
 
 #[tokio::test]
 async fn aionrs_agent_metadata() {
-    let agent = AionrsAgentManager::new("conv-abc".into(), "/work".into(), make_aionrs_config(), None)
+    let agent = AionrsAgentManager::new("conv-abc".into(), "/work".into(), make_aionrs_config(), None, None)
         .await
         .unwrap();
     assert_eq!(agent.agent_type(), AgentType::Aionrs);

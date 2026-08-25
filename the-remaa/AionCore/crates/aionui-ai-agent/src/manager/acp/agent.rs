@@ -581,6 +581,10 @@ pub enum RequiredFullAutoApplication {
 }
 
 pub struct AcpAgentManager {
+    /// Monotonic turn number for the usage ledger, so the recorder can tell
+    /// one turn from the next.
+    pub(super) usage_turn_seq: std::sync::atomic::AtomicU64,
+
     /// Pre-computed, immutable session parameters assembled by the factory.
     pub(super) params: Arc<AcpSessionParams>,
 
@@ -707,6 +711,7 @@ impl AcpAgentManager {
         let pipeline = PromptPipeline::new(vec![Arc::new(SessionNewPreludeHook)]);
 
         let manager = Self {
+            usage_turn_seq: std::sync::atomic::AtomicU64::new(0),
             params,
             session: RwLock::new(session),
             runtime,

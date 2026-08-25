@@ -442,6 +442,7 @@ pub fn build_conversation_state(
         service: conversation_service,
         task_manager: services.worker_task_manager.clone(),
         active_leases: services.active_lease_registry.clone(),
+        usage_ledger: services.usage_ledger_repo.clone(),
     }
 }
 

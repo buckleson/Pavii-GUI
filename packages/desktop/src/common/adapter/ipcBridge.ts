@@ -603,21 +603,25 @@ export const paviiTunnel = {
   stop: bridge.buildProvider<void, void>('pavii-tunnel.stop'),
 };
 
-/** Local per-day usage ledger backing the Profile page (see process/services/usageLedger.ts). */
+/**
+ * Per-day token ledger behind the Profile page.
+ *
+ * Served by the engine, not the desktop process: every surface runs its turns
+ * through the engine, so this covers scheduled tasks, channel turns and WebUI
+ * as well as desktop chats. Reading it over HTTP also means a WebUI browser —
+ * whose bridge talks to the engine directly and never reaches the Electron
+ * main process — sees the same figures.
+ */
 export const paviiUsage = {
-  record: bridge.buildProvider<void, { tokens: number; model?: string; backend?: string; at?: number }>(
-    'pavii-usage.record'
-  ),
-  get: bridge.buildProvider<
+  get: httpGet<
     {
-      version: 1;
       days: Record<
         string,
         { tokens: number; turns: number; byModel: Record<string, number>; byBackend: Record<string, number> }
       >;
     },
     void
-  >('pavii-usage.get'),
+  >('/api/usage/ledger'),
 };
 
 export const application = {

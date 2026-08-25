@@ -319,6 +319,50 @@ impl AcpAgentManager {
     }
 
     /// Send a prompt to an already-established session.
+    /// File this turn's tokens against the per-day ledger.
+    ///
+    /// The total is taken from the protocol's own `total_tokens` rather than
+    /// rebuilt from the parts: ACP reports `input_tokens` alongside optional
+    /// cache buckets without specifying whether the former already contains
+    /// the latter, so summing them could double-count and dropping them could
+    /// under-count. The total is authoritative either way, and the ledger
+    /// records it as an unattributed figure instead of inventing a breakdown.
+    ///
+    /// Per-turn, not cumulative: this runs once per prompt, and the SDK field
+    /// is `unstable_end_turn_token_usage` — an end-of-turn report.
+    async fn record_turn_usage(&self, response: &PromptResponse) {
+        let Some(recorder) = self.params.usage_recorder.as_ref() else {
+            return;
+        };
+        let Some(total) = end_turn_total_tokens(response) else {
+            return;
+        };
+
+        let turn = self.usage_turn_seq.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        // The CLI behind this session (`opencode`, `gemini`, …). `agent_type`
+        // would be `acp` for all of them.
+        let agent_kind = self
+            .params
+            .metadata
+            .backend
+            .clone()
+            .unwrap_or_else(|| "acp".to_string());
+        let model = self.session.read().await.current_model_id();
+
+        recorder
+            .record(
+                crate::usage_recorder::UsageIdentity {
+                    user_id: &self.params.user_id,
+                    conversation_id: &self.params.conversation_id,
+                    agent_kind: &agent_kind,
+                    model: model.as_deref(),
+                },
+                turn,
+                crate::usage_recorder::UsageReport::Turn(aionui_db::TurnTokens::unattributed(total)),
+            )
+            .await;
+    }
+
     pub(super) async fn prompt_existing_session(
         &self,
         data: &SendMessageData,
@@ -375,6 +419,7 @@ impl AcpAgentManager {
                 self.commit_session_changes(&mut session).await;
             }
             self.runtime.emit(AgentStreamEvent::AcpContextUsage(frame));
+            self.record_turn_usage(&prompt_response).await;
         }
 
         // Drain the turn-scoped receiver once: detect both the empty-turn
@@ -652,6 +697,22 @@ fn end_turn_usage_frame_from_response(response: &PromptResponse) -> Option<Value
         "size": 0,
         "_meta": { "input_tokens": input, "output_tokens": output },
     }))
+}
+
+/// The turn total for the usage ledger, from the same two sources
+/// `end_turn_usage_frame_from_response` reads, in the same order.
+fn end_turn_total_tokens(response: &PromptResponse) -> Option<i64> {
+    if let Some(usage) = response.usage.as_ref().filter(|u| u.total_tokens > 0) {
+        return i64::try_from(usage.total_tokens).ok();
+    }
+    let counts = response.meta.as_ref()?.get("quota")?.get("token_count")?;
+    let input = counts.get("input_tokens").and_then(Value::as_u64).unwrap_or(0);
+    let output = counts.get("output_tokens").and_then(Value::as_u64).unwrap_or(0);
+    let used = input.checked_add(output)?;
+    if used == 0 {
+        return None;
+    }
+    i64::try_from(used).ok()
 }
 
 /// Carry previously-reported fields the end-of-turn write doesn't know —

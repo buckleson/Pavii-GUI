@@ -103,6 +103,13 @@ fn build_aionrs_final_input_dump_value(
     })
 }
 
+/// Identity and sink for aionrs token accounting.
+pub struct AionrsUsage {
+    pub recorder: Arc<crate::usage_recorder::UsageRecorder>,
+    pub user_id: String,
+    pub model: String,
+}
+
 pub struct AionrsAgentManager {
     runtime: AgentRuntime,
     engine: Mutex<AgentEngine>,
@@ -122,6 +129,11 @@ pub struct AionrsAgentManager {
     /// Signalled by `cancel()` to abort an in-flight `engine.run()` via
     /// `tokio::select!` in `send_message()`.
     cancel_notify: Arc<Notify>,
+    /// Token accounting for the per-day ledger. `None` disables it (tests).
+    usage: Option<AionrsUsage>,
+    /// Monotonic turn number, so the recorder can tell one turn from the
+    /// next. aionrs has no turn generation of its own here.
+    turn_seq: std::sync::atomic::AtomicU64,
     /// Signalled after an in-flight turn emits its terminal event.
     turn_finished_notify: Arc<Notify>,
 }
@@ -142,6 +154,7 @@ impl AionrsAgentManager {
         workspace: String,
         config_extra: AionrsResolvedConfig,
         resume_session: Option<Session>,
+        usage: Option<AionrsUsage>,
     ) -> Result<Self, AgentError> {
         let runtime = AgentRuntime::new(conversation_id.clone(), workspace.clone(), 128);
         let sink: Arc<dyn OutputSink> = Arc::new(BackendOutputSink::new(runtime.event_sender()));
@@ -284,6 +297,8 @@ impl AionrsAgentManager {
             final_input_dump,
             cancel_notify: Arc::new(Notify::new()),
             turn_finished_notify: Arc::new(Notify::new()),
+            usage,
+            turn_seq: std::sync::atomic::AtomicU64::new(0),
         })
     }
 
@@ -439,7 +454,38 @@ impl IAgentTask for AionrsAgentManager {
         self.runtime.bump_activity();
 
         let send_result = match result {
-            Some(Ok(_)) => {
+            Some(Ok(ref run)) => {
+                // aionrs hands back the session RUNNING TOTAL, not this
+                // turn's usage: `AgentEngine::record_turn_usage` accumulates
+                // into `total_usage`, which is also restored from the
+                // persisted session on resume. Reporting it as cumulative
+                // lets the recorder difference it — adding it outright is
+                // what inflated the old ledger on every long conversation.
+                //
+                // `input_tokens` already includes both cache buckets (see
+                // `aion_types::TokenUsage`), so they are not added again.
+                if let Some(usage) = self.usage.as_ref() {
+                    let turn = self.turn_seq.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    usage
+                        .recorder
+                        .record(
+                            crate::usage_recorder::UsageIdentity {
+                                user_id: &usage.user_id,
+                                conversation_id: self.runtime.conversation_id(),
+                                agent_kind: "aionrs",
+                                model: Some(&usage.model),
+                            },
+                            turn,
+                            crate::usage_recorder::UsageReport::SessionCumulative(aionui_db::TurnTokens {
+                                input_tokens: i64::try_from(run.usage.input_tokens).unwrap_or(i64::MAX),
+                                output_tokens: i64::try_from(run.usage.output_tokens).unwrap_or(i64::MAX),
+                                cache_read_tokens: 0,
+                                cache_write_tokens: 0,
+                                other_tokens: 0,
+                            }),
+                        )
+                        .await;
+                }
                 info!(
                     conversation_id = %self.runtime.conversation_id(),
                     elapsed_ms,

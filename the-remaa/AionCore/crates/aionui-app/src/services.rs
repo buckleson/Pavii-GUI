@@ -6,17 +6,17 @@ use std::sync::Arc;
 use crate::config::{AppConfig, IdentityMode, derive_encryption_key};
 use aionui_ai_agent::{
     AcpSessionSyncService, AcpSkillManager, ActiveLeaseRegistry, AgentFactoryDeps, AgentRegistry, IWorkerTaskManager,
-    RuntimeTokenService, WorkerTaskManagerImpl, build_agent_factory,
+    RuntimeTokenService, WorkerTaskManagerImpl, build_agent_factory, usage_recorder::UsageRecorder,
 };
 use aionui_auth::{CookieConfig, JwtService, QrTokenStore, resolve_jwt_secret};
 use aionui_common::OnConversationDelete;
 use aionui_conversation::{ConversationService, runtime_state::ConversationRuntimeStateService};
 use aionui_db::{
     Database, IAcpSessionRepository, IAgentMetadataRepository, IConversationRepository, IMcpServerRepository,
-    IProjectStore, ISkillRepository, IUserRepository, SqliteAcpSessionRepository, SqliteAgentMetadataRepository,
-    SqliteAssistantDefinitionRepository, SqliteAssistantOverlayRepository, SqliteAssistantPreferenceRepository,
-    SqliteConversationRepository, SqliteMcpServerRepository, SqliteProjectStore, SqliteProviderRepository,
-    SqliteSkillRepository, SqliteUserRepository,
+    IProjectStore, ISkillRepository, IUsageLedgerRepository, IUserRepository, SqliteAcpSessionRepository,
+    SqliteAgentMetadataRepository, SqliteAssistantDefinitionRepository, SqliteAssistantOverlayRepository,
+    SqliteAssistantPreferenceRepository, SqliteConversationRepository, SqliteMcpServerRepository, SqliteProjectStore,
+    SqliteProviderRepository, SqliteSkillRepository, SqliteUsageLedgerRepository, SqliteUserRepository,
 };
 use aionui_project::ProjectService;
 use aionui_realtime::{BroadcastEventBus, WebSocketManager};
@@ -31,6 +31,8 @@ pub struct AppServices {
     pub event_bus: Arc<BroadcastEventBus>,
     pub worker_task_manager: Arc<dyn IWorkerTaskManager>,
     pub active_lease_registry: Arc<ActiveLeaseRegistry>,
+    /// Per-day token ledger, read by the profile page endpoint.
+    pub usage_ledger_repo: Arc<dyn IUsageLedgerRepository>,
     pub runtime_token_service: Arc<RuntimeTokenService>,
     pub conversation_runtime_state: Arc<ConversationRuntimeStateService>,
     pub conversation_service: ConversationService,
@@ -251,6 +253,13 @@ impl AppServices {
             machine_id,
         ));
 
+        // Per-day token ledger. Constructed here, as the sole service
+        // construction centre, and handed to the agent factory so every
+        // session it builds reports usage — whatever surface drove the turn.
+        let usage_ledger_repo: Arc<dyn IUsageLedgerRepository> =
+            Arc::new(SqliteUsageLedgerRepository::new(database.pool().clone()));
+        let usage_recorder = Arc::new(UsageRecorder::new(usage_ledger_repo.clone()));
+
         let factory = build_agent_factory(AgentFactoryDeps {
             skill_manager: AcpSkillManager::new_with_repo(skill_paths.clone(), skill_repo.clone()),
             provider_repo,
@@ -268,6 +277,7 @@ impl AppServices {
             // back here to raise the user's permission card.
             antigravity_hook_base_url: Some(runtime_base_url.clone()),
             antigravity_hook_tokens: antigravity_hook_tokens.clone(),
+            usage_recorder: Some(usage_recorder.clone()),
         });
 
         // Agent factory is now wired. Future extension/custom agents
@@ -309,6 +319,7 @@ impl AppServices {
             event_bus,
             worker_task_manager,
             active_lease_registry,
+            usage_ledger_repo,
             runtime_token_service,
             conversation_runtime_state,
             conversation_service,

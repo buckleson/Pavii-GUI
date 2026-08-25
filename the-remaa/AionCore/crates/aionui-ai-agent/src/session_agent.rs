@@ -437,6 +437,8 @@ impl SessionAgentTask {
             // No broadcaster: this ctor is the test/simple path, which has no
             // conversation WebSocket to push a late usage frame to.
             None,
+            // No usage sink either — same rationale as `session_repo: None`.
+            None,
         )
     }
 
@@ -456,6 +458,7 @@ impl SessionAgentTask {
         handshake: &aionui_api_types::AgentHandshake,
         prompt_dump: Option<SessionPromptDump>,
         broadcaster: Option<Arc<dyn EventBroadcaster>>,
+        usage: Option<UsageSink>,
     ) -> Arc<Self> {
         Self::build(
             agent_type,
@@ -467,6 +470,7 @@ impl SessionAgentTask {
             CatalogPreload::from_handshake(handshake),
             prompt_dump,
             broadcaster,
+            usage,
         )
     }
 
@@ -481,6 +485,7 @@ impl SessionAgentTask {
         catalog_preload: CatalogPreload,
         prompt_dump: Option<SessionPromptDump>,
         broadcaster: Option<Arc<dyn EventBroadcaster>>,
+        usage: Option<UsageSink>,
     ) -> Arc<Self> {
         let (tx, _rx) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
         let runtime = Arc::new(SessionRuntime {
@@ -506,6 +511,7 @@ impl SessionAgentTask {
             user_id.clone(),
             session_repo.clone(),
             broadcaster,
+            usage,
         );
         Arc::new(Self {
             agent_type,
@@ -1506,6 +1512,11 @@ pub struct SessionBuildInputs<'a> {
     /// the writes the legacy ACP path performed via `AcpSessionSyncService`, which
     /// this direct-CLI path bypasses. `None` (tests) = no persistence.
     pub acp_session_repo: Option<Arc<dyn IAcpSessionRepository>>,
+    /// Sink for the per-day token ledger. The event pump files each turn's
+    /// usage here, which is why scheduled tasks, channel turns and WebUI turns
+    /// are counted too — they all run through this same pump. `None` (tests) =
+    /// no accounting.
+    pub usage_recorder: Option<Arc<crate::usage_recorder::UsageRecorder>>,
     /// DEV (`--dump-prompts`): the already-resolved `<data_dir>/prompt-dumps`
     /// dir, or `None` when off. `build_session_instance` uses it for the
     /// spawn-time `session-cli-config` dump AND threads it (with the vendor
@@ -1665,6 +1676,7 @@ pub async fn build_antigravity_instance(
         broadcaster,
         catalog_writeback,
         acp_session_repo,
+        usage_recorder,
         // agy has no prompt-dump lane yet (the dev dump is keyed by a
         // claude/codex label); skip it rather than mislabel the dump.
         prompt_dump_dir: _,
@@ -1672,6 +1684,9 @@ pub async fn build_antigravity_instance(
     } = inputs;
 
     let (spec, mode, model) = spec_mode_model(&conversation_id, backend_session_id, config, session_snapshot, metadata);
+    // Snapshot before `model` is moved into the session config; the live
+    // override still wins at record time, this is only the fallback.
+    let usage_model = model.clone();
 
     // Same MCP init surface and ordering as the claude/codex path: user servers
     // resolved from the repo, plus the inline snapshot, with the team
@@ -1733,6 +1748,11 @@ pub async fn build_antigravity_instance(
         spawn_catalog_writeback(agent_id, user_id.clone(), backend.clone(), catalog_tx);
     }
 
+    let usage = usage_recorder.map(|recorder| UsageSink {
+        recorder,
+        agent_kind: "antigravity".to_string(),
+        model: usage_model,
+    });
     let task = SessionAgentTask::new_with_preload(
         AgentType::Antigravity,
         conversation_id,
@@ -1743,6 +1763,7 @@ pub async fn build_antigravity_instance(
         &metadata.handshake,
         None,
         Some(broadcaster),
+        usage,
     );
     Ok(crate::agent_task::AgentInstance::Session(task))
 }
@@ -1777,6 +1798,7 @@ pub async fn build_session_instance(
         broadcaster,
         catalog_writeback,
         acp_session_repo,
+        usage_recorder,
         prompt_dump_dir,
         // claude/codex gate through CLI flags, not an installed hook file.
         permission_hook_body: _,
@@ -1786,6 +1808,9 @@ pub async fn build_session_instance(
     // snapshot-wins precedence). Extracted so it is unit-testable in isolation, the
     // exact sibling of clean-slate's `spec_and_config`.
     let (spec, mode, model) = spec_mode_model(&conversation_id, backend_session_id, config, session_snapshot, metadata);
+    // Snapshot before `model` is moved into the session config; the live
+    // override still wins at record time, this is only the fallback.
+    let usage_model = model.clone();
 
     // GAP #3 — MCP init surface: resolve user-configured servers to the neutral
     // spec (clean-slate resolve_session_init), fold in the inline snapshot, then
@@ -2026,6 +2051,13 @@ pub async fn build_session_instance(
         backend: if backend_label == "claude" { "claude" } else { "codex" },
     });
 
+    // `backend_label` is the real CLI ("claude"/"codex"); AgentType::Acp below
+    // is the family, and would bucket every agent together.
+    let usage = usage_recorder.map(|recorder| UsageSink {
+        recorder,
+        agent_kind: backend_label.to_string(),
+        model: usage_model,
+    });
     let task = SessionAgentTask::new_with_preload(
         AgentType::Acp,
         conversation_id,
@@ -2038,6 +2070,7 @@ pub async fn build_session_instance(
         // Lets the pump push a usage frame that arrives after the turn's relay has
         // already stopped listening — the claude case (usage rides `result`).
         Some(broadcaster),
+        usage,
     );
     Ok(Some(crate::agent_task::AgentInstance::Session(task)))
 }
@@ -2574,6 +2607,99 @@ fn emit_config_options_snapshot(modes: &[ModeInfo], models: &[ModelInfo], runtim
     }
 }
 
+/// Widen a backend counter into the ledger's signed arithmetic. Saturating
+/// rather than wrapping: a nonsense counter should read implausibly high, not
+/// flip negative and subtract from the day.
+fn ledger_count(value: u64) -> i64 {
+    i64::try_from(value).unwrap_or(i64::MAX)
+}
+
+/// File one usage event against the conversation's day bucket.
+///
+/// Each backend reports in its own dialect, so the arithmetic differs and both
+/// halves are verified against the adapters:
+///
+/// * claude keeps `input_tokens`/`output_tokens` as the wire's BASE counts and
+///   reports the cache buckets separately (`adapter/claude.rs`), so the cache
+///   is added — it is billed input, and leaving it out under-reported a
+///   cache-heavy turn by orders of magnitude.
+/// * codex's `inputTokens` ALREADY contains the cached part (`backend/
+///   codex_conn.rs`, live capture: total {input 22032, output 11} == its own
+///   totalTokens 22043), so adding the cache buckets again would double-count.
+///   Its cumulative series carries the whole turn, not just the last request,
+///   and supersedes the per-turn frame once it starts flowing.
+async fn record_pump_usage(
+    sink: &UsageSink,
+    runtime: &SessionRuntime,
+    user_id: &str,
+    conversation_id: &str,
+    env: &aionui_session::SessionEnvelope,
+    saw_session_totals: &mut bool,
+) {
+    use crate::usage_recorder::{UsageIdentity, UsageReport};
+    use aionui_db::TurnTokens;
+
+    let report = match &env.event {
+        SessionEvent::SessionUsageTotals {
+            input_tokens,
+            output_tokens,
+        } => {
+            *saw_session_totals = true;
+            UsageReport::SessionCumulative(TurnTokens {
+                input_tokens: ledger_count(*input_tokens),
+                output_tokens: ledger_count(*output_tokens),
+                // Already inside `input_tokens` for every backend that emits
+                // this variant; see the doc comment.
+                cache_read_tokens: 0,
+                cache_write_tokens: 0,
+                other_tokens: 0,
+            })
+        }
+        SessionEvent::UsageDelta {
+            input_tokens,
+            output_tokens,
+            breakdown,
+            ..
+        } if !*saw_session_totals => UsageReport::Turn(TurnTokens {
+            input_tokens: ledger_count(*input_tokens),
+            output_tokens: ledger_count(*output_tokens),
+            cache_read_tokens: ledger_count(breakdown.cached_read_tokens),
+            cache_write_tokens: ledger_count(breakdown.cached_write_tokens),
+            other_tokens: 0,
+        }),
+        _ => return,
+    };
+
+    // A mid-session model switch should attribute later turns to the new model.
+    let model = runtime.model_override().or_else(|| sink.model.clone());
+    sink.recorder
+        .record(
+            UsageIdentity {
+                user_id,
+                conversation_id,
+                agent_kind: &sink.agent_kind,
+                model: model.as_deref(),
+            },
+            env.turn_gen,
+            report,
+        )
+        .await;
+}
+
+/// Where the pump reports token usage, plus the identity to file it under.
+///
+/// `agent_kind` is the CLI actually behind the conversation (`claude`,
+/// `codex`, `antigravity`), NOT the `AgentType` — that is `acp` for the whole
+/// ACP family and would collapse every agent into a single bucket.
+#[derive(Clone)]
+pub struct UsageSink {
+    pub recorder: Arc<crate::usage_recorder::UsageRecorder>,
+    pub agent_kind: String,
+    /// Model resolved at build time; the live override wins when the user
+    /// switches models mid-session.
+    pub model: Option<String>,
+}
+
 fn spawn_event_pump(
     mut events: BoxStream<'static, SessionEnvelope>,
     runtime: Arc<SessionRuntime>,
@@ -2581,6 +2707,7 @@ fn spawn_event_pump(
     user_id: String,
     session_repo: Option<Arc<dyn IAcpSessionRepository>>,
     broadcaster: Option<Arc<dyn EventBroadcaster>>,
+    usage: Option<UsageSink>,
 ) {
     use futures_util::StreamExt as _;
     // The pump owns ONLY the event stream (a broadcast `Receiver` handle — see
@@ -2611,6 +2738,11 @@ fn spawn_event_pump(
         // would terminate the relay and drop the workflow's completion message, so
         // we suppress the intermediate Finish until this set drains.
         let mut workflow_inflight: std::collections::HashSet<String> = std::collections::HashSet::new();
+        // Set once a backend publishes session-cumulative counters (codex). Its
+        // per-turn `UsageDelta` carries the FINAL request only, so once the
+        // cumulative series is flowing that is the accurate source and the
+        // per-turn frame must not be added on top of it.
+        let mut saw_session_totals = false;
         // Is a suppressed launch Finish still OWED for the current turn? While true,
         // the relay is held open on credit: the turn's real Finish was swallowed
         // (branch below), betting on the 2.1.176 invariant that a terminal `result`
@@ -3209,6 +3341,21 @@ fn spawn_event_pump(
             // a repo error is warn-logged, never fatal to the stream.
             if let Some(repo) = session_repo.as_ref() {
                 persist_side_effects(repo.as_ref(), &user_id, &conversation_id, &env.event).await;
+            }
+            // Token accounting for the usage ledger. Done HERE, at the event
+            // source, so it happens once per report: `broadcast_usage_frame`
+            // below deliberately emits a second frame for codex/ACP, which a
+            // consumer that adds (rather than replaces) would double-count.
+            if let Some(sink) = usage.as_ref() {
+                record_pump_usage(
+                    sink,
+                    &runtime,
+                    &user_id,
+                    &conversation_id,
+                    &env,
+                    &mut saw_session_totals,
+                )
+                .await;
             }
             // Usage must ALSO reach the live view directly. claude reports it on the
             // `result` frame, which lands after the relay has already broken on
@@ -4887,6 +5034,8 @@ mod build_mapping_tests {
                 broadcaster,
                 catalog_writeback: None,
                 acp_session_repo: None,
+
+                usage_recorder: None,
                 prompt_dump_dir: None,
                 permission_hook_body: None,
             },
@@ -7453,6 +7602,7 @@ mod pump_tests {
                 backend: "claude",
             }),
             None,
+            None,
         );
         crate::agent_task::IAgentTask::send_message(
             task.as_ref(),
@@ -7496,6 +7646,7 @@ mod pump_tests {
                 backend: "codex",
             }),
             None,
+            None,
         );
         // Inject an image directly onto the task's dump path via a content slice
         // containing an Image block.
@@ -7530,6 +7681,7 @@ mod pump_tests {
             backend,
             None,
             CatalogPreload::default(),
+            None,
             None,
             None,
         );
@@ -9489,6 +9641,7 @@ mod pump_tests {
             &handshake_with_catalog(),
             None,
             None,
+            None,
         );
 
         // get_model serves the preloaded catalog + persisted current model.
@@ -9549,6 +9702,7 @@ mod pump_tests {
             &stale,
             None,
             None,
+            None,
         );
         let m = task.get_model().await.unwrap().model_info.expect("model_info");
         assert_eq!(
@@ -9603,6 +9757,7 @@ mod pump_tests {
             backend,
             None,
             &handshake_with_catalog(),
+            None,
             None,
             None,
         );

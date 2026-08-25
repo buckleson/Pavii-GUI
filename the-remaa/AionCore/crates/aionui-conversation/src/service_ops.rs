@@ -315,11 +315,7 @@ impl ConversationService {
     /// acp_session row → assistant snapshot → `extra.agent_id` →
     /// `extra.backend` builtin. Any failure along the way degrades to `None`;
     /// nothing here may surface an error to the menu.
-    async fn cached_slash_commands(
-        &self,
-        user_id: &str,
-        conversation_id: &str,
-    ) -> Option<Vec<SlashCommandItem>> {
+    async fn cached_slash_commands(&self, user_id: &str, conversation_id: &str) -> Option<Vec<SlashCommandItem>> {
         let agent_row = self.resolve_agent_metadata_row(user_id, conversation_id).await?;
         let raw = agent_row.available_commands.as_deref()?;
         let items = aionui_ai_agent::manager::acp::cached_slash_command_items(raw);
@@ -338,7 +334,11 @@ impl ConversationService {
         //    conversations (see session_context::resolve_acp_identity).
         if let Ok(Some(session)) = self.acp_session_repo().get_for_user(user_id, conversation_id).await {
             if !session.agent_id.is_empty() {
-                if let Ok(Some(row)) = self.agent_metadata_repo().get_for_user(user_id, &session.agent_id).await {
+                if let Ok(Some(row)) = self
+                    .agent_metadata_repo()
+                    .get_for_user(user_id, &session.agent_id)
+                    .await
+                {
                     return Some(row);
                 }
             }
@@ -352,7 +352,11 @@ impl ConversationService {
             .await
         {
             if !snapshot.agent_id.is_empty() {
-                if let Ok(Some(row)) = self.agent_metadata_repo().get_for_user(user_id, &snapshot.agent_id).await {
+                if let Ok(Some(row)) = self
+                    .agent_metadata_repo()
+                    .get_for_user(user_id, &snapshot.agent_id)
+                    .await
+                {
                     return Some(row);
                 }
             }

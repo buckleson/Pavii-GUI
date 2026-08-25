@@ -668,9 +668,15 @@ mod aionrs_config_option_tests {
     }
 
     async fn aionrs_instance() -> AgentInstance {
-        let manager = AionrsAgentManager::new("conv-aionrs-config".into(), "/project".into(), make_test_config(), None)
-            .await
-            .expect("aionrs manager should start in tests");
+        let manager = AionrsAgentManager::new(
+            "conv-aionrs-config".into(),
+            "/project".into(),
+            make_test_config(),
+            None,
+            None,
+        )
+        .await
+        .expect("aionrs manager should start in tests");
         AgentInstance::Aionrs(Arc::new(manager))
     }
 

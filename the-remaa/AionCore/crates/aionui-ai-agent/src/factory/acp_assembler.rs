@@ -4,6 +4,7 @@ use aionui_api_types::AgentMetadata;
 use aionui_api_types::{AcpBuildExtra, TEAM_MCP_SERVER_NAME, TeamMcpStdioConfig};
 use aionui_common::CommandSpec;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 /// Pre-computed workspace information.
 #[derive(Debug, Clone)]
@@ -34,6 +35,8 @@ pub struct AcpSessionParams {
     pub data_dir: PathBuf,
     /// Whether prompt diagnostics should be dumped under `data_dir/prompt-dumps`.
     pub dump_prompts: bool,
+    /// Per-day token ledger sink. `None` disables accounting (tests).
+    pub usage_recorder: Option<Arc<crate::usage_recorder::UsageRecorder>>,
 }
 
 impl AcpSessionParams {
@@ -69,6 +72,7 @@ pub async fn assemble_acp_params(
     session_snapshot: Option<PersistedSessionState>,
     data_dir: PathBuf,
     dump_prompts: bool,
+    usage_recorder: Option<Arc<crate::usage_recorder::UsageRecorder>>,
 ) -> AcpSessionParams {
     let mcp_servers = resolve_mcp_servers(&config, user_mcp_servers);
     let preset_context = compose_preset_context(config.preset_context.as_deref());
@@ -85,6 +89,7 @@ pub async fn assemble_acp_params(
         session_snapshot,
         data_dir,
         dump_prompts,
+        usage_recorder,
     }
 }
 
@@ -215,6 +220,7 @@ mod tests {
             None,
             PathBuf::from("/tmp/data"),
             true,
+            None,
         )
         .await;
 
@@ -297,6 +303,7 @@ mod tests {
             None,
             PathBuf::from("/tmp/data"),
             false,
+            None,
         )
         .await;
 

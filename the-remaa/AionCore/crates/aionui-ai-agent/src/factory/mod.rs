@@ -45,6 +45,9 @@ pub struct AgentFactoryDeps {
     /// run through `SessionAgentTask` (direct-CLI) instead of the ACP manager, so
     /// the spawner is unconditionally wired — there is no fallback to the ACP path.
     pub session_spawner: Arc<dyn aionui_process::Spawner>,
+    /// Per-day token ledger sink, handed to every session this factory builds.
+    /// `None` disables accounting (tests).
+    pub usage_recorder: Option<Arc<crate::usage_recorder::UsageRecorder>>,
     /// Base URL the Antigravity permission hook calls back on (e.g.
     /// `http://127.0.0.1:25808`). agy cannot prompt for permission in headless
     /// mode, so AionUi registers its own binary as a PreToolUse hook and

@@ -3355,39 +3355,55 @@ fn map_usage(params: &Value) -> Vec<SessionEvent> {
     let usage = params.get("tokenUsage").unwrap_or(&Value::Null);
     let last = usage.get("last").unwrap_or(&Value::Null);
     let g = |k: &str| last.get(k).and_then(Value::as_u64).unwrap_or(0);
-    vec![SessionEvent::UsageDelta {
-        input_tokens: g("inputTokens"),
-        output_tokens: g("outputTokens"),
-        total_tokens: g("totalTokens"),
-        cost_usd: None,
-        // DELIBERATELY NOT REPORTED, despite `tokenUsage.modelContextWindow` being
-        // the only context-window field in the whole codex protocol.
-        //
-        // Live-probed on 0.145.0 through a custom `model_provider`: `gpt-5.6-sol`,
-        // `gpt-5.5` and `gpt-5.6-luna` ALL report 258_400, and an explicit
-        // `model_context_window` (in `config.toml` AND via `-c`) is ignored. A
-        // figure that never varies by model and cannot be configured says nothing
-        // about the model in use, and a wrong denominator is worse than none: the
-        // renderer has a designed "context window size unknown" state that shows a
-        // plain token count instead of inventing a percentage.
-        //
-        // The likely explanation is that codex falls back to a stand-in for models
-        // it does not recognise, i.e. any custom provider — an official/Bedrock
-        // setup may well report a real window. That is UNVERIFIED: this machine has
-        // no official codex auth (no `~/.codex/auth.json`) to test against. Suppress
-        // unconditionally rather than encode a guess; revisit with a capture from a
-        // first-party provider, and gate on that evidence rather than on a
-        // hardcoded constant.
-        context_window: None,
-        // Per-turn detail line. codex reports every field natively on `last`
-        // (verified: TokenUsageBreakdown in the generated schema), including the
-        // reasoning tokens claude only exposes per-call.
-        breakdown: crate::event::UsageBreakdown {
-            cached_read_tokens: g("cachedInputTokens"),
-            cached_write_tokens: g("cacheWriteInputTokens"),
-            thought_tokens: g("reasoningOutputTokens"),
+    // Session-cumulative counters for the usage ledger, which must not sum
+    // per-request occupancy: `last` covers only the turn's FINAL request, so a
+    // tool-heavy turn would lose the earlier ones. `total` has the same shape as
+    // `last`, and its `inputTokens` likewise already includes the cached part —
+    // verified against the live capture in
+    // `live_token_usage_maps_last_as_occupancy_and_drops_the_window`, where
+    // total {inputTokens: 22032, outputTokens: 11} sums to its own
+    // totalTokens: 22043. Cache is therefore NOT added again.
+    let totals = usage.get("total").unwrap_or(&Value::Null);
+    let t = |k: &str| totals.get(k).and_then(Value::as_u64).unwrap_or(0);
+    vec![
+        SessionEvent::UsageDelta {
+            input_tokens: g("inputTokens"),
+            output_tokens: g("outputTokens"),
+            total_tokens: g("totalTokens"),
+            cost_usd: None,
+            // DELIBERATELY NOT REPORTED, despite `tokenUsage.modelContextWindow` being
+            // the only context-window field in the whole codex protocol.
+            //
+            // Live-probed on 0.145.0 through a custom `model_provider`: `gpt-5.6-sol`,
+            // `gpt-5.5` and `gpt-5.6-luna` ALL report 258_400, and an explicit
+            // `model_context_window` (in `config.toml` AND via `-c`) is ignored. A
+            // figure that never varies by model and cannot be configured says nothing
+            // about the model in use, and a wrong denominator is worse than none: the
+            // renderer has a designed "context window size unknown" state that shows a
+            // plain token count instead of inventing a percentage.
+            //
+            // The likely explanation is that codex falls back to a stand-in for models
+            // it does not recognise, i.e. any custom provider — an official/Bedrock
+            // setup may well report a real window. That is UNVERIFIED: this machine has
+            // no official codex auth (no `~/.codex/auth.json`) to test against. Suppress
+            // unconditionally rather than encode a guess; revisit with a capture from a
+            // first-party provider, and gate on that evidence rather than on a
+            // hardcoded constant.
+            context_window: None,
+            // Per-turn detail line. codex reports every field natively on `last`
+            // (verified: TokenUsageBreakdown in the generated schema), including the
+            // reasoning tokens claude only exposes per-call.
+            breakdown: crate::event::UsageBreakdown {
+                cached_read_tokens: g("cachedInputTokens"),
+                cached_write_tokens: g("cacheWriteInputTokens"),
+                thought_tokens: g("reasoningOutputTokens"),
+            },
         },
-    }]
+        SessionEvent::SessionUsageTotals {
+            input_tokens: t("inputTokens"),
+            output_tokens: t("outputTokens"),
+        },
+    ]
 }
 
 #[cfg(test)]
@@ -3415,18 +3431,28 @@ mod usage_window_tests {
         assert!(
             matches!(
                 events.as_slice(),
-                [SessionEvent::UsageDelta {
-                    input_tokens: 11024,
-                    output_tokens: 6,
-                    total_tokens: 11030,
-                    // The frame carried `modelContextWindow: 258400`; it is
-                    // deliberately not forwarded — see `map_usage`.
-                    context_window: None,
-                    cost_usd: None,
-                    ..
-                }]
+                [
+                    SessionEvent::UsageDelta {
+                        input_tokens: 11024,
+                        output_tokens: 6,
+                        total_tokens: 11030,
+                        // The frame carried `modelContextWindow: 258400`; it is
+                        // deliberately not forwarded — see `map_usage`.
+                        context_window: None,
+                        cost_usd: None,
+                        ..
+                    },
+                    // Cumulative counters for the usage ledger, which needs the
+                    // whole turn rather than its final request. `inputTokens`
+                    // already contains the cached part: 22032 + 11 == the
+                    // frame's own `total.totalTokens` of 22043.
+                    SessionEvent::SessionUsageTotals {
+                        input_tokens: 22032,
+                        output_tokens: 11,
+                    },
+                ]
             ),
-            "expected last-based occupancy and no window, got {events:?}"
+            "expected cumulative totals plus last-based occupancy and no window, got {events:?}"
         );
     }
 
@@ -3462,11 +3488,14 @@ mod usage_window_tests {
             assert!(
                 matches!(
                     map_usage(&params).as_slice(),
-                    [SessionEvent::UsageDelta {
-                        context_window: None,
-                        total_tokens: 5,
+                    [
+                        SessionEvent::UsageDelta {
+                            context_window: None,
+                            total_tokens: 5,
+                            ..
+                        },
                         ..
-                    }]
+                    ]
                 ),
                 "expected no window for {raw}"
             );

@@ -282,10 +282,9 @@ export const useAionrsMessage = (
                 },
                 merge_extra: true,
               });
-              // Profile usage ledger: per-turn totals, best-effort only.
-              void ipcBridge.paviiUsage.record
-                .invoke({ tokens: newTokenUsage.total_tokens, backend: 'aionrs' })
-                .catch(() => {});
+              // Token accounting lives in the engine now: this frame carried the
+              // session RUNNING TOTAL, so adding it each turn counted the same
+              // tokens again and again.
               track(ANALYTICS_EVENTS.turnCompleted, { agent_kind: 'aionrs', ok: true });
             }
             setStreamRunning(false);

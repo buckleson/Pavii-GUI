@@ -26,4 +26,12 @@ export const initializeProcess = async () => {
 
   await initStorage();
   mark('initStorage');
+
+  // The local token ledger was retired in favour of the engine-side one; its
+  // figures could not be migrated (see services/usageLedger).
+  const { clearLegacyUsageLedger } = await import('./services/usageLedger');
+  const { getConfigPath } = await import('./utils/utils');
+  if (clearLegacyUsageLedger(getConfigPath())) {
+    mark('clearLegacyUsageLedger');
+  }
 };

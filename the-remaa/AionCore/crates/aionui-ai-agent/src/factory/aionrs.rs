@@ -192,7 +192,15 @@ pub(super) async fn build(
         }
     }
 
-    let agent = AionrsAgentManager::new(ctx.conversation_id, ctx.workspace, config, resume_session).await?;
+    let usage = deps
+        .usage_recorder
+        .clone()
+        .map(|recorder| crate::manager::aionrs::agent::AionrsUsage {
+            recorder,
+            user_id: ctx.user_id.clone(),
+            model: config.model.clone(),
+        });
+    let agent = AionrsAgentManager::new(ctx.conversation_id, ctx.workspace, config, resume_session, usage).await?;
     Ok(AgentInstance::Aionrs(Arc::new(agent)))
 }
 

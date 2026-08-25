@@ -74,6 +74,7 @@ async fn fixture_params(
             None,
             std::env::temp_dir(),
             false,
+            None,
         )
         .await,
     )

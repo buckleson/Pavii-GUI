@@ -3,7 +3,7 @@
 use crate::state::ConversationRouterState;
 use aionui_api_types::{
     ApiResponse, SetConfigOptionRequest, SetConfigOptionResponse, SideQuestionRequest, SideQuestionResponse,
-    SlashCommandItem, WorkspaceBrowseQuery, WorkspaceEntry,
+    SlashCommandItem, UsageLedgerDay, UsageLedgerResponse, WorkspaceBrowseQuery, WorkspaceEntry,
 };
 use aionui_auth::CurrentUser;
 use aionui_common::ApiError;
@@ -19,6 +19,7 @@ pub fn conversation_ops_routes(state: ConversationRouterState) -> Router {
         .route("/api/conversations/{id}/side-question", post(side_question))
         .route("/api/conversations/{id}/slash-commands", get(get_slash_commands))
         .route("/api/conversations/{id}/usage", get(get_usage))
+        .route("/api/usage/ledger", get(get_usage_ledger))
         .route(
             "/api/conversations/{id}/config-options/{option_id}",
             put(set_config_option),
@@ -53,6 +54,41 @@ async fn get_usage(
     Ok(Json(ApiResponse::ok(
         state.service.get_usage(&user.id, &id).await.map_err(ApiError::from)?,
     )))
+}
+
+/// The calling user's per-day token ledger.
+///
+/// User-scoped rather than conversation-scoped: this is what the profile
+/// page totals, and it counts every surface — desktop chats, scheduled
+/// tasks, channel turns and WebUI — because all of them run their turns
+/// through the engine that writes it.
+async fn get_usage_ledger(
+    State(state): State<ConversationRouterState>,
+    Extension(user): Extension<CurrentUser>,
+) -> Result<Json<ApiResponse<UsageLedgerResponse>>, ApiError> {
+    let rows = state
+        .usage_ledger
+        .list_days(&user.id)
+        .await
+        .map_err(crate::error::ConversationError::from)
+        .map_err(ApiError::from)?;
+
+    let days = rows
+        .into_iter()
+        .map(|day| {
+            (
+                day.day,
+                UsageLedgerDay {
+                    tokens: day.tokens,
+                    turns: day.turns,
+                    by_model: day.by_model.into_iter().collect(),
+                    by_backend: day.by_backend.into_iter().collect(),
+                },
+            )
+        })
+        .collect();
+
+    Ok(Json(ApiResponse::ok(UsageLedgerResponse { days })))
 }
 
 async fn side_question(

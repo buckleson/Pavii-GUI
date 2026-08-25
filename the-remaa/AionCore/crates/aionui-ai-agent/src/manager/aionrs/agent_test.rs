@@ -178,7 +178,7 @@ fn aionrs_final_input_dump_value_contains_raw_split_input_and_context() {
 
 #[tokio::test]
 async fn aionrs_agent_returns_correct_type() {
-    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None)
+    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None, None)
         .await
         .unwrap();
     assert_eq!(agent.agent_type(), AgentType::Aionrs);
@@ -188,7 +188,7 @@ async fn aionrs_agent_returns_correct_type() {
 
 #[tokio::test]
 async fn aionrs_agent_initial_status_is_pending() {
-    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None)
+    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None, None)
         .await
         .unwrap();
     assert_eq!(agent.status(), Some(ConversationStatus::Pending));
@@ -196,7 +196,7 @@ async fn aionrs_agent_initial_status_is_pending() {
 
 #[tokio::test]
 async fn aionrs_agent_subscribe_returns_receiver() {
-    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None)
+    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None, None)
         .await
         .unwrap();
     let _rx = agent.subscribe();
@@ -204,7 +204,7 @@ async fn aionrs_agent_subscribe_returns_receiver() {
 
 #[tokio::test]
 async fn aionrs_agent_kill_succeeds() {
-    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None)
+    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None, None)
         .await
         .unwrap();
     assert!(agent.kill(None).is_ok());
@@ -214,7 +214,7 @@ async fn aionrs_agent_kill_succeeds() {
 
 #[tokio::test]
 async fn aionrs_agent_kill_with_reason_succeeds() {
-    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None)
+    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None, None)
         .await
         .unwrap();
     assert!(agent.kill(Some(AgentKillReason::IdleTimeout)).is_ok());
@@ -222,7 +222,7 @@ async fn aionrs_agent_kill_with_reason_succeeds() {
 
 #[tokio::test]
 async fn aionrs_agent_kill_running_turn_sends_stop_signal() {
-    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None)
+    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None, None)
         .await
         .unwrap();
     agent.runtime.reset_for_new_turn(ConversationStatus::Running);
@@ -242,7 +242,7 @@ async fn aionrs_agent_kill_running_turn_sends_stop_signal() {
 
 #[tokio::test]
 async fn aionrs_agent_kill_and_wait_waits_for_running_turn_terminal() {
-    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None)
+    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None, None)
         .await
         .unwrap();
     agent.runtime.reset_for_new_turn(ConversationStatus::Running);
@@ -264,7 +264,7 @@ async fn aionrs_agent_kill_and_wait_waits_for_running_turn_terminal() {
 
 #[tokio::test]
 async fn aionrs_agent_kill_idle_turn_does_not_leave_stale_stop_signal() {
-    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None)
+    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None, None)
         .await
         .unwrap();
 
@@ -277,7 +277,7 @@ async fn aionrs_agent_kill_idle_turn_does_not_leave_stale_stop_signal() {
 
 #[tokio::test]
 async fn aionrs_agent_confirmations_initially_empty() {
-    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None)
+    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None, None)
         .await
         .unwrap();
     assert!(agent.get_confirmations().is_empty());
@@ -285,7 +285,7 @@ async fn aionrs_agent_confirmations_initially_empty() {
 
 #[tokio::test]
 async fn aionrs_agent_get_slash_commands_does_not_wait_for_engine_lock() {
-    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None)
+    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None, None)
         .await
         .unwrap();
 
@@ -300,7 +300,7 @@ async fn aionrs_agent_get_slash_commands_does_not_wait_for_engine_lock() {
 
 #[tokio::test]
 async fn aionrs_agent_check_approval_returns_false_by_default() {
-    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None)
+    let agent = AionrsAgentManager::new("conv-1".into(), "/project".into(), make_test_config(), None, None)
         .await
         .unwrap();
     assert!(!agent.check_approval("any_action", None));
@@ -308,7 +308,7 @@ async fn aionrs_agent_check_approval_returns_false_by_default() {
 
 #[tokio::test]
 async fn stop_only_signals_in_flight_run() {
-    let agent = AionrsAgentManager::new("conv-stop".into(), "/project".into(), make_test_config(), None)
+    let agent = AionrsAgentManager::new("conv-stop".into(), "/project".into(), make_test_config(), None, None)
         .await
         .unwrap();
     let mut rx = agent.subscribe();
@@ -322,7 +322,7 @@ async fn stop_only_signals_in_flight_run() {
 
 #[tokio::test]
 async fn runtime_can_emit_error_and_finish() {
-    let agent = AionrsAgentManager::new("conv-err".into(), "/project".into(), make_test_config(), None)
+    let agent = AionrsAgentManager::new("conv-err".into(), "/project".into(), make_test_config(), None, None)
         .await
         .unwrap();
     let mut rx = agent.subscribe();

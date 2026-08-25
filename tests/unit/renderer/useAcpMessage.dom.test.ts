@@ -17,6 +17,7 @@ const {
   ensureRuntimeInvokeMock,
   getSlashCommandsInvokeMock,
   getUsageInvokeMock,
+  recordUsageInvokeMock,
   responseStreamOnMock,
   responseStreamHandlerRef,
 } = vi.hoisted(() => ({
@@ -24,6 +25,7 @@ const {
   ensureRuntimeInvokeMock: vi.fn(),
   getSlashCommandsInvokeMock: vi.fn(),
   getUsageInvokeMock: vi.fn(),
+  recordUsageInvokeMock: vi.fn(),
   responseStreamOnMock: vi.fn(),
   responseStreamHandlerRef: {
     current: undefined as ((message: IResponseMessage) => void) | undefined,
@@ -41,6 +43,12 @@ vi.mock('@/renderer/pages/conversation/utils/conversationCache', () => ({
 
 vi.mock('@/common', () => ({
   ipcBridge: {
+    // Kept in the mock deliberately: if the renderer ever starts recording
+    // usage again this spy will catch it, rather than the call vanishing into
+    // an undefined-property error that reads like an unrelated failure.
+    paviiUsage: {
+      record: { invoke: recordUsageInvokeMock },
+    },
     acpConversation: {
       responseStream: {
         on: responseStreamOnMock.mockImplementation((handler: (message: IResponseMessage) => void) => {
@@ -653,5 +661,31 @@ describe('tokenUsageFromAcpUsage', () => {
   it('drops a zero-amount cost as unreported', () => {
     const usage = tokenUsageFromAcpUsage({ used: 10, cost: { amount: 0, currency: 'USD' } });
     expect(usage.cost).toBeUndefined();
+  });
+});
+
+describe('token accounting', () => {
+  it('never records usage from the renderer', async () => {
+    // The engine owns the ledger now. Recording here saw only conversations
+    // this window had open, double-counted the deliberately duplicated usage
+    // frame, and summed figures whose meaning differs per backend.
+    const { result } = renderHook(() => useAcpMessage('conv-1'));
+    await waitFor(() => expect(responseStreamHandlerRef.current).toBeTruthy());
+
+    act(() => {
+      responseStreamHandlerRef.current?.({
+        type: 'acp_context_usage',
+        conversation_id: 'conv-1',
+        msg_id: 'm-usage',
+        data: {
+          used: 52_000,
+          size: 200_000,
+          _meta: { input_tokens: 40_000, output_tokens: 12_000 },
+        },
+      } as unknown as IResponseMessage);
+    });
+
+    await waitFor(() => expect(result.current.tokenUsage).toBeTruthy());
+    expect(recordUsageInvokeMock).not.toHaveBeenCalled();
   });
 });

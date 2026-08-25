@@ -8,6 +8,7 @@ async-trait.workspace = true
 aionui-auth.workspace = true
 aionui-common.workspace = true
 aionui-db.workspace = true
+chrono.workspace = true
 aionui-mcp.workspace = true
 aionui-realtime.workspace = true
 aionui-runtime.workspace = true

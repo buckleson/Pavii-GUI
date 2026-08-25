@@ -501,15 +501,14 @@ export const useAcpMessage = (
               if (!next.cost && prev?.cost) next.cost = prev.cost;
               return next;
             });
-            // Profile usage ledger: end-of-turn frames carry per-turn counters
-            // under _meta; mid-turn frames don't and are skipped. Best-effort.
+            // Token accounting lives in the engine now. Doing it here saw only
+            // conversations this window had open, counted the deliberately
+            // duplicated usage frame twice, and summed figures whose meaning
+            // differs per backend.
             const meta = usageData._meta as { input_tokens?: unknown; output_tokens?: unknown } | undefined;
             const turnInput = typeof meta?.input_tokens === 'number' ? meta.input_tokens : 0;
             const turnOutput = typeof meta?.output_tokens === 'number' ? meta.output_tokens : 0;
             if (turnInput + turnOutput > 0) {
-              void ipcBridge.paviiUsage.record
-                .invoke({ tokens: turnInput + turnOutput, backend: 'acp' })
-                .catch(() => {});
               track(ANALYTICS_EVENTS.turnCompleted, { agent_kind: 'acp', ok: true });
             }
             if (usageData.size > 0) {

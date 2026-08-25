@@ -2,167 +2,61 @@
  * @license
  * Copyright 2026 Team Pavii
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * The local ledger was retired: the engine records token usage now, at the one
+ * point every surface passes through. All that remains here is removing the old
+ * file, which cannot be migrated — its buckets mix inflated and under-counted
+ * figures with no per-turn record to recompute from.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  recordUsage,
-  readUsageLedger,
-  flushUsageLedger,
-  dayKeyOf,
-  __resetUsageLedgerForTests,
-} from '@/process/services/usageLedger';
+import { clearLegacyUsageLedger } from '@/process/services/usageLedger';
 
-// Local-noon epochs avoid timezone edge cases around midnight.
-const epochOf = (y: number, m: number, d: number): number => new Date(y, m - 1, d, 12, 0, 0).getTime();
-
-const DAY_A = epochOf(2026, 8, 17);
-const DAY_B = epochOf(2026, 8, 18);
-const KEY_A = dayKeyOf(DAY_A);
-const KEY_B = dayKeyOf(DAY_B);
-
-describe('usageLedger', () => {
+describe('clearLegacyUsageLedger', () => {
   let configDir: string;
-
   const ledgerFile = () => join(configDir, 'usage-ledger.json');
 
   beforeEach(() => {
-    __resetUsageLedgerForTests();
-    configDir = mkdtempSync(join(tmpdir(), 'pavii-usage-ledger-test-'));
+    configDir = mkdtempSync(join(tmpdir(), 'pavii-usage-ledger-'));
   });
 
   afterEach(() => {
-    __resetUsageLedgerForTests();
     rmSync(configDir, { recursive: true, force: true });
   });
 
-  describe('dayKeyOf', () => {
-    it('formats a local-time YYYY-MM-DD key with zero padding', () => {
-      expect(dayKeyOf(epochOf(2026, 1, 5))).toBe('2026-01-05');
-      expect(dayKeyOf(epochOf(2026, 12, 31))).toBe('2026-12-31');
-    });
+  it('removes a ledger left behind by an earlier build', () => {
+    writeFileSync(ledgerFile(), JSON.stringify({ version: 1, days: { '2026-08-01': { tokens: 33_500_000 } } }));
+
+    expect(clearLegacyUsageLedger(configDir)).toBe(true);
+    expect(existsSync(ledgerFile())).toBe(false);
   });
 
-  describe('recordUsage aggregation', () => {
-    it('aggregates tokens, turns, byModel and byBackend into the day bucket of the entry epoch', async () => {
-      await recordUsage(configDir, { tokens: 100, model: 'claude-sonnet-5', backend: 'claude-code', at: DAY_A });
-      const ledger = await readUsageLedger(configDir);
-      expect(ledger.version).toBe(1);
-      expect(Object.keys(ledger.days)).toEqual([KEY_A]);
-      expect(ledger.days[KEY_A]).toEqual({
-        tokens: 100,
-        turns: 1,
-        byModel: { 'claude-sonnet-5': 100 },
-        byBackend: { 'claude-code': 100 },
-      });
-    });
-
-    it('accumulates multiple entries within the same day', async () => {
-      await recordUsage(configDir, { tokens: 100, model: 'claude-sonnet-5', backend: 'claude-code', at: DAY_A });
-      await recordUsage(configDir, { tokens: 50, model: 'claude-sonnet-5', backend: 'opencode', at: DAY_A });
-      await recordUsage(configDir, { tokens: 25, model: 'claude-opus-5', backend: 'claude-code', at: DAY_A });
-      const ledger = await readUsageLedger(configDir);
-      expect(ledger.days[KEY_A]).toEqual({
-        tokens: 175,
-        turns: 3,
-        byModel: { 'claude-sonnet-5': 150, 'claude-opus-5': 25 },
-        byBackend: { 'claude-code': 125, opencode: 50 },
-      });
-    });
-
-    it('keeps entries on different days in separate buckets', async () => {
-      await recordUsage(configDir, { tokens: 10, at: DAY_A });
-      await recordUsage(configDir, { tokens: 20, at: DAY_B });
-      const ledger = await readUsageLedger(configDir);
-      expect(ledger.days[KEY_A]).toMatchObject({ tokens: 10, turns: 1 });
-      expect(ledger.days[KEY_B]).toMatchObject({ tokens: 20, turns: 1 });
-    });
-
-    it('defaults the day bucket to now when at is missing', async () => {
-      await recordUsage(configDir, { tokens: 5 });
-      const ledger = await readUsageLedger(configDir);
-      expect(Object.keys(ledger.days)).toEqual([dayKeyOf(Date.now())]);
-    });
-
-    it.each([
-      ['zero tokens', 0],
-      ['negative tokens', -5],
-      ['NaN tokens', Number.NaN],
-      ['Infinity tokens', Number.POSITIVE_INFINITY],
-      ['non-number tokens', 'lots' as unknown as number],
-    ])('ignores invalid entries: %s', async (_label, tokens) => {
-      await recordUsage(configDir, { tokens, model: 'm', backend: 'b', at: DAY_A });
-      const ledger = await readUsageLedger(configDir);
-      expect(ledger.days).toEqual({});
-    });
-
-    it('skips model/backend tallies when the entry omits them', async () => {
-      await recordUsage(configDir, { tokens: 42, at: DAY_A });
-      const ledger = await readUsageLedger(configDir);
-      expect(ledger.days[KEY_A]).toEqual({ tokens: 42, turns: 1, byModel: {}, byBackend: {} });
-    });
-
-    it('tallies only the dimension that is present', async () => {
-      await recordUsage(configDir, { tokens: 10, model: 'only-model', at: DAY_A });
-      await recordUsage(configDir, { tokens: 20, backend: 'only-backend', at: DAY_A });
-      const ledger = await readUsageLedger(configDir);
-      expect(ledger.days[KEY_A].byModel).toEqual({ 'only-model': 10 });
-      expect(ledger.days[KEY_A].byBackend).toEqual({ 'only-backend': 20 });
-    });
+  it('reports nothing to do when the file is already gone', () => {
+    // Runs on every start, so the second start must be a quiet no-op.
+    expect(clearLegacyUsageLedger(configDir)).toBe(false);
   });
 
-  describe('persistence', () => {
-    it('debounces the write: file does not exist immediately, flush forces it', async () => {
-      await recordUsage(configDir, { tokens: 100, at: DAY_A });
-      expect(existsSync(ledgerFile())).toBe(false);
-      await flushUsageLedger(configDir);
-      expect(existsSync(ledgerFile())).toBe(true);
-    });
+  it('is a no-op rather than a throw when the config dir does not exist', () => {
+    expect(clearLegacyUsageLedger(join(configDir, 'missing'))).toBe(false);
+  });
 
-    it('round-trips through a fresh load after flush', async () => {
-      await recordUsage(configDir, { tokens: 100, model: 'claude-sonnet-5', backend: 'claude-code', at: DAY_A });
-      await recordUsage(configDir, { tokens: 7, at: DAY_B });
-      await flushUsageLedger(configDir);
+  it('never fails startup when the path cannot be unlinked', () => {
+    // A directory at the ledger's path cannot be unlinked; startup must survive
+    // it rather than take the whole process down over an orphaned file.
+    mkdirSync(ledgerFile());
 
-      const onDisk = JSON.parse(readFileSync(ledgerFile(), 'utf-8'));
-      expect(onDisk.version).toBe(1);
+    expect(clearLegacyUsageLedger(configDir)).toBe(false);
+  });
 
-      __resetUsageLedgerForTests();
-      const reloaded = await readUsageLedger(configDir);
-      expect(reloaded).toEqual({
-        version: 1,
-        days: {
-          [KEY_A]: { tokens: 100, turns: 1, byModel: { 'claude-sonnet-5': 100 }, byBackend: { 'claude-code': 100 } },
-          [KEY_B]: { tokens: 7, turns: 1, byModel: {}, byBackend: {} },
-        },
-      });
-    });
+  it('leaves everything else in the config directory alone', () => {
+    const neighbour = join(configDir, 'settings.json');
+    writeFileSync(neighbour, '{"keep":true}');
+    writeFileSync(ledgerFile(), '{}');
 
-    it('returns a fresh empty ledger without throwing when the file is corrupt', async () => {
-      writeFileSync(ledgerFile(), '{not json!!', 'utf-8');
-      const ledger = await readUsageLedger(configDir);
-      expect(ledger).toEqual({ version: 1, days: {} });
-    });
+    clearLegacyUsageLedger(configDir);
 
-    it('ignores a file with the wrong shape and starts fresh', async () => {
-      writeFileSync(ledgerFile(), JSON.stringify({ version: 2, days: {} }), 'utf-8');
-      const ledger = await readUsageLedger(configDir);
-      expect(ledger).toEqual({ version: 1, days: {} });
-    });
-
-    it('readUsageLedger returns the cached in-memory state after recording', async () => {
-      await recordUsage(configDir, { tokens: 9, at: DAY_A });
-      const first = await readUsageLedger(configDir);
-      const second = await readUsageLedger(configDir);
-      expect(second).toBe(first);
-      expect(first.days[KEY_A].tokens).toBe(9);
-    });
-
-    it('flushUsageLedger is a no-op without cached state', async () => {
-      await expect(flushUsageLedger(configDir)).resolves.toBeUndefined();
-      expect(existsSync(ledgerFile())).toBe(false);
-    });
+    expect(existsSync(neighbour)).toBe(true);
   });
 });
