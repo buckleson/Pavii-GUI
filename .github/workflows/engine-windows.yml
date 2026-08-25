@@ -1,0 +1,96 @@
+name: Engine (Windows)
+
+# Builds just the Pavii Engine for Windows and uploads the binary, so testing an
+# engine change does not require a local release build.
+#
+# This exists because the other two workflows leave a gap. `ci.yml` runs
+# `cargo test --workspace` on Linux — it proves the engine compiles and passes,
+# but produces no binary. The job that does build one lives in
+# `_build-reusable.yml`, which only `release.yml` calls, on a `v*` tag: getting
+# one Windows engine that way means building all eight installers first.
+#
+# A local build is the other option, and the one this replaces: a cold cargo
+# build of this workspace needs roughly 15 GB of disk and filled the drive
+# mid-run more than once.
+#
+# The artifact is the bare executable, NOT a bundle. `managed-resources/` (the
+# materialized Node runtime and agent CLIs, hundreds of MB fetched over the
+# network) is not rebuilt here — it is already in the target bundle directory
+# and `scripts/build-paviicore.js` deliberately preserves it, so replacing the
+# binary alone is enough to run a new engine.
+#
+# Note the bundle's `manifest.json` still describes whatever build last wrote
+# it. Nothing reads it at runtime — the pin guard in `prepare-paviicore.js`
+# consults it during packaging — so a stale version string there is cosmetic
+# for a dev run, and the next real build corrects it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: >-
+          Branch, tag or SHA to build. Defaults to the ref this was dispatched
+          on. Without it, asking for another branch would silently build the
+          dispatch ref instead.
+        type: string
+        default: ''
+  push:
+    branches: [main]
+    paths:
+      # Engine source only. A desktop-only change cannot alter the binary, and
+      # a Windows build is slow enough that running it for every push would
+      # mostly burn minutes reproducing the previous artifact.
+      - 'the-remaa/AionCore/**'
+      - '.github/workflows/engine-windows.yml'
+
+concurrency:
+  # Supersede an in-flight build for the same ref: only the newest engine is
+  # ever wanted, and these runs are long.
+  group: engine-windows-${{ github.event.inputs.ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build paviicore (windows-x64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || '' }}
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: the-remaa/AionCore -> target
+          # A separate key from ci.yml's `engine-tests`: that cache holds debug
+          # test artifacts, this one release build output. Sharing the key would
+          # have each run evict the other's.
+          key: engine-windows-release
+
+      # The embedded builtin-assistant manifest degrades to an empty catalog at
+      # runtime rather than failing the build, so this test is the only place a
+      # corrupt manifest is caught. Same gate `scripts/build-paviicore.js` runs
+      # before it builds.
+      - name: Verify engine assets
+        working-directory: the-remaa/AionCore
+        run: cargo test -p aionui-assistant builtin
+
+      - name: Build Pavii Engine (paviicore)
+        working-directory: the-remaa/AionCore
+        run: cargo build --release --bin paviicore
+
+      - name: Confirm the binary exists
+        shell: bash
+        run: |
+          BIN="the-remaa/AionCore/target/release/paviicore.exe"
+          test -f "$BIN" || { echo "engine binary missing at $BIN"; exit 1; }
+          ls -l "$BIN"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paviicore-windows-x64
+          path: the-remaa/AionCore/target/release/paviicore.exe
+          if-no-files-found: error
+          # These are test builds, superseded by the next push to the engine.
+          retention-days: 14
