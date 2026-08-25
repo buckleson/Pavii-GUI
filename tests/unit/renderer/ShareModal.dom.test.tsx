@@ -157,6 +157,35 @@ describe('ShareModal', () => {
     expect(Object.keys(written[0].items)).toEqual(['image/png']);
   });
 
+  it.each([
+    ['linkedin', 'linkedin.com'],
+    ['reddit', 'reddit.com/submit'],
+  ])('copies the card for %s too, since no intent can attach a file', async (network, host) => {
+    // The card matters as much on LinkedIn and Reddit as on X — none of the
+    // three accept a file — so all three must go through the same copy step.
+    renderModal(true);
+    await waitFor(() => expect(screen.getByTestId(`share-action-${network}`)).toBeInTheDocument());
+
+    screen.getByTestId(`share-action-${network}`).click();
+
+    await waitFor(() => expect(clipboardWrite).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(openExternal).toHaveBeenCalledTimes(1));
+    expect(String(openExternal.mock.calls[0][0])).toContain(host);
+  });
+
+  it.each(['x', 'linkedin', 'reddit'])('sends %s to the Dev Tools page', async (network) => {
+    // Every network carries the same summary, so the link fix must reach all
+    // three — not just the one it was reported against.
+    renderModal(true);
+    await waitFor(() => expect(screen.getByTestId(`share-action-${network}`)).toBeInTheDocument());
+
+    screen.getByTestId(`share-action-${network}`).click();
+
+    await waitFor(() => expect(openExternal).toHaveBeenCalledTimes(1));
+    const intent = String(openExternal.mock.calls[0][0]);
+    expect(decodeURIComponent(intent)).toContain('https://www.pavii.tech/products/dev-tools/');
+  });
+
   it('tells the user the card is ready to paste', async () => {
     // Arco's static Message.* helpers mount via the legacy ReactDOM.render,
     // which React 19 removed: they reject instead of rendering, so the toast
