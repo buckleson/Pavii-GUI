@@ -139,18 +139,18 @@ pub fn drift_notice(cli: &str, reported: &str, verified: &str) -> Option<(Notice
         VersionVerdict::Older => Some((
             NoticeLevel::Info,
             format!(
-                "The installed {cli} is older than the version AionUi verified; \
+                "The installed {cli} is older than the version Pavii.Ai verified; \
                  some features may be missing. Consider upgrading {cli}. \
-                 (installed {reported} / verified by AionUi: {verified})"
+                 (installed {reported} / verified by Pavii.Ai: {verified})"
             ),
             localized(CODE_CLI_VERSION_OLDER),
         )),
         VersionVerdict::Newer => Some((
             NoticeLevel::Info,
             format!(
-                "The installed {cli} is newer than the version AionUi verified. \
+                "The installed {cli} is newer than the version Pavii.Ai verified. \
                  It should still work; report anything that behaves oddly. \
-                 (installed {reported} / verified by AionUi: {verified})"
+                 (installed {reported} / verified by Pavii.Ai: {verified})"
             ),
             localized(CODE_CLI_VERSION_NEWER),
         )),
@@ -489,6 +489,19 @@ mod tests {
         let (level, _, localized) = drift_notice("codex", "0.200.0", VERIFIED_CODEX_VERSION).expect("newer drifts");
         assert_eq!(level, NoticeLevel::Info, "a newer CLI must not be treated as broken");
         assert_eq!(localized.code, CODE_CLI_VERSION_NEWER);
+    }
+
+    /// The drift notice is user-facing prose, and it shipped once with the
+    /// pre-rebrand product name in it — reported live 2026-08-26 from a
+    /// codex 0.147.0 install. The fallback text must carry the brand the
+    /// user actually installed.
+    #[test]
+    fn the_drift_notice_never_names_the_old_brand() {
+        for (reported, verified) in [("0.100.0", VERIFIED_CODEX_VERSION), ("9.9.9", VERIFIED_CODEX_VERSION)] {
+            let (_, text, _) = drift_notice("codex", reported, verified).expect("drifts");
+            assert!(!text.contains("Aion"), "old brand leaked into the notice: {text}");
+            assert!(text.contains("Pavii.Ai"), "the notice should name the product: {text}");
+        }
     }
 
     #[test]

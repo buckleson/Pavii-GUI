@@ -246,6 +246,9 @@ export function formatManagedAgentDiagnosticMessage(t: TFunction, agent: Managed
     case 'version_drift_older':
     case 'version_drift_newer': {
       const explanation = t(`settings.agentManagement.errorCodes.${agent.last_check_error_code}`, {
+        // The keys used to hardcode "agy" but this branch runs for every
+        // direct CLI — a drifting codex read "The installed agy…".
+        cli: agent.backend || agent.name,
         defaultValue: agent.last_check_guidance || '',
       });
       const versions = agent.last_check_error_message?.trim();

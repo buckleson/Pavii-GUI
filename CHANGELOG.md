@@ -15,6 +15,7 @@
 
 #### Bug Fixes
 
+- **brand:** the codex version-drift notice (and every other backend fallback string) no longer names AionUi — chat notices are translated via the codes the engine actually emits, and scrubbed as a safety net
 - **usage:** the old renderer-side counter added a session running total every turn, double-counted duplicated frames and dropped claude cache tokens; the recorded history could not be repaired and restarts from zero
 - **usage:** a ledger day without breakdowns no longer crashes the Profile page, and a backend that spent nothing can no longer be crowned most-used
 - **profile:** the share card is written to the clipboard by the main process — the renderer clipboard API rejected image writes with no visible cause

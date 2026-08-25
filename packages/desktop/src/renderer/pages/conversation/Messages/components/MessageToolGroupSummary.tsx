@@ -39,7 +39,15 @@ const ToolItemDetail: React.FC<{ item: NormalizedToolCall }> = ({ item }) => {
   // Team MCP tools arrive as raw ids (`aionui-team_team_task_update`); show the
   // action instead. Tools from other servers keep the name the agent reported.
   const teamLabel = teamToolDisplayLabel(displayItem.name);
-  const toolLabel = teamLabel ? t(teamLabel.key, { defaultValue: teamLabel.defaultValue }) : displayItem.name;
+  // The builtin image tool keeps its stored id (renaming it would orphan
+  // saved configs) but the id carries the pre-rebrand name, so it gets a
+  // display label the same way team tools do.
+  const builtinLabel = displayItem.name?.startsWith('aionui-image-generation')
+    ? displayItem.name.replace('aionui-image-generation', 'Image Generation')
+    : null;
+  const toolLabel = teamLabel
+    ? t(teamLabel.key, { defaultValue: teamLabel.defaultValue })
+    : (builtinLabel ?? displayItem.name);
   const hasDetail = displayItem.input || displayItem.output || item.truncated || item.imagePath;
   const [messageApi, messageContext] = Message.useMessage();
   const handleDownloadImage = useCallback(
