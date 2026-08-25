@@ -200,6 +200,21 @@ describe('ShareModal', () => {
     });
   });
 
+  it('finishes the copy before handing focus to the browser', async () => {
+    // Chromium refuses a clipboard write from an unfocused document, and
+    // opening the intent raises the browser over this window. Firing both at
+    // once lost that race, so the composer opened with nothing to paste and X
+    // fell back to unfurling the link instead of showing the card.
+    renderModal(true);
+    await waitFor(() => expect(screen.getByTestId('share-action-x')).toBeInTheDocument());
+
+    screen.getByTestId('share-action-x').click();
+
+    await waitFor(() => expect(openExternal).toHaveBeenCalledTimes(1));
+    expect(clipboardWrite).toHaveBeenCalledTimes(1);
+    expect(clipboardWrite.mock.invocationCallOrder[0]).toBeLessThan(openExternal.mock.invocationCallOrder[0]);
+  });
+
   it('still opens the composer when the clipboard write is refused', async () => {
     // A rejected clipboard promise must cost the image, not the post — letting
     // it swallow the share would make the button look dead.

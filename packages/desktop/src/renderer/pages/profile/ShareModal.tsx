@@ -28,6 +28,13 @@ type ShareModalProps = {
   isDark: boolean;
 };
 
+/**
+ * How long to wait for the clipboard before opening the composer anyway. The
+ * write is normally instant; this only stops a wedged one from stranding the
+ * share entirely.
+ */
+const COPY_TIMEOUT_MS = 2000;
+
 type ShareAction = {
   glyph: React.ReactNode;
   key: string;
@@ -92,10 +99,20 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose, data, isDark 
 
   const shareTo = useCallback(
     (network: ShareNetwork) => {
-      // Fire the copy and the composer independently. Awaiting the clipboard
-      // before opening would let a rejected write swallow the share and leave
-      // the button looking dead; a failed copy costs the image, not the post.
-      void copyCard().then((copied) => {
+      void (async () => {
+        // Copy BEFORE handing focus away. Chromium refuses a clipboard write
+        // from an unfocused document, and opening the intent raises the
+        // browser over this window — so firing both at once lost the race and
+        // the composer came up with nothing to paste.
+        //
+        // Bounded so a wedged clipboard cannot strand the share: whatever
+        // happens, the composer opens. A failed copy costs the image, not the
+        // post.
+        const copied = await Promise.race([
+          copyCard(),
+          new Promise<boolean>((resolve) => setTimeout(() => resolve(false), COPY_TIMEOUT_MS)),
+        ]);
+
         if (copied) {
           messageApi.success(
             t('profile.shareCopied', { defaultValue: 'Card copied — paste it into the post with Ctrl+V' })
@@ -107,8 +124,9 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose, data, isDark 
             })
           );
         }
-      });
-      void ipcBridge.shell.openExternal.invoke(buildShareIntentUrl(network, data));
+
+        void ipcBridge.shell.openExternal.invoke(buildShareIntentUrl(network, data));
+      })();
     },
     [copyCard, data, messageApi, t]
   );
