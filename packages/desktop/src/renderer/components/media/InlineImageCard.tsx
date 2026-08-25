@@ -33,7 +33,9 @@ const InlineImageCard: React.FC<{ path: string }> = ({ path }) => {
 
   const copy = useCallback(() => {
     copyText(path)
-      .then(() => messageApi.success(t('messages.imagePathCopied', { defaultValue: 'Image location copied to clipboard' })))
+      .then(() =>
+        messageApi.success(t('messages.imagePathCopied', { defaultValue: 'Image location copied to clipboard' }))
+      )
       .catch(() => messageApi.error(t('common.copyFailed', { defaultValue: 'Copy failed' })));
   }, [path, messageApi, t]);
 

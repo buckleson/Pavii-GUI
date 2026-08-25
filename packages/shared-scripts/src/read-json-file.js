@@ -40,7 +40,9 @@ function readJsonFile(filePath) {
   } catch (error) {
     const preview = JSON.stringify(text.slice(0, 80));
     const bomNote = hadBom ? ' (a UTF-8 BOM was stripped before parsing)' : '';
-    throw new Error(`Failed to parse JSON file ${filePath}${bomNote}: ${error.message}. First bytes: ${preview}`, { cause: error });
+    throw new Error(`Failed to parse JSON file ${filePath}${bomNote}: ${error.message}. First bytes: ${preview}`, {
+      cause: error,
+    });
   }
 }
 
