@@ -329,3 +329,168 @@ describe('rebranded skill names', () => {
     expect(stats.skillsUsedCount).toBe(2);
   });
 });
+
+describe('computeStreaks calendar boundaries', () => {
+  it('counts a run that crosses a month boundary as consecutive', () => {
+    // Day keys are strings, so a naive "increment the last field" comparison
+    // would break the streak on the 1st and reset every user to 1 monthly.
+    const days = ['2026-07-30', '2026-07-31', '2026-08-01', '2026-08-02'];
+    expect(computeStreaks(days, '2026-08-02')).toEqual({ current: 4, longest: 4 });
+  });
+
+  it('counts a run that crosses a year boundary as consecutive', () => {
+    const days = ['2025-12-30', '2025-12-31', '2026-01-01', '2026-01-02'];
+    expect(computeStreaks(days, '2026-01-02')).toEqual({ current: 4, longest: 4 });
+  });
+
+  it('does not join two days that merely share a day-of-month', () => {
+    // The failure path for the two above: a comparison loose enough to bridge
+    // months would report a 2-day streak a month wide.
+    expect(computeStreaks(['2026-07-01', '2026-08-01'], '2026-08-01')).toEqual({ current: 1, longest: 1 });
+  });
+});
+
+describe('computeProfileStats edge cases', () => {
+  const TODAY = '2026-08-18';
+
+  it('picks the peak day by tokens, not by position in the ledger', () => {
+    // Insertion order deliberately puts the busiest day in the middle so that
+    // "first key wins" and "last key wins" both fail here.
+    const ledger: LedgerDays = {
+      '2026-08-01': ledgerDay(0, 1),
+      '2026-08-02': ledgerDay(900, 4),
+      '2026-08-03': ledgerDay(120, 2),
+    };
+    expect(computeProfileStats(ledger, [], TODAY).peakDay).toEqual({ day: '2026-08-02', tokens: 900 });
+  });
+
+  it('reports no peak day when chats exist but the ledger is empty', () => {
+    // A new install has conversations before the engine has written any usage
+    // day. Deriving the peak from merged daily activity instead of the ledger
+    // would surface a "peak day" of 0 tokens on the profile tile.
+    const stats = computeProfileStats({}, [conversation(), conversation()], TODAY);
+    expect(stats.peakDay).toBeNull();
+    expect(stats.totalTokens).toBe(0);
+    expect(stats.daily).not.toEqual([]);
+  });
+
+  it('keeps a zero-token day in the streak when it recorded turns', () => {
+    // Turns served entirely from cache can total zero tokens. Dropping those
+    // days from activity would silently break the streak of a real active day.
+    const ledger: LedgerDays = { '2026-08-17': ledgerDay(0, 3), '2026-08-18': ledgerDay(0, 1) };
+    const stats = computeProfileStats(ledger, [], TODAY);
+    expect(stats.currentStreak).toBe(2);
+    expect(stats.daily).toEqual([
+      { day: '2026-08-17', tokens: 0, activity: 3 },
+      { day: '2026-08-18', tokens: 0, activity: 1 },
+    ]);
+  });
+
+  it('sums multi-billion token days without losing precision', () => {
+    // Lifetime totals pass 2^31 for heavy users; any 32-bit coercion in the
+    // accumulator (`| 0`, `>>> 0`) would wrap the headline number negative.
+    const ledger: LedgerDays = {
+      '2026-08-01': ledgerDay(4_000_000_000, 10),
+      '2026-08-02': ledgerDay(4_000_000_000, 10),
+      '2026-08-03': ledgerDay(4_000_000_000, 10),
+    };
+    const stats = computeProfileStats(ledger, [], TODAY);
+    expect(stats.totalTokens).toBe(12_000_000_000);
+    expect(stats.peakDay).toEqual({ day: '2026-08-01', tokens: 4_000_000_000 });
+  });
+
+  it('terminates and ignores future ledger days when the clock has slipped back', () => {
+    // A machine whose clock jumped backwards (or a timezone move) leaves ledger
+    // days ahead of "today". The backward walk must still stop, and days the
+    // user has not reached yet must not pad the current streak.
+    const ledger: LedgerDays = {
+      '2026-08-17': ledgerDay(10, 1),
+      '2026-08-18': ledgerDay(10, 1),
+      '2026-08-19': ledgerDay(10, 1),
+      '2026-08-20': ledgerDay(10, 1),
+    };
+    const stats = computeProfileStats(ledger, [], TODAY);
+    expect(stats.currentStreak).toBe(2);
+    expect(stats.longestStreak).toBe(4);
+  });
+
+  it('never reports a negative longest chat for a row modified before it was created', () => {
+    // Clock skew between two machines syncing the same conversation can leave
+    // modified_at behind created_at; formatDuration would render "-1h 6m".
+    const stats = computeProfileStats({}, [conversation({ created_at: 5_000, modified_at: 1_000 })], TODAY);
+    expect(stats.longestChatMs).toBe(0);
+  });
+
+  it('does not tally conversations without a model under an "undefined" name', () => {
+    // Backends that report no model id leave `model` unset. Counting those
+    // would put a literal "undefined" on the most-used-model tile.
+    const conversations = [conversation(), conversation(), conversation(), conversation({ model: 'claude-sonnet-5' })];
+    const stats = computeProfileStats({}, conversations, TODAY);
+    expect(stats.mostUsedModel).toEqual({ name: 'claude-sonnet-5', value: 1 });
+  });
+
+  it('does not tally conversations without attachments under an empty name', () => {
+    // Same class of bug on the MCP/skill tiles: an empty attachment list must
+    // leave the tally empty rather than counting a nameless entry.
+    const stats = computeProfileStats({}, [conversation({ mcpServers: [], skills: [] }), conversation()], TODAY);
+    expect(stats.mostAttachedMcp).toBeNull();
+    expect(stats.mostAttachedSkill).toBeNull();
+    expect(stats.skillsUsedCount).toBe(0);
+  });
+});
+
+describe('ledger data the engine may not fully populate', () => {
+  const TODAY = '2026-08-18';
+
+  it('survives a day with no breakdown maps at all', () => {
+    // computeProfileStats runs inside a render-time useMemo, so
+    // Object.entries(undefined) here would throw during render and white-screen
+    // the Profile page — losing every statistic to protect none. A version-skewed
+    // engine omitting these fields must cost the breakdown, not the page.
+    const ledger = {
+      '2026-08-17': { tokens: 500, turns: 2 },
+    } as unknown as LedgerDays;
+
+    expect(() => computeProfileStats(ledger, [], TODAY)).not.toThrow();
+    const stats = computeProfileStats(ledger, [], TODAY);
+    expect(stats.totalTokens).toBe(500);
+    expect(stats.mostUsedModel).toBeNull();
+  });
+
+  it('does not crown a backend that spent nothing over the conversation counts', () => {
+    // The ledger counts a turn even when the agent reported no token figures
+    // (plain-ACP agents report none), so a backend can sit in byBackend at zero.
+    // topOf returns that as a truthy entry, so a bare `??` fallback would pin
+    // "Most used CLI" to the backend that did no measurable work.
+    const ledger: LedgerDays = {
+      '2026-08-17': { tokens: 0, turns: 1, byModel: {}, byBackend: { opencode: 0 } },
+    };
+    const conversations = [
+      conversation({ backend: 'claude' }),
+      conversation({ backend: 'claude' }),
+      conversation({ backend: 'opencode' }),
+    ];
+
+    const stats = computeProfileStats(ledger, conversations, TODAY);
+
+    expect(stats.mostUsedBackend).toEqual({ name: 'claude', value: 2 });
+  });
+
+  it('still prefers the token tally once a backend has real spend', () => {
+    // The guard above must not disable token weighting outright: a backend with
+    // fewer conversations but far more tokens is still the most used one.
+    const ledger: LedgerDays = {
+      '2026-08-17': { tokens: 90_000, turns: 3, byModel: {}, byBackend: { codex: 90_000 } },
+    };
+    const conversations = [
+      conversation({ backend: 'claude' }),
+      conversation({ backend: 'claude' }),
+      conversation({ backend: 'codex' }),
+    ];
+
+    expect(computeProfileStats(ledger, conversations, TODAY).mostUsedBackend).toEqual({
+      name: 'codex',
+      value: 90_000,
+    });
+  });
+});

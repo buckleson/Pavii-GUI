@@ -147,8 +147,11 @@ export function computeProfileStats(
   for (const [day, agg] of Object.entries(ledgerDays)) {
     totalTokens += agg.tokens;
     if (!peakDay || agg.tokens > peakDay.tokens) peakDay = { day, tokens: agg.tokens };
-    for (const [model, tokens] of Object.entries(agg.byModel)) tallyInto(modelTally, model, tokens);
-    for (const [backend, tokens] of Object.entries(agg.byBackend)) tallyInto(backendTokenTally, backend, tokens);
+    // Defaulted, not asserted: this runs inside a render-time useMemo, so an
+    // engine that omits a breakdown would throw on Object.entries(undefined)
+    // and take the whole Profile page down rather than lose one statistic.
+    for (const [model, tokens] of Object.entries(agg.byModel ?? {})) tallyInto(modelTally, model, tokens);
+    for (const [backend, tokens] of Object.entries(agg.byBackend ?? {})) tallyInto(backendTokenTally, backend, tokens);
   }
 
   const backendTally: Record<string, number> = {};
@@ -169,7 +172,13 @@ export function computeProfileStats(
   }
   // Token-weighted backend usage from the ledger beats conversation counts
   // when available (it reflects real work, not chat creation habits).
-  const mostUsedBackend = topOf(backendTokenTally) ?? topOf(backendTally);
+  //
+  // "Available" has to mean a non-zero winner. The ledger records a turn even
+  // when the agent reported no figures, so a backend can sit in the tally at
+  // zero; `topOf` returns that as a truthy entry, and a bare `??` would then
+  // crown a backend that spent nothing over the conversation counts.
+  const backendByTokens = topOf(backendTokenTally);
+  const mostUsedBackend = backendByTokens && backendByTokens.value > 0 ? backendByTokens : topOf(backendTally);
 
   const firstLedgerDay = Object.keys(ledgerDays).toSorted()[0] ?? null;
 
