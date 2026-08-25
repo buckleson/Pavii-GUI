@@ -99,7 +99,12 @@ describe('e2e testid coverage', () => {
    * without a spec pushes it up and fails here, which is the moment to decide
    * whether that is acceptable.
    */
-  const ORPHAN_BUDGET = 145;
+  // 145 → 147: the inline image card (inline-image-card / -show / -shown) is
+  // driven end-to-end by tests/unit/renderer/inlineImageCard.dom.test.tsx and
+  // tests/unit/chat/messageText.dom.test.tsx — DOM coverage, which this scan
+  // does not count. Accepted rather than writing a Playwright spec that needs
+  // a configured agent to produce an image path.
+  const ORPHAN_BUDGET = 147;
 
   function collectTestIds(): Set<string> {
     const ids = new Set<string>();

@@ -667,6 +667,38 @@ describe('MessageText attachment paths', () => {
     // The whole point: the content endpoint is never hit for an oversized file.
     expect(ipcBridge.fs.readContent.invoke).not.toHaveBeenCalled();
   });
+
+  describe('bare image paths from agent replies', () => {
+    // Codex answers with a bare absolute path when it generates an image.
+    // The Markdown component is mocked in this harness, so these tests pin
+    // the MessageText seam only: the transform must run for assistant text
+    // and must NOT run for user text. The card itself is covered in
+    // tests/unit/renderer/inlineImageCard.dom.test.tsx against the real
+    // MarkdownView.
+    const codexPath = 'C:\\Users\\vijay\\.codex\\generated_images\\abc\\call_x.png';
+
+    it('rewrites an assistant path into a marked markdown image', async () => {
+      renderMessageText(`Saved at:\n${codexPath}\n`);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText((text) =>
+            text.includes('![pavii:inline-image](<C:/Users/vijay/.codex/generated_images/abc/call_x.png>)')
+          )
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('leaves a path in a USER message untouched', async () => {
+      // A user pasting a path is quoting it, not attaching it.
+      renderMessageText(`look at ${codexPath}`, { position: 'right' });
+
+      await waitFor(() => {
+        expect(screen.getByText((text) => text.includes(codexPath))).toBeInTheDocument();
+      });
+      expect(screen.queryByText((text) => text.includes('pavii:inline-image'))).toBeNull();
+    });
+  });
 });
 
 describe('MessageText fork entry point', () => {

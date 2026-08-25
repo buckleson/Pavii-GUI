@@ -21,6 +21,8 @@ import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { convertLatexDelimiters } from '@renderer/utils/chat/latexDelimiters';
 import LocalImageView from '@renderer/components/media/LocalImageView';
+import InlineImageCard from '@renderer/components/media/InlineImageCard';
+import { INLINE_IMAGE_ALT } from '@renderer/utils/chat/inlineImagePaths';
 import CodeBlock from './CodeBlock';
 import LocalFileLink from './LocalFileLink';
 import ShadowView from './ShadowView';
@@ -130,6 +132,12 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
         ),
         img: ({ node: _node, ...rest }: Record<string, unknown>) => {
           const imgProps = rest as React.ImgHTMLAttributes<HTMLImageElement>;
+          // Bare-path images injected by linkifyBareImagePaths are deferred:
+          // a card that loads on click, not an eager fetch for every path an
+          // agent happens to mention.
+          if (imgProps.alt === INLINE_IMAGE_ALT) {
+            return <InlineImageCard path={decodeURIComponent(imgProps.src || '')} />;
+          }
           if (isLocalFilePath(imgProps.src || '')) {
             const src = decodeURIComponent(imgProps.src || '');
             return <LocalImageView src={src} alt={imgProps.alt || ''} className={imgProps.className} />;

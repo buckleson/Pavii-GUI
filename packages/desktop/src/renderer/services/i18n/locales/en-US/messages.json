@@ -14,7 +14,7 @@
   "copiedToClipboard": "Copied to clipboard",
   "downloadSuccess": "Download successful",
   "downloadFailed": "Failed to download",
-  "imageLoadFailed": "Failed to load image",
+  "imageLoadFailed": "Could not load",
   "scrollToBottom": "Scroll to bottom",
   "anchorRail": {
     "label": "Conversation message anchors",
@@ -89,5 +89,7 @@
   "askDeclined": "Dismissed",
   "askOther": "Other",
   "askOtherPlaceholder": "Type your answer",
-  "requestDetails": "Request details:"
+  "requestDetails": "Request details:",
+  "showImage": "Show image",
+  "imageRetry": "Retry"
 }

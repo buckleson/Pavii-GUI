@@ -22,6 +22,7 @@ import HorizontalFileList from '@renderer/components/media/HorizontalFileList';
 import MarkdownView from '@renderer/components/Markdown';
 import { stripThinkTags, hasThinkTags } from '@renderer/utils/chat/thinkTagFilter';
 import { stripSkillSuggest, hasSkillSuggest } from '@renderer/utils/chat/skillSuggestParser';
+import { linkifyBareImagePaths } from '@/renderer/utils/chat/inlineImagePaths';
 import { isForkEnabled } from '@/common/chat/forkConversation';
 import { useForkConversation } from '@/renderer/hooks/chat/useForkConversation';
 import ForkBranchIcon from '@renderer/components/base/ForkBranchIcon';
@@ -166,10 +167,16 @@ const MessageText: React.FC<{
       if (hasSkillSuggest(content)) {
         content = stripSkillSuggest(content);
       }
+      // Agents reply with bare absolute paths when they generate an image;
+      // rewrite those into click-to-view cards. Assistant prose only — a user
+      // pasting a path is quoting it, not attaching it.
+      if (message.position !== 'right') {
+        content = linkifyBareImagePaths(content);
+      }
       return content;
     }
     return content;
-  }, [message.content.content]);
+  }, [message.content.content, message.position]);
 
   const { t } = useTranslation();
   const [showCopyAlert, setShowCopyAlert] = useState(false);
