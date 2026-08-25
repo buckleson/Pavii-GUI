@@ -5,7 +5,7 @@
  */
 
 import type { BrowserWindow } from 'electron';
-import { app, session } from 'electron';
+import { app, clipboard, nativeImage, session } from 'electron';
 import { ipcBridge } from '@/common';
 import { BROWSER_SESSION_PARTITION } from '@/common/config/constants';
 import { ProcessConfig } from '@process/utils/initStorage';
@@ -103,6 +103,21 @@ export function initApplicationBridge(): void {
   initApplicationBridgeCore();
 
   // Pavii account (Firebase via pavii.tech/login)
+  // Image clipboard writes come here rather than using the renderer
+  // navigator API: main-process writeImage is synchronous and immune to
+  // the focus/secure-context rules that made the renderer path fail.
+  ipcBridge.paviiClipboard.copyImage.provider(async ({ dataUrl }) => {
+    try {
+      const image = nativeImage.createFromDataURL(dataUrl);
+      if (image.isEmpty()) return false;
+      clipboard.writeImage(image);
+      return true;
+    } catch (error) {
+      console.error('[ApplicationBridge] clipboard image write failed:', error);
+      return false;
+    }
+  });
+
   ipcBridge.paviiAuth.getSession.provider(async () => {
     const { readStoredSession } = await import('../services/paviiAuth');
     const { getConfigPath } = await import('../utils/utils');

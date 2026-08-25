@@ -558,6 +558,19 @@ export interface IRendererLogEntry {
 // ---------------------------------------------------------------------------
 
 // Pavii account (Firebase via pavii.tech/login) — Electron-local providers.
+/**
+ * Electron-only clipboard operations, served by the MAIN process.
+ *
+ * Exists because the renderer's `navigator.clipboard.write` proved
+ * unreliable for images (rejected writes with no visible cause, in dev and
+ * packaged builds alike). `clipboard.writeImage` in the main process is
+ * synchronous and bound by neither focus nor secure-context rules. Absent
+ * in the WebUI, where callers fall back to the navigator API.
+ */
+export const paviiClipboard = {
+  copyImage: bridge.buildProvider<boolean, { dataUrl: string }>('pavii-clipboard.copy-image'),
+};
+
 export const paviiAuth = {
   /** Current persisted session, token-free ({uid,email,name,signedInAt} | null). */
   getSession: bridge.buildProvider<{ uid: string; email?: string; name?: string; signedInAt: number } | null, void>(

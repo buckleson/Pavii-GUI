@@ -5,6 +5,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { isElectronDesktop } from '@/renderer/utils/platform';
 import brandLogo from '@renderer/assets/logos/brand/app.png';
 import { Button, Message, Modal } from '@arco-design/web-react';
 import { Download } from '@icon-park/react';
@@ -83,6 +84,21 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose, data, isDark 
   // image X shows is the unfurled link's own artwork, not the activity card.
   const copyCard = useCallback(async (): Promise<boolean> => {
     if (!canvas) return false;
+
+    // Electron: write through the MAIN process. The renderer navigator API
+    // rejected image writes with no visible cause (observed in both dev and
+    // packaged builds); main-process writeImage is synchronous and bound by
+    // neither focus nor secure-context rules.
+    if (isElectronDesktop()) {
+      try {
+        return await ipcBridge.paviiClipboard.copyImage.invoke({ dataUrl: canvas.toDataURL('image/png') });
+      } catch (error) {
+        console.warn('[ShareModal] Main-process clipboard write failed:', error);
+        return false;
+      }
+    }
+
+    // WebUI/browser: the navigator API is all there is.
     if (!navigator.clipboard || !window.isSecureContext || typeof navigator.clipboard.write !== 'function') {
       return false;
     }

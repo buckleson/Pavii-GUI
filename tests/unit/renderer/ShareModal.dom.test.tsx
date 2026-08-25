@@ -13,8 +13,21 @@ vi.mock('react-i18next', () => ({
 }));
 
 const openExternal = vi.hoisted(() => vi.fn());
+const copyImageIpc = vi.hoisted(() => vi.fn());
+// The DOM setup defines window.electronAPI globally, so the real
+// isElectronDesktop() is always true here; this switch lets the browser
+// path be tested too.
+const electronMode = vi.hoisted(() => ({ value: true }));
+
 vi.mock('@/common', () => ({
-  ipcBridge: { shell: { openExternal: { invoke: openExternal } } },
+  ipcBridge: {
+    shell: { openExternal: { invoke: openExternal } },
+    paviiClipboard: { copyImage: { invoke: copyImageIpc } },
+  },
+}));
+
+vi.mock('@/renderer/utils/platform', () => ({
+  isElectronDesktop: () => electronMode.value,
 }));
 
 vi.mock('@renderer/assets/logos/brand/app.png', () => ({ default: 'brand.png' }));
@@ -43,6 +56,11 @@ beforeEach(() => {
   openExternal.mockClear();
   clipboardWrite.mockReset();
   clipboardWrite.mockResolvedValue(undefined);
+  copyImageIpc.mockReset();
+  copyImageIpc.mockResolvedValue(true);
+  electronMode.value = true;
+  // jsdom has no canvas backend; toDataURL only logs 'Not implemented'.
+  HTMLCanvasElement.prototype.toDataURL = vi.fn(() => 'data:image/png;base64,QUFB');
   toBlob.mockReset();
   // jsdom implements neither, and the component feature-detects both.
   toBlob.mockImplementation((cb: (b: Blob | null) => void) => cb(new Blob(['png'], { type: 'image/png' })));
@@ -147,6 +165,7 @@ describe('ShareModal', () => {
   it('copies the card so it can be pasted into the post', async () => {
     // No web intent can attach a file, so without this the post carries only
     // prose and X shows the unfurled link's artwork instead of the card.
+    electronMode.value = false;
     renderModal(true);
     await waitFor(() => expect(screen.getByTestId('share-action-x')).toBeInTheDocument());
 
@@ -163,6 +182,7 @@ describe('ShareModal', () => {
   ])('copies the card for %s too, since no intent can attach a file', async (network, host) => {
     // The card matters as much on LinkedIn and Reddit as on X — none of the
     // three accept a file — so all three must go through the same copy step.
+    electronMode.value = false;
     renderModal(true);
     await waitFor(() => expect(screen.getByTestId(`share-action-${network}`)).toBeInTheDocument());
 
@@ -186,6 +206,29 @@ describe('ShareModal', () => {
     expect(decodeURIComponent(intent)).toContain('https://www.pavii.tech/products/dev-tools/');
   });
 
+  it('writes through the main process in Electron, not the navigator API', async () => {
+    // The renderer navigator path rejected image writes with no visible
+    // cause; the deterministic path is main-process writeImage over IPC.
+    renderModal(true);
+    await waitFor(() => expect(screen.getByTestId('share-action-x')).toBeInTheDocument());
+
+    screen.getByTestId('share-action-x').click();
+
+    await waitFor(() => expect(copyImageIpc).toHaveBeenCalledTimes(1));
+    expect(copyImageIpc.mock.calls[0][0].dataUrl).toMatch(/^data:image\/png/);
+    expect(clipboardWrite).not.toHaveBeenCalled();
+    await waitFor(() => expect(openExternal).toHaveBeenCalledTimes(1));
+  });
+
+  it('still opens the composer when the main-process write reports failure', async () => {
+    copyImageIpc.mockResolvedValue(false);
+    renderModal(true);
+    await waitFor(() => expect(screen.getByTestId('share-action-x')).toBeInTheDocument());
+
+    screen.getByTestId('share-action-x').click();
+
+    await waitFor(() => expect(openExternal).toHaveBeenCalledTimes(1));
+  });
   it('tells the user the card is ready to paste', async () => {
     // Arco's static Message.* helpers mount via the legacy ReactDOM.render,
     // which React 19 removed: they reject instead of rendering, so the toast
@@ -205,6 +248,7 @@ describe('ShareModal', () => {
     // opening the intent raises the browser over this window. Firing both at
     // once lost that race, so the composer opened with nothing to paste and X
     // fell back to unfurling the link instead of showing the card.
+    electronMode.value = false;
     renderModal(true);
     await waitFor(() => expect(screen.getByTestId('share-action-x')).toBeInTheDocument());
 
@@ -218,6 +262,7 @@ describe('ShareModal', () => {
   it('still opens the composer when the clipboard write is refused', async () => {
     // A rejected clipboard promise must cost the image, not the post — letting
     // it swallow the share would make the button look dead.
+    electronMode.value = false;
     clipboardWrite.mockRejectedValue(new Error('denied'));
     renderModal(true);
     await waitFor(() => expect(screen.getByTestId('share-action-x')).toBeInTheDocument());
@@ -230,6 +275,7 @@ describe('ShareModal', () => {
   it('still opens the composer where the clipboard API is unavailable', async () => {
     // The packaged app runs the renderer from file://; if that ever stops
     // counting as a secure context, sharing must degrade, not break.
+    electronMode.value = false;
     Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
     renderModal(true);
     await waitFor(() => expect(screen.getByTestId('share-action-x')).toBeInTheDocument());
