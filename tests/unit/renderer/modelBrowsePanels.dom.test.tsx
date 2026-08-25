@@ -27,6 +27,13 @@ import { FREE_MODEL_PROVIDERS } from '@/renderer/components/settings/SettingsMod
 describe('FreeModelsPanel', () => {
   beforeEach(() => openExternal.mockClear());
 
+  it('shows one uniform mark per row rather than a scattering of logos', () => {
+    // Only three free providers ever had real artwork, so a mixed list read as
+    // broken. Every row now carries the same icon and no logo image at all.
+    render(<FreeModelsPanel onConnect={vi.fn()} />);
+    expect(document.querySelectorAll('.free-models-collapse img').length).toBe(0);
+  });
+
   it('lists every free provider', () => {
     render(<FreeModelsPanel onConnect={vi.fn()} />);
     for (const provider of FREE_MODEL_PROVIDERS) {

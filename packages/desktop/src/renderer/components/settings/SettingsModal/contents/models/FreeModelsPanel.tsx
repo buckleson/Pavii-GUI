@@ -7,7 +7,6 @@
 import { ipcBridge } from '@/common';
 import type { DeepLinkAddProviderDetail } from '@/renderer/hooks/system/useDeepLink';
 import { useClipboardApiKey } from '@/renderer/hooks/system/useClipboardApiKey';
-import { getProviderLogo } from '@/renderer/utils/model/modelPlatforms';
 import { Button, Collapse, Tag, Tooltip } from '@arco-design/web-react';
 import { Key, Link, Lightning } from '@icon-park/react';
 import React, { useCallback, useState } from 'react';
@@ -104,7 +103,6 @@ const FreeModelsPanel: React.FC<{
         className='free-models-collapse'
       >
         {FREE_MODEL_PROVIDERS.map((provider) => {
-          const logo = getProviderLogo({ name: provider.name, base_url: provider.baseUrl });
           const autoConfigurable = canAutoConfigure(provider);
           return (
             <Collapse.Item
@@ -113,11 +111,7 @@ const FreeModelsPanel: React.FC<{
               data-testid={`free-model-${provider.id}`}
               header={
                 <div className='flex items-center gap-10px min-w-0'>
-                  {logo ? (
-                    <img src={logo} alt='' className='w-20px h-20px rd-4px flex-shrink-0 object-contain' />
-                  ) : (
-                    <Lightning theme='outline' size='18' className='text-t-secondary flex-shrink-0' />
-                  )}
+                  <Lightning theme='outline' size='18' className='text-t-secondary flex-shrink-0' />
                   <span className='text-14px font-500 text-t-primary truncate'>{provider.name}</span>
                   <Tag size='small' color='green'>
                     {t('settings.freeModels.modelCount', { count: provider.models.length })}

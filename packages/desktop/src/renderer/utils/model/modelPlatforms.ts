@@ -10,6 +10,17 @@
  * Centralized management of all model platform configurations for extensibility and maintainability
  */
 
+import arkLogo from '@renderer/assets/logos/providers/china/ark.svg';
+import hunyuanLogo from '@renderer/assets/logos/providers/china/hunyuan.svg';
+import lingyiLogo from '@renderer/assets/logos/providers/china/lingyi.svg';
+import stepfunLogo from '@renderer/assets/logos/providers/china/stepfun.svg';
+import zhipuLogo from '@renderer/assets/logos/providers/china/zhipu.svg';
+import bedrockLogo from '@renderer/assets/logos/providers/global/bedrock.svg';
+import deepseekLogo from '@renderer/assets/logos/providers/global/deepseek.svg';
+import huggingfaceLogo from '@renderer/assets/logos/providers/global/huggingface.svg';
+import modelscopeLogo from '@renderer/assets/logos/providers/global/modelscope.svg';
+import openrouterLogo from '@renderer/assets/logos/providers/global/openrouter.svg';
+import poeLogo from '@renderer/assets/logos/providers/global/poe.svg';
 import { resolveBackendAssetUrl } from '@/renderer/utils/platform';
 
 const buildLogoAssetUrl = (path: string): string => {
@@ -110,14 +121,14 @@ export const MODEL_PLATFORMS: PlatformConfig[] = [
   {
     name: 'AWS Bedrock',
     value: 'AWS-Bedrock',
-    logo: buildLogoAssetUrl('ai-cloud/bedrock.svg'),
+    logo: bedrockLogo,
     platform: 'bedrock',
     i18nKey: 'settings.platformBedrock',
   },
   {
     name: 'DeepSeek',
     value: 'DeepSeek',
-    logo: buildLogoAssetUrl('ai-major/deepseek.svg'),
+    logo: deepseekLogo,
     platform: 'custom',
     base_url: 'https://api.deepseek.com/v1',
   },
@@ -138,9 +149,16 @@ export const MODEL_PLATFORMS: PlatformConfig[] = [
   {
     name: 'OpenRouter',
     value: 'OpenRouter',
-    logo: buildLogoAssetUrl('ai-cloud/openrouter.svg'),
+    logo: openrouterLogo,
     platform: 'custom',
     base_url: 'https://openrouter.ai/api/v1',
+  },
+  {
+    name: 'Hugging Face',
+    value: 'HuggingFace',
+    logo: huggingfaceLogo,
+    platform: 'custom',
+    base_url: 'https://router.huggingface.co/v1',
   },
   {
     name: 'Dashscope',
@@ -175,7 +193,7 @@ export const MODEL_PLATFORMS: PlatformConfig[] = [
   {
     name: 'Zhipu',
     value: 'Zhipu',
-    logo: buildLogoAssetUrl('ai-china/zhipu.svg'),
+    logo: zhipuLogo,
     platform: 'custom',
     base_url: 'https://open.bigmodel.cn/api/paas/v4',
   },
@@ -189,7 +207,7 @@ export const MODEL_PLATFORMS: PlatformConfig[] = [
   {
     name: 'Ark',
     value: 'Ark',
-    logo: buildLogoAssetUrl('ai-china/volcengine.svg'),
+    logo: arkLogo,
     platform: 'custom',
     base_url: 'https://ark.cn-beijing.volces.com/api/v3',
   },
@@ -203,21 +221,21 @@ export const MODEL_PLATFORMS: PlatformConfig[] = [
   {
     name: 'Hunyuan',
     value: 'Hunyuan',
-    logo: buildLogoAssetUrl('ai-china/tencent.svg'),
+    logo: hunyuanLogo,
     platform: 'custom',
     base_url: 'https://api.hunyuan.cloud.tencent.com/v1',
   },
   {
     name: 'Lingyi',
     value: 'Lingyi',
-    logo: buildLogoAssetUrl('ai-china/lingyiwanwu.svg'),
+    logo: lingyiLogo,
     platform: 'custom',
     base_url: 'https://api.lingyiwanwu.com/v1',
   },
   {
     name: 'Poe',
     value: 'Poe',
-    logo: buildLogoAssetUrl('ai-cloud/poe.svg'),
+    logo: poeLogo,
     platform: 'custom',
     base_url: 'https://api.poe.com/v1',
   },
@@ -231,7 +249,7 @@ export const MODEL_PLATFORMS: PlatformConfig[] = [
   {
     name: 'ModelScope',
     value: 'ModelScope',
-    logo: buildLogoAssetUrl('ai-cloud/modelscope.svg'),
+    logo: modelscopeLogo,
     platform: 'custom',
     base_url: 'https://api-inference.modelscope.cn/v1',
   },
@@ -252,7 +270,7 @@ export const MODEL_PLATFORMS: PlatformConfig[] = [
   {
     name: 'StepFun',
     value: 'StepFun',
-    logo: buildLogoAssetUrl('ai-china/stepfun.svg'),
+    logo: stepfunLogo,
     platform: 'custom',
     base_url: 'https://api.stepfun.com/v1',
   },
@@ -283,6 +301,12 @@ export const detectNewApiProtocol = (modelName: string): string => {
  */
 export const DEFAULT_PLATFORM_VALUE = MODEL_PLATFORMS[0].value;
 
+/**
+ * Shared bucket every OpenAI-compatible provider falls into. It groups them by
+ * wire protocol, so it can never identify one provider.
+ */
+const GENERIC_PLATFORM = 'custom';
+
 // Utility Functions ============
 
 /**
@@ -310,11 +334,11 @@ export const getProviderLogo = ({
 }): string | null => {
   if (!name && !base_url && !platform) return null;
 
-  if (platform) {
-    const byPlatform = MODEL_PLATFORMS.find((item) => item.platform === platform && item.logo);
-    if (byPlatform?.logo) return byPlatform.logo;
-  }
-
+  // Identity first. `platform` is a bucket, not an identifier: every preset
+  // except Gemini and Anthropic carries `platform: 'custom'`, so matching on
+  // it returned the first custom entry that had a logo — Moonshot, which sits
+  // near the top of MODEL_PLATFORMS by design — and the whole provider list
+  // rendered Moonshot's mark instead of its own.
   if (name) {
     const byName = MODEL_PLATFORMS.find((item) => item.name === name && item.logo);
     if (byName?.logo) return byName.logo;
@@ -334,6 +358,12 @@ export const getProviderLogo = ({
       }
     });
     if (byUrl?.logo) return byUrl.logo;
+  }
+
+  // Platform last, and never the generic bucket — it cannot identify anyone.
+  if (platform && platform !== GENERIC_PLATFORM) {
+    const byPlatform = MODEL_PLATFORMS.find((item) => item.platform === platform && item.logo);
+    if (byPlatform?.logo) return byPlatform.logo;
   }
 
   return null;
