@@ -91,5 +91,7 @@
   "askOtherPlaceholder": "Type your answer",
   "requestDetails": "Request details:",
   "showImage": "Show image",
-  "imageRetry": "Retry"
+  "imageRetry": "Retry",
+  "openFile": "Open",
+  "openFileFailed": "Could not open the file"
 }

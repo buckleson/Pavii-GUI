@@ -46,6 +46,25 @@ describe('linkifyBareImagePaths', () => {
     expect(linkifyBareImagePaths(input)).toBe(input);
   });
 
+  it('turns a backticked path into a card — the shape codex actually emits', () => {
+    // Codex writes "Saved at:" and then the path wrapped in backticks. The
+    // code-span skip silenced the card for exactly this, so the feature
+    // missed its primary target (found live on the first codex image).
+    const input = 'Saved at:\n`C:\\Users\\vijay\\.codex\\generated_images\\abc\\call_x.png`\n';
+
+    const out = linkifyBareImagePaths(input);
+
+    expect(out).toContain(`![${INLINE_IMAGE_ALT}](<C:/Users/vijay/.codex/generated_images/abc/call_x.png>)`);
+    expect(out).not.toContain('`C:');
+  });
+
+  it('leaves a code span that is more than a path alone', () => {
+    // A span holding a command that merely mentions a path is code, not an
+    // attachment.
+    const input = 'Run `copy C:\\a\\shot.png D:\\backup` yourself.';
+    expect(linkifyBareImagePaths(input)).toBe(input);
+  });
+
   it('leaves inline code spans alone', () => {
     const input = 'Run `open C:\\Users\\v\\shot.png` yourself.';
     expect(linkifyBareImagePaths(input)).toBe(input);
@@ -72,5 +91,37 @@ describe('linkifyBareImagePaths', () => {
   it('passes empty and pathless content through unchanged', () => {
     expect(linkifyBareImagePaths('')).toBe('');
     expect(linkifyBareImagePaths('no paths here')).toBe('no paths here');
+  });
+});
+
+describe('openable document paths', () => {
+  it('turns a backticked docx path into a file chip marker', () => {
+    // The user asked for exactly this: a small Open button beside the path an
+    // agent prints after generating a document.
+    const input = 'Saved the report at `C:\\Users\\vijay\\Documents\\report.docx` for you.';
+
+    const out = linkifyBareImagePaths(input);
+
+    expect(out).toContain('![pavii:inline-file](<C:/Users/vijay/Documents/report.docx>)');
+  });
+
+  it('handles bare pdf and pptx paths in prose', () => {
+    const out = linkifyBareImagePaths('Deck: C:\\work\\pitch.pptx and notes at /Users/v/notes.pdf today.');
+    expect(out).toContain('(<C:/work/pitch.pptx>)');
+    expect(out).toContain('(</Users/v/notes.pdf>)');
+    expect(out.match(/pavii:inline-file/g)).toHaveLength(2);
+  });
+
+  it('keeps images on the image card, not the file chip', () => {
+    const out = linkifyBareImagePaths('Shot: C:\\a\\x.png and doc: C:\\a\\y.docx.');
+    expect(out).toContain('![pavii:inline-image](<C:/a/x.png>)');
+    expect(out).toContain('![pavii:inline-file](<C:/a/y.docx>)');
+  });
+
+  it('ignores source-code extensions', () => {
+    // A .ts/.rs path in prose is the agent talking about code, not delivering
+    // a file to open.
+    const input = 'Edit C:\\repo\\src\\main.rs and C:\\repo\\app.ts first.';
+    expect(linkifyBareImagePaths(input)).toBe(input);
   });
 });

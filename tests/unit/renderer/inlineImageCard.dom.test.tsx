@@ -17,9 +17,10 @@ import MarkdownView from '@/renderer/components/Markdown';
 import { linkifyBareImagePaths } from '@/renderer/utils/chat/inlineImagePaths';
 
 const getImageBase64 = vi.hoisted(() => vi.fn());
+const openSystem = vi.hoisted(() => vi.fn());
 
 vi.mock('@/common', () => ({
-  ipcBridge: { fs: { getImageBase64: { invoke: getImageBase64 } } },
+  ipcBridge: { fs: { getImageBase64: { invoke: getImageBase64 }, openSystem: { invoke: openSystem } } },
 }));
 
 vi.mock('@/renderer/components/Markdown/ShadowView', () => ({
@@ -62,13 +63,29 @@ vi.mock('@arco-design/web-react', () => ({
     </button>
   ),
   Image: ({ src, alt }: { src: string; alt?: string }) => <img src={src} alt={alt} data-testid='arco-image' />,
-  Message: { error: vi.fn() },
+  Message: {
+    error: vi.fn(),
+    // The hook form the components actually use (Arco's static helpers mount
+    // via the legacy ReactDOM.render, which React 19 removed).
+    useMessage: () => [
+      {
+        error: (text: string) => {
+          const node = document.createElement('div');
+          node.textContent = text;
+          document.body.appendChild(node);
+        },
+      },
+      null,
+    ],
+  },
   Tooltip: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('@icon-park/react', () => ({
   Copy: () => <span data-testid='copy-icon' />,
   Pic: () => <span data-testid='pic-icon' />,
+  FileDisplayOne: () => <span data-testid='file-icon' />,
+  FolderOpen: () => <span data-testid='folder-icon' />,
 }));
 
 vi.mock('react-i18next', () => ({
@@ -127,6 +144,35 @@ describe('inline image cards in markdown', () => {
     fireEvent.click(screen.getByTestId('inline-image-show'));
     await waitFor(() => {
       expect(screen.getByTestId('inline-image-shown')).toBeInTheDocument();
+    });
+  });
+
+  it('gives a document path an Open button that hands it to the OS', async () => {
+    // Not a viewer: a docx belongs to Word. One small button beside the path,
+    // opening via the existing open-system route with a local ref.
+    openSystem.mockResolvedValue(undefined);
+    renderTransformed('Saved the report at `C:\\Users\\v\\Documents\\report.docx` for you.');
+
+    expect(screen.getByTestId('inline-file-chip')).toBeInTheDocument();
+    expect(screen.getByText('report.docx')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('inline-file-open'));
+
+    await waitFor(() => {
+      expect(openSystem).toHaveBeenCalledWith({
+        file: { kind: 'local', path: 'C:/Users/v/Documents/report.docx' },
+      });
+    });
+  });
+
+  it('shows a toast rather than nothing when the OS open fails', async () => {
+    openSystem.mockRejectedValue(new Error('gone'));
+    renderTransformed('Deck at `C:\\work\\pitch.pptx` ready.');
+
+    fireEvent.click(screen.getByTestId('inline-file-open'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Could not open the file')).toBeInTheDocument();
     });
   });
 

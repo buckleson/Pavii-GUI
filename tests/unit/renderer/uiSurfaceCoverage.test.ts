@@ -104,7 +104,9 @@ describe('e2e testid coverage', () => {
   // tests/unit/chat/messageText.dom.test.tsx — DOM coverage, which this scan
   // does not count. Accepted rather than writing a Playwright spec that needs
   // a configured agent to produce an image path.
-  const ORPHAN_BUDGET = 147;
+  // 147 → 149: same reasoning for the document chip (inline-file-chip /
+  // inline-file-open), driven by the same DOM suite.
+  const ORPHAN_BUDGET = 149;
 
   function collectTestIds(): Set<string> {
     const ids = new Set<string>();

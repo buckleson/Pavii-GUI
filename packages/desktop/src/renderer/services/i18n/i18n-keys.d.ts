@@ -1237,6 +1237,8 @@ export type I18nKey =
   | 'messages.imageLoadFailed'
   | 'messages.imageRetry'
   | 'messages.noOptionsAvailable'
+  | 'messages.openFile'
+  | 'messages.openFileFailed'
   | 'messages.openLinkFailed'
   | 'messages.option'
   | 'messages.permissionRequest'

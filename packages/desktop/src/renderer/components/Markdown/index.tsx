@@ -21,8 +21,9 @@ import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { convertLatexDelimiters } from '@renderer/utils/chat/latexDelimiters';
 import LocalImageView from '@renderer/components/media/LocalImageView';
+import InlineFileChip from '@renderer/components/media/InlineFileChip';
 import InlineImageCard from '@renderer/components/media/InlineImageCard';
-import { INLINE_IMAGE_ALT } from '@renderer/utils/chat/inlineImagePaths';
+import { INLINE_FILE_ALT, INLINE_IMAGE_ALT } from '@renderer/utils/chat/inlineImagePaths';
 import CodeBlock from './CodeBlock';
 import LocalFileLink from './LocalFileLink';
 import ShadowView from './ShadowView';
@@ -137,6 +138,11 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
           // agent happens to mention.
           if (imgProps.alt === INLINE_IMAGE_ALT) {
             return <InlineImageCard path={decodeURIComponent(imgProps.src || '')} />;
+          }
+          // Document paths get the path back plus one small Open button that
+          // hands the file to the OS default app.
+          if (imgProps.alt === INLINE_FILE_ALT) {
+            return <InlineFileChip path={decodeURIComponent(imgProps.src || '')} />;
           }
           if (isLocalFilePath(imgProps.src || '')) {
             const src = decodeURIComponent(imgProps.src || '');
