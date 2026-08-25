@@ -14,6 +14,8 @@
  * invocations are not recorded anywhere.
  */
 
+import { skillDisplayName } from '@/common/utils/skillBranding';
+
 export type LedgerDays = Record<
   string,
   { tokens: number; turns: number; byModel: Record<string, number>; byBackend: Record<string, number> }
@@ -157,7 +159,11 @@ export function computeProfileStats(
     tallyInto(backendTally, conversation.backend);
     tallyInto(modelTally, conversation.model);
     for (const server of conversation.mcpServers ?? []) tallyInto(mcpTally, server);
-    for (const skill of conversation.skills ?? []) tallyInto(skillTally, skill);
+    // Conversations store the raw skill name, so pre-rebrand chats carry
+    // `aionui-config` while newer ones carry `pavii-config` for the same
+    // skill. Fold them onto the display name before tallying: otherwise the
+    // count splits across two keys and `skillsUsedCount` double-counts.
+    for (const skill of conversation.skills ?? []) tallyInto(skillTally, skillDisplayName(skill));
     const duration = conversation.modified_at - conversation.created_at;
     if (duration > longestChatMs) longestChatMs = duration;
   }

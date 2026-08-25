@@ -304,3 +304,28 @@ describe('shareCard', () => {
     });
   });
 });
+
+describe('rebranded skill names', () => {
+  const TODAY = '2026-08-18';
+
+  it('reports the most attached skill under its Pavii name', () => {
+    const stats = computeProfileStats({}, [conversation({ skills: ['aionui-config'] })], TODAY);
+    expect(stats.mostAttachedSkill).toEqual({ name: 'pavii-config', value: 1 });
+  });
+
+  it('folds pre-rebrand and post-rebrand names into one skill', () => {
+    // The same skill recorded under both names across the rename. Counting
+    // them apart splits the tally and reports two skills used instead of one.
+    const stats = computeProfileStats(
+      {},
+      [
+        conversation({ skills: ['aionui-config'] }),
+        conversation({ skills: ['pavii-config'] }),
+        conversation({ skills: ['officecli-docx'] }),
+      ],
+      TODAY
+    );
+    expect(stats.mostAttachedSkill).toEqual({ name: 'pavii-config', value: 2 });
+    expect(stats.skillsUsedCount).toBe(2);
+  });
+});
