@@ -227,5 +227,7 @@
   "profile.heatmapActivity": "{{count}} activities on {{day}}",
   "profile.shareTitle": "Share your activity",
   "profile.shareSave": "Save image",
-  "profile.shareHint": "Sharing opens a post with your stats. Save the image to attach it."
+  "profile.shareHint": "Sharing copies your card and opens a post. Paste the card in with Ctrl+V.",
+  "profile.shareCopied": "Card copied — paste it into the post with Ctrl+V",
+  "profile.shareCopyFailed": "Could not copy the card. Use Save image, then attach it to the post."
 }

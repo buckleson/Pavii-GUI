@@ -206,6 +206,16 @@ export function renderShareCard(
   ctx.textAlign = 'left';
 }
 
+/**
+ * Where the shared post points. The Dev Tools page rather than the site root:
+ * it is the product the card is actually about.
+ *
+ * Posted as a full URL because X renders a link as its domain plus a truncated
+ * path — there is no way to give it custom anchor text, and a bare `pavii.tech`
+ * token only ever landed on the marketing homepage.
+ */
+export const SHARE_LINK_URL = 'https://www.pavii.tech/products/dev-tools/';
+
 export type ShareNetwork = 'x' | 'linkedin' | 'reddit';
 
 /** Web intent URL carrying the text summary for a network. */
@@ -223,5 +233,22 @@ export function buildShareIntentUrl(network: ShareNetwork, text: string): string
 
 /** Text summary used by the share intents. */
 export function buildShareText(data: ShareCardData): string {
-  return `${formatCompactNumber(data.totalTokens)} lifetime tokens, ${data.currentStreak}-day streak on Pavii.Ai — my personal AI workspace. pavii.tech`;
+  return `${formatCompactNumber(data.totalTokens)} lifetime tokens, ${data.currentStreak}-day streak on Pavii.Ai — my personal AI workspace. ${SHARE_LINK_URL}`;
+}
+
+/**
+ * The card as a PNG blob, for putting on the clipboard.
+ *
+ * `toBlob` rather than the `toDataURL` the save path uses: a clipboard write
+ * needs a real Blob, and going through a base64 data URL would mean decoding it
+ * straight back again.
+ */
+export function shareCardBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    if (typeof canvas.toBlob !== 'function') {
+      resolve(null);
+      return;
+    }
+    canvas.toBlob((blob) => resolve(blob), 'image/png');
+  });
 }

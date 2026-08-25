@@ -325,6 +325,8 @@ export type I18nKey =
   | 'common.profile.mostUsedModel'
   | 'common.profile.peakTokens'
   | 'common.profile.share'
+  | 'common.profile.shareCopied'
+  | 'common.profile.shareCopyFailed'
   | 'common.profile.shareHint'
   | 'common.profile.shareSave'
   | 'common.profile.shareTitle'

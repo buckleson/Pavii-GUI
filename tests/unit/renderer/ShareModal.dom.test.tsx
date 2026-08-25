@@ -35,9 +35,26 @@ const data: ShareCardData = {
 
 const drawnText: string[] = [];
 
+const clipboardWrite = vi.hoisted(() => vi.fn());
+const toBlob = vi.hoisted(() => vi.fn());
+
 beforeEach(() => {
   drawnText.length = 0;
   openExternal.mockClear();
+  clipboardWrite.mockReset();
+  clipboardWrite.mockResolvedValue(undefined);
+  toBlob.mockReset();
+  // jsdom implements neither, and the component feature-detects both.
+  toBlob.mockImplementation((cb: (b: Blob | null) => void) => cb(new Blob(['png'], { type: 'image/png' })));
+  HTMLCanvasElement.prototype.toBlob = toBlob as unknown as HTMLCanvasElement['toBlob'];
+  Object.defineProperty(window, 'isSecureContext', { value: true, configurable: true });
+  Object.defineProperty(navigator, 'clipboard', { value: { write: clipboardWrite }, configurable: true });
+  vi.stubGlobal(
+    'ClipboardItem',
+    class {
+      constructor(public items: Record<string, Blob>) {}
+    }
+  );
   // jsdom has no canvas backend; record what the card draws instead.
   HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
     fillStyle: '',
@@ -125,5 +142,72 @@ describe('ShareModal', () => {
       expect(openExternal).toHaveBeenCalledTimes(1);
     });
     expect(String(openExternal.mock.calls[0][0])).toContain('twitter.com/intent/tweet');
+  });
+
+  it('copies the card so it can be pasted into the post', async () => {
+    // No web intent can attach a file, so without this the post carries only
+    // prose and X shows the unfurled link's artwork instead of the card.
+    renderModal(true);
+    await waitFor(() => expect(screen.getByTestId('share-action-x')).toBeInTheDocument());
+
+    screen.getByTestId('share-action-x').click();
+
+    await waitFor(() => expect(clipboardWrite).toHaveBeenCalledTimes(1));
+    const written = clipboardWrite.mock.calls[0][0] as Array<{ items: Record<string, Blob> }>;
+    expect(Object.keys(written[0].items)).toEqual(['image/png']);
+  });
+
+  it('tells the user the card is ready to paste', async () => {
+    // Arco's static Message.* helpers mount via the legacy ReactDOM.render,
+    // which React 19 removed: they reject instead of rendering, so the toast
+    // silently never appeared. Assert the text actually reaches the DOM.
+    renderModal(true);
+    await waitFor(() => expect(screen.getByTestId('share-action-x')).toBeInTheDocument());
+
+    screen.getByTestId('share-action-x').click();
+
+    await waitFor(() => {
+      expect(screen.getByText(/paste it into the post/i)).toBeInTheDocument();
+    });
+  });
+
+  it('still opens the composer when the clipboard write is refused', async () => {
+    // A rejected clipboard promise must cost the image, not the post — letting
+    // it swallow the share would make the button look dead.
+    clipboardWrite.mockRejectedValue(new Error('denied'));
+    renderModal(true);
+    await waitFor(() => expect(screen.getByTestId('share-action-x')).toBeInTheDocument());
+
+    screen.getByTestId('share-action-x').click();
+
+    await waitFor(() => expect(openExternal).toHaveBeenCalledTimes(1));
+  });
+
+  it('still opens the composer where the clipboard API is unavailable', async () => {
+    // The packaged app runs the renderer from file://; if that ever stops
+    // counting as a secure context, sharing must degrade, not break.
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    renderModal(true);
+    await waitFor(() => expect(screen.getByTestId('share-action-x')).toBeInTheDocument());
+
+    screen.getByTestId('share-action-x').click();
+
+    await waitFor(() => expect(openExternal).toHaveBeenCalledTimes(1));
+    expect(clipboardWrite).not.toHaveBeenCalled();
+  });
+
+  it('saves the card under a stable filename', async () => {
+    // The hint tells users to fall back to Save image, so the download path is
+    // load-bearing; it had no coverage at all.
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    renderModal(true);
+    await waitFor(() => expect(screen.getByTestId('share-action-save')).toBeInTheDocument());
+
+    screen.getByTestId('share-action-save').click();
+
+    expect(click).toHaveBeenCalledTimes(1);
+    const anchor = click.mock.instances[0] as HTMLAnchorElement;
+    expect(anchor.download).toBe('pavii-activity.png');
+    click.mockRestore();
   });
 });

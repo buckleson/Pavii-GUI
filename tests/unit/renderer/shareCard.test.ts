@@ -11,6 +11,7 @@ import {
   SHARE_CARD_WIDTH,
   buildShareIntentUrl,
   buildShareText,
+  SHARE_LINK_URL,
   renderShareCard,
   type ShareCardData,
 } from '@/renderer/pages/profile/shareCard';
@@ -146,5 +147,27 @@ describe('buildShareText', () => {
     const text = buildShareText(data);
     expect(text).toContain('13-day streak');
     expect(text).toContain('pavii.tech');
+  });
+});
+
+describe('share link target', () => {
+  it('points the post at the Dev Tools page, not the marketing root', () => {
+    // The old text carried a bare `pavii.tech` token, so the link landed on the
+    // homepage and X unfurled the site's own artwork as the post image.
+    const text = buildShareText({
+      name: 'Buckleson',
+      handle: '',
+      initials: 'BU',
+      totalTokens: 1_000,
+      peakDayTokens: 500,
+      currentStreak: 2,
+      longestStreak: 4,
+      daily: [],
+    });
+
+    expect(text).toContain(SHARE_LINK_URL);
+    expect(SHARE_LINK_URL).toBe('https://www.pavii.tech/products/dev-tools/');
+    // A full URL, not a bare domain: X only linkifies something it can resolve.
+    expect(text).toContain('https://');
   });
 });

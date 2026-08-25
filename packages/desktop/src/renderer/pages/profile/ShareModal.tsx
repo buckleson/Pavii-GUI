@@ -6,7 +6,7 @@
 
 import { ipcBridge } from '@/common';
 import brandLogo from '@renderer/assets/logos/brand/app.png';
-import { Button, Modal } from '@arco-design/web-react';
+import { Button, Message, Modal } from '@arco-design/web-react';
 import { Download } from '@icon-park/react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +19,7 @@ import {
   buildShareIntentUrl,
   buildShareText,
   renderShareCard,
+  shareCardBlob,
 } from './shareCard';
 
 type ShareModalProps = {
@@ -39,6 +40,10 @@ type ShareAction = {
 /** Renders the activity card to a canvas and offers save + share intents. */
 const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose, data, isDark }) => {
   const { t } = useTranslation();
+  // Arco's static `Message.*` helpers mount through the legacy
+  // `ReactDOM.render`, which React 19 removed, so they reject instead of
+  // showing anything. The hook form is what the rest of the app uses.
+  const [messageApi, messageContext] = Message.useMessage();
   // A ref would still be null when this component's effect first runs: Arco
   // mounts the modal body on its own later render, so the canvas does not
   // exist yet and the card was never drawn. Tracking the node in state means
@@ -66,11 +71,47 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose, data, isDark 
     link.click();
   }, [canvas]);
 
+  // No web intent can attach a file — `text` is the only payload X, LinkedIn
+  // and Reddit accept — so the card goes to the clipboard for the user to
+  // paste into the composer. Without this the post carries only prose, and the
+  // image X shows is the unfurled link's own artwork, not the activity card.
+  const copyCard = useCallback(async (): Promise<boolean> => {
+    if (!canvas) return false;
+    if (!navigator.clipboard || !window.isSecureContext || typeof navigator.clipboard.write !== 'function') {
+      return false;
+    }
+    try {
+      const blob = await shareCardBlob(canvas);
+      if (!blob) return false;
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+      return true;
+    } catch (error) {
+      console.warn('[ShareModal] Could not copy the activity card:', error);
+      return false;
+    }
+  }, [canvas]);
+
   const shareTo = useCallback(
     (network: ShareNetwork) => {
+      // Fire the copy and the composer independently. Awaiting the clipboard
+      // before opening would let a rejected write swallow the share and leave
+      // the button looking dead; a failed copy costs the image, not the post.
+      void copyCard().then((copied) => {
+        if (copied) {
+          messageApi.success(
+            t('profile.shareCopied', { defaultValue: 'Card copied — paste it into the post with Ctrl+V' })
+          );
+        } else {
+          messageApi.info(
+            t('profile.shareCopyFailed', {
+              defaultValue: 'Could not copy the card. Use Save image, then attach it to the post.',
+            })
+          );
+        }
+      });
       void ipcBridge.shell.openExternal.invoke(buildShareIntentUrl(network, buildShareText(data)));
     },
-    [data]
+    [copyCard, data, messageApi, t]
   );
 
   // icon-park ships no LinkedIn or Reddit mark, and those brands are wordmarks
@@ -111,6 +152,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose, data, isDark 
       title={t('profile.shareTitle', { defaultValue: 'Share your activity' })}
       style={{ width: 720 }}
     >
+      {messageContext}
       <canvas
         ref={setCanvas}
         width={SHARE_CARD_WIDTH}
@@ -137,7 +179,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose, data, isDark 
       </div>
       <div className='mt-12px text-center text-12px text-t-tertiary'>
         {t('profile.shareHint', {
-          defaultValue: 'Sharing opens a post with your stats. Save the image to attach it.',
+          defaultValue: 'Sharing copies your card and opens a post. Paste the card in with Ctrl+V.',
         })}
       </div>
     </Modal>
