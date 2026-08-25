@@ -39,3 +39,7 @@ aionui-ai-agent = { workspace = true, features = ["test-support"] }
 aionui-session = { workspace = true, features = ["test-support"] }
 futures-util = { workspace = true }
 async-trait.workspace = true
+# usage_ledger_endpoint.rs drives `conversation_ops_routes` as a real axum
+# service (`ServiceExt::oneshot`) so the ledger endpoint is exercised through
+# its auth layer, not by calling the handler directly.
+tower = { workspace = true, features = ["util"] }

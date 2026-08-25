@@ -11,15 +11,21 @@ import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conve
 import { resetConversationTurnClockForTests } from '@/renderer/pages/conversation/utils/conversationTurnClock';
 import type { IResponseMessage } from '@/common/adapter/ipcBridge';
 
-const { addOrUpdateMessageMock, conversationUpdateInvokeMock, responseStreamOnMock, responseStreamHandlerRef } =
-  vi.hoisted(() => ({
-    addOrUpdateMessageMock: vi.fn(),
-    conversationUpdateInvokeMock: vi.fn(),
-    responseStreamOnMock: vi.fn(),
-    responseStreamHandlerRef: {
-      current: undefined as ((message: IResponseMessage) => void) | undefined,
-    },
-  }));
+const {
+  addOrUpdateMessageMock,
+  conversationUpdateInvokeMock,
+  recordUsageInvokeMock,
+  responseStreamOnMock,
+  responseStreamHandlerRef,
+} = vi.hoisted(() => ({
+  addOrUpdateMessageMock: vi.fn(),
+  conversationUpdateInvokeMock: vi.fn(),
+  recordUsageInvokeMock: vi.fn(),
+  responseStreamOnMock: vi.fn(),
+  responseStreamHandlerRef: {
+    current: undefined as ((message: IResponseMessage) => void) | undefined,
+  },
+}));
 
 vi.mock('@/renderer/pages/conversation/Messages/hooks', () => ({
   useAddOrUpdateMessage: () => addOrUpdateMessageMock,
@@ -32,6 +38,12 @@ vi.mock('@/renderer/pages/conversation/utils/conversationCache', () => ({
 
 vi.mock('@/common', () => ({
   ipcBridge: {
+    // Kept in the mock deliberately: if the renderer ever starts recording
+    // usage again this spy will catch it, rather than the call vanishing into
+    // an undefined-property error that reads like an unrelated failure.
+    paviiUsage: {
+      record: { invoke: recordUsageInvokeMock },
+    },
     conversation: {
       responseStream: {
         on: responseStreamOnMock.mockImplementation((handler: (message: IResponseMessage) => void) => {
@@ -197,5 +209,105 @@ describe('useAionrsMessage turn clock', () => {
     });
     expect(result.current.turnStartedAtMs).toBe(300_000);
     nowSpy.mockRestore();
+  });
+});
+
+describe('useAionrsMessage token accounting', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetConversationTurnClockForTests();
+    conversationUpdateInvokeMock.mockResolvedValue(undefined);
+    responseStreamHandlerRef.current = undefined;
+    vi.mocked(getConversationOrNull).mockResolvedValue(null);
+  });
+
+  const finishWithUsage = (input_tokens: number, output_tokens: number, conversation_id = 'conv-1') =>
+    ({
+      type: 'finish',
+      data: { input_tokens, output_tokens },
+      msg_id: 'msg-1',
+      conversation_id,
+    }) as unknown as IResponseMessage;
+
+  it('never records usage from the renderer', async () => {
+    // The engine owns the ledger now. Recording here saw only conversations
+    // this window had open, and this frame carries the session RUNNING TOTAL,
+    // so every turn re-submitted tokens already counted.
+    const { result } = renderHook(() => useAionrsMessage('conv-1'));
+    await waitFor(() => {
+      expect(result.current.hasHydratedRunningState).toBe(true);
+    });
+
+    act(() => {
+      responseStreamHandlerRef.current?.(finishWithUsage(40_000, 12_000));
+    });
+
+    // The usage branch really ran — otherwise this assertion would pass
+    // vacuously and guard nothing.
+    expect(result.current.tokenUsage).toEqual({ total_tokens: 52_000 });
+    expect(recordUsageInvokeMock).not.toHaveBeenCalled();
+  });
+
+  it('shows the latest session total rather than a sum across turns', async () => {
+    // aionrs reports a cumulative session total on every finish. Accumulating
+    // those frames inflated superlinearly (turn 3 counted turn 1 three times);
+    // the indicator must track the newest figure, never their sum.
+    const { result } = renderHook(() => useAionrsMessage('conv-1'));
+    await waitFor(() => {
+      expect(result.current.hasHydratedRunningState).toBe(true);
+    });
+
+    act(() => {
+      responseStreamHandlerRef.current?.(finishWithUsage(10_000, 2_000));
+      responseStreamHandlerRef.current?.(finishWithUsage(17_000, 3_000));
+      responseStreamHandlerRef.current?.(finishWithUsage(26_000, 5_000));
+    });
+
+    expect(result.current.tokenUsage).toEqual({ total_tokens: 31_000 });
+    expect(recordUsageInvokeMock).not.toHaveBeenCalled();
+  });
+
+  it('ignores a finish frame carrying usage for a different conversation', async () => {
+    // Every mounted hook shares one response stream. Attributing another
+    // chat's totals here would show a figure the user never spent in this chat
+    // and persist it onto the wrong conversation row.
+    const { result } = renderHook(() => useAionrsMessage('conv-1'));
+    await waitFor(() => {
+      expect(result.current.hasHydratedRunningState).toBe(true);
+    });
+
+    act(() => {
+      responseStreamHandlerRef.current?.(finishWithUsage(40_000, 12_000, 'conv-2'));
+    });
+
+    expect(result.current.tokenUsage).toBeNull();
+    expect(conversationUpdateInvokeMock).not.toHaveBeenCalled();
+  });
+
+  it('leaves the indicator untouched when a finish frame carries no token figures', async () => {
+    // A plain terminal frame (`data: null`) must not be treated as usage:
+    // persisting `total_tokens: 0` would blank a real figure on every turn
+    // that ends without a usage payload.
+    const { result } = renderHook(() => useAionrsMessage('conv-1'));
+    await waitFor(() => {
+      expect(result.current.hasHydratedRunningState).toBe(true);
+    });
+
+    act(() => {
+      responseStreamHandlerRef.current?.(finishWithUsage(40_000, 12_000));
+    });
+    expect(result.current.tokenUsage).toEqual({ total_tokens: 52_000 });
+
+    act(() => {
+      responseStreamHandlerRef.current?.({
+        type: 'finish',
+        data: null,
+        msg_id: 'msg-2',
+        conversation_id: 'conv-1',
+      } as unknown as IResponseMessage);
+    });
+
+    expect(result.current.tokenUsage).toEqual({ total_tokens: 52_000 });
+    expect(recordUsageInvokeMock).not.toHaveBeenCalled();
   });
 });

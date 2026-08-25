@@ -296,4 +296,266 @@ mod tests {
         assert_eq!(repo.list_days(USER_A).await.unwrap()[0].tokens, 100);
         assert_eq!(repo.list_days(USER_B).await.unwrap()[0].tokens, 7);
     }
+
+    #[tokio::test]
+    async fn a_user_with_no_rows_lists_nothing_while_another_user_has_usage() {
+        let (repo, _db) = setup().await;
+        repo.add_usage(UsageEntry {
+            user_id: USER_B,
+            ..entry(DAY, "claude", "m", tokens(500, 0, 0, 0))
+        })
+        .await
+        .unwrap();
+
+        // Guards a WHERE clause that stops filtering (or filters on the wrong
+        // bind): a brand-new user would then be shown someone else's spend.
+        assert!(repo.list_days(USER_A).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn each_component_accumulates_into_its_own_column() {
+        let (repo, db) = setup().await;
+        // A copy-paste slip in the ON CONFLICT SET list (e.g.
+        // `cache_read_tokens = cache_read_tokens + excluded.cache_write_tokens`)
+        // leaves `tokens` perfectly correct and corrupts only the breakdown, so
+        // no assertion on the day total can catch it. Distinct values per
+        // column, read back raw, can.
+        let first = TurnTokens {
+            input_tokens: 2,
+            output_tokens: 3,
+            cache_read_tokens: 5,
+            cache_write_tokens: 7,
+            other_tokens: 11,
+        };
+        let second = TurnTokens {
+            input_tokens: 100,
+            output_tokens: 200,
+            cache_read_tokens: 400,
+            cache_write_tokens: 800,
+            other_tokens: 1600,
+        };
+        repo.add_usage(entry(DAY, "claude", "m", first)).await.unwrap();
+        repo.add_usage(entry(DAY, "claude", "m", second)).await.unwrap();
+
+        let row = sqlx::query(
+            "SELECT input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, other_tokens, tokens \
+             FROM usage_ledger_days WHERE user_id = ? AND day = ?",
+        )
+        .bind(USER_A)
+        .bind(DAY)
+        .fetch_one(db.pool())
+        .await
+        .unwrap();
+
+        let stored: (i64, i64, i64, i64, i64, i64) = (
+            row.get("input_tokens"),
+            row.get("output_tokens"),
+            row.get("cache_read_tokens"),
+            row.get("cache_write_tokens"),
+            row.get("other_tokens"),
+            row.get("tokens"),
+        );
+        assert_eq!(stored, (102, 203, 405, 807, 1611, 3128));
+    }
+
+    #[tokio::test]
+    async fn other_tokens_count_toward_the_stored_total() {
+        let (repo, _db) = setup().await;
+        // ACP reports a turn total with no breakdown. If `other_tokens` were
+        // left out of `total()`, every ACP turn would read as zero spend while
+        // still counting as a turn.
+        repo.add_usage(entry(DAY, "acp", "", TurnTokens::unattributed(777)))
+            .await
+            .unwrap();
+
+        assert_eq!(repo.list_days(USER_A).await.unwrap()[0].tokens, 777);
+    }
+
+    #[tokio::test]
+    async fn a_correction_bigger_than_the_recorded_total_drives_the_day_negative() {
+        let (repo, _db) = setup().await;
+        repo.add_usage(entry(DAY, "claude", "m", tokens(100, 0, 0, 0)))
+            .await
+            .unwrap();
+        // The backend revised the turn down from 100 to -50 worth of work
+        // (an over-report being undone). A clamp, an unsigned column, or a
+        // `MAX(0, …)` in the upsert would swallow the credit and leave the
+        // user's day permanently inflated.
+        repo.add_usage(UsageEntry {
+            turns: 0,
+            ..entry(DAY, "claude", "m", tokens(-150, 0, 0, 0))
+        })
+        .await
+        .unwrap();
+
+        let days = repo.list_days(USER_A).await.unwrap();
+        assert_eq!(days[0].tokens, -50);
+        assert_eq!(days[0].turns, 1);
+    }
+
+    #[tokio::test]
+    async fn a_token_count_beyond_32_bits_survives_the_round_trip() {
+        let (repo, _db) = setup().await;
+        // Guards a narrowing bind or a column read as i32: cache-heavy usage
+        // passes 4 billion tokens within a day, and truncation would show a
+        // nonsense (often negative) figure rather than an obvious failure.
+        repo.add_usage(entry(DAY, "claude", "m", TurnTokens::unattributed(i64::MAX)))
+            .await
+            .unwrap();
+
+        let days = repo.list_days(USER_A).await.unwrap();
+        assert_eq!(days[0].tokens, i64::MAX);
+        assert_eq!(sorted(&days[0].by_model), vec![("m", i64::MAX)]);
+    }
+
+    #[tokio::test]
+    async fn days_come_back_ascending_regardless_of_write_order() {
+        let (repo, _db) = setup().await;
+        // Writes arrive in whatever order turns happen — including a late
+        // correction to yesterday. The fold only merges into the LAST bucket,
+        // so if the ORDER BY were dropped the same day would split into two
+        // entries and the heatmap would double-plot it. The year boundary also
+        // checks the sort is on the date string, not on insertion order.
+        repo.add_usage(entry("2026-01-02", "claude", "m", tokens(5, 0, 0, 0)))
+            .await
+            .unwrap();
+        repo.add_usage(entry("2025-12-31", "claude", "m", tokens(7, 0, 0, 0)))
+            .await
+            .unwrap();
+        repo.add_usage(entry("2026-01-02", "codex", "m2", tokens(3, 0, 0, 0)))
+            .await
+            .unwrap();
+
+        let days = repo.list_days(USER_A).await.unwrap();
+        assert_eq!(days.len(), 2);
+        assert_eq!(
+            days.iter().map(|d| (d.day.as_str(), d.tokens)).collect::<Vec<_>>(),
+            vec![("2025-12-31", 7), ("2026-01-02", 8)]
+        );
+    }
+
+    #[tokio::test]
+    async fn one_model_shared_by_two_agents_is_a_single_model_bucket() {
+        let (repo, _db) = setup().await;
+        // Two rows, one model. `accumulate` must find and add to the existing
+        // entry; pushing blindly would emit a duplicate key that the consumer's
+        // object fold silently collapses to whichever came last, losing tokens.
+        repo.add_usage(entry(DAY, "claude", "shared-m", tokens(10, 0, 0, 0)))
+            .await
+            .unwrap();
+        repo.add_usage(entry(DAY, "codex", "shared-m", tokens(4, 0, 0, 0)))
+            .await
+            .unwrap();
+
+        let days = repo.list_days(USER_A).await.unwrap();
+        assert_eq!(sorted(&days[0].by_model), vec![("shared-m", 14)]);
+        assert_eq!(sorted(&days[0].by_backend), vec![("claude", 10), ("codex", 4)]);
+    }
+
+    #[tokio::test]
+    async fn one_agent_using_two_models_is_a_single_backend_bucket() {
+        let (repo, _db) = setup().await;
+        // The mirror image: switching model mid-day must not split the agent.
+        repo.add_usage(entry(DAY, "claude", "sonnet", tokens(10, 0, 0, 0)))
+            .await
+            .unwrap();
+        repo.add_usage(entry(DAY, "claude", "opus", tokens(4, 0, 0, 0)))
+            .await
+            .unwrap();
+
+        let days = repo.list_days(USER_A).await.unwrap();
+        assert_eq!(sorted(&days[0].by_backend), vec![("claude", 14)]);
+        assert_eq!(sorted(&days[0].by_model), vec![("opus", 4), ("sonnet", 10)]);
+    }
+
+    #[tokio::test]
+    async fn a_day_with_many_agent_model_rows_folds_into_one_entry() {
+        let (repo, _db) = setup().await;
+        // A real day mixes several agents and models. Six rows must still fold
+        // into one day, or the profile page renders the same date repeatedly.
+        for agent in ["claude", "codex", "opencode"] {
+            for model in ["a", "b"] {
+                repo.add_usage(entry(DAY, agent, model, tokens(10, 0, 0, 0)))
+                    .await
+                    .unwrap();
+            }
+        }
+
+        let days = repo.list_days(USER_A).await.unwrap();
+        assert_eq!(days.len(), 1);
+        assert_eq!((days[0].tokens, days[0].turns), (60, 6));
+        assert_eq!(days[0].by_backend.len(), 3);
+        assert_eq!(days[0].by_model.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn an_unknown_model_and_a_named_one_share_the_day_but_not_the_bucket() {
+        let (repo, _db) = setup().await;
+        // '' is the placeholder that keeps the primary key working. Its tokens
+        // must still reach the day total and the agent breakdown while staying
+        // out of the model breakdown — dropping them from the total instead
+        // would under-report every backend that omits its model id.
+        repo.add_usage(entry(DAY, "acp", "", tokens(42, 0, 0, 0)))
+            .await
+            .unwrap();
+        repo.add_usage(entry(DAY, "acp", "m", tokens(8, 0, 0, 0)))
+            .await
+            .unwrap();
+
+        let days = repo.list_days(USER_A).await.unwrap();
+        assert_eq!(days[0].tokens, 50);
+        assert_eq!(sorted(&days[0].by_backend), vec![("acp", 50)]);
+        assert_eq!(sorted(&days[0].by_model), vec![("m", 8)]);
+    }
+
+    #[tokio::test]
+    async fn non_ascii_agent_and_model_ids_round_trip_intact() {
+        let (repo, _db) = setup().await;
+        // Model ids come straight from a provider and are not guaranteed
+        // ASCII. A byte-truncating bind would either corrupt the id shown in
+        // the breakdown or make the primary key stop matching, so every turn
+        // would insert a fresh row instead of accumulating.
+        repo.add_usage(entry(DAY, "克劳德", "модель-α🚀", tokens(3, 0, 0, 0)))
+            .await
+            .unwrap();
+        repo.add_usage(entry(DAY, "克劳德", "модель-α🚀", tokens(4, 0, 0, 0)))
+            .await
+            .unwrap();
+
+        let days = repo.list_days(USER_A).await.unwrap();
+        assert_eq!(days[0].turns, 2);
+        assert_eq!(sorted(&days[0].by_model), vec![("модель-α🚀", 7)]);
+    }
+
+    #[tokio::test]
+    async fn model_ids_differing_only_in_case_stay_separate() {
+        let (repo, _db) = setup().await;
+        // Model ids are case-sensitive identifiers. A COLLATE NOCASE creeping
+        // into the primary key would merge two genuinely different deployments
+        // into one line of the breakdown.
+        repo.add_usage(entry(DAY, "claude", "Model-X", tokens(10, 0, 0, 0)))
+            .await
+            .unwrap();
+        repo.add_usage(entry(DAY, "claude", "model-x", tokens(1, 0, 0, 0)))
+            .await
+            .unwrap();
+
+        let days = repo.list_days(USER_A).await.unwrap();
+        assert_eq!(sorted(&days[0].by_model), vec![("Model-X", 10), ("model-x", 1)]);
+    }
+
+    #[tokio::test]
+    async fn a_very_long_agent_id_is_stored_whole() {
+        let (repo, _db) = setup().await;
+        // TEXT has no declared length here, but a future column type change
+        // (or a bind that pre-truncates) would silently merge distinct custom
+        // agent ids that share a long prefix.
+        let long_kind = "custom-agent-".repeat(80);
+        repo.add_usage(entry(DAY, &long_kind, "m", tokens(9, 0, 0, 0)))
+            .await
+            .unwrap();
+
+        let days = repo.list_days(USER_A).await.unwrap();
+        assert_eq!(sorted(&days[0].by_backend), vec![(long_kind.as_str(), 9)]);
+    }
 }

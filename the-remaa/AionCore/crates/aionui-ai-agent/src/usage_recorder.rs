@@ -193,20 +193,31 @@ mod tests {
     use aionui_db::{DbError, UsageDayTotals};
     use std::sync::Mutex as StdMutex;
 
+    /// One `add_usage` call as it reached the repository.
+    #[derive(Debug, Clone)]
+    struct Write {
+        agent_kind: String,
+        model: String,
+        tokens: TurnTokens,
+        turns: i64,
+    }
+
     /// Captures what reached the repository. The SQLite implementation has its
     /// own tests; these pin the recorder's arithmetic in isolation.
     #[derive(Default)]
     struct FakeRepo {
-        writes: StdMutex<Vec<(String, TurnTokens, i64)>>,
+        writes: StdMutex<Vec<Write>>,
     }
 
     #[async_trait::async_trait]
     impl IUsageLedgerRepository for FakeRepo {
         async fn add_usage(&self, entry: UsageEntry<'_>) -> Result<(), DbError> {
-            self.writes
-                .lock()
-                .unwrap()
-                .push((entry.agent_kind.to_string(), entry.tokens, entry.turns));
+            self.writes.lock().unwrap().push(Write {
+                agent_kind: entry.agent_kind.to_string(),
+                model: entry.model.to_string(),
+                tokens: entry.tokens,
+                turns: entry.turns,
+            });
             Ok(())
         }
 
@@ -219,9 +230,33 @@ mod tests {
         fn totals(&self) -> (i64, i64) {
             let writes = self.writes.lock().unwrap();
             (
-                writes.iter().map(|(_, t, _)| t.total()).sum(),
-                writes.iter().map(|(_, _, n)| n).sum(),
+                writes.iter().map(|w| w.tokens.total()).sum(),
+                writes.iter().map(|w| w.turns).sum(),
             )
+        }
+
+        fn writes(&self) -> Vec<Write> {
+            self.writes.lock().unwrap().clone()
+        }
+    }
+
+    /// Storage that always fails, to prove a ledger outage cannot break a turn.
+    #[derive(Default)]
+    struct FailingRepo {
+        calls: StdMutex<usize>,
+    }
+
+    #[async_trait::async_trait]
+    impl IUsageLedgerRepository for FailingRepo {
+        async fn add_usage(&self, _entry: UsageEntry<'_>) -> Result<(), DbError> {
+            *self.calls.lock().unwrap() += 1;
+            // The realistic failure: the pool is gone because the app is
+            // shutting down while a turn is still finishing.
+            Err(DbError::Query(sqlx::Error::PoolClosed))
+        }
+
+        async fn list_days(&self, _user_id: &str) -> Result<Vec<UsageDayTotals>, DbError> {
+            Ok(vec![])
         }
     }
 
@@ -439,5 +474,279 @@ mod tests {
         .await;
 
         assert_eq!(repo.totals(), (0, 2));
+    }
+
+    #[tokio::test]
+    async fn forgetting_a_conversation_drops_its_per_turn_figures_too() {
+        let (rec, repo) = recorder();
+        rec.record(identity("claude"), 1, UsageReport::Turn(tokens(100, 0, 0, 0)))
+            .await;
+        rec.forget("c1").await;
+        // If `forget` cleared only the cumulative half of the state, the
+        // re-report below would diff 100 against a stale 100, record nothing,
+        // and the turn's tokens would vanish from the ledger.
+        rec.record(identity("claude"), 1, UsageReport::Turn(tokens(100, 0, 0, 0)))
+            .await;
+
+        assert_eq!(repo.totals(), (200, 2));
+    }
+
+    #[tokio::test]
+    async fn forgetting_an_unknown_conversation_is_harmless() {
+        let (rec, repo) = recorder();
+        // `forget` is called from session teardown, which also runs for
+        // sessions that never produced a usage report. A lookup that assumed
+        // the key exists would panic on the shutdown path.
+        rec.forget("never-seen").await;
+        rec.record(identity("claude"), 1, UsageReport::Turn(tokens(10, 0, 0, 0)))
+            .await;
+
+        assert_eq!(repo.totals(), (10, 1));
+    }
+
+    #[tokio::test]
+    async fn turn_generation_zero_is_a_real_generation_not_an_unset_marker() {
+        let (rec, repo) = recorder();
+        // `ConversationUsage::default()` starts at turn_gen 0, so the very
+        // first turn of a conversation collides with the sentinel. Treating 0
+        // as "no turn recorded yet" would re-add the duplicate frame below.
+        rec.record(identity("claude"), 0, UsageReport::Turn(tokens(100, 0, 0, 0)))
+            .await;
+        rec.record(identity("claude"), 0, UsageReport::Turn(tokens(100, 0, 0, 0)))
+            .await;
+
+        assert_eq!(repo.totals(), (100, 1));
+    }
+
+    #[tokio::test]
+    async fn a_turn_generation_that_moves_backwards_starts_a_fresh_turn() {
+        let (rec, repo) = recorder();
+        rec.record(identity("claude"), 5, UsageReport::Turn(tokens(100, 0, 0, 0)))
+            .await;
+        // Frames can be reordered or a backend can restart its counter. A
+        // `turn_gen > current` guard instead of `!=` would leave turn 5's
+        // figures in place and diff 30 against 100, writing -70 to the ledger.
+        rec.record(identity("claude"), 4, UsageReport::Turn(tokens(30, 0, 0, 0)))
+            .await;
+
+        assert_eq!(repo.totals(), (130, 2));
+    }
+
+    #[tokio::test]
+    async fn a_generation_that_repeats_after_moving_on_is_never_booked_as_a_credit() {
+        let (rec, repo) = recorder();
+        rec.record(identity("claude"), 1, UsageReport::Turn(tokens(100, 0, 0, 0)))
+            .await;
+        rec.record(identity("claude"), 2, UsageReport::Turn(tokens(50, 0, 0, 0)))
+            .await;
+        // Only the current generation's figures are retained, so a late frame
+        // for generation 1 is booked as new work. The failure this guards is
+        // the alternative: diffing 100 against generation 2's 50 and writing a
+        // negative that would erase real usage from the day.
+        rec.record(identity("claude"), 1, UsageReport::Turn(tokens(100, 0, 0, 0)))
+            .await;
+
+        assert_eq!(repo.totals(), (250, 3));
+        assert!(repo.writes().iter().all(|w| w.tokens.total() >= 0));
+    }
+
+    #[tokio::test]
+    async fn per_turn_and_cumulative_baselines_do_not_overwrite_each_other() {
+        let (rec, repo) = recorder();
+        // A conversation can emit both dialects: codex sends cumulative
+        // `tokenUsage` frames while a per-turn `result` frame also arrives.
+        rec.record(
+            identity("codex"),
+            1,
+            UsageReport::SessionCumulative(tokens(500, 0, 0, 0)),
+        )
+        .await;
+        rec.record(identity("codex"), 2, UsageReport::Turn(tokens(80, 0, 0, 0)))
+            .await;
+        // If both dialects shared one field, the per-turn 80 would have
+        // replaced the 500 baseline and this would record 480 instead of 60.
+        rec.record(
+            identity("codex"),
+            3,
+            UsageReport::SessionCumulative(tokens(560, 0, 0, 0)),
+        )
+        .await;
+
+        assert_eq!(repo.totals(), (140, 3));
+    }
+
+    #[tokio::test]
+    async fn a_new_turn_whose_running_total_did_not_move_still_counts() {
+        let (rec, repo) = recorder();
+        rec.record(
+            identity("aionrs"),
+            1,
+            UsageReport::SessionCumulative(tokens(100, 0, 0, 0)),
+        )
+        .await;
+        // A rejected or cached turn can leave the counter untouched. Skipping
+        // the write on zero tokens alone (rather than zero tokens AND zero
+        // turns) would make the turn disappear from the day's turn count.
+        rec.record(
+            identity("aionrs"),
+            2,
+            UsageReport::SessionCumulative(tokens(100, 0, 0, 0)),
+        )
+        .await;
+
+        assert_eq!(repo.totals(), (0, 2));
+    }
+
+    #[tokio::test]
+    async fn a_counter_rebased_to_zero_rebaselines_instead_of_diffing_forever() {
+        let (rec, repo) = recorder();
+        rec.record(
+            identity("codex"),
+            1,
+            UsageReport::SessionCumulative(tokens(500, 0, 0, 0)),
+        )
+        .await;
+        // A respawn can hand back a total of exactly 0 before its first
+        // request completes.
+        rec.record(
+            identity("codex"),
+            2,
+            UsageReport::SessionCumulative(TurnTokens::default()),
+        )
+        .await;
+        // The real hazard is here: if the rebase branch had not replaced the
+        // stored baseline, this would diff 70 against 500 and record nothing
+        // for the rest of the session.
+        rec.record(
+            identity("codex"),
+            3,
+            UsageReport::SessionCumulative(tokens(70, 0, 0, 0)),
+        )
+        .await;
+
+        assert_eq!(repo.totals(), (70, 3));
+    }
+
+    #[tokio::test]
+    async fn tokens_moving_between_buckets_record_only_the_net_increase() {
+        let (rec, repo) = recorder();
+        rec.record(
+            identity("codex"),
+            1,
+            UsageReport::SessionCumulative(tokens(100, 0, 0, 0)),
+        )
+        .await;
+        // The running total grew 100 -> 250, but input shrank as tokens were
+        // reclassified into output. Clamping each component at zero would book
+        // 200 of new work instead of the 150 that actually happened.
+        rec.record(
+            identity("codex"),
+            2,
+            UsageReport::SessionCumulative(tokens(50, 200, 0, 0)),
+        )
+        .await;
+
+        assert_eq!(repo.totals(), (150, 2));
+        assert_eq!(repo.writes()[1].tokens.input_tokens, -50);
+    }
+
+    #[tokio::test]
+    async fn a_saturated_running_total_is_not_mistaken_for_a_rebase() {
+        let (rec, repo) = recorder();
+        // `total()` saturates, so two absurd-but-growing totals both read as
+        // i64::MAX. The rebase branch triggers on "went backwards"; if that
+        // comparison were fooled here it would book the entire saturated total
+        // as one turn's usage instead of the 5 tokens actually added.
+        let huge = TurnTokens {
+            input_tokens: i64::MAX,
+            ..TurnTokens::default()
+        };
+        rec.record(identity("aionrs"), 1, UsageReport::SessionCumulative(huge))
+            .await;
+        rec.record(
+            identity("aionrs"),
+            2,
+            UsageReport::SessionCumulative(TurnTokens {
+                output_tokens: 5,
+                ..huge
+            }),
+        )
+        .await;
+
+        assert_eq!(repo.totals(), (5, 2));
+    }
+
+    #[tokio::test]
+    async fn interleaved_conversations_keep_separate_cumulative_baselines() {
+        let (rec, repo) = recorder();
+        let a = UsageIdentity {
+            conversation_id: "a",
+            ..identity("aionrs")
+        };
+        let b = UsageIdentity {
+            conversation_id: "b",
+            ..identity("aionrs")
+        };
+        // Two sessions running at once report alternately. Keying the state on
+        // anything shared (user, agent kind) would make b's 100 diff against
+        // a's baseline and turn independent sessions into nonsense deltas.
+        rec.record(a, 1, UsageReport::SessionCumulative(tokens(100, 0, 0, 0)))
+            .await;
+        rec.record(b, 1, UsageReport::SessionCumulative(tokens(100, 0, 0, 0)))
+            .await;
+        rec.record(a, 2, UsageReport::SessionCumulative(tokens(250, 0, 0, 0)))
+            .await;
+        rec.record(b, 2, UsageReport::SessionCumulative(tokens(180, 0, 0, 0)))
+            .await;
+
+        // a contributed 150, b contributed 80; both baselines counted nothing.
+        assert_eq!(repo.totals(), (230, 4));
+    }
+
+    #[tokio::test]
+    async fn an_unreported_model_reaches_the_ledger_as_the_empty_string() {
+        let (rec, repo) = recorder();
+        // '' is the ledger's placeholder, deliberately filtered out of the
+        // model breakdown. Substituting "unknown" (or leaving it NULL) would
+        // either show a fake model to the user or break the primary key so
+        // every turn inserted a new row.
+        rec.record(
+            UsageIdentity {
+                model: None,
+                ..identity("opencode")
+            },
+            1,
+            UsageReport::Turn(tokens(10, 0, 0, 0)),
+        )
+        .await;
+
+        assert_eq!(repo.writes()[0].model, "");
+    }
+
+    #[tokio::test]
+    async fn the_backend_cli_is_recorded_not_the_acp_umbrella_type() {
+        let (rec, repo) = recorder();
+        // Every ACP-family agent shares AgentType `acp`; passing that through
+        // would collapse gemini, opencode and qwen into one indistinguishable
+        // bucket on the profile breakdown.
+        rec.record(identity("opencode"), 1, UsageReport::Turn(tokens(10, 0, 0, 0)))
+            .await;
+
+        assert_eq!(repo.writes()[0].agent_kind, "opencode");
+    }
+
+    #[tokio::test]
+    async fn a_ledger_write_failure_does_not_take_the_turn_down() {
+        let repo = Arc::new(FailingRepo::default());
+        let rec = UsageRecorder::new(repo.clone());
+        // Usage accounting is best-effort: a closed pool during shutdown must
+        // be logged and swallowed, never unwrapped into a panic that kills the
+        // turn the user is waiting on.
+        rec.record(identity("claude"), 1, UsageReport::Turn(tokens(10, 0, 0, 0)))
+            .await;
+        rec.record(identity("claude"), 2, UsageReport::Turn(tokens(20, 0, 0, 0)))
+            .await;
+
+        assert_eq!(*repo.calls.lock().unwrap(), 2);
     }
 }
