@@ -9,7 +9,7 @@
  * keep the same mistakes out of the desktop About panel.
  */
 import { describe, expect, it } from 'vitest';
-import { SOCIAL_LINKS } from '@/renderer/components/settings/SettingsModal/contents/AboutModalContent';
+import { ABOUT_LINK_URLS, SOCIAL_LINKS } from '@/renderer/components/settings/SettingsModal/contents/AboutModalContent';
 
 const urlFor = (label: string): string => SOCIAL_LINKS.find((link) => link.label === label)?.url ?? '';
 
@@ -57,5 +57,14 @@ describe('About panel social links', () => {
       expect(link.url, link.label).toMatch(/^https:\/\//);
       expect(() => new URL(link.url), link.label).not.toThrow();
     }
+  });
+});
+
+describe('About panel text links', () => {
+  it('sends each label where it says it goes, not the product landing page', () => {
+    // All three used to open the same landing page whatever their label said.
+    expect(ABOUT_LINK_URLS.helpDocumentation).toBe('https://www.pavii.tech/products/dev-tools/docs/');
+    expect(ABOUT_LINK_URLS.updateLog).toBe('https://github.com/buckleson/Pavii-Gui-Releases/releases');
+    expect(ABOUT_LINK_URLS.officialWebsite).toBe('https://www.pavii.tech/products/dev-tools/');
   });
 });

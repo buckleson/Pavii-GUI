@@ -53,6 +53,18 @@ const wordmark = (text: string, size: number): React.ReactNode => (
   </span>
 );
 
+/**
+ * Destinations for the text links below the update section. Hoisted and
+ * exported (like SOCIAL_LINKS) so tests can pin them: every one of these
+ * used to point at the product landing page regardless of its label.
+ */
+export const ABOUT_LINK_URLS = {
+  helpDocumentation: 'https://www.pavii.tech/products/dev-tools/docs/',
+  // The public releases list, which is also where issues are tracked.
+  updateLog: 'https://github.com/buckleson/Pavii-Gui-Releases/releases',
+  officialWebsite: 'https://www.pavii.tech/products/dev-tools/',
+} as const;
+
 export const SOCIAL_LINKS: Array<{ label: string; url: string; glyph: React.ReactNode }> = [
   {
     label: 'GitHub',
@@ -164,13 +176,12 @@ const AboutModalContent: React.FC = () => {
   const linkItems: LinkItem[] = [
     {
       title: t('settings.helpDocumentation'),
-      // The actual documentation, not the product landing page.
-      url: 'https://www.pavii.tech/products/dev-tools/docs/',
+      url: ABOUT_LINK_URLS.helpDocumentation,
       icon: <Right theme='outline' size='16' />,
     },
     {
       title: t('settings.updateLog'),
-      url: 'https://www.pavii.tech/products/Super-Assistant/',
+      url: ABOUT_LINK_URLS.updateLog,
       icon: <Right theme='outline' size='16' />,
     },
     {
@@ -180,7 +191,7 @@ const AboutModalContent: React.FC = () => {
     },
     {
       title: t('settings.officialWebsite'),
-      url: 'https://www.pavii.tech/products/Super-Assistant/',
+      url: ABOUT_LINK_URLS.officialWebsite,
       icon: <Right theme='outline' size='16' />,
     },
   ];
