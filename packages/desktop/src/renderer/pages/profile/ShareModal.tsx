@@ -17,7 +17,6 @@ import {
   SHARE_CARD_LIGHT,
   SHARE_CARD_WIDTH,
   buildShareIntentUrl,
-  buildShareText,
   renderShareCard,
   shareCardBlob,
 } from './shareCard';
@@ -109,7 +108,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, onClose, data, isDark 
           );
         }
       });
-      void ipcBridge.shell.openExternal.invoke(buildShareIntentUrl(network, buildShareText(data)));
+      void ipcBridge.shell.openExternal.invoke(buildShareIntentUrl(network, data));
     },
     [copyCard, data, messageApi, t]
   );

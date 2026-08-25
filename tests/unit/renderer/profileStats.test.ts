@@ -15,7 +15,13 @@ import {
   type ConversationStatsInput,
   type LedgerDays,
 } from '@renderer/pages/profile/profileStats';
-import { buildShareIntentUrl, buildShareText, type ShareCardData } from '@renderer/pages/profile/shareCard';
+import {
+  SHARE_LINK_URL,
+  buildShareIntentUrl,
+  buildShareSummary,
+  buildShareText,
+  type ShareCardData,
+} from '@renderer/pages/profile/shareCard';
 
 // Local-noon epochs avoid timezone edge cases around midnight.
 const epochOf = (y: number, m: number, d: number): number => new Date(y, m - 1, d, 12, 0, 0).getTime();
@@ -269,26 +275,29 @@ describe('shareCard', () => {
   };
 
   describe('buildShareIntentUrl', () => {
-    const text = 'hello world & 100% pavii';
-    const encoded = encodeURIComponent(text);
-
-    it('builds an x intent URL with encoded text', () => {
-      expect(buildShareIntentUrl('x', text)).toBe(`https://twitter.com/intent/tweet?text=${encoded}`);
-    });
-
-    it('builds a linkedin intent URL with encoded text', () => {
-      expect(buildShareIntentUrl('linkedin', text)).toBe(
-        `https://www.linkedin.com/feed/?shareActive=true&text=${encoded}`
+    it('builds an x intent URL with the encoded summary', () => {
+      expect(buildShareIntentUrl('x', data)).toBe(
+        `https://twitter.com/intent/tweet?text=${encodeURIComponent(buildShareText(data))}`
       );
     });
 
-    it('builds a reddit intent URL with encoded text as the title', () => {
-      expect(buildShareIntentUrl('reddit', text)).toBe(`https://www.reddit.com/submit?title=${encoded}`);
+    it('builds a linkedin intent URL with the encoded summary', () => {
+      expect(buildShareIntentUrl('linkedin', data)).toBe(
+        `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(buildShareText(data))}`
+      );
+    });
+
+    it('builds a reddit LINK post, headline and destination apart', () => {
+      // Reddit prefills only `title` and `url`; a URL inside the title does
+      // not render as a link, which is where the whole summary used to go.
+      expect(buildShareIntentUrl('reddit', data)).toBe(
+        `https://www.reddit.com/submit?title=${encodeURIComponent(buildShareSummary(data))}&url=${encodeURIComponent(SHARE_LINK_URL)}`
+      );
     });
 
     it('does not leak raw unsafe characters into the URL', () => {
-      expect(buildShareIntentUrl('x', text)).not.toContain(' ');
-      expect(buildShareIntentUrl('x', text)).not.toContain('&text=hello');
+      expect(buildShareIntentUrl('x', data)).not.toContain(' ');
+      expect(buildShareIntentUrl('reddit', data)).not.toContain(' ');
     });
   });
 

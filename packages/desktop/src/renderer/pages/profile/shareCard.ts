@@ -218,22 +218,38 @@ export const SHARE_LINK_URL = 'https://www.pavii.tech/products/dev-tools/';
 
 export type ShareNetwork = 'x' | 'linkedin' | 'reddit';
 
-/** Web intent URL carrying the text summary for a network. */
-export function buildShareIntentUrl(network: ShareNetwork, text: string): string {
-  const encoded = encodeURIComponent(text);
+/**
+ * Web intent URL for a network.
+ *
+ * Takes the card data rather than a prebuilt string because the networks do
+ * not want the same shape: X and LinkedIn post one block of prose with the
+ * link inside it, while Reddit needs the headline and the link as separate
+ * fields.
+ */
+export function buildShareIntentUrl(network: ShareNetwork, data: ShareCardData): string {
   switch (network) {
     case 'x':
-      return `https://twitter.com/intent/tweet?text=${encoded}`;
+      return `https://twitter.com/intent/tweet?text=${encodeURIComponent(buildShareText(data))}`;
     case 'linkedin':
-      return `https://www.linkedin.com/feed/?shareActive=true&text=${encoded}`;
+      return `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(buildShareText(data))}`;
     case 'reddit':
-      return `https://www.reddit.com/submit?title=${encoded}`;
+      // Reddit prefills ONLY `title` and `url` — it has no body parameter, and
+      // `text`/`selftext` are silently ignored. Posting the whole summary as
+      // the title therefore buried the link somewhere it does not even render
+      // as a link. Splitting it makes this a normal link post: headline in
+      // `title`, destination in `url`, which Reddit renders and unfurls.
+      return `https://www.reddit.com/submit?title=${encodeURIComponent(buildShareSummary(data))}&url=${encodeURIComponent(SHARE_LINK_URL)}`;
   }
 }
 
-/** Text summary used by the share intents. */
+/** The summary without the link, for networks that carry the link separately. */
+export function buildShareSummary(data: ShareCardData): string {
+  return `${formatCompactNumber(data.totalTokens)} lifetime tokens, ${data.currentStreak}-day streak on Pavii.Ai — my personal AI workspace.`;
+}
+
+/** Text summary used by the share intents that post one block of prose. */
 export function buildShareText(data: ShareCardData): string {
-  return `${formatCompactNumber(data.totalTokens)} lifetime tokens, ${data.currentStreak}-day streak on Pavii.Ai — my personal AI workspace. ${SHARE_LINK_URL}`;
+  return `${buildShareSummary(data)} ${SHARE_LINK_URL}`;
 }
 
 /**

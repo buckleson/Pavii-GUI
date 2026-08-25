@@ -10,6 +10,7 @@ import {
   SHARE_CARD_LIGHT,
   SHARE_CARD_WIDTH,
   buildShareIntentUrl,
+  buildShareSummary,
   buildShareText,
   SHARE_LINK_URL,
   renderShareCard,
@@ -134,11 +135,32 @@ describe('renderShareCard', () => {
 
 describe('buildShareIntentUrl', () => {
   it('encodes the summary into each network intent', () => {
-    const text = 'hello world & more';
-    expect(buildShareIntentUrl('x', text)).toContain('twitter.com/intent/tweet?text=');
-    expect(buildShareIntentUrl('linkedin', text)).toContain('linkedin.com');
-    expect(buildShareIntentUrl('reddit', text)).toContain('reddit.com/submit?title=');
-    expect(buildShareIntentUrl('x', text)).toContain(encodeURIComponent(text));
+    expect(buildShareIntentUrl('x', data)).toContain('twitter.com/intent/tweet?text=');
+    expect(buildShareIntentUrl('linkedin', data)).toContain('linkedin.com');
+    expect(buildShareIntentUrl('reddit', data)).toContain('reddit.com/submit?title=');
+    expect(buildShareIntentUrl('x', data)).toContain(encodeURIComponent(buildShareText(data)));
+  });
+
+  it('gives Reddit a link post rather than a link buried in the title', () => {
+    // Reddit prefills only `title` and `url` — `text`/`selftext` are ignored —
+    // so the whole summary used to go in the title, where a URL does not even
+    // render as a link.
+    const intent = buildShareIntentUrl('reddit', data);
+
+    expect(intent).toContain(`url=${encodeURIComponent(SHARE_LINK_URL)}`);
+    // The title carries the headline only; the link lives in `url`.
+    expect(intent).toContain(encodeURIComponent(buildShareSummary(data)));
+    const title = new URL(intent).searchParams.get('title') ?? '';
+    expect(title).not.toContain('http');
+  });
+
+  it('keeps the link inside the prose for X and LinkedIn', () => {
+    // Those composers take one block of text, so the link has to be in it.
+    for (const network of ['x', 'linkedin'] as const) {
+      const intent = buildShareIntentUrl(network, data);
+      expect(decodeURIComponent(intent)).toContain(SHARE_LINK_URL);
+      expect(intent).not.toContain('&url=');
+    }
   });
 });
 
