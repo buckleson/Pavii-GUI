@@ -102,7 +102,16 @@ ipcMain.handle('feedback:issue-environment', () => collectIssueEnvironment());
 
 ipcMain.handle(
   'feedback:submit-issue',
-  async (_event, payload: { attachments?: IssueAttachment[]; body?: unknown; title?: unknown }) => {
+  async (
+    _event,
+    payload: {
+      attachments?: IssueAttachment[];
+      body?: unknown;
+      description?: unknown;
+      module?: unknown;
+      title?: unknown;
+    }
+  ) => {
     const title = typeof payload?.title === 'string' ? payload.title : '';
     const body = typeof payload?.body === 'string' ? payload.body : '';
     if (!title || !body) {
@@ -112,6 +121,8 @@ ipcMain.handle(
     return deliverIssueReport({
       title,
       body,
+      description: typeof payload?.description === 'string' && payload.description ? payload.description : undefined,
+      module: typeof payload?.module === 'string' && payload.module ? payload.module : undefined,
       attachments: Array.isArray(payload?.attachments) ? payload.attachments : [],
     });
   }

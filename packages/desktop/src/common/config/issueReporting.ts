@@ -39,3 +39,18 @@ export function issueRepoSlug(): string {
 export function newIssueFormUrl(): string {
   return `https://github.com/${ISSUE_REPO_OWNER}/${ISSUE_REPO_NAME}/issues/new`;
 }
+
+/**
+ * Primary issue sink: a Supabase project that accepts reports directly, so
+ * reporting needs no GitHub account and screenshots/logs actually upload.
+ *
+ * The publishable key is SAFE to ship: row-level security on `issue_reports`
+ * and `storage.objects` grants it INSERT only — it can file a report and
+ * upload into the `issue-attachments` bucket, and can never read, change, or
+ * delete anything. The project's secret key is used by nothing in this app
+ * and must never appear here.
+ */
+export const SUPABASE_ISSUE_URL = 'https://bnvnwkzeadpvxxssueif.supabase.co';
+export const SUPABASE_ISSUE_KEY = 'sb_publishable_SuU9RXdL0FMNPfDZO3zJ5Q_ky-ocXif';
+export const SUPABASE_ISSUE_BUCKET = 'issue-attachments';
+export const SUPABASE_ISSUE_TABLE = 'issue_reports';

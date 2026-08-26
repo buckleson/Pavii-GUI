@@ -60,6 +60,10 @@ export async function submitIssueReport(input: SubmitIssueReportInput): Promise<
   const result = await submit({
     title,
     body,
+    // Raw fields ride along so the Supabase sink stores them structured
+    // instead of re-parsing the composed markdown.
+    description: input.description,
+    module: input.moduleLabel,
     attachments: input.attachments.map((attachment) => ({
       filename: attachment.filename,
       data: Array.from(attachment.data),

@@ -77,6 +77,9 @@ const FeedbackReportModal: React.FC<FeedbackReportModalProps> = ({
   const { t } = useTranslation();
   const talkToButler = useTalkToButler();
 
+  // Hook form: Arco's static Message.* mounts via the legacy ReactDOM.render,
+  // which React 19 removed, so static toasts silently never render.
+  const [messageApi, messageContext] = Message.useMessage();
   const [module, setModule] = useState<string | undefined>(defaultModule);
   const [description, setDescription] = useState('');
   const [screenshots, setScreenshots] = useState<UploadItem[]>([]);
@@ -178,22 +181,26 @@ const FeedbackReportModal: React.FC<FeedbackReportModalProps> = ({
         tags: feedbackTags,
       });
 
-      // Say what actually happened: the issue form opens in the browser and the
-      // diagnostics are on disk, because neither path can attach files for the
-      // reporter.
-      if (result.mode === 'proxy') {
-        Message.success(
+      // Say what actually happened. The Supabase path delivers report AND
+      // attachments in one go; the GitHub paths open a browser and leave the
+      // diagnostics on disk, because neither can attach files for the reporter.
+      if (result.mode === 'supabase') {
+        messageApi.success(
+          t('settings.bugReportSent', { defaultValue: 'Report sent — thank you! Screenshots and logs were attached.' })
+        );
+      } else if (result.mode === 'proxy') {
+        messageApi.success(
           t('settings.bugReportCreated', { defaultValue: 'Issue created on GitHub. Opening it in your browser.' })
         );
       } else {
-        Message.success(
+        messageApi.success(
           t('settings.bugReportOpened', {
             defaultValue: 'Opening a prefilled GitHub issue in your browser - review it and press Submit.',
           })
         );
       }
       if (result.bundleDir) {
-        Message.info(
+        messageApi.info(
           t('settings.bugReportBundleSaved', {
             defaultValue: 'Logs and diagnostics were saved to a folder - drag them into the issue to attach them.',
           })
@@ -338,147 +345,152 @@ const FeedbackReportModal: React.FC<FeedbackReportModalProps> = ({
   }, [handlePaste, visible]);
 
   return (
-    <AionModal
-      variant='standard'
-      header={{ title: t('settings.bugReportTitle'), showClose: true }}
-      visible={visible}
-      onCancel={handleCancel}
-      onOk={handleSubmit}
-      confirmLoading={submitting}
-      okText={t('settings.bugReportSubmit')}
-      cancelText={t('settings.bugReportCancel')}
-      okButtonProps={{ disabled: !isFormValid }}
-      alignCenter
-      footer={{
-        render: () => (
-          <div className='flex items-center justify-between gap-8px'>
-            {/* "Solve via chat" is an alternative self-service path — kept on the
+    <>
+      {/* Outside the modal: the success toast fires as the modal closes, and a
+          holder inside the dialog would unmount with it. */}
+      {messageContext}
+      <AionModal
+        variant='standard'
+        header={{ title: t('settings.bugReportTitle'), showClose: true }}
+        visible={visible}
+        onCancel={handleCancel}
+        onOk={handleSubmit}
+        confirmLoading={submitting}
+        okText={t('settings.bugReportSubmit')}
+        cancelText={t('settings.bugReportCancel')}
+        okButtonProps={{ disabled: !isFormValid }}
+        alignCenter
+        footer={{
+          render: () => (
+            <div className='flex items-center justify-between gap-8px'>
+              {/* "Solve via chat" is an alternative self-service path — kept on the
                 left as a borderless text action so it reads as secondary to the
                 primary submit, not as a competing filled button. */}
-            <Button
-              type='text'
-              loading={diagnosing}
-              disabled={!description.trim() || submitting}
-              onClick={() => void handleDiagnose()}
-              data-testid='btn-feedback-diagnose'
-              className='!text-primary-6 hover:!text-primary-5'
-            >
-              {t('settings.talkToButler.solveViaChat', { defaultValue: 'Solve via chat' })}
-            </Button>
-            <div className='flex items-center gap-8px'>
-              <Button onClick={handleCancel} className='px-20px min-w-80px' style={{ borderRadius: 8 }}>
-                {t('settings.bugReportCancel')}
-              </Button>
               <Button
-                type='primary'
-                loading={submitting}
-                disabled={!isFormValid || diagnosing}
-                onClick={() => void handleSubmit()}
-                className='px-20px min-w-80px'
-                style={{ borderRadius: 8 }}
+                type='text'
+                loading={diagnosing}
+                disabled={!description.trim() || submitting}
+                onClick={() => void handleDiagnose()}
+                data-testid='btn-feedback-diagnose'
+                className='!text-primary-6 hover:!text-primary-5'
               >
-                {t('settings.bugReportSubmit')}
+                {t('settings.talkToButler.solveViaChat', { defaultValue: 'Solve via chat' })}
               </Button>
+              <div className='flex items-center gap-8px'>
+                <Button onClick={handleCancel} className='px-20px min-w-80px' style={{ borderRadius: 8 }}>
+                  {t('settings.bugReportCancel')}
+                </Button>
+                <Button
+                  type='primary'
+                  loading={submitting}
+                  disabled={!isFormValid || diagnosing}
+                  onClick={() => void handleSubmit()}
+                  className='px-20px min-w-80px'
+                  style={{ borderRadius: 8 }}
+                >
+                  {t('settings.bugReportSubmit')}
+                </Button>
+              </div>
             </div>
-          </div>
-        ),
-      }}
-      className='w-[min(600px,calc(100vw-32px))] max-w-600px'
-      autoFocus={false}
-      // The feedback modal is global and may be opened from inside another
-      // AionModal (e.g. the Agent editor). Arco's default z-index stacks
-      // modals in mount order, which leaves the feedback modal under the
-      // pre-existing modal when both are open. Bump wrap+mask above the
-      // standard 1001 so feedback always appears on top.
-      wrapStyle={{ zIndex: 1050 }}
-      maskStyle={{ zIndex: 1050 }}
-    >
-      <div data-testid='feedback-report-scroll-body' className='overflow-x-hidden'>
-        <div className='flex flex-col gap-16px'>
-          {/* Description */}
-          <div className='flex flex-col gap-4px'>
-            <label className='text-13px text-t-secondary'>
-              {t('settings.bugReportDescriptionLabel')} <span className='text-red-500'>*</span>
-            </label>
-            <Input.TextArea
-              ref={descriptionRef}
-              placeholder={t('settings.bugReportDescriptionPlaceholder')}
-              value={description}
-              onChange={(val) => {
-                setDescription(val);
-                setError('');
-              }}
-              maxLength={DESCRIPTION_MAX_LENGTH}
-              showWordLimit
-              autoSize={{ minRows: 3, maxRows: 6 }}
-            />
-          </div>
-
-          {/* Module Select */}
-          <div className='flex flex-col gap-4px'>
-            <label className='text-13px text-t-secondary'>
-              {t('settings.bugReportModuleLabel')} <span className='text-red-500'>*</span>
-            </label>
-            <Select
-              placeholder={t('settings.bugReportModulePlaceholder')}
-              value={module}
-              onChange={(val) => {
-                setModule(val);
-                setError('');
-              }}
-            >
-              {FEEDBACK_MODULES.map((m) => (
-                <Select.Option key={m.tag} value={m.tag}>
-                  {t(m.i18nKey)}
-                </Select.Option>
-              ))}
-            </Select>
-          </div>
-
-          {/* Screenshot Upload */}
-          <div className='flex flex-col gap-4px'>
-            <label className='text-13px text-t-secondary'>
-              {t('settings.bugReportScreenshotLabel')}
-              {screenshots.length > 0 && (
-                <span data-testid='feedback-report-screenshot-count'>
-                  {' '}
-                  {t('settings.bugReportScreenshotUploaded', { count: screenshots.length })}
-                </span>
-              )}
-            </label>
-            <div data-testid='feedback-report-upload-trigger'>
-              <Upload
-                listType='picture-card'
-                multiple
-                accept={ACCEPTED_IMAGE_TYPES}
-                autoUpload={false}
-                fileList={screenshots}
-                onChange={handleScreenshotChange}
-                limit={MAX_SCREENSHOTS}
-                imagePreview
+          ),
+        }}
+        className='w-[min(600px,calc(100vw-32px))] max-w-600px'
+        autoFocus={false}
+        // The feedback modal is global and may be opened from inside another
+        // AionModal (e.g. the Agent editor). Arco's default z-index stacks
+        // modals in mount order, which leaves the feedback modal under the
+        // pre-existing modal when both are open. Bump wrap+mask above the
+        // standard 1001 so feedback always appears on top.
+        wrapStyle={{ zIndex: 1050 }}
+        maskStyle={{ zIndex: 1050 }}
+      >
+        <div data-testid='feedback-report-scroll-body' className='overflow-x-hidden'>
+          <div className='flex flex-col gap-16px'>
+            {/* Description */}
+            <div className='flex flex-col gap-4px'>
+              <label className='text-13px text-t-secondary'>
+                {t('settings.bugReportDescriptionLabel')} <span className='text-red-500'>*</span>
+              </label>
+              <Input.TextArea
+                ref={descriptionRef}
+                placeholder={t('settings.bugReportDescriptionPlaceholder')}
+                value={description}
+                onChange={(val) => {
+                  setDescription(val);
+                  setError('');
+                }}
+                maxLength={DESCRIPTION_MAX_LENGTH}
+                showWordLimit
+                autoSize={{ minRows: 3, maxRows: 6 }}
               />
             </div>
-          </div>
 
-          {/* Auto-info Banner */}
-          <div className='flex'>
-            <div
-              data-testid='feedback-report-auto-info'
-              className='inline-flex max-w-full items-start gap-6px px-10px py-8px bg-fill-1 rd-8px text-12px leading-18px text-t-tertiary'
-            >
-              <Info theme='outline' size='14' className='mt-2px flex-shrink-0' />
-              <span>{t('settings.bugReportAutoInfo')}</span>
+            {/* Module Select */}
+            <div className='flex flex-col gap-4px'>
+              <label className='text-13px text-t-secondary'>
+                {t('settings.bugReportModuleLabel')} <span className='text-red-500'>*</span>
+              </label>
+              <Select
+                placeholder={t('settings.bugReportModulePlaceholder')}
+                value={module}
+                onChange={(val) => {
+                  setModule(val);
+                  setError('');
+                }}
+              >
+                {FEEDBACK_MODULES.map((m) => (
+                  <Select.Option key={m.tag} value={m.tag}>
+                    {t(m.i18nKey)}
+                  </Select.Option>
+                ))}
+              </Select>
             </div>
-          </div>
 
-          {error ? (
-            <div className='px-12px py-8px bg-red-50 dark:bg-red-900/20 rd-8px text-13px text-red-500 b-1px b-solid b-red-200 dark:b-red-800'>
-              {error}
+            {/* Screenshot Upload */}
+            <div className='flex flex-col gap-4px'>
+              <label className='text-13px text-t-secondary'>
+                {t('settings.bugReportScreenshotLabel')}
+                {screenshots.length > 0 && (
+                  <span data-testid='feedback-report-screenshot-count'>
+                    {' '}
+                    {t('settings.bugReportScreenshotUploaded', { count: screenshots.length })}
+                  </span>
+                )}
+              </label>
+              <div data-testid='feedback-report-upload-trigger'>
+                <Upload
+                  listType='picture-card'
+                  multiple
+                  accept={ACCEPTED_IMAGE_TYPES}
+                  autoUpload={false}
+                  fileList={screenshots}
+                  onChange={handleScreenshotChange}
+                  limit={MAX_SCREENSHOTS}
+                  imagePreview
+                />
+              </div>
             </div>
-          ) : null}
+
+            {/* Auto-info Banner */}
+            <div className='flex'>
+              <div
+                data-testid='feedback-report-auto-info'
+                className='inline-flex max-w-full items-start gap-6px px-10px py-8px bg-fill-1 rd-8px text-12px leading-18px text-t-tertiary'
+              >
+                <Info theme='outline' size='14' className='mt-2px flex-shrink-0' />
+                <span>{t('settings.bugReportAutoInfo')}</span>
+              </div>
+            </div>
+
+            {error ? (
+              <div className='px-12px py-8px bg-red-50 dark:bg-red-900/20 rd-8px text-13px text-red-500 b-1px b-solid b-red-200 dark:b-red-800'>
+                {error}
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
-    </AionModal>
+      </AionModal>
+    </>
   );
 };
 

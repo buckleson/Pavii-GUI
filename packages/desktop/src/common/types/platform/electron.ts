@@ -23,8 +23,10 @@ export type IssueEnvironment = {
 export type IssueReportResult = {
   bundleDir?: string;
   issueUrl?: string;
-  mode: 'proxy' | 'browser';
+  mode: 'supabase' | 'proxy' | 'browser';
   proxyError?: string;
+  reportId?: string;
+  supabaseError?: string;
 };
 
 export interface ElectronBridgeAPI {
@@ -44,6 +46,8 @@ export interface ElectronBridgeAPI {
   submitIssueReport?: (payload: {
     attachments?: Array<{ data: number[]; filename: string }>;
     body: string;
+    description?: string;
+    module?: string;
     title: string;
   }) => Promise<IssueReportResult>;
   recoverCorruptedDatabase?: () => Promise<void>;

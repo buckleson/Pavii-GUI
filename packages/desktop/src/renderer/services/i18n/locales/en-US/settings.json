@@ -772,6 +772,7 @@
   "bugReport": "Report Issue",
   "bugReportTitle": "Report Issue",
   "oneClickFeedback": "Report Issue",
+  "bugReportSent": "Report sent — thank you! Screenshots and logs were attached.",
   "bugReportModuleLabel": "Module",
   "bugReportModulePlaceholder": "Select the module related to the issue",
   "bugReportDescriptionLabel": "Description",

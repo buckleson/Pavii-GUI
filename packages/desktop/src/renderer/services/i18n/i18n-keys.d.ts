@@ -1736,6 +1736,7 @@ export type I18nKey =
   | 'settings.bugReportScreenshotFormats'
   | 'settings.bugReportScreenshotLabel'
   | 'settings.bugReportScreenshotUploaded'
+  | 'settings.bugReportSent'
   | 'settings.bugReportSubmit'
   | 'settings.bugReportSuccess'
   | 'settings.bugReportTitle'
