@@ -272,7 +272,12 @@ class AutoUpdaterService extends EventEmitter {
    * update forever: the installer's own silent retries are the backstop.
    */
   private async waitForInstallDirProcessSettle(timeoutMs = 10_000): Promise<void> {
-    if (process.platform !== 'win32') {
+    // Packaged Windows builds only: dev runs and unit tests have no real
+    // installer handoff, and the poll would just add dead seconds (it broke
+    // the "immediate quitAndInstall" test contracts when unconditional —
+    // under vitest the probe scans the TEST RUNNER's own directory and never
+    // settles, so the explicit guard matters even with isPackaged mocked).
+    if (process.platform !== 'win32' || !app.isPackaged || process.env.VITEST) {
       return;
     }
     const installDir = path.dirname(process.execPath);
