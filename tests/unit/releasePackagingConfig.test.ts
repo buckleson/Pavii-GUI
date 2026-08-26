@@ -67,12 +67,16 @@ describe('release packaging configuration', () => {
   });
 
   itWithWorkflows('stages and verifies Windows blockmap release assets', () => {
+    // Blockmaps reach the publish job as draft-release assets uploaded by the
+    // build jobs (the artifact-mediated `find`-staging is gone with the
+    // artifact quota dependency); the publish job must still refuse to go
+    // live without both Windows blockmaps.
     const workflow = readProjectFile('.github/workflows/release.yml');
 
-    expect(workflow).toContain("-name '*.exe.blockmap'");
+    expect(workflow).toContain('gh release download');
     expect(workflow).toContain('Verify Windows differential update assets are present');
-    expect(workflow).toContain('Pavii.Ai-$V-win-x64.exe.blockmap');
-    expect(workflow).toContain('Pavii.Ai-$V-win-arm64.exe.blockmap');
+    expect(workflow).toContain('Pavii.Ai-$VERSION-win-x64.exe.blockmap');
+    expect(workflow).toContain('Pavii.Ai-$VERSION-win-arm64.exe.blockmap');
   });
 
   it('retries mac prepackaged builds with both dmg and zip targets', () => {
