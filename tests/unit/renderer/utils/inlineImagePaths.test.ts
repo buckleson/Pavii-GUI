@@ -124,4 +124,33 @@ describe('openable document paths', () => {
     const input = 'Edit C:\\repo\\src\\main.rs and C:\\repo\\app.ts first.';
     expect(linkifyBareImagePaths(input)).toBe(input);
   });
+
+  it('replaces a codex file citation with a chip, spaces and all', () => {
+    // The exact directive codex emitted live for a renamed PDF (2026-08-26):
+    // rendered as raw text because nothing parses ::directives. The quoted
+    // path attribute is an explicit file claim, so spaces in the name and
+    // uncurated extensions are all accepted.
+    const input =
+      'Done. The PDF is now named `super watch.pdf` : ::codex-file-citation{path="C:\\Users\\vijay\\AppData\\Local\\out\\super watch.pdf" purpose="output"}';
+
+    const out = linkifyBareImagePaths(input);
+
+    expect(out).toContain('![pavii:inline-file](<C:/Users/vijay/AppData/Local/out/super watch.pdf>)');
+    expect(out).not.toContain('::codex-file-citation');
+  });
+
+  it('renders a cited image path as an image card, not a chip', () => {
+    const out = linkifyBareImagePaths('Cover: ::codex-file-citation{path="C:\\out\\cover photo.png" purpose="output"}');
+    expect(out).toContain(`![${INLINE_IMAGE_ALT}](<C:/out/cover photo.png>)`);
+  });
+
+  it('accepts citations with any extension and no purpose attribute', () => {
+    const out = linkifyBareImagePaths('Installer: ::codex-file-citation{path="C:\\out\\setup tool.exe"}');
+    expect(out).toContain('![pavii:inline-file](<C:/out/setup tool.exe>)');
+  });
+
+  it('leaves a citation inside a code fence untouched', () => {
+    const input = 'Format:\n```\n::codex-file-citation{path="C:\\x\\y.pdf"}\n```\n';
+    expect(linkifyBareImagePaths(input)).toBe(input);
+  });
 });

@@ -56,6 +56,18 @@ const FILE_PATH_PATTERN = new RegExp(
 /** Fenced code blocks and inline code spans, which must never be rewritten. */
 const CODE_REGION_PATTERN = /```[\s\S]*?(?:```|$)|`[^`\n]*`/g;
 
+/**
+ * Codex's own file-delivery markup: `::codex-file-citation{path="C:\..."
+ * purpose="output"}` (observed live 2026-08-26 — a renamed PDF answer rendered
+ * the directive as raw text). Nothing downstream parses directives, so the
+ * whole thing is replaced with our marker. Unlike the bare-path patterns this
+ * is permissive about extension and spaces: the quoted attribute is an
+ * explicit "here is a file" claim, not prose that merely resembles a path.
+ */
+const CODEX_FILE_CITATION = /::codex-file-citation\{[^}]*?path="([^"]+)"[^}]*\}/g;
+
+const IMAGE_EXT_PATTERN = /\.(?:png|jpe?g|gif|webp|bmp)$/i;
+
 const normalizeSlashes = (rawPath: string): string =>
   // Forward slashes: CommonMark backslash-escapes eat `\.` and friends, so a
   // Windows path cannot survive a markdown destination in its native form.
@@ -67,6 +79,9 @@ const toMarkdownFile = (rawPath: string): string => `![${INLINE_FILE_ALT}](<${no
 
 const transformSegment = (segment: string): string =>
   segment
+    .replace(CODEX_FILE_CITATION, (_full, path: string) =>
+      IMAGE_EXT_PATTERN.test(path) ? toMarkdownImage(path) : toMarkdownFile(path)
+    )
     .replace(IMAGE_PATH_PATTERN, (match) => toMarkdownImage(match))
     .replace(FILE_PATH_PATTERN, (match) => toMarkdownFile(match));
 
