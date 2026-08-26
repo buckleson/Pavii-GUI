@@ -239,9 +239,13 @@ electronDownload:
 # Releases live on GitHub. The release workflow uploads with `gh release upload`
 # (build-with-builder.js hardcodes --publish=never), and electron-updater uses
 # this provider to find updates.
+# The PUBLIC mirror, not the source repo: the source repo is private, and a
+# private feed 404s every installed app's update check (observed live on
+# 2.2.1 the day the repo was flipped). The release pipeline mirrors every
+# asset + latest*.yml there, so the feed is complete.
 publish:
   provider: github
   owner: buckleson
-  repo: Pavii-GUI
+  repo: Pavii-Gui-Releases
   publishAutoUpdate: true
   releaseType: release

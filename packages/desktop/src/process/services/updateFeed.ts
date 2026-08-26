@@ -20,9 +20,13 @@ import type { CdnGenericProviderConfiguration } from './cdnGenericProvider';
  * tests/unit/bootstrap/noVendorUpdateEndpoint.test.ts.
  */
 
-/** GitHub repo that hosts Pavii.Ai releases (must match electron-builder.yml `publish`). */
+/**
+ * GitHub repo that hosts Pavii.Ai releases (must match electron-builder.yml
+ * `publish`). This is the PUBLIC mirror: the source repo is private, and a
+ * private feed 404s every installed app's update check.
+ */
 export const GITHUB_RELEASE_OWNER = 'buckleson';
-export const GITHUB_RELEASE_REPO = 'Pavii-GUI';
+export const GITHUB_RELEASE_REPO = 'Pavii-Gui-Releases';
 export const UPDATE_FEED_URL_ENV = 'PAVII_UPDATE_FEED_URL';
 
 /** Configured feed base URL, or undefined when updates are intentionally off. */
