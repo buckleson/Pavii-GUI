@@ -176,6 +176,22 @@ async fn midturn_send_returns_200_with_the_active_turn_id() {
     assert_eq!(status1, StatusCode::ACCEPTED, "first send scheduled a turn: {body1}");
     let turn1 = body1["data"]["turn_id"].as_str().unwrap().to_owned();
 
+    // The 202 only SCHEDULES the turn: the orchestrator builds the agent in a
+    // spawned task, and the mid-turn branch requires `get_task` to return it.
+    // A send that outruns the build correctly falls back to 409 (the window
+    // is milliseconds in production; a retry lands). This test models the
+    // human-paced case — an interjection while the agent is mid-turn — so
+    // wait for registration instead of racing it (flaked in CI: rc.1 run
+    // 32917873517 hit exactly this and blocked a release).
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while services.worker_task_manager.get_task(&conv_id).is_none() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "agent task never registered for {conv_id}"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+
     // Mid-turn second message: 200, folded into the SAME turn.
     let (status2, body2) = send_message(&mut app, &conv_id, "midturn interjection", &token, &csrf).await;
     assert_eq!(
