@@ -142,11 +142,11 @@ const QuickActionButtons: React.FC<QuickActionButtonsProps> = ({
           </span>
         </div>
         <div
-          className='group inline-flex items-center justify-center h-36px min-w-36px max-w-36px px-0 rd-999px bg-fill-0 cursor-pointer overflow-hidden whitespace-nowrap hover:max-w-150px hover:px-14px hover:justify-start hover:gap-8px transition-[max-width,padding,border-radius,box-shadow] duration-420 ease-in-out'
+          className='group inline-flex items-center justify-center h-36px min-w-36px max-w-36px px-0 rd-999px bg-fill-0 cursor-pointer overflow-hidden whitespace-nowrap hover:max-w-280px hover:px-14px hover:justify-start hover:gap-8px transition-[max-width,padding,border-radius,box-shadow] duration-420 ease-in-out'
           style={quickActionStyle(hoveredQuickAction === 'repo')}
           onMouseEnter={() => setHoveredQuickAction('repo')}
           onMouseLeave={() => setHoveredQuickAction(null)}
-          onClick={() => onOpenLink('https://www.pavii.tech/products/Super-Assistant/')}
+          onClick={() => onOpenLink('https://cal.com/buckleson-group/30min?overlayCalendar=true')}
         >
           <svg
             className='flex-shrink-0 text-[var(--color-text-3)] group-hover:text-[#FE9900] transition-colors duration-300'
@@ -164,8 +164,8 @@ const QuickActionButtons: React.FC<QuickActionButtonsProps> = ({
               strokeLinejoin='round'
             />
           </svg>
-          <span className='opacity-0 max-w-0 overflow-hidden text-14px text-[var(--color-text-2)] group-hover:opacity-100 group-hover:max-w-120px transition-all duration-360 ease-in-out'>
-            {t('conversation.welcome.quickActionStar')}
+          <span className='opacity-0 max-w-0 overflow-hidden text-14px text-[var(--color-text-2)] group-hover:opacity-100 group-hover:max-w-250px transition-all duration-360 ease-in-out'>
+            {t('conversation.welcome.quickActionTellUs')}
           </span>
         </div>
         <div
