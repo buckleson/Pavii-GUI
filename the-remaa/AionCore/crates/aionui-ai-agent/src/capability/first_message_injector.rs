@@ -65,17 +65,30 @@ mod tests {
 
     /// Point the embedded corpus at an empty dir so tests don't pick up
     /// real auto-inject builtin skills.
-    struct EmptyBuiltinGuard;
+    /// The env var is process-global and cargo runs lib tests on parallel
+    /// threads, so two guard users could interleave: one test's Drop removed
+    /// the var while another was mid-lookup. That race failed the v2.2.1
+    /// release preflight (`heavy_mode_with_resolved_skills_injects_index`
+    /// lost its corpus and "cron" vanished from the index). The guard now
+    /// also holds a global lock so every test touching the var serialises.
+    static BUILTIN_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    struct EmptyBuiltinGuard(#[allow(dead_code)] std::sync::MutexGuard<'static, ()>);
     impl EmptyBuiltinGuard {
         fn new(empty_path: &std::path::Path) -> Self {
+            // A poisoned lock only means another test panicked while holding
+            // it; the env var itself is re-set below, so continuing is safe.
+            let lock = BUILTIN_ENV_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
             unsafe {
                 std::env::set_var(BUILTIN_SKILLS_ENV_VAR, empty_path);
             }
-            Self
+            Self(lock)
         }
     }
     impl Drop for EmptyBuiltinGuard {
         fn drop(&mut self) {
+            // Runs before the mutex guard in field 0 is released, so the var
+            // is always removed while the lock is still held.
             unsafe {
                 std::env::remove_var(BUILTIN_SKILLS_ENV_VAR);
             }
