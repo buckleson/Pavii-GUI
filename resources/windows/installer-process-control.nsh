@@ -104,7 +104,7 @@ Var /GLOBAL AionUiCurrentOutDir
         } elseif ($$targetPath -and (Test-Path -LiteralPath $$targetPath -PathType Container)) { \
           $$root = [System.IO.Path]::GetFullPath($$targetPath); \
           $$topLevel = @(Get-ChildItem -LiteralPath $$root -Force -File -ErrorAction SilentlyContinue | ForEach-Object { $$_.FullName }); \
-          $$knownRelative = @('${AIONUI_APP_EXECUTABLE_FILENAME}', '${UNINSTALL_FILENAME}', 'resources\app.asar', 'resources\app-update.yml', 'resources\bundled-paviicore\win32-x64\paviicore.exe'); \
+          $$knownRelative = @('${AIONUI_APP_EXECUTABLE_FILENAME}', '${UNINSTALL_FILENAME}', 'resources\app.asar', 'resources\app-update.yml', 'resources\bundled-paviicore\${AIONUI_RUNTIME_KEY}\paviicore.exe'); \
           $$known = @($$knownRelative | ForEach-Object { Join-Path $$root $$_ } | Where-Object { Test-Path -LiteralPath $$_ -PathType Leaf }); \
           $$resources = @($$topLevel + $$known | Where-Object { $$_ -and $$_.Trim().Length -gt 0 } | Select-Object -Unique | Select-Object -First 512); \
         } \
@@ -174,7 +174,7 @@ Var /GLOBAL AionUiCurrentOutDir
 !macro AIONUI_QUERY_LOCKERS _TARGET_PATH _RETURN
   InitPluginsDir
   File /oname=$PLUGINSDIR\aionui-query-lockers.ps1 "${PROJECT_DIR}\resources\windows\support\query-lockers.ps1"
-  nsExec::Exec `"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\aionui-query-lockers.ps1" -LogPath "$AionUiSessionLogPath" -InstDir "$INSTDIR" -TargetPath "${_TARGET_PATH}" -LockerListPath "$PLUGINSDIR\aionui-rm-lockers.txt" -Session "$AionUiSessionId" -Version "${VERSION}" -Arch "${AIONUI_TARGET_ARCH}" -Updated "$AionUiIsUpdated" -CurrentOutDir "$AionUiCurrentOutDir"`
+  nsExec::Exec `"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\aionui-query-lockers.ps1" -LogPath "$AionUiSessionLogPath" -InstDir "$INSTDIR" -TargetPath "${_TARGET_PATH}" -LockerListPath "$PLUGINSDIR\aionui-rm-lockers.txt" -Session "$AionUiSessionId" -Version "${VERSION}" -Arch "${AIONUI_TARGET_ARCH}" -Updated "$AionUiIsUpdated" -CurrentOutDir "$AionUiCurrentOutDir" -RuntimeKey "${AIONUI_RUNTIME_KEY}"`
   Pop ${_RETURN}
 !macroend
 

@@ -31,7 +31,9 @@
 !define AIONUI_MSG_OLD_UNINSTALL_FAILED_EN "The previous Pavii.Ai uninstaller returned an error."
 !define AIONUI_MSG_OLD_UNINSTALL_ACTION_EN "Close the program listed above, then run this installer again. If no program is listed, restart Windows and run this installer again."
 
-!define AIONUI_MSG_REPLACE_LOCKED_EN "Pavii.Ai could not safely replace the previous installation because files are still open."
+!define AIONUI_MSG_REPLACE_LOCKED_EN "Pavii.Ai could not safely replace the previous installation because files are still open. Your existing installation was left untouched and still works."
+!define AIONUI_MSG_ROLLBACK_RESTORED_EN "The update failed partway, so your previous installation was restored and still works."
+!define AIONUI_MSG_UNINSTALLER_WRITE_EN "Pavii.Ai could not finish writing its uninstaller file. If this was an update, your previous installation was restored."
 !define AIONUI_MSG_PREVIOUS_FILE_OPEN_EN "Pavii.Ai cannot continue because a file in the previous installation is still open."
 !define AIONUI_MSG_REMOVE_PREVIOUS_DIR_EN "Pavii.Ai could not remove the previous installation directory."
 !define AIONUI_MSG_CLOSE_SHOWN_FILE_ACTION_EN "Close the application using the file shown in the previous message, then run this installer again. If you are not sure what to close, restart Windows and run this installer again."

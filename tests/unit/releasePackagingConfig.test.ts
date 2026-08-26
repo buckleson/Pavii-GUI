@@ -126,4 +126,40 @@ describe('release packaging configuration', () => {
       rmSync(tempDir, { force: true, recursive: true });
     }
   });
+
+  it('keeps the transactional-installer patches and NSIS contracts in place', () => {
+    // The 2026-08-27 update failure destroyed a working install. These pins
+    // guard the pieces that make that impossible again; the behavior itself
+    // is proven by scripts/smoke-installer-rollback.js against compiled NSIS.
+    const patcher = readFileSync(resolve(projectRoot, 'scripts/build-with-builder.js'), 'utf8');
+    expect(patcher).toContain('event=foreign-install-skipped');
+    expect(patcher).toContain('event=old-uninstaller-skipped reason=transactional-update');
+    expect(patcher).toContain('aionui_retry_uninstaller_write');
+    expect(patcher).toContain('SetOverwrite try');
+
+    const removeRegistry = readFileSync(
+      resolve(projectRoot, 'resources/windows/installer-remove-registry.nsh'),
+      'utf8'
+    );
+    expect(removeRegistry).toContain('atomic-silent-retry');
+    expect(removeRegistry).toContain('deferredDelete=1');
+    expect(removeRegistry).toContain('oldInstallIntact=1');
+    // The atomic-failure path must never clear the registry of the intact
+    // old install (that is what orphaned it from "Installed apps").
+    expect(removeRegistry).not.toContain(
+      'AIONUI_CLEAR_INSTALL_REGISTRY "remove-failed-before-quit"\n      !insertmacro AIONUI_FAIL_REPORTABLE ${AIONUI_E_INSTALL_DIR_REMOVE_OR_LOCKED} "event=session-end result=fail code=${AIONUI_E_INSTALL_DIR_REMOVE_OR_LOCKED} phase=atomic-failed'
+    );
+
+    const errorsSentry = readFileSync(resolve(projectRoot, 'resources/windows/installer-errors-sentry.nsh'), 'utf8');
+    expect(errorsSentry).toContain('AIONUI_ROLLBACK_OLD_SNAPSHOT');
+    // Every fatal path funnels through FAIL_UX, which must roll back first.
+    expect(errorsSentry).toMatch(/AIONUI_FAIL_UX[\s\S]{0,200}AIONUI_ROLLBACK_OLD_SNAPSHOT/);
+
+    const updateVerify = readFileSync(resolve(projectRoot, 'resources/windows/installer-update-verify.nsh'), 'utf8');
+    expect(updateVerify).toContain('snapshot-delete');
+
+    const queryLockers = readFileSync(resolve(projectRoot, 'resources/windows/support/query-lockers.ps1'), 'utf8');
+    expect(queryLockers).toContain("'Uninstall PaviiAi.exe'");
+    expect(queryLockers).toContain('$RuntimeKey');
+  });
 });

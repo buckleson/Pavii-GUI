@@ -167,9 +167,102 @@ function patchElectronBuilderNsisInstaller() {
     );
   }
 
+  // Guard uninstallOldVersion (2026-08-27 live failure): it followed registry
+  // InstallLocation wherever it pointed, executing a FOREIGN install's
+  // uninstaller during an update, and on same-dir updates it deleted the
+  // working app BEFORE extraction with no way back. Foreign dirs are now
+  // never touched, and updates skip the old uninstaller entirely — the
+  // transactional atomic-rename in customRemoveFiles owns that replacement.
+  const uninstallerResolveAnchor = [
+    '  ${if} $installationDir == ""',
+    '  ${andIf} $uninstallerFileName == ""',
+    '    ClearErrors',
+    '    Return',
+    '  ${endif}',
+  ].join('\n');
+  const uninstallerGuards = [
+    uninstallerResolveAnchor,
+    '',
+    '  # Pavii.Ai: compare normalized dirs (strip one trailing backslash).',
+    '  StrCpy $R7 "$installationDir"',
+    '  StrCpy $R8 "$R7" 1 -1',
+    '  ${if} $R8 == "\\"',
+    '    StrCpy $R7 "$R7" -1',
+    '  ${endif}',
+    '  StrCpy $R8 "$INSTDIR"',
+    '  StrCpy $R9 "$R8" 1 -1',
+    '  ${if} $R9 == "\\"',
+    '    StrCpy $R8 "$R8" -1',
+    '  ${endif}',
+    '  ${if} $R7 != ""',
+    '  ${andIf} $R7 != $R8',
+    '    DetailPrint `Pavii.Ai: skipping uninstaller of a different installation: $installationDir`',
+    '    !insertmacro AIONUI_LOG_EVENT "event=foreign-install-skipped registryDir=$installationDir instDir=$INSTDIR"',
+    '    ClearErrors',
+    '    Return',
+    '  ${endif}',
+    '  ${if} ${isUpdated}',
+    '    DetailPrint `Pavii.Ai: transactional update replaces the previous version; old uninstaller skipped.`',
+    '    !insertmacro AIONUI_LOG_EVENT "event=old-uninstaller-skipped reason=transactional-update instDir=$INSTDIR"',
+    '    ClearErrors',
+    '    Return',
+    '  ${endif}',
+  ].join('\n');
+  if (patched.includes('event=foreign-install-skipped')) {
+    // Already patched.
+  } else if (patched.includes(uninstallerResolveAnchor)) {
+    patched = patched.replace(uninstallerResolveAnchor, uninstallerGuards);
+  } else {
+    throw new Error(
+      'electron-builder uninstallOldVersion resolve anchor changed; update patchElectronBuilderNsisInstaller.'
+    );
+  }
+
   if (patched !== original) {
     fs.writeFileSync(installUtilPath, patched);
     console.log('Patched electron-builder NSIS uninstall failure handoff.');
+  }
+
+  // The uninstaller EXE write is the last extraction step and used to abort
+  // the whole install raw ("Extract: error writing to file Uninstall
+  // PaviiAi.exe", live 2026-08-27) with the payload already replaced.
+  // `SetOverwrite try` turns a locked write into an error flag we can retry
+  // (stop owned processes, settle, again), and the final failure goes through
+  // the reportable funnel — which also restores the transactional snapshot.
+  const installerNshPath = path.join(appBuilderDir, 'templates', 'nsis', 'include', 'installer.nsh');
+  const installerOriginal = fs.readFileSync(installerNshPath, 'utf8');
+  let installerPatched = installerOriginal;
+  const uninstallerWriteLine = '  File "/oname=${UNINSTALL_FILENAME}" "${UNINSTALLER_OUT_FILE}"';
+  const uninstallerWriteGuarded = [
+    '  SetOverwrite try',
+    '  StrCpy $R9 "0"',
+    '  aionui_retry_uninstaller_write:',
+    '  ClearErrors',
+    '  File "/oname=${UNINSTALL_FILENAME}" "${UNINSTALLER_OUT_FILE}"',
+    '  ${if} ${Errors}',
+    '    ${if} $R9 < 3',
+    '      IntOp $R9 $R9 + 1',
+    '      !insertmacro AIONUI_LOG_EVENT "event=uninstaller-write-retry attempt=$R9 file=${UNINSTALL_FILENAME}"',
+    '      !insertmacro AIONUI_STOP_APP_PROCESSES',
+    '      Sleep 2000',
+    '      Goto aionui_retry_uninstaller_write',
+    '    ${endif}',
+    '    !insertmacro AIONUI_FAIL_REPORTABLE ${AIONUI_E_EXTRACT_FAILED} "event=session-end result=fail code=${AIONUI_E_EXTRACT_FAILED} phase=uninstaller-write fatal=1 file=${UNINSTALL_FILENAME}" "${AIONUI_MSG_UNINSTALLER_WRITE_EN}" "${AIONUI_MSG_CLOSE_SHOWN_FILE_ACTION_EN}"',
+    '  ${endif}',
+    '  SetOverwrite on',
+  ].join('\n');
+  if (installerPatched.includes('aionui_retry_uninstaller_write')) {
+    // Already patched.
+  } else if (installerPatched.includes(uninstallerWriteLine)) {
+    installerPatched = installerPatched.replace(uninstallerWriteLine, uninstallerWriteGuarded);
+  } else {
+    throw new Error(
+      'electron-builder uninstaller File-write template changed; update patchElectronBuilderNsisInstaller.'
+    );
+  }
+  if (installerPatched !== installerOriginal) {
+    fs.writeFileSync(installerNshPath, installerPatched);
+    console.log('Patched electron-builder NSIS uninstaller write with retry + rollback funnel.');
   }
 }
 

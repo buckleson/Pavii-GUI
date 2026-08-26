@@ -7,7 +7,8 @@ param(
   [string]$Version,
   [string]$Arch,
   [string]$Updated,
-  [string]$CurrentOutDir
+  [string]$CurrentOutDir,
+  [string]$RuntimeKey = 'win32-x64'
 )
 
 $ErrorActionPreference = 'SilentlyContinue'
@@ -79,10 +80,12 @@ try {
     $topLevel = @(Get-ChildItem -LiteralPath $targetPathFull -Force -File -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
     $knownRelative = @(
       'PaviiAi.exe',
-      'Uninstall Pavii.Ai.exe',
+      # Shipping name is "Uninstall PaviiAi.exe" (productFilename, no dot) —
+      # the old "Uninstall Pavii.Ai.exe" entry never matched a real file.
+      'Uninstall PaviiAi.exe',
       'resources\app.asar',
       'resources\app-update.yml',
-      'resources\bundled-paviicore\win32-x64\paviicore.exe'
+      ('resources\bundled-paviicore\' + $RuntimeKey + '\paviicore.exe')
     )
     $known = @(
       $knownRelative |

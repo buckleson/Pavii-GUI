@@ -17,7 +17,43 @@
 !define AIONUI_E_ACTIVE_MARKER_WRITE_FAILED "E1070"
 !define AIONUI_E_INVALID_INSTALL_PATH "E1090"
 
+/*
+ * Transactional-update snapshot. During an update, customRemoveFiles renames
+ * the working install to `$INSTDIR.__old` and records it here INSTEAD of
+ * deleting it; only a fully verified install (customInstall) deletes the
+ * snapshot. Any fatal failure in between restores it, so a failed update can
+ * never leave the machine without a bootable app — which is exactly what
+ * happened live on 2026-08-27 (E1010 after the old install was gone).
+ */
+Var /GLOBAL AionUiOldSnapshotPath
+
+!macro AIONUI_ROLLBACK_OLD_SNAPSHOT
+  ${If} $AionUiOldSnapshotPath != ""
+    ${If} ${FileExists} "$AionUiOldSnapshotPath\*.*"
+      ; The extractor may have left $INSTDIR as the installer's own OutPath,
+      ; which would self-lock the rename below. ($AionUiCurrentOutDir is
+      ; deliberately not updated here: it lives in process-control.nsh, which
+      ; the failure-messagebox smoke harness does not include, and after a
+      ; rollback the session ends in Quit anyway.)
+      SetOutPath $TEMP
+      RMDir /r "$INSTDIR.__failed"
+      ClearErrors
+      Rename "$INSTDIR" "$INSTDIR.__failed"
+      ClearErrors
+      Rename "$AionUiOldSnapshotPath" "$INSTDIR"
+      ${If} ${Errors}
+        !insertmacro AIONUI_SLOG "event=rollback-failed snapshot=$AionUiOldSnapshotPath instDir=$INSTDIR"
+      ${Else}
+        !insertmacro AIONUI_SLOG "event=rollback-restored snapshot=$AionUiOldSnapshotPath instDir=$INSTDIR"
+        RMDir /r "$INSTDIR.__failed"
+      ${EndIf}
+    ${EndIf}
+    StrCpy $AionUiOldSnapshotPath ""
+  ${EndIf}
+!macroend
+
 !macro AIONUI_FAIL_UX _CODE _DETAIL _MSG_EN _ACTION_EN _DIAGNOSTICS_EN
+  !insertmacro AIONUI_ROLLBACK_OLD_SNAPSHOT
   !insertmacro AIONUI_SLOG "event=session-end result=fail code=${_CODE} detail=${_DETAIL}"
   Push $9
   ${If} ${Silent}

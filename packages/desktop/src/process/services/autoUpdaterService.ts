@@ -262,6 +262,55 @@ class AutoUpdaterService extends EventEmitter {
     }
   }
 
+  /**
+   * Wait until no process is running from inside the install directory before
+   * handing off to the silent installer — the same path-prefix test the NSIS
+   * stop logic uses. `backendManager.stop()` resolves when the direct engine
+   * child exits, but grandchildren (bundled node / opencode) may still be
+   * terminating and holding handles; racing them was one leg of the
+   * 2026-08-27 atomic-rename failure. Times out rather than blocking the
+   * update forever: the installer's own silent retries are the backstop.
+   */
+  private async waitForInstallDirProcessSettle(timeoutMs = 10_000): Promise<void> {
+    if (process.platform !== 'win32') {
+      return;
+    }
+    const installDir = path.dirname(process.execPath);
+    const deadline = Date.now() + timeoutMs;
+    const psCommand =
+      `$p='${installDir.replace(/'/g, "''")}\\'; ` +
+      `@(Get-CimInstance Win32_Process | Where-Object { $x=$_.ExecutablePath; if(-not $x){$x=$_.Path}; ` +
+      `$x -and $x.StartsWith($p,[System.StringComparison]::CurrentCultureIgnoreCase) -and $_.ProcessId -ne ${process.pid} }).Count`;
+    const { execFile } = await import('child_process');
+    const countOwned = (): Promise<number> =>
+      new Promise((resolve) => {
+        execFile(
+          'powershell.exe',
+          ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', psCommand],
+          { timeout: 5000, windowsHide: true },
+          (error, stdout) => {
+            if (error) return resolve(-1);
+            const parsed = Number.parseInt(String(stdout).trim(), 10);
+            resolve(Number.isFinite(parsed) ? parsed : -1);
+          }
+        );
+      });
+    for (;;) {
+      const owned = await countOwned();
+      if (owned === 0) {
+        log.info('[auto-update] Install dir settled before installer handoff');
+        return;
+      }
+      if (Date.now() >= deadline) {
+        log.warn('[auto-update] Install dir did not settle before handoff; proceeding (installer retries remain)', {
+          owned,
+        });
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+
   private moveCwdOutOfInstallDirForWindowsHandoff(): void {
     if (process.platform !== 'win32') {
       return;
@@ -905,6 +954,7 @@ class AutoUpdaterService extends EventEmitter {
 
     log.info('Quitting and installing update...');
     try {
+      await this.waitForInstallDirProcessSettle();
       this.moveCwdOutOfInstallDirForWindowsHandoff();
       // The first argument maps to electron-updater's silent installer flag.
       // Windows in-app updates should hand off to NSIS silently; manual website

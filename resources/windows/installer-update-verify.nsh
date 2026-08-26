@@ -199,6 +199,16 @@ Var /GLOBAL AionUiActiveMarkerResult
   !insertmacro AIONUI_VERIFY_CORE_APP_FILES
   !insertmacro AIONUI_VERIFY_BUNDLED_AIONCORE_RESOURCES "${AIONUI_RUNTIME_KEY}"
   !insertmacro AIONUI_LOG_EVENT "verify-install ok instDir=$INSTDIR"
+  ; The new install is verified — only NOW is the transactional snapshot of
+  ; the previous version deleted (customRemoveFiles deferred it; every fatal
+  ; path before this point restores it via AIONUI_ROLLBACK_OLD_SNAPSHOT).
+  ${If} $AionUiOldSnapshotPath != ""
+    StrCpy $AionUiRemoveResidueRoot "$AionUiOldSnapshotPath"
+    !insertmacro AIONUI_REMOVE_INSTALL_DIR
+    !insertmacro AIONUI_LOG_EVENT "event=snapshot-delete result=$AionUiRemoveDirResult snapshot=$AionUiOldSnapshotPath"
+    StrCpy $AionUiRemoveResidueRoot "$INSTDIR"
+    StrCpy $AionUiOldSnapshotPath ""
+  ${EndIf}
   !insertmacro AIONUI_CLEAR_ACTIVE_INSTALLER_MARKER
   !insertmacro AIONUI_SESSION_SUCCESS
 !macroend

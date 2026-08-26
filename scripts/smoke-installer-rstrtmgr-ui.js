@@ -102,7 +102,7 @@ SilentInstall normal
 !define VERSION "rstrtmgr-ui-smoke"
 !define AIONUI_TARGET_ARCH "x64"
 !define AIONUI_APP_EXECUTABLE_FILENAME "PaviiAi.exe"
-!define UNINSTALL_FILENAME "Uninstall Pavii.Ai.exe"
+!define UNINSTALL_FILENAME "Uninstall PaviiAi.exe"
 !define PROJECT_DIR "${nsisQuote(repoRoot)}"
 !include LogicLib.nsh
 !include "${nsisQuote(messagesPath)}"

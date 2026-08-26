@@ -1,6 +1,19 @@
 !ifndef AIONUI_INSTALLER_REMOVE_REGISTRY_NSH
 !define AIONUI_INSTALLER_REMOVE_REGISTRY_NSH
 
+; Top-level like installer-update-verify.nsh: these are used by
+; customRemoveFiles AND customInstall (the deferred snapshot delete), and a
+; declaration inside one macro is invisible to the other at compile time.
+Var /GLOBAL AionUiRemoveDirResult
+Var /GLOBAL AionUiAtomicFailedPath
+Var /GLOBAL AionUiAtomicRemoveSucceeded
+Var /GLOBAL AionUiAtomicStagingDir
+Var /GLOBAL AionUiRemoveResidueCount
+Var /GLOBAL AionUiRemoveResidueRoot
+Var /GLOBAL AionUiRemoveFirstFailedPath
+Var /GLOBAL AionUiRemoveFirstFailedFile
+Var /GLOBAL AionUiAtomicSilentRetries
+
 !macro AIONUI_CLEAR_INSTALL_REGISTRY _REASON
   DeleteRegKey SHCTX "${UNINSTALL_REGISTRY_KEY}"
   DeleteRegKey SHCTX "${INSTALL_REGISTRY_KEY}"
@@ -101,14 +114,6 @@
 
 !macro customRemoveFiles
   !insertmacro AIONUI_LOG_EVENT "remove-start instDir=$INSTDIR"
-  Var /GLOBAL AionUiRemoveDirResult
-  Var /GLOBAL AionUiAtomicFailedPath
-  Var /GLOBAL AionUiAtomicRemoveSucceeded
-  Var /GLOBAL AionUiAtomicStagingDir
-  Var /GLOBAL AionUiRemoveResidueCount
-  Var /GLOBAL AionUiRemoveResidueRoot
-  Var /GLOBAL AionUiRemoveFirstFailedPath
-  Var /GLOBAL AionUiRemoveFirstFailedFile
   StrCpy $AionUiAtomicFailedPath ""
   StrCpy $AionUiAtomicRemoveSucceeded "0"
   StrCpy $AionUiAtomicStagingDir ""
@@ -128,10 +133,23 @@
       StrCpy $AionUiRemoveResidueRoot "$INSTDIR"
     ${EndIf}
 
+    StrCpy $AionUiAtomicSilentRetries "0"
     aionui_retry_atomic_rename:
       ClearErrors
       Rename "$INSTDIR" "$AionUiAtomicStagingDir"
     ${if} ${Errors}
+      ; Silent handoffs (the in-app updater) have no retry dialog, so give
+      ; them a real budget: stop owned processes, let handles settle, retry.
+      ; The 2026-08-27 live failure had exactly one silent shot and aborted.
+      ${If} ${Silent}
+        ${If} $AionUiAtomicSilentRetries < 3
+          IntOp $AionUiAtomicSilentRetries $AionUiAtomicSilentRetries + 1
+          !insertmacro AIONUI_LOG_EVENT "event=atomic-silent-retry attempt=$AionUiAtomicSilentRetries instDir=$INSTDIR"
+          !insertmacro AIONUI_STOP_APP_PROCESSES
+          Sleep 2000
+          Goto aionui_retry_atomic_rename
+        ${EndIf}
+      ${EndIf}
       DetailPrint "Atomic update cleanup failed before replacing previous installation: $INSTDIR"
       StrCpy $AionUiAtomicFailedPath "$INSTDIR"
       !insertmacro AIONUI_LOG_ATOMIC_REMOVE_FAILURE
@@ -142,13 +160,19 @@
       ${EndIf}
       aionui_continue_atomic_failed:
       !insertmacro AIONUI_LOG_REMOVE_FAILURE_JSON "atomic-failed" "1" "$AionUiAtomicFailedPath" "$$payload.atomicFailedPath = '$AionUiAtomicFailedPath'"
-      !insertmacro AIONUI_LOG_EVENT "code=${AIONUI_E_INSTALL_DIR_REMOVE_OR_LOCKED} phase=atomic-failed fatal=1 degraded=none firstFailed=$AionUiAtomicFailedPath atomicFailedPath=$AionUiAtomicFailedPath"
-      !insertmacro AIONUI_CLEAR_INSTALL_REGISTRY "remove-failed-before-quit"
-      !insertmacro AIONUI_FAIL_REPORTABLE ${AIONUI_E_INSTALL_DIR_REMOVE_OR_LOCKED} "event=session-end result=fail code=${AIONUI_E_INSTALL_DIR_REMOVE_OR_LOCKED} phase=atomic-failed fatal=1 firstFailed=$AionUiAtomicFailedPath lockers=$AionUiLockerList" "${AIONUI_MSG_REPLACE_LOCKED_EN}" "${AIONUI_MSG_CLOSE_SHOWN_FILE_ACTION_EN}"
+      ; The rename never happened, so the previous installation is intact and
+      ; bootable at $INSTDIR — its registry entry MUST survive. Clearing it
+      ; here (as this path used to) orphaned a working install from
+      ; "Installed apps" and sent the next run's heal logic into a cascade.
+      !insertmacro AIONUI_LOG_EVENT "code=${AIONUI_E_INSTALL_DIR_REMOVE_OR_LOCKED} phase=atomic-failed fatal=1 degraded=none oldInstallIntact=1 firstFailed=$AionUiAtomicFailedPath atomicFailedPath=$AionUiAtomicFailedPath"
+      !insertmacro AIONUI_FAIL_REPORTABLE ${AIONUI_E_INSTALL_DIR_REMOVE_OR_LOCKED} "event=session-end result=fail code=${AIONUI_E_INSTALL_DIR_REMOVE_OR_LOCKED} phase=atomic-failed fatal=1 oldInstallIntact=1 firstFailed=$AionUiAtomicFailedPath lockers=$AionUiLockerList" "${AIONUI_MSG_REPLACE_LOCKED_EN}" "${AIONUI_MSG_CLOSE_SHOWN_FILE_ACTION_EN}"
     ${else}
-      !insertmacro AIONUI_LOG_EVENT "remove-atomic result=0 staging=$AionUiAtomicStagingDir"
+      ; Transactional update: the old install survives as the snapshot until
+      ; customInstall verifies the new one (see AIONUI_ROLLBACK_OLD_SNAPSHOT).
+      !insertmacro AIONUI_LOG_EVENT "remove-atomic result=0 staging=$AionUiAtomicStagingDir deferredDelete=1"
       StrCpy $AionUiAtomicRemoveSucceeded "1"
-      StrCpy $AionUiRemoveResidueRoot "$AionUiAtomicStagingDir"
+      StrCpy $AionUiOldSnapshotPath "$AionUiAtomicStagingDir"
+      Goto aionui_remove_files_done
     ${endif}
   ${endif}
 
@@ -182,6 +206,7 @@
   ${else}
     !insertmacro AIONUI_LOG_EVENT "remove-final errors=0 instDir=$INSTDIR removeDirResult=$AionUiRemoveDirResult removeResidueCount=$AionUiRemoveResidueCount removeResidueRoot=$AionUiRemoveResidueRoot atomicFailedPath=$AionUiAtomicFailedPath atomicSucceeded=$AionUiAtomicRemoveSucceeded"
   ${endif}
+  aionui_remove_files_done:
 !macroend
 
 !macro customUnInit
