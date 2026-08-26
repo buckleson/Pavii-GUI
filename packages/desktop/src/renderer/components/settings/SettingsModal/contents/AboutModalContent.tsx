@@ -5,7 +5,8 @@
  */
 
 import { Divider, Typography, Button, Switch, Message } from '@arco-design/web-react';
-import { Github, Right } from '@icon-park/react';
+import { Github, Instagram, Right } from '@icon-park/react';
+import { LinkedinGlyph, MediumGlyph, SubstackGlyph, XGlyph } from '@renderer/components/icons/BrandGlyphs';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import classNames from 'classnames';
@@ -37,21 +38,11 @@ type LinkItem =
 /**
  * Social destinations shown beside the version badge.
  *
- * X and LinkedIn use typographic glyphs rather than icons: @icon-park ships no
- * LinkedIn mark and only the retired Twitter bird, and both brands are
- * wordmarks anyway — the same call the share modal already makes. Labels stay
- * untranslated, as brand names are everywhere else in the app.
- *
- * The GitHub glyph keeps pointing at the product page: the repository is
- * private, so a real GitHub link would 404 for everyone (see the note further
- * down this file).
+ * GitHub and Instagram come from @icon-park; X, LinkedIn, Medium, and
+ * Substack use the inline brand marks in components/icons/BrandGlyphs
+ * (@icon-park ships neither those brands nor the current X logo). Labels
+ * stay untranslated, as brand names are everywhere else in the app.
  */
-/** Fixed-width wordmark so the row stays evenly spaced whatever the letters. */
-const wordmark = (text: string, size: number): React.ReactNode => (
-  <span className='inline-block w-20px text-center font-700 leading-none' style={{ fontSize: size }}>
-    {text}
-  </span>
-);
 
 /**
  * Destinations for the text links below the update section. Hoisted and
@@ -74,27 +65,27 @@ export const SOCIAL_LINKS: Array<{ label: string; url: string; glyph: React.Reac
   {
     label: 'X',
     url: 'https://x.com/Bucklesongroup',
-    glyph: wordmark('X', 16),
+    glyph: <XGlyph />,
   },
   {
     label: 'LinkedIn',
     url: 'https://www.linkedin.com/company/thepavii/',
-    glyph: wordmark('in', 14),
+    glyph: <LinkedinGlyph />,
   },
   {
     label: 'Instagram',
     url: 'https://www.instagram.com/pavii.ai/',
-    glyph: wordmark('IG', 13),
+    glyph: <Instagram theme='outline' size='19' />,
   },
   {
     label: 'Medium',
     url: 'https://medium.com/@pavii.ai',
-    glyph: wordmark('M', 16),
+    glyph: <MediumGlyph />,
   },
   {
     label: 'Substack',
     url: 'https://substack.com/@paviiai',
-    glyph: wordmark('S', 16),
+    glyph: <SubstackGlyph />,
   },
 ];
 

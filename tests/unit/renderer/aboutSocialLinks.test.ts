@@ -60,6 +60,19 @@ describe('About panel social links', () => {
   });
 });
 
+describe('About panel social glyphs', () => {
+  it('renders every entry with a real brand mark, not a text wordmark', () => {
+    // X/LinkedIn/Instagram/Medium/Substack used to be bold letters ("X",
+    // "in", "IG"…). A wordmark is a host element (<span>, type is a string);
+    // every real mark is a component (icon-park or BrandGlyphs), whose
+    // element type is a function.
+    for (const link of SOCIAL_LINKS) {
+      const glyph = link.glyph as { type?: unknown };
+      expect(typeof glyph?.type, `${link.label} glyph should be an icon component`).toBe('function');
+    }
+  });
+});
+
 describe('About panel text links', () => {
   it('sends each label where it says it goes, not the product landing page', () => {
     // All three used to open the same landing page whatever their label said.
