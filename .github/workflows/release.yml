@@ -156,6 +156,29 @@ jobs:
           gh release download "$TAG" --dir release
           ls -lh release
 
+      # Installers are named by package.json's version, not the tag. On a
+      # stable tag the two MUST agree (tagging the wrong commit is exactly
+      # what this catches). On a prerelease tag (v2.2.0-rc.1) they differ by
+      # design — the rc rehearses the 2.2.0 artifacts — so every later step
+      # keys on ARTIFACT_V, the version the build actually produced.
+      - name: Resolve artifact version
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARTIFACT_V=$(sed -n 's/^version: //p' release/latest.yml | tr -d '\r' | head -1)
+          [ -n "$ARTIFACT_V" ] || { echo "could not read version from release/latest.yml"; exit 1; }
+          echo "ARTIFACT_V=$ARTIFACT_V" >> "$GITHUB_ENV"
+          if [[ "$TAG" != *-* ]]; then
+            [ "$VERSION" = "$ARTIFACT_V" ] || {
+              echo "Refusing to publish: tag says $VERSION but the artifacts are $ARTIFACT_V."
+              echo "The tag points at a commit whose package.json does not match the tag."
+              exit 1
+            }
+            echo "tag and artifacts agree: $ARTIFACT_V"
+          else
+            echo "prerelease tag $TAG rehearsing artifact version $ARTIFACT_V"
+          fi
+
       # Channel files arrive already under their published per-arch names —
       # each build job renames its own before uploading (see the matrix
       # comment in _build-reusable.yml). This step only adds the stable-named
@@ -168,7 +191,7 @@ jobs:
 
           # Stable-named aliases so website links like
           # releases/latest/download/Pavii.Ai-Windows-x64-Setup.exe keep working.
-          V="$VERSION"
+          V="$ARTIFACT_V"
           alias_of() { [ -f "release/$1" ] && cp "release/$1" "release/$2" || true; }
           alias_of "Pavii.Ai-$V-win-x64.exe"       "Pavii.Ai-Windows-x64-Setup.exe"
           alias_of "Pavii.Ai-$V-win-arm64.exe"     "Pavii.Ai-Windows-arm64-Setup.exe"
@@ -210,7 +233,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          for f in "Pavii.Ai-$VERSION-win-x64.exe.blockmap" "Pavii.Ai-$VERSION-win-arm64.exe.blockmap"; do
+          for f in "Pavii.Ai-$ARTIFACT_V-win-x64.exe.blockmap" "Pavii.Ai-$ARTIFACT_V-win-arm64.exe.blockmap"; do
             if [ -f "release/$f" ]; then echo "ok      $f"; else echo "MISSING $f"; missing=1; fi
           done
           [ "$missing" -eq 0 ] || { echo "Refusing to publish: Windows differential update blockmaps are missing."; exit 1; }
@@ -227,8 +250,8 @@ jobs:
                    latest-linux.yml latest-linux-arm64.yml; do
             if [ ! -f "release/$f" ]; then
               echo "MISSING $f"; missing=1
-            elif grep -Eq "^version: ${VERSION}\s*$" "release/$f"; then
-              echo "ok      $f (version $VERSION)"
+            elif grep -Eq "^version: ${ARTIFACT_V}\s*$" "release/$f"; then
+              echo "ok      $f (version $ARTIFACT_V)"
             else
               echo "WRONG VERSION in $f: $(grep '^version:' "release/$f" || echo none)"; missing=1
             fi
@@ -244,14 +267,17 @@ jobs:
           for f in release/Pavii.Ai-*; do
             base=$(basename "$f")
             case " $aliases " in *" $base "*) continue ;; esac
-            if [[ "$base" != *"$VERSION"* ]]; then
-              echo "VERSION MISMATCH: $base does not contain $VERSION"; bad=1
+            if [[ "$base" != *"$ARTIFACT_V"* ]]; then
+              echo "VERSION MISMATCH: $base does not contain $ARTIFACT_V"; bad=1
             fi
           done
+          # sha256sum separates hash and name with "  " (text) or " *"
+          # (binary, the Git Bash default) — accept either.
+          awk '{ line=$0; sub(/^[0-9a-f]+ [ *]/, "", line); print line }' release/SHA256SUMS > /tmp/summed.txt
           for f in release/*; do
             base=$(basename "$f")
             [ "$base" = "SHA256SUMS" ] && continue
-            grep -q " $base\$" release/SHA256SUMS || { echo "UNCHECKSUMMED: $base"; bad=1; }
+            grep -Fxq "$base" /tmp/summed.txt || { echo "UNCHECKSUMMED: $base"; bad=1; }
           done
           [ "$bad" -eq 0 ] || { echo "Refusing to publish: version or checksum inconsistency."; exit 1; }
           echo "all assets carry $VERSION and are checksummed"
