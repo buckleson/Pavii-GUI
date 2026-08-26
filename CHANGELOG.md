@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.2](https://www.pavii.tech/products/dev-tools/) (2026-08-27)
+
+### Desktop
+
+#### Bug Fixes
+
+- **updater:** the update feed now reads the public releases mirror, so the app updates even with the source repository private
+
+---
+
 ## [2.2.1](https://www.pavii.tech/products/dev-tools/) (2026-08-26)
 
 ### Desktop
