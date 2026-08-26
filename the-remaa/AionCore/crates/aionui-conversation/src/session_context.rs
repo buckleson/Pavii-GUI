@@ -71,6 +71,17 @@ impl<'a> SessionContextBuilder<'a> {
         self.build_with_workspace_override(row, None, None).await
     }
 
+    /// Resolve JUST the workspace path for a row — the same directory that
+    /// becomes the agent's process cwd and ACP session cwd. Used by the send
+    /// boundary to materialize attachments where the CLI can actually read
+    /// them; creates the auto workspace when it does not exist yet (same as
+    /// the full build).
+    pub(crate) fn resolve_workspace_path(&self, row: &ConversationRow) -> Result<String, ConversationError> {
+        let agent_type: AgentType = string_to_enum(&row.r#type)?;
+        let extra = parse_extra(row)?;
+        Ok(self.resolve_workspace(row, &agent_type, &extra, None)?.path)
+    }
+
     async fn build_with_workspace_override(
         &self,
         row: &ConversationRow,

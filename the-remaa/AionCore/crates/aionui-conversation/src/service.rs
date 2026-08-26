@@ -515,6 +515,7 @@ impl ConversationService {
         user_id: &str,
         content: &str,
         files: &[ChatFileRef],
+        materialize_workspace: Option<&str>,
     ) -> Result<ResolvedChatMessage, ConversationError> {
         if files.is_empty() {
             return Ok(ResolvedChatMessage {
@@ -532,11 +533,36 @@ impl ConversationService {
             })?;
         let upload_root = std::env::temp_dir().join("aionui");
         project
-            .resolve_chat_message(user_id, content, files, &upload_root)
+            .resolve_chat_message(
+                user_id,
+                content,
+                files,
+                &upload_root,
+                materialize_workspace.map(std::path::Path::new),
+            )
             .await
             .map_err(|err| ConversationError::BadRequest {
                 reason: err.to_string(),
             })
+    }
+
+    /// Workspace path for a conversation row, for attachment materialization.
+    /// Failure is tolerated (None): a send with attachments still works, the
+    /// paths just stay in the upload store — degraded but not broken.
+    fn attachment_workspace_for(&self, row: &aionui_db::models::ConversationRow) -> Option<String> {
+        let builder =
+            SessionContextBuilder::new(&self.workspace_root, &self.agent_metadata_repo, &self.acp_session_repo);
+        match builder.resolve_workspace_path(row) {
+            Ok(path) => Some(path),
+            Err(error) => {
+                warn!(
+                    conversation_id = %row.id,
+                    %error,
+                    "could not resolve workspace for attachment materialization; sending upload-store paths"
+                );
+                None
+            }
+        }
     }
 
     pub fn with_assistant_definition_repo(&self, repo: Arc<dyn IAssistantDefinitionRepository>) {
@@ -3812,8 +3838,16 @@ impl ConversationService {
         // Resolve file attachments at the send boundary before any persist/claim
         // (atomic: a bad reference fails the whole send). Produces the inlined
         // `[[AION_FILES]]` content used for persistence, broadcast, and the turn.
+        // Attachments are materialized into the conversation workspace so the
+        // agent CLI — whose cwd and sandbox are that workspace — can read the
+        // actual bytes, not just see pixels in the prompt.
+        let attachment_workspace = if req.files.is_empty() {
+            None
+        } else {
+            self.attachment_workspace_for(&row)
+        };
         let resolved = self
-            .resolve_message_attachments(user_id, &req.content, &req.files)
+            .resolve_message_attachments(user_id, &req.content, &req.files, attachment_workspace.as_deref())
             .await?;
 
         // ── Mid-turn delivery (B5, spec §4.3) ────────────────────────────

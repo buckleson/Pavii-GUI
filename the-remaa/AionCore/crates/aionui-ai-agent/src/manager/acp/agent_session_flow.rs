@@ -1646,10 +1646,15 @@ mod tests {
         assert_eq!(blocks.len(), 2);
         match &blocks[0] {
             ContentBlock::Text(text) => {
-                // Image path left the marker list; the pdf stays.
+                // EVERY path stays in the marker — including the image sent
+                // as a native block. Stripping it left the CLI with pixels it
+                // could see but no file it could read (live 2026-08-27).
                 assert_eq!(
                     text.text,
-                    format!("look\n\n{}\n{pdf}", aionui_common::constants::AIONUI_FILES_MARKER)
+                    format!(
+                        "look\n\n{}\n{img}\n{pdf}",
+                        aionui_common::constants::AIONUI_FILES_MARKER
+                    )
                 );
             }
             other => panic!("expected text block, got {other:?}"),

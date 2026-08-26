@@ -182,6 +182,9 @@ pub enum ProjectError {
     #[error("local file path is not a readable file: {path}")]
     LocalPathNotReadable { path: String },
 
+    #[error("failed to copy attachment into the workspace: {path}: {reason}")]
+    AttachmentCopyFailed { path: String, reason: String },
+
     #[error(transparent)]
     Database(#[from] DbError),
 }
@@ -209,6 +212,7 @@ impl ProjectError {
             ProjectError::UploadPathOutsideRoot { .. } => "upload_path_outside_root",
             ProjectError::ChatFileMissing { .. } => "chat_file_missing",
             ProjectError::LocalPathNotReadable { .. } => "local_path_not_readable",
+            ProjectError::AttachmentCopyFailed { .. } => "attachment_copy_failed",
             ProjectError::Database(_) => "internal_db_error",
         }
     }

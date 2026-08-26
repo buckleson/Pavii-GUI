@@ -38,6 +38,7 @@ async fn resolves_project_file_and_inlines_marker() {
                 relative_path: "note.txt".into(),
             }],
             upload_root.path(),
+            None,
         )
         .await
         .unwrap();
@@ -68,6 +69,7 @@ async fn resolves_project_directory_ref() {
                 relative_path: "sub".into(),
             }],
             upload_root.path(),
+            None,
         )
         .await
         .unwrap();
@@ -92,6 +94,7 @@ async fn resolves_project_root_ref_empty_relative_path() {
                 relative_path: String::new(),
             }],
             upload_root.path(),
+            None,
         )
         .await
         .unwrap();
@@ -142,6 +145,7 @@ async fn emitted_absolute_path_keeps_real_root_casing() {
                 relative_path: "Brief.md".into(),
             }],
             upload_root.path(),
+            None,
         )
         .await
         .unwrap();
@@ -161,10 +165,116 @@ async fn emitted_absolute_path_keeps_real_root_casing() {
 }
 
 #[tokio::test]
+async fn materializes_uploads_into_the_workspace_attachments_dir() {
+    // The agent CLI's cwd and sandbox are the workspace; an upload-store path
+    // is unreadable to it. Materialization copies the bytes into
+    // <workspace>/attachments and the emitted paths point at the copies.
+    let (service, _pe, _dir, upload_root) = setup().await;
+    let workspace = tempfile::tempdir().unwrap();
+    let conv_dir = upload_root.path().join("conv-1");
+    std::fs::create_dir_all(&conv_dir).unwrap();
+    let src = conv_dir.join("photo.png");
+    std::fs::write(&src, b"png-bytes").unwrap();
+
+    let out = service
+        .resolve_chat_message(
+            "system_default_user",
+            "make a pdf",
+            &[ChatFileRef::Upload {
+                path: src.to_string_lossy().into_owned(),
+            }],
+            upload_root.path(),
+            Some(workspace.path()),
+        )
+        .await
+        .unwrap();
+
+    let dest = workspace.path().join("attachments").join("photo.png");
+    assert!(dest.is_file(), "attachment must be copied into the workspace");
+    assert_eq!(std::fs::read(&dest).unwrap(), b"png-bytes");
+    assert_eq!(out.files.len(), 1);
+    assert!(
+        out.files[0].contains("attachments"),
+        "emitted path must be the workspace copy, got {}",
+        out.files[0]
+    );
+    assert!(
+        out.content.contains(&out.files[0]),
+        "the [[AION_FILES]] block must list the workspace copy"
+    );
+}
+
+#[tokio::test]
+async fn materialization_reuses_same_size_copies_and_renames_conflicts() {
+    let (service, _pe, _dir, upload_root) = setup().await;
+    let workspace = tempfile::tempdir().unwrap();
+    let conv_dir = upload_root.path().join("conv-1");
+    std::fs::create_dir_all(&conv_dir).unwrap();
+    let src = conv_dir.join("doc.txt");
+    std::fs::write(&src, b"same-bytes").unwrap();
+    let send = |workspace: std::path::PathBuf, src: std::path::PathBuf| {
+        let service = service.clone();
+        let upload_root = upload_root.path().to_path_buf();
+        async move {
+            service
+                .resolve_chat_message(
+                    "system_default_user",
+                    "hi",
+                    &[ChatFileRef::Upload {
+                        path: src.to_string_lossy().into_owned(),
+                    }],
+                    &upload_root,
+                    Some(workspace.as_path()),
+                )
+                .await
+                .unwrap()
+        }
+    };
+
+    // Re-sending the identical file must reuse the copy, not mint "doc (2)".
+    let first = send(workspace.path().to_path_buf(), src.clone()).await;
+    let second = send(workspace.path().to_path_buf(), src.clone()).await;
+    assert_eq!(first.files, second.files);
+    assert!(!workspace.path().join("attachments").join("doc (2).txt").exists());
+
+    // A DIFFERENT file with the same name gets the suffixed copy.
+    std::fs::write(&src, b"different-length-bytes").unwrap();
+    let third = send(workspace.path().to_path_buf(), src.clone()).await;
+    assert!(third.files[0].ends_with("doc (2).txt"), "got {}", third.files[0]);
+}
+
+#[tokio::test]
+async fn attachments_already_inside_the_workspace_are_not_copied() {
+    let (service, _pe, _dir, upload_root) = setup().await;
+    let workspace = tempfile::tempdir().unwrap();
+    let inside = workspace.path().join("notes.md");
+    std::fs::write(&inside, b"already here").unwrap();
+
+    let out = service
+        .resolve_chat_message(
+            "system_default_user",
+            "hi",
+            &[ChatFileRef::Local {
+                path: inside.to_string_lossy().into_owned(),
+            }],
+            upload_root.path(),
+            Some(workspace.path()),
+        )
+        .await
+        .unwrap();
+
+    assert!(
+        !workspace.path().join("attachments").exists(),
+        "no copy for in-workspace files"
+    );
+    assert_eq!(out.files.len(), 1);
+}
+
+#[tokio::test]
 async fn empty_files_leaves_content_unchanged() {
     let (service, _pe, _dir, upload_root) = setup().await;
     let out = service
-        .resolve_chat_message("system_default_user", "hi", &[], upload_root.path())
+        .resolve_chat_message("system_default_user", "hi", &[], upload_root.path(), None)
         .await
         .unwrap();
     assert_eq!(out.content, "hi");
@@ -183,6 +293,7 @@ async fn missing_project_file_is_atomic_error() {
                 relative_path: "nope.txt".into(),
             }],
             upload_root.path(),
+            None,
         )
         .await
         .unwrap_err();
@@ -202,6 +313,7 @@ async fn upload_under_root_is_accepted() {
             "",
             &[ChatFileRef::Upload { path: path.clone() }],
             upload_root.path(),
+            None,
         )
         .await
         .unwrap();
@@ -224,6 +336,7 @@ async fn local_readable_file_resolves_and_inlines_marker() {
             "see this",
             &[ChatFileRef::Local { path }],
             upload_root.path(),
+            None,
         )
         .await
         .unwrap();
@@ -257,6 +370,7 @@ async fn local_canonicalizes_symlink_to_target_path() {
                 path: link_path.clone(),
             }],
             upload_root.path(),
+            None,
         )
         .await
         .unwrap();
@@ -286,6 +400,7 @@ async fn local_nonexistent_is_rejected() {
             "x",
             &[ChatFileRef::Local { path: missing }],
             upload_root.path(),
+            None,
         )
         .await
         .unwrap_err();
@@ -305,6 +420,7 @@ async fn local_directory_is_rejected() {
             "x",
             &[ChatFileRef::Local { path }],
             upload_root.path(),
+            None,
         )
         .await
         .unwrap_err();
@@ -327,6 +443,7 @@ async fn upload_outside_root_is_rejected() {
                 path: ext.to_string_lossy().into_owned(),
             }],
             upload_root.path(),
+            None,
         )
         .await
         .unwrap_err();

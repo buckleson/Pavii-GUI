@@ -33,16 +33,27 @@ pub struct ResolvedChatMessage {
 impl ProjectService {
     /// Resolve a message's `files` to absolute paths and return the inlined
     /// content. Atomic: any bad reference (unknown pe, escape, missing file,
-    /// out-of-root upload, unreadable local path) fails the whole message.
+    /// out-of-root upload, unreadable local path, failed materialization)
+    /// fails the whole message.
     ///
     /// `upload_root` is the managed upload directory (`temp_dir()/aionui`);
     /// `Upload` paths must live under it.
+    ///
+    /// `materialize_workspace`: when set, every attachment that does not
+    /// already live under this directory is COPIED into
+    /// `<workspace>/attachments/` and the emitted paths point at the copies.
+    /// This is what makes attachments readable by the agent CLI: its process
+    /// cwd and sandbox are the workspace, while uploads land in the OS temp
+    /// dir and host-picker files live anywhere — paths the CLI could not
+    /// open ("the images in your message are visible in chat only",
+    /// reported live 2026-08-27).
     pub async fn resolve_chat_message(
         &self,
         user_id: &str,
         content: &str,
         files: &[ChatFileRef],
         upload_root: &Path,
+        materialize_workspace: Option<&Path>,
     ) -> Result<ResolvedChatMessage, ProjectError> {
         let mut paths = Vec::with_capacity(files.len());
         for file in files {
@@ -50,6 +61,10 @@ impl ProjectService {
                 self.resolve_chat_file_ref(user_id, file, upload_root, FileOp::Read)
                     .await?,
             );
+        }
+
+        if let Some(workspace) = materialize_workspace {
+            paths = materialize_attachments(workspace, paths).await?;
         }
 
         let content = if paths.is_empty() {
@@ -256,6 +271,81 @@ fn path_within(root: &Path, target: &Path) -> bool {
         return false;
     };
     target.starts_with(root)
+}
+
+/// Copy resolved attachments into `<workspace>/attachments/`, returning the
+/// destination paths. Files already under the workspace are passed through
+/// untouched (a project-conversation attachment may already be in the cwd).
+///
+/// Collision policy: an existing destination with the SAME byte length is
+/// reused (re-sending the same file must not spawn `name (2).ext` copies);
+/// a different length gets a ` (N)` suffix like the upload store does.
+async fn materialize_attachments(workspace: &Path, paths: Vec<String>) -> Result<Vec<String>, ProjectError> {
+    if paths.is_empty() {
+        return Ok(paths);
+    }
+    let attachments_dir = workspace.join("attachments");
+    let mut out = Vec::with_capacity(paths.len());
+    for source in paths {
+        let source_path = Path::new(&source);
+        if path_within(workspace, source_path) {
+            out.push(source);
+            continue;
+        }
+        tokio::fs::create_dir_all(&attachments_dir)
+            .await
+            .map_err(|e| ProjectError::AttachmentCopyFailed {
+                path: attachments_dir.to_string_lossy().into_owned(),
+                reason: e.to_string(),
+            })?;
+        let source_len = tokio::fs::metadata(source_path)
+            .await
+            .map_err(|e| ProjectError::AttachmentCopyFailed {
+                path: source.clone(),
+                reason: e.to_string(),
+            })?
+            .len();
+        let file_name = source_path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "attachment".to_owned());
+        let (stem, ext) = match file_name.rsplit_once('.') {
+            Some((stem, ext)) if !stem.is_empty() => (stem.to_owned(), format!(".{ext}")),
+            _ => (file_name.clone(), String::new()),
+        };
+        let mut dest = attachments_dir.join(&file_name);
+        let mut suffix = 2u32;
+        loop {
+            match tokio::fs::metadata(&dest).await {
+                Err(_) => break,
+                Ok(existing) if existing.len() == source_len => break,
+                Ok(_) => {
+                    dest = attachments_dir.join(format!("{stem} ({suffix}){ext}"));
+                    suffix += 1;
+                    if suffix > 100 {
+                        return Err(ProjectError::AttachmentCopyFailed {
+                            path: source.clone(),
+                            reason: "too many name collisions in attachments dir".to_owned(),
+                        });
+                    }
+                }
+            }
+        }
+        let already_there = tokio::fs::metadata(&dest)
+            .await
+            .map(|existing| existing.len() == source_len)
+            .unwrap_or(false);
+        if !already_there {
+            tokio::fs::copy(source_path, &dest)
+                .await
+                .map_err(|e| ProjectError::AttachmentCopyFailed {
+                    path: source.clone(),
+                    reason: e.to_string(),
+                })?;
+        }
+        out.push(dest.to_string_lossy().into_owned());
+    }
+    Ok(out)
 }
 
 #[cfg(test)]

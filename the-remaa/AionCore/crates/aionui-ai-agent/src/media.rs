@@ -76,13 +76,15 @@ pub fn partition_media(content: &str, files: &[String], caps: PromptMediaCaps) -
         }
     }
 
-    let content = if media.is_empty() {
-        content.to_owned()
-    } else {
-        append_files_marker(strip_files_marker(content, files), &path_files)
-    };
+    // The text block keeps EVERY attachment path — including the ones also
+    // sent as native media blocks. Stripping media paths (the old behavior)
+    // left an image-capable CLI with pixels it could see but no file it could
+    // read, so "make a PDF from these images" dead-ended with the agent
+    // asking the user for local paths (reported live 2026-08-27). The paths
+    // point into the conversation workspace (the CLI's cwd) since the send
+    // boundary materializes attachments there.
     MediaPartition {
-        content,
+        content: content.to_owned(),
         path_files,
         media,
     }
@@ -115,30 +117,6 @@ fn classify(path: &str, caps: PromptMediaCaps) -> Option<MediaAttachment> {
             warn!(path, "media attachment unreadable; sending as path");
             None
         }
-    }
-}
-
-/// Strip the trailing `[[AION_FILES]]` block iff its path list matches
-/// `files` exactly (same validation as aionrs `strip_attachment_metadata`);
-/// otherwise return `content` unchanged.
-fn strip_files_marker<'a>(content: &'a str, files: &[String]) -> &'a str {
-    let Some((user_text, metadata)) = content.rsplit_once(AIONUI_FILES_MARKER) else {
-        return content;
-    };
-    let metadata_files = metadata.lines().map(str::trim).filter(|line| !line.is_empty());
-    if metadata_files.eq(files.iter().map(String::as_str)) {
-        user_text.strip_suffix("\n\n").unwrap_or(user_text)
-    } else {
-        content
-    }
-}
-
-/// Re-append the marker block in the exact `resolve_chat_message` format.
-fn append_files_marker(content: &str, paths: &[String]) -> String {
-    if paths.is_empty() {
-        content.to_owned()
-    } else {
-        format!("{content}\n\n{AIONUI_FILES_MARKER}\n{}", paths.join("\n"))
     }
 }
 
@@ -195,11 +173,16 @@ mod tests {
     }
 
     #[test]
-    fn image_partitions_to_media_and_marker_is_removed() {
+    fn image_partitions_to_media_and_keeps_its_path_in_the_marker() {
+        // The path STAYS in the text even though pixels ride as a media
+        // block: stripping it left an image-capable CLI with pixels it could
+        // see but no file it could read ("visible in chat only", live
+        // 2026-08-27). The path points into the agent's own workspace since
+        // the send boundary materializes attachments there.
         let img = temp_file("b.png", b"png");
         let content = inline("look at this", &[&img]);
         let part = partition_media(&content, std::slice::from_ref(&img), CAPS_IMAGE);
-        assert_eq!(part.content, "look at this");
+        assert_eq!(part.content, content);
         assert!(part.path_files.is_empty());
         assert_eq!(part.media.len(), 1);
         assert_eq!(part.media[0].mime, "image/png");
@@ -207,12 +190,12 @@ mod tests {
     }
 
     #[test]
-    fn mixed_files_keep_non_media_in_marker() {
+    fn mixed_files_keep_every_path_in_marker() {
         let img = temp_file("c.jpg", b"jpg");
         let doc = temp_file("c.pdf", b"pdf");
         let content = inline("mix", &[&img, &doc]);
         let part = partition_media(&content, &[img.clone(), doc.clone()], CAPS_IMAGE);
-        assert_eq!(part.content, inline("mix", &[&doc]));
+        assert_eq!(part.content, content);
         assert_eq!(part.path_files, vec![doc]);
         assert_eq!(part.media.len(), 1);
         assert_eq!(part.media[0].path, img);

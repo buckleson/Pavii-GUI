@@ -238,6 +238,11 @@ impl From<ProjectError> for ApiError {
                 "local_path_not_readable",
                 Some(json!({ "path": path })),
             ),
+            ProjectError::AttachmentCopyFailed { path, .. } => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "attachment_copy_failed",
+                Some(json!({ "path": path })),
+            ),
             ProjectError::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_error", None),
         };
         // Never leak internal DB detail to clients (Security: no internal leakage).
