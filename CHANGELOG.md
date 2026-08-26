@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.2.1](https://www.pavii.tech/products/dev-tools/) (2026-08-26)
+
+### Desktop
+
+#### Features
+
+- **welcome:** the feedback pill now books a call — "Tell us how you feel about the product"
+- **about:** real brand marks for X, LinkedIn, Instagram, Medium, and Substack
+- **skills:** token-optimizer is auto-injected into every CLI and carries a YAGNI rule for code
+- **welcome:** new chats default to OpenCode; Pavii CLI is never auto-selected (still selectable manually)
+
+#### Bug Fixes
+
+- **theme:** buttons across the app now follow the Violet Bloom / Vercel palette (the Arco palette bridge was shadowed on `body`)
+
+---
+
 ## [2.2.0](https://www.pavii.tech/products/dev-tools/) (2026-08-26)
 
 ### Desktop
