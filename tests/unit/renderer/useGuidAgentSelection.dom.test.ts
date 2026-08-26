@@ -136,6 +136,29 @@ describe('useGuidAssistantSelection', () => {
     });
   });
 
+  it('never restores Pavii CLI from persistence — a new chat defaults past it', async () => {
+    // Product call: the built-in CLI must not be the auto-selected agent for
+    // a fresh chat even when it was the last one used. Its persisted id is
+    // treated as "no preference", so the OpenCode-first default runs. Other
+    // agents keep last-choice memory (pinned above).
+    mockAssistants = [
+      assistantFixture({ id: 'bare-aionrs', runtimeKey: 'aionrs', source: 'generated', sortOrder: 1 }),
+      assistantFixture({ id: 'assistant-opencode', runtimeKey: 'opencode', source: 'generated', sortOrder: 2 }),
+    ];
+    configGetMock.mockImplementation((key: string) => (key === 'guid.lastAssistantId' ? 'bare-aionrs' : undefined));
+
+    const { result } = renderHook(() =>
+      useGuidAssistantSelection({
+        resetAssistant: true,
+        locationKey: 'new-chat',
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.selectedAssistantId).toBe('assistant-opencode');
+    });
+  });
+
   it('persists manual guid assistant selections for the next visit', async () => {
     mockAssistants = [
       assistantFixture({ id: 'bare-aionrs', runtimeKey: 'aionrs', source: 'generated', sortOrder: 1 }),

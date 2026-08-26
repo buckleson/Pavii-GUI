@@ -92,7 +92,16 @@ export function resolveAssistantSelectionKey(
 function readPersistedGuidAssistantSelectionKey(assistants: Assistant[]): string | undefined {
   const savedKey = configService.get('guid.lastAssistantId');
   const enabledAssistants = assistants.filter((assistant) => assistant.enabled !== false);
-  return resolveAssistantSelectionKey(savedKey, enabledAssistants);
+  const resolved = resolveAssistantSelectionKey(savedKey, enabledAssistants);
+  if (!resolved) return undefined;
+  // Product call: the built-in CLI must never be the auto-selected agent for a
+  // fresh chat — OpenCode is the house default (see pickDefault below). A
+  // remembered Pavii CLI selection is treated as "no preference" so the
+  // default policy runs; every other agent keeps last-choice memory, and
+  // Pavii CLI remains freely selectable within a session.
+  const resolvedAssistant = enabledAssistants.find((assistant) => assistant.id === resolved);
+  if (resolvedAssistant && isAionrsAssistant(resolvedAssistant)) return undefined;
+  return resolved;
 }
 
 function persistGuidAssistantSelectionKey(assistantId: string): void {
