@@ -117,7 +117,22 @@ const RETIRED_BUILTIN_SKILL_NAMES: ReadonlySet<string> = new Set([
   'officecli-xlsx',
 ]);
 
+/**
+ * Bundled skills later promoted into the engine's builtin auto-inject corpus.
+ * Installs that predate the promotion imported these as user-source rows,
+ * which the engine never prunes — left alone, the list would show the skill
+ * twice. Only the non-builtin duplicate is dropped; the builtin row (the one
+ * that actually auto-injects) must survive.
+ */
+const PROMOTED_TO_BUILTIN_SKILL_NAMES: ReadonlySet<string> = new Set([
+  // Promoted 2.2.1 to auto-inject so every CLI gets terse mode + YAGNI.
+  'token-optimizer',
+]);
+
 export const brandSkills = <T extends SkillRowLike>(skills: T[]): Array<T & BrandedSkillExtras> =>
   Array.isArray(skills)
-    ? skills.filter((skill) => !RETIRED_BUILTIN_SKILL_NAMES.has(skill.name)).map(applySkillBranding)
+    ? skills
+        .filter((skill) => !RETIRED_BUILTIN_SKILL_NAMES.has(skill.name))
+        .filter((skill) => !(PROMOTED_TO_BUILTIN_SKILL_NAMES.has(skill.name) && skill.source !== 'builtin'))
+        .map(applySkillBranding)
     : skills;

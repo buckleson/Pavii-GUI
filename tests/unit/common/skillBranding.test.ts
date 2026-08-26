@@ -109,12 +109,24 @@ describe('applySkillBranding / brandSkills', () => {
   });
 
   it('tags bundled custom skills as display_source official', () => {
-    const bundled = applySkillBranding({ name: 'token-optimizer', description: 'terse mode', source: 'custom' });
+    const bundled = applySkillBranding({ name: 'token-budget-advisor', description: 'budgets', source: 'custom' });
     expect(bundled.display_source).toBe('official');
     const userSkill = applySkillBranding({ name: 'my-own-skill', description: 'mine', source: 'custom' });
     expect(userSkill.display_source).toBeUndefined();
     const builtin = applySkillBranding({ name: 'tdd', description: 'x', source: 'builtin' });
     expect(builtin.display_source).toBeUndefined();
+  });
+
+  it('drops the imported duplicate of a skill promoted to builtin auto-inject', () => {
+    // token-optimizer moved from the desktop bundle (imported as user-source)
+    // into the engine's auto-inject corpus (builtin). Older installs carry
+    // both rows; only the builtin one — the one that actually injects — stays.
+    const rows = brandSkills([
+      { name: 'token-optimizer', description: 'old imported copy', source: 'custom' },
+      { name: 'token-optimizer', description: 'engine auto-inject', source: 'builtin' },
+      { name: 'my-own-skill', description: 'untouched', source: 'custom' },
+    ]);
+    expect(rows.map((row) => `${row.name}:${row.source}`)).toEqual(['token-optimizer:builtin', 'my-own-skill:custom']);
   });
 
   it('drops removed builtin skills that linger in older installs', () => {

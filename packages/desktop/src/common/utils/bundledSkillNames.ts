@@ -103,7 +103,6 @@ export const BUNDLED_SKILL_NAMES: ReadonlySet<string> = new Set([
   'to-spec',
   'to-tickets',
   'token-budget-advisor',
-  'token-optimizer',
   'triage',
   'ui-demo',
   'verification-loop',
