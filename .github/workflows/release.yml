@@ -3,6 +3,16 @@ name: Release
 # Tag a version (e.g. `git tag v2.1.52 && git push --tags`) to build every
 # target and publish a GitHub Release. electron-updater reads the uploaded
 # latest*.yml channel files to offer in-app updates.
+#
+# The pipeline is deliberately NOT artifact-mediated: build jobs upload their
+# installers straight onto a DRAFT release for the tag, and the publish job
+# downloads from that draft, verifies, and flips it live. Workflow artifacts
+# count against the account's Actions storage quota, and an exhausted quota
+# once stalled a release for a day with six 90-minute builds that could not
+# hand their output to the publish job. Release assets are not metered by
+# that quota (proven by release-asset-probe.yml). The draft is invisible to
+# `releases/latest` until the verify gates pass, so a half-built release can
+# never break the site's download links.
 on:
   push:
     tags:
@@ -17,24 +27,18 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    uses: ./.github/workflows/_build-reusable.yml
-    with:
-      ref: ${{ inputs.tag || github.ref }}
-
-  publish:
-    needs: build
+  # Resolves the version once and creates the draft release exactly once, so
+  # the six parallel build jobs upload into it without racing a create.
+  prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag || github.ref }}
-
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
 
       - name: Resolve version
         id: version
@@ -44,29 +48,127 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
-      # Collect installers + rename the per-arch channel files so electron-updater
-      # finds the right one (latest.yml, latest-mac.yml, latest-arm64-mac.yml, ...).
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release $TAG already exists (rerun) — reusing it"
+          else
+            gh release create "$TAG" --draft --title "Pavii.Ai $VERSION" --generate-notes --verify-tag
+          fi
+
+  # The full test pass for the exact ref being released. CI runs the same
+  # suites on main pushes, but a tag must not depend on CI history — these
+  # gates run unconditionally before any 90-minute build starts.
+  preflight-desktop:
+    name: Preflight (desktop)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+
+      # --quiet reports errors only: the repo carries long-standing warnings.
+      - name: Lint
+        run: bun run lint -- --quiet
+      - name: Format
+        run: bun run format:check
+      - name: Typecheck
+        run: bunx tsc --noEmit
+      - name: Encoding
+        run: node scripts/check-encoding.js
+      - name: Language
+        run: node scripts/check-language.js
+      - name: i18n keys
+        run: |
+          bun run i18n:types
+          node scripts/check-i18n.js
+      - name: Unit tests
+        run: bun run test
+
+  preflight-engine:
+    name: Preflight (engine)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      # Same reclaim ci.yml carries: a cold debug build of the workspace
+      # exceeds the runner's ~14 GB of free disk.
+      - name: Reclaim runner disk
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup
+          sudo docker image prune -af
+          df -h /
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: the-remaa/AionCore -> target
+          key: engine-tests
+
+      - name: Workspace tests
+        working-directory: the-remaa/AionCore
+        run: cargo test --workspace
+
+      # `aionui-channel` gates every platform behind a feature; a bare run
+      # compiles no plugin code and reports a hollow pass.
+      - name: Channel plugins
+        working-directory: the-remaa/AionCore
+        run: cargo test -p aionui-channel --features slack,discord,telegram,lark,dingtalk,weixin
+
+  build:
+    needs: [prepare, preflight-desktop, preflight-engine]
+    uses: ./.github/workflows/_build-reusable.yml
+    with:
+      ref: ${{ inputs.tag || github.ref }}
+      release-tag: ${{ needs.prepare.outputs.tag }}
+
+  publish:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Download draft release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          gh release download "$TAG" --dir release
+          ls -lh release
+
+      # Channel files arrive already under their published per-arch names —
+      # each build job renames its own before uploading (see the matrix
+      # comment in _build-reusable.yml). This step only adds the stable-named
+      # aliases and the checksum manifest.
       - name: Stage release assets
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p release
-          find artifacts -type f \( -name '*.exe' -o -name '*.exe.blockmap' -o -name '*.dmg' -o -name '*.deb' \
-            -o -name '*.AppImage' -o -name 'Pavii.Ai-*-mac-*.zip' \) -exec cp -n {} release/ \;
-
-          copy_channel() { [ -f "$1" ] && cp "$1" "release/$2" || echo "note: missing $1"; }
-          copy_channel artifacts/windows-build-x64/latest.yml        latest.yml
-          copy_channel artifacts/windows-build-arm64/latest.yml      latest-win-arm64.yml
-          # macOS x64 uses the default latest-mac.yml channel; macOS arm64
-          # uses the custom latest-arm64 channel, resolved as latest-arm64-mac.yml.
-          copy_channel artifacts/macos-build-x64/latest-mac.yml      latest-mac.yml
-          copy_channel artifacts/macos-build-arm64/latest-mac.yml    latest-arm64-mac.yml
-          copy_channel artifacts/linux-build-x64/latest-linux.yml    latest-linux.yml
-          copy_channel artifacts/linux-build-arm64/latest-linux-arm64.yml latest-linux-arm64.yml
+          ls release > /tmp/assets-before.txt
 
           # Stable-named aliases so website links like
           # releases/latest/download/Pavii.Ai-Windows-x64-Setup.exe keep working.
-          V="${{ steps.version.outputs.version }}"
+          V="$VERSION"
           alias_of() { [ -f "release/$1" ] && cp "release/$1" "release/$2" || true; }
           alias_of "Pavii.Ai-$V-win-x64.exe"       "Pavii.Ai-Windows-x64-Setup.exe"
           alias_of "Pavii.Ai-$V-win-arm64.exe"     "Pavii.Ai-Windows-arm64-Setup.exe"
@@ -95,7 +197,10 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          for f in Pavii.Ai-Windows-x64-Setup.exe Pavii.Ai-Windows-arm64-Setup.exe                    Pavii.Ai-macOS-x64.dmg Pavii.Ai-macOS-arm64.dmg                    Pavii.Ai-Linux-x64.AppImage Pavii.Ai-Linux-arm64.AppImage                    Pavii.Ai-Linux-x64.deb Pavii.Ai-Linux-arm64.deb; do
+          for f in Pavii.Ai-Windows-x64-Setup.exe Pavii.Ai-Windows-arm64-Setup.exe \
+                   Pavii.Ai-macOS-x64.dmg Pavii.Ai-macOS-arm64.dmg \
+                   Pavii.Ai-Linux-x64.AppImage Pavii.Ai-Linux-arm64.AppImage \
+                   Pavii.Ai-Linux-x64.deb Pavii.Ai-Linux-arm64.deb; do
             if [ -f "release/$f" ]; then echo "ok      $f"; else echo "MISSING $f"; missing=1; fi
           done
           [ "$missing" -eq 0 ] || { echo "Refusing to publish: a download button would 404."; exit 1; }
@@ -104,31 +209,79 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          V="${{ steps.version.outputs.version }}"
           missing=0
-          for f in "Pavii.Ai-$V-win-x64.exe.blockmap" "Pavii.Ai-$V-win-arm64.exe.blockmap"; do
+          for f in "Pavii.Ai-$VERSION-win-x64.exe.blockmap" "Pavii.Ai-$VERSION-win-arm64.exe.blockmap"; do
             if [ -f "release/$f" ]; then echo "ok      $f"; else echo "MISSING $f"; missing=1; fi
           done
           [ "$missing" -eq 0 ] || { echo "Refusing to publish: Windows differential update blockmaps are missing."; exit 1; }
 
+      # A stale or cross-arch channel file is how updaters break silently:
+      # the release looks complete, downloads work, and installed apps either
+      # see no update or fetch the wrong binary.
+      - name: Verify update channel files carry this version
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for f in latest.yml latest-win-arm64.yml latest-mac.yml latest-arm64-mac.yml \
+                   latest-linux.yml latest-linux-arm64.yml; do
+            if [ ! -f "release/$f" ]; then
+              echo "MISSING $f"; missing=1
+            elif grep -Eq "^version: ${VERSION}\s*$" "release/$f"; then
+              echo "ok      $f (version $VERSION)"
+            else
+              echo "WRONG VERSION in $f: $(grep '^version:' "release/$f" || echo none)"; missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ] || { echo "Refusing to publish: update feeds are absent or stale."; exit 1; }
+
+      - name: Verify every versioned asset and the checksum manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          bad=0
+          aliases="Pavii.Ai-Windows-x64-Setup.exe Pavii.Ai-Windows-arm64-Setup.exe Pavii.Ai-macOS-x64.dmg Pavii.Ai-macOS-arm64.dmg Pavii.Ai-Linux-x64.AppImage Pavii.Ai-Linux-arm64.AppImage Pavii.Ai-Linux-x64.deb Pavii.Ai-Linux-arm64.deb"
+          for f in release/Pavii.Ai-*; do
+            base=$(basename "$f")
+            case " $aliases " in *" $base "*) continue ;; esac
+            if [[ "$base" != *"$VERSION"* ]]; then
+              echo "VERSION MISMATCH: $base does not contain $VERSION"; bad=1
+            fi
+          done
+          for f in release/*; do
+            base=$(basename "$f")
+            [ "$base" = "SHA256SUMS" ] && continue
+            grep -q " $base\$" release/SHA256SUMS || { echo "UNCHECKSUMMED: $base"; bad=1; }
+          done
+          [ "$bad" -eq 0 ] || { echo "Refusing to publish: version or checksum inconsistency."; exit 1; }
+          echo "all assets carry $VERSION and are checksummed"
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.version.outputs.tag }}
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "Pavii.Ai $VERSION" --generate-notes --verify-tag
+          # Only the files created here (aliases + SHA256SUMS) still need
+          # uploading; the installers and channel files are already assets.
+          ls release > /tmp/assets-after.txt
+          new_files=$(comm -13 /tmp/assets-before.txt /tmp/assets-after.txt || true)
+          if [ -n "$new_files" ]; then
+            (cd release && echo "$new_files" | xargs gh release upload "$TAG" --clobber)
           fi
-          gh release upload "$TAG" release/* --clobber
+
+          # A tag with a prerelease suffix (v2.2.0-rc.1) publishes as a
+          # prerelease: it never becomes `releases/latest`, so the site's
+          # stable download links keep pointing at the previous release.
+          if [[ "$TAG" == *-* ]]; then
+            gh release edit "$TAG" --draft=false --prerelease
+          else
+            gh release edit "$TAG" --draft=false
+          fi
           gh release view "$TAG" --json assets -q '.assets[].name'
 
       - name: Mirror release assets
         env:
           GH_TOKEN: ${{ secrets.PAVII_RELEASES_TOKEN }}
-          TAG: ${{ steps.version.outputs.tag }}
-          VERSION: ${{ steps.version.outputs.version }}
           MIRROR_REPO: buckleson/Pavii-Gui-Releases
         shell: bash
         run: |
@@ -140,12 +293,15 @@ jobs:
 
           gh release view "$TAG" --repo "${{ github.repository }}" --json body -q '.body // ""' > release-notes.md
 
+          prerelease_flag=""
+          [[ "$TAG" == *-* ]] && prerelease_flag="--prerelease"
+
           if ! gh release view "$TAG" --repo "$MIRROR_REPO" >/dev/null 2>&1; then
             gh release create "$TAG" \
               --repo "$MIRROR_REPO" \
               --target main \
               --title "Pavii.Ai $VERSION" \
-              --notes-file release-notes.md
+              --notes-file release-notes.md $prerelease_flag
           else
             gh release edit "$TAG" \
               --repo "$MIRROR_REPO" \

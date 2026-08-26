@@ -10,6 +10,17 @@ on:
         description: Upload build output as workflow artifacts
         type: boolean
         default: true
+      release-tag:
+        description: >-
+          When set, upload build output as assets on this tag's DRAFT release
+          instead of as workflow artifacts. Release assets do not count
+          against the Actions artifact storage quota, which is what stalled
+          the v2.2.0 train for a day: the artifact-mediated pipeline could
+          not move installers from build to publish while the quota was
+          exhausted. The draft release must already exist (release.yml's
+          prepare job creates it) so six parallel jobs never race the create.
+        type: string
+        default: ''
       ref:
         description: >-
           Git ref to build. Required for workflow_dispatch: without it every
@@ -32,36 +43,56 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # channel-src / channel-dest: electron-updater channel files share
+          # names across arches (both Windows jobs emit `latest.yml`, both
+          # macOS jobs `latest-mac.yml`). Workflow artifacts kept them apart
+          # by artifact directory; release assets share ONE namespace, so
+          # each job renames its channel file to its published name before
+          # uploading. The publish job consumes them as-is.
           - name: windows-x64
             runner: windows-latest
             artifact: windows-build-x64
             build: build-win:x64
             rust-target: x86_64-pc-windows-msvc
+            channel-src: latest.yml
+            channel-dest: latest.yml
           - name: windows-arm64
             runner: windows-11-arm
             artifact: windows-build-arm64
             build: build-win:arm64
             rust-target: aarch64-pc-windows-msvc
+            channel-src: latest.yml
+            channel-dest: latest-win-arm64.yml
           - name: macos-arm64
             runner: macos-14
             artifact: macos-build-arm64
             build: build-mac:arm64
             rust-target: aarch64-apple-darwin
+            # macOS arm64 builds with the custom latest-arm64 channel, which
+            # electron-updater resolves as latest-arm64-mac.yml.
+            channel-src: latest-mac.yml
+            channel-dest: latest-arm64-mac.yml
           - name: macos-x64
             runner: macos-15-intel
             artifact: macos-build-x64
             build: build-mac:x64
             rust-target: x86_64-apple-darwin
+            channel-src: latest-mac.yml
+            channel-dest: latest-mac.yml
           - name: linux-x64
             runner: ubuntu-latest
             artifact: linux-build-x64
             build: linux-x64
             rust-target: x86_64-unknown-linux-gnu
+            channel-src: latest-linux.yml
+            channel-dest: latest-linux.yml
           - name: linux-arm64
             runner: ubuntu-24.04-arm
             artifact: linux-build-arm64
             build: linux-arm64
             rust-target: aarch64-unknown-linux-gnu
+            channel-src: latest-linux-arm64.yml
+            channel-dest: latest-linux-arm64.yml
 
     env:
       ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
@@ -139,8 +170,36 @@ jobs:
             *)           bun run ${{ matrix.build }} ;;
           esac
 
+      # Quota-independent path: assets go straight onto the tag's draft
+      # release, which the publish job downloads, verifies, and flips live.
+      - name: Upload to draft release
+        if: inputs.release-tag != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release-tag }}
+          CHANNEL_SRC: ${{ matrix.channel-src }}
+          CHANNEL_DEST: ${{ matrix.channel-dest }}
+        run: |
+          set -euo pipefail
+          # Publish-time channel name (see the matrix comment): rename before
+          # upload so same-named channel files from sibling arches never
+          # clobber each other in the release's single namespace.
+          if [ "$CHANNEL_SRC" != "$CHANNEL_DEST" ]; then
+            mv "out/$CHANNEL_SRC" "out/$CHANNEL_DEST"
+          fi
+          test -f "out/$CHANNEL_DEST" || { echo "channel file out/$CHANNEL_DEST missing"; exit 1; }
+
+          shopt -s nullglob
+          files=(out/Pavii.Ai-*.exe out/Pavii.Ai-*.exe.blockmap out/Pavii.Ai-*.dmg \
+                 out/Pavii.Ai-*-mac-*.zip out/Pavii.Ai-*.deb out/Pavii.Ai-*.AppImage \
+                 "out/$CHANNEL_DEST")
+          [ "${#files[@]}" -ge 2 ] || { echo "no build output found in out/"; exit 1; }
+          printf 'uploading: %s\n' "${files[@]}"
+          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
+
       - name: Upload artifacts
-        if: inputs.upload-artifacts
+        if: inputs.upload-artifacts && inputs.release-tag == ''
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
