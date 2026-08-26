@@ -75,8 +75,11 @@ describe('release packaging configuration', () => {
 
     expect(workflow).toContain('gh release download');
     expect(workflow).toContain('Verify Windows differential update assets are present');
-    expect(workflow).toContain('Pavii.Ai-$VERSION-win-x64.exe.blockmap');
-    expect(workflow).toContain('Pavii.Ai-$VERSION-win-arm64.exe.blockmap');
+    // Gates key on ARTIFACT_V (read from the built latest.yml), not the tag:
+    // installers are named by package.json's version, which an rc tag's
+    // version deliberately differs from.
+    expect(workflow).toContain('Pavii.Ai-$ARTIFACT_V-win-x64.exe.blockmap');
+    expect(workflow).toContain('Pavii.Ai-$ARTIFACT_V-win-arm64.exe.blockmap');
   });
 
   it('retries mac prepackaged builds with both dmg and zip targets', () => {
