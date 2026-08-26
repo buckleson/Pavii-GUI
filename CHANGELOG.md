@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.2.3](https://www.pavii.tech/products/dev-tools/) (2026-08-27)
+
+### Desktop
+
+#### Bug Fixes
+
+- **installer:** updates are transactional — a failed update restores the previous installation instead of destroying it, silent updates retry locked files, foreign installations are never touched, and the registry entry survives a failed replacement
+- **chat:** generated images render bounded (max 420px) with the caption below instead of overlapping, and inline file/image cards are properly styled inside chat
+
+---
+
 ## [2.2.2](https://www.pavii.tech/products/dev-tools/) (2026-08-27)
 
 ### Desktop
