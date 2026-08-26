@@ -112,13 +112,37 @@
 - Affects: `packages/shared-scripts/src/prepare-opencode.js`
 - Evidence: `packages/web-host/src/ensure-opencode.test.ts`, `tests/unit/assets/prepareOpencode.test.ts`, `scripts/afterPack.js`
 
-### Issue reports leave through the reporter, not the app
+### Issue reports file into Supabase with an insert-only shipped key
 
 - Status: accepted
-- Decision: Report Issue opens a prefilled GitHub issue form in the user's own browser. `PAVII_ISSUE_PROXY_URL` may point at the Cloudflare Worker in `services/issue-proxy/` for reporters without a GitHub account; it is unset by default, and no token ships in the app.
-- Rationale: The previous path called `Sentry.captureEvent`, and Sentry builds with an empty DSN, so every report was discarded or threw at the flush while the button looked functional. Routing through the browser means nothing leaves the machine without the user seeing it; a token embedded in a public desktop build would be extractable.
+- Decision: Report Issue inserts a row into the Pavii Supabase project (`issue_reports` table) and uploads screenshots/log bundles to the private `issue-attachments` bucket, using the publishable key baked into `packages/desktop/src/common/config/issueReporting.ts`. Row-level security grants that key INSERT only (no read/update/delete on rows or objects), and inserts use `Prefer: return=minimal` because the key has no SELECT. The GitHub proxy/browser paths remain as fallbacks when Supabase is unreachable; the previous browser-form flow is otherwise superseded.
+- Rationale: The GitHub path required a reporter account and could never upload attachments (they were saved to a local folder to drag in by hand). A publishable key is safe in a public desktop build precisely because RLS makes it write-only; the project's secret key is used by nothing in the repo.
 - Affects: `packages/desktop/src/process/feedback/issueDelivery.ts`
-- Evidence: `tests/unit/feedback/issueReport.test.ts`
+- Evidence: `tests/unit/feedback/issueDelivery.test.ts`
+
+### Release assets flow through a draft GitHub release, not workflow artifacts
+
+- Status: accepted
+- Decision: Each build job uploads its installers and per-arch-renamed channel file directly onto the tag's draft release (created once by release.yml's `prepare` job); the publish job downloads from the draft, adds stable-named aliases and SHA256SUMS, verifies 8 installers + 2 Windows blockmaps + 6 updater feeds carrying the artifact version + full checksum coverage, then flips the release live (prerelease when the tag has a `-` suffix) and mirrors to buckleson/Pavii-Gui-Releases. Publish gates key on the version read from the built `latest.yml`, with a stable-tag gate requiring tag and artifact versions to agree. Preflight jobs run the full desktop and engine suites before any build starts.
+- Rationale: The artifact-mediated pipeline was quota-gated end to end — an exhausted Actions storage quota stalled v2.2.0 for a day with builds that could not hand output to publish. Release assets are not metered by that quota (proven by `release-asset-probe.yml`), and a draft is invisible to `releases/latest` until every gate passes. Validated end to end by a v2.2.0-rc.1 prerelease dry-run before the real tag.
+- Affects: `.github/workflows/release.yml`
+- Evidence: `.github/workflows/_build-reusable.yml`, `tests/unit/releasePackagingConfig.test.ts`
+
+### The Arco palette bridge is re-inherited on body
+
+- Status: accepted
+- Decision: `arco-override.css` re-declares the eight tokens the app defines on `:root` that arco.css also declares on `body` (`--primary-1..7`, `--color-text-1`) as `inherit` on `body` and `body[arco-theme='dark']`, plus explicit ramp fills for primary/secondary/text buttons.
+- Rationale: An element's own custom-property declaration beats an inherited one, so Arco's `body` palette silently shadowed the `:root` violet bridge — every `type='primary'` button and `rgb(var(--primary-6))` usage rendered Arco blue while hand-written `var(--primary)` surfaces went violet. `inherit` re-opens the cascade for any theme that writes `:root`, presets included.
+- Affects: `packages/desktop/src/renderer/styles/arco-override.css`
+- Evidence: `tests/unit/theme/arcoButtonTheme.test.ts`
+
+### token-optimizer is a builtin auto-inject skill
+
+- Status: accepted
+- Decision: The skill ships in the engine's embedded corpus at `the-remaa/AionCore/crates/aionui-app/assets/builtin-skills/auto-inject/token-optimizer/` (auto-injection is a path predicate — builtin source plus an `auto-inject/` relative location — not a flag), carrying a YAGNI rule for code. The desktop bundle copy is removed, and `brandSkills` drops the lingering imported user-source duplicate on older installs while keeping the builtin row.
+- Rationale: The bundle import lands skills as user-source rows, which can never auto-inject; only the embedded corpus loads a skill into every conversation for every CLI.
+- Affects: `the-remaa/AionCore/crates/aionui-app/assets/builtin-skills/auto-inject/token-optimizer/SKILL.md`
+- Evidence: `packages/desktop/src/common/utils/skillBranding.ts`, `tests/unit/common/skillBranding.test.ts`
 
 ### Palette light on Violet Bloom, dark on Vercel
 
