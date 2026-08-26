@@ -1,0 +1,40 @@
+name: Release asset probe
+
+# The release pipeline was rebuilt to pass installers between jobs as DRAFT
+# RELEASE ASSETS instead of workflow artifacts, because release assets do not
+# count against the Actions artifact storage quota that stalled v2.2.0 for a
+# day. This probe proves that assumption in ~30 seconds: it creates a draft
+# release, uploads a tiny asset, lists it back, and deletes the release. If it
+# succeeds while `quota-probe.yml` (the artifact-upload probe) still fails,
+# the draft-release path is quota-independent and a tag is safe.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Create draft release, upload, verify, delete
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          TAG="asset-probe-${{ github.run_id }}"
+          echo "release asset probe $(date -u +%FT%TZ)" > probe.txt
+
+          # --draft creates no tag and is invisible to `releases/latest`.
+          gh release create "$TAG" --repo "$REPO" --draft --title "$TAG" --notes "storage probe, auto-deleted"
+          gh release upload "$TAG" probe.txt --repo "$REPO"
+
+          names=$(gh release view "$TAG" --repo "$REPO" --json assets -q '.assets[].name')
+          echo "assets: $names"
+          [ "$names" = "probe.txt" ] || { echo "uploaded asset not listed"; exit 1; }
+
+          gh release delete "$TAG" --repo "$REPO" --yes
+          echo "PROBE OK: draft-release asset upload works"
