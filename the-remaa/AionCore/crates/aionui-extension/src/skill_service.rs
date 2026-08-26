@@ -1651,7 +1651,19 @@ fn dedupe_user_visible_skill_rows(rows: Vec<SkillRow>) -> Vec<SkillRow> {
 
     for row in rows {
         if let Some(index) = merged.iter().position(|existing| existing.name == row.name) {
-            if merged[index].user_id.is_none() && row.user_id.is_some() {
+            let existing_is_auto = is_auto_inject_builtin_row(&merged[index]);
+            let row_is_auto = is_auto_inject_builtin_row(&row);
+            if row_is_auto && !existing_is_auto {
+                // A builtin auto-inject skill always wins the name collision.
+                merged[index] = row;
+            } else if merged[index].user_id.is_none() && row.user_id.is_some() && !existing_is_auto {
+                // User custom skills override ordinary (opt-in) builtins —
+                // but never an auto-inject builtin: shadowing one removes it
+                // from auto_inject_names(), silently disabling injection.
+                // Live case (2026-08-27): token-optimizer was promoted from a
+                // bundled import to auto-inject; upgraded installs still held
+                // the old user-scoped row, which shadowed the builtin and
+                // made the skill both invisible AND uninjected.
                 merged[index] = row;
             }
         } else {
@@ -1660,6 +1672,15 @@ fn dedupe_user_visible_skill_rows(rows: Vec<SkillRow>) -> Vec<SkillRow> {
     }
 
     merged
+}
+
+/// A global builtin row living under the `auto-inject/` corpus subtree.
+fn is_auto_inject_builtin_row(row: &SkillRow) -> bool {
+    row.user_id.is_none()
+        && row.source == "builtin"
+        && Path::new(&row.path)
+            .components()
+            .any(|component| component.as_os_str() == BUILTIN_AUTO_SKILLS_SUBDIR)
 }
 
 /// Synchronize filesystem-backed skill catalogs into the database.
@@ -2328,6 +2349,58 @@ mod tests {
     use aionui_db::{ISkillRepository, SqliteSkillRepository, init_database_memory};
     use std::io::Write;
     use tempfile::TempDir;
+
+    fn skill_row(name: &str, user_id: Option<&str>, source: &str, path: &str) -> aionui_db::SkillRow {
+        aionui_db::SkillRow {
+            id: format!("skill_{name}_{}", user_id.unwrap_or("global")),
+            user_id: user_id.map(str::to_owned),
+            name: name.to_owned(),
+            description: None,
+            path: path.to_owned(),
+            source: source.to_owned(),
+            enabled: true,
+            deleted_at: None,
+            created_at: 1,
+            updated_at: 1,
+        }
+    }
+
+    /// Regression (live 2026-08-27): token-optimizer was promoted from a
+    /// bundled import (user-scoped row) to a builtin auto-inject skill. The
+    /// stale user row shadowed the builtin in the dedupe, which removed the
+    /// skill from `auto_inject_names()` — invisible in the UI AND silently
+    /// not injected. Auto-inject builtins must win the collision in both
+    /// arrival orders.
+    #[test]
+    fn auto_inject_builtin_wins_name_collision_with_stale_user_row() {
+        let auto = || {
+            skill_row(
+                "token-optimizer",
+                None,
+                "builtin",
+                "C:/data/builtin-skills/auto-inject/token-optimizer/SKILL.md",
+            )
+        };
+        let stale_user = || skill_row("token-optimizer", Some("u1"), "user", "C:/data/skills/token-optimizer");
+
+        // User row first (list is updated_at DESC, so the newer import
+        // usually arrives first) — builtin still wins.
+        let merged = dedupe_user_visible_skill_rows(vec![stale_user(), auto()]);
+        assert_eq!(merged.len(), 1);
+        assert!(merged[0].user_id.is_none(), "builtin auto-inject row must survive");
+
+        // Builtin first — the user row must not replace it.
+        let merged = dedupe_user_visible_skill_rows(vec![auto(), stale_user()]);
+        assert_eq!(merged.len(), 1);
+        assert!(merged[0].user_id.is_none());
+
+        // Ordinary (opt-in) builtins keep the user-override semantics.
+        let plain_builtin = skill_row("mermaid", None, "builtin", "C:/data/builtin-skills/mermaid/SKILL.md");
+        let user_override = skill_row("mermaid", Some("u1"), "user", "C:/data/skills/mermaid");
+        let merged = dedupe_user_visible_skill_rows(vec![plain_builtin, user_override]);
+        assert_eq!(merged.len(), 1);
+        assert!(merged[0].user_id.is_some(), "user override of opt-in builtin stays");
+    }
 
     // -----------------------------------------------------------------------
     // Frontmatter parsing
