@@ -12,13 +12,14 @@ import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
- * A document path an agent wrote in chat, with three small actions.
+ * A document path an agent wrote in chat, with three small actions:
+ * "Click here" reveals the file selected in the OS file manager, the copy
+ * button puts the location on the clipboard, and Open hands the file to the
+ * OS default app.
  *
- * Deliberately not a viewer: a docx/pptx/pdf is best opened by the app the
- * user already has, so Open hands the file to the OS default via the existing
- * `/api/fs/open-system` route. "Click here" reveals the file selected in the
- * OS file manager (`/api/shell/show-item-in-folder`) so the user can find it
- * on disk, and the copy button puts the location on the clipboard.
+ * STYLING CONTRACT: renders inside ShadowView's shadow root, where UnoCSS
+ * and Arco styles do not exist — every class here must be defined in
+ * ShadowView.tsx (`.pavii-inline-*`).
  */
 const InlineFileChip: React.FC<{ path: string }> = ({ path }) => {
   const { t } = useTranslation();
@@ -52,20 +53,17 @@ const InlineFileChip: React.FC<{ path: string }> = ({ path }) => {
   }, [path, messageApi, t]);
 
   return (
-    <span
-      className='inline-flex items-center gap-8px my-4px px-10px py-6px rd-8px border border-[var(--color-border-2)] bg-fill-1 max-w-full'
-      data-testid='inline-file-chip'
-    >
+    <span className='pavii-inline-chip' data-testid='inline-file-chip'>
       {messageContext}
-      <FileDisplayOne theme='outline' size='16' className='flex-shrink-0 text-t-secondary' />
-      <span className='text-13px text-t-primary truncate' title={path}>
+      <FileDisplayOne theme='outline' size='16' />
+      <span className='pavii-inline-name' title={path}>
         {basename}
       </span>
       <Button
         size='mini'
         type='text'
+        className='pavii-inline-btn pavii-inline-btn-accent'
         onClick={reveal}
-        style={{ color: 'var(--electric-violet)' }}
         data-testid='inline-file-reveal'
       >
         {t('messages.revealFile', { defaultValue: 'Click here' })}
@@ -73,6 +71,7 @@ const InlineFileChip: React.FC<{ path: string }> = ({ path }) => {
       <Button
         size='mini'
         type='secondary'
+        className='pavii-inline-btn'
         onClick={copy}
         icon={<Copy theme='outline' size='13' />}
         title={t('messages.copyFilePath', { defaultValue: 'Copy file location' })}
@@ -81,6 +80,7 @@ const InlineFileChip: React.FC<{ path: string }> = ({ path }) => {
       <Button
         size='mini'
         type='secondary'
+        className='pavii-inline-btn'
         loading={opening}
         onClick={open}
         icon={<FolderOpen theme='outline' size='13' />}

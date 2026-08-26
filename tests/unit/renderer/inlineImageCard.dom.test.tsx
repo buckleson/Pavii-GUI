@@ -10,6 +10,8 @@
  * so ShadowView flattens to a div.
  */
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -118,6 +120,28 @@ describe('inline image cards in markdown', () => {
     expect(getImageBase64).toHaveBeenCalledWith({
       path: 'C:/Users/vijay/.codex/generated_images/abc/call_x.png',
     });
+    // A PLAIN img with the shadow-styled class: Arco's Image is unstyled and
+    // unconstrained inside the markdown shadow root (a generated 1024x1536
+    // image once painted over the whole conversation).
+    const img = screen.getByTestId('inline-image-shown').querySelector('img');
+    expect(img?.className).toContain('pavii-inline-media-img');
+  });
+
+  it('uses only classes the markdown shadow stylesheet actually defines', () => {
+    // UnoCSS utilities and Arco's stylesheet DO NOT exist inside ShadowView's
+    // shadow root — a class not defined there renders as nothing. Every
+    // pavii-inline-* class the two card components use must have a rule in
+    // ShadowView.tsx.
+    const read = (rel: string) => readFileSync(resolve(__dirname, '../../../packages/desktop/src', rel), 'utf-8');
+    const shadowCss = read('renderer/components/Markdown/ShadowView.tsx');
+    const componentSource =
+      read('renderer/components/media/InlineImageCard.tsx') + read('renderer/components/media/InlineFileChip.tsx');
+
+    const used = [...new Set(componentSource.match(/pavii-inline-[a-z-]+/g) ?? [])];
+    expect(used.length).toBeGreaterThan(3);
+    for (const cls of used) {
+      expect(shadowCss, `ShadowView.tsx must define .${cls}`).toContain(`.${cls}`);
+    }
   });
 
   it('offers a copy-location button under the shown image, with a toast', async () => {

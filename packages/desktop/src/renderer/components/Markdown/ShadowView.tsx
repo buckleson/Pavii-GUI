@@ -74,6 +74,98 @@ const createInitStyle = (
     word-break: break-all;
     overflow-wrap: anywhere;
   }
+  /* Inline media cards (InlineImageCard / InlineFileChip). These components
+   * render inside this shadow root, where UnoCSS utilities and Arco's
+   * stylesheet DO NOT exist — every visual they need must be defined here
+   * (same contract as .markdown-local-file-link below). Shipped unstyled
+   * once: a 1024x1536 generated image rendered at natural size and painted
+   * over the whole conversation. */
+  .pavii-inline-media {
+    display: block;
+    margin: 8px 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .pavii-inline-media-img {
+    display: block;
+    max-width: 100%;
+    max-height: 420px;
+    width: auto;
+    height: auto;
+    border-radius: 8px;
+  }
+  .pavii-inline-media-caption {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .pavii-inline-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+    padding: 6px 10px;
+    border: 1px solid var(--bg-3);
+    border-radius: 8px;
+    background: var(--bg-1);
+    max-width: 100%;
+    min-width: 0;
+  }
+  .pavii-inline-name {
+    font-size: 13px;
+    color: var(--text-primary);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pavii-inline-name-secondary {
+    font-size: 12px;
+    color: var(--text-secondary);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pavii-inline-note {
+    font-size: 12px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .pavii-inline-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border: 1px solid var(--bg-3);
+    border-radius: 6px;
+    background: var(--bg-2);
+    color: var(--text-primary);
+    font-size: 12px;
+    line-height: 18px;
+    cursor: pointer;
+    box-shadow: none;
+    transition: background-color 0.15s ease;
+  }
+  .pavii-inline-btn:hover {
+    background: var(--bg-3);
+    color: var(--text-primary);
+  }
+  .pavii-inline-btn-accent {
+    border-color: transparent;
+    background: transparent;
+    color: var(--electric-violet, #8f00ff);
+    font-weight: 600;
+  }
+  .pavii-inline-btn-accent:hover {
+    background: var(--bg-2);
+    color: var(--electric-violet, #8f00ff);
+  }
+
   .markdown-local-file-link {
     display: inline-flex;
     align-items: center;

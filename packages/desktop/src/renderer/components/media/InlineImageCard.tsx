@@ -6,17 +6,21 @@
 
 import { ipcBridge } from '@/common';
 import { copyText } from '@/renderer/utils/ui/clipboard';
-import { Button, Image, Message } from '@arco-design/web-react';
+import { Button, Message } from '@arco-design/web-react';
 import { Copy, Pic } from '@icon-park/react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
  * Inline card for an image an agent referenced by bare file path; the image
- * loads as soon as the card mounts. It owns its own fetch instead of reusing
- * LocalImageView because that component's failure mode is a broken <img> with
- * no error state — a card whose path may point anywhere (or at a since-deleted
- * temp file) needs a visible failure with a retry.
+ * loads as soon as the card mounts.
+ *
+ * STYLING CONTRACT: this renders inside ShadowView's shadow root, where
+ * UnoCSS utilities and Arco's stylesheet do not exist. Every class used here
+ * must be defined in ShadowView.tsx's stylesheet (`.pavii-inline-*`), and the
+ * image is a plain <img> because Arco's Image component is unstyled and
+ * unconstrained in there — it shipped once rendering a generated image at
+ * natural size over the whole conversation.
  *
  * Pixels come from the sandboxed `/api/fs/image-base64` endpoint (temp + home
  * + workspace roots). A path outside those roots fails closed into the error
@@ -63,16 +67,17 @@ const InlineImageCard: React.FC<{ path: string }> = ({ path }) => {
 
   if (state === 'shown' && dataUrl) {
     return (
-      <span className='block my-8px' data-testid='inline-image-shown'>
+      <span className='pavii-inline-media' data-testid='inline-image-shown'>
         {messageContext}
-        <Image src={dataUrl} alt={basename} className='max-w-full rounded-8px' style={{ maxHeight: 420 }} />
-        <span className='flex items-center gap-8px mt-4px'>
-          <span className='text-12px text-t-tertiary truncate' title={path}>
+        <img className='pavii-inline-media-img' src={dataUrl} alt={basename} />
+        <span className='pavii-inline-media-caption'>
+          <span className='pavii-inline-name-secondary' title={path}>
             {basename}
           </span>
           <Button
             size='mini'
             type='secondary'
+            className='pavii-inline-btn'
             onClick={copy}
             icon={<Copy theme='outline' size='13' />}
             data-testid='inline-image-copy'
@@ -85,22 +90,18 @@ const InlineImageCard: React.FC<{ path: string }> = ({ path }) => {
   }
 
   return (
-    <span
-      className='inline-flex items-center gap-8px my-4px px-10px py-6px rd-8px border border-[var(--color-border-2)] bg-fill-1 max-w-full'
-      data-testid='inline-image-card'
-    >
-      <Pic theme='outline' size='16' className='flex-shrink-0 text-t-secondary' />
-      <span className='text-13px text-t-primary truncate' title={path}>
+    <span className='pavii-inline-chip' data-testid='inline-image-card'>
+      <Pic theme='outline' size='16' />
+      <span className='pavii-inline-name' title={path}>
         {basename}
       </span>
       {state === 'failed' && (
-        <span className='text-12px text-t-tertiary flex-shrink-0'>
-          {t('messages.imageLoadFailed', { defaultValue: 'Could not load' })}
-        </span>
+        <span className='pavii-inline-note'>{t('messages.imageLoadFailed', { defaultValue: 'Could not load' })}</span>
       )}
       <Button
         size='mini'
         type='secondary'
+        className='pavii-inline-btn'
         loading={state === 'loading'}
         disabled={state === 'loading'}
         onClick={load}
