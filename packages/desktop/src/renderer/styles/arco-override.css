@@ -132,6 +132,32 @@ html body .arco-popconfirm-arrow.arco-trigger-arrow {
   }
 } */
 
+/* Re-open the palette bridge's inheritance.
+ *
+ * arco.css declares its palette tokens ON `body` (light) and
+ * `body[arco-theme='dark']`, while the app's violet bridge lives on `:root`
+ * (default-color-scheme.css, and applyTheme.ts emits `:root` for presets).
+ * An element's OWN custom-property declaration beats an inherited one, so
+ * Arco's body values shadowed the bridge for every descendant — which is why
+ * `type='primary'` buttons and every `rgb(var(--primary-6))` /
+ * `bg-primary-6` usage rendered Arco blue while hand-written
+ * `var(--primary)` surfaces went violet. `inherit` is a valid explicit value
+ * for custom properties: it forces body to take html's value again. The list
+ * is exactly the tokens the app defines on `:root` that arco.css also
+ * declares on `body` (diffed 2026-08-26; guarded by
+ * tests/unit/theme/arcoButtonTheme.test.ts). */
+body,
+body[arco-theme='dark'] {
+  --primary-1: inherit;
+  --primary-2: inherit;
+  --primary-3: inherit;
+  --primary-4: inherit;
+  --primary-5: inherit;
+  --primary-6: inherit;
+  --primary-7: inherit;
+  --color-text-1: inherit;
+}
+
 /* Buttons follow the theme's shape and elevation tokens (tweakcn violet-bloom
  * light / vercel dark). `--radius: 1.4rem` is the palette's own value, so an
  * ordinary button is a lozenge and an icon-only button is a circle — that is
@@ -168,6 +194,37 @@ html body .arco-popconfirm-arrow.arco-trigger-arrow {
   &.arco-btn-primary:not(.arco-btn-disabled):hover,
   &.arco-btn-status-danger:not(.arco-btn-disabled):hover {
     box-shadow: var(--shadow-sm);
+  }
+
+  /* Belt-and-braces on the fill itself: even if some surface reintroduces its
+   * own --primary-6, the primary button stays on the brand ramp. */
+  &.arco-btn-primary:not(.arco-btn-disabled):not(.arco-btn-status-danger) {
+    background-color: rgb(var(--primary-6));
+  }
+  &.arco-btn-primary:not(.arco-btn-disabled):not(.arco-btn-status-danger):hover {
+    background-color: rgb(var(--primary-5));
+  }
+  &.arco-btn-primary:not(.arco-btn-disabled):not(.arco-btn-status-danger):active {
+    background-color: rgb(var(--primary-7));
+  }
+
+  /* Secondary was Arco's neutral grey in both themes; tint it with the ramp
+   * so it visibly belongs to the palette (violet-tinted light, neutral dark —
+   * --aou-* swaps per theme). */
+  &.arco-btn-secondary:not(.arco-btn-disabled) {
+    background-color: var(--aou-1);
+    color: var(--aou-7);
+  }
+  &.arco-btn-secondary:not(.arco-btn-disabled):hover {
+    background-color: var(--aou-2);
+  }
+  &.arco-btn-secondary:not(.arco-btn-disabled):active {
+    background-color: var(--aou-3);
+  }
+
+  /* Text buttons: label follows the ramp instead of Arco blue. */
+  &.arco-btn-text:not(.arco-btn-disabled):not(.arco-btn-status-danger) {
+    color: rgb(var(--primary-6));
   }
 }
 

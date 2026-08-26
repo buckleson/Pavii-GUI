@@ -4,8 +4,10 @@
 .send-button-custom:disabled,
 .send-button-custom.arco-btn:disabled,
 .send-button-custom.arco-btn-primary:disabled {
-  background-color: #d3d4d9 !important;
-  border-color: #d3d4d9 !important;
+  /* Palette token, not a hardcoded grey: --aou-2 is a pale violet in the
+   * light theme and stays neutral in dark (which has its own rule below). */
+  background-color: var(--aou-2) !important;
+  border-color: var(--aou-2) !important;
   opacity: 1 !important;
 }
 

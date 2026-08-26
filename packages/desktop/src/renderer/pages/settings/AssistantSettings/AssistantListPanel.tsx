@@ -283,7 +283,7 @@ const AssistantListPanel: React.FC<AssistantListPanelProps> = ({
         <Tag
           size='small'
           bordered={false}
-          className='!rounded-10px !bg-fill-1 !px-8px !py-1px !text-10px !font-600 !leading-16px !text-[rgb(var(--arcoblue-6))]'
+          className='!rounded-10px !bg-fill-1 !px-8px !py-1px !text-10px !font-600 !leading-16px !text-[rgb(var(--primary-6))]'
         >
           {t('settings.assistantSourceCli', { defaultValue: 'CLI' })}
         </Tag>
