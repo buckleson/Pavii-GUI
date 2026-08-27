@@ -72,6 +72,7 @@ impl BuildTaskOptions {
                     | PAVII_CONVERSATION_ID_ENV
                     | PAVII_HELPER_BIN_ENV
                     | PAVII_BASE_URL_ENV
+                    | PAVII_RUNTIME_TOKEN_ENV
             )
         });
         self.context
@@ -106,6 +107,9 @@ impl BuildTaskOptions {
             self.context
                 .runtime_env
                 .push((AIONUI_RUNTIME_TOKEN_ENV.to_owned(), runtime_token.to_owned()));
+            self.context
+                .runtime_env
+                .push((PAVII_RUNTIME_TOKEN_ENV.to_owned(), runtime_token.to_owned()));
         }
         self.runtime_capabilities.conversation_runtime_context_version = Some(CONVERSATION_RUNTIME_CONTEXT_VERSION);
     }
@@ -129,6 +133,10 @@ pub const AIONUI_HELPER_BIN_ENV: &str = "AIONUI_HELPER_BIN";
 pub const PAVII_HELPER_BIN_ENV: &str = "PAVII_HELPER_BIN";
 pub const AIONUI_BASE_URL_ENV: &str = "AIONUI_BASE_URL";
 pub const AIONUI_RUNTIME_TOKEN_ENV: &str = "AIONUI_RUNTIME_TOKEN";
+/// Pavii-named alias for [`AIONUI_RUNTIME_TOKEN_ENV`]. `team capabilities`
+/// advertises the runtime context it needs, so that list must name variables
+/// that are actually exported under Pavii names.
+pub const PAVII_RUNTIME_TOKEN_ENV: &str = "PAVII_RUNTIME_TOKEN";
 pub const CONVERSATION_RUNTIME_CONTEXT_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -322,6 +330,12 @@ mod tests {
                 .runtime_env
                 .contains(&(PAVII_BASE_URL_ENV.to_owned(), "http://127.0.0.1:25808".to_owned()))
         );
+        assert!(
+            options
+                .context
+                .runtime_env
+                .contains(&(PAVII_RUNTIME_TOKEN_ENV.to_owned(), "runtime-token-1".to_owned()))
+        );
         // Re-applying the context must not duplicate the aliases either.
         options.apply_conversation_runtime_context(
             "user-1",
@@ -345,6 +359,15 @@ mod tests {
                 .runtime_env
                 .iter()
                 .filter(|(key, _)| key == AIONUI_RUNTIME_TOKEN_ENV)
+                .count(),
+            1
+        );
+        assert_eq!(
+            options
+                .context
+                .runtime_env
+                .iter()
+                .filter(|(key, _)| key == PAVII_RUNTIME_TOKEN_ENV)
                 .count(),
             1
         );

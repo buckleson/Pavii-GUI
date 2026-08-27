@@ -10,6 +10,10 @@ fn aioncore_command() -> Command {
 async fn top_level_capabilities_prints_domain_index_without_runtime_env() {
     let output = aioncore_command()
         .arg("capabilities")
+        .env_remove("PAVII_BASE_URL")
+        .env_remove("PAVII_CONVERSATION_ID")
+        .env_remove("PAVII_USER_ID")
+        .env_remove("PAVII_HELPER_BIN")
         .env_remove("AIONUI_BASE_URL")
         .env_remove("AIONUI_CONVERSATION_ID")
         .env_remove("AIONUI_USER_ID")
@@ -35,7 +39,7 @@ async fn top_level_capabilities_prints_domain_index_without_runtime_env() {
     assert_eq!(stdout["meta"]["schema_version"], 1);
     assert_eq!(stdout["data"]["contract"], "agent-facing-aioncore-cli");
     assert_eq!(stdout["data"]["entrypoint"], "paviicore capabilities");
-    assert_eq!(stdout["data"]["runtime_context"]["primary"], "AIONUI_CONVERSATION_ID");
+    assert_eq!(stdout["data"]["runtime_context"]["primary"], "PAVII_CONVERSATION_ID");
 
     let domains = stdout["data"]["domains"]
         .as_array()

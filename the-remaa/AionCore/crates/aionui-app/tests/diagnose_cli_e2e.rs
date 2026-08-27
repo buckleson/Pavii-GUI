@@ -495,8 +495,8 @@ fn builtin_troubleshooting_skill_uses_diagnose_cli_not_python_helper() {
             "pavii-troubleshooting skill must not mention {forbidden}"
         );
     }
-    assert!(skill.contains("\"$AIONUI_HELPER_BIN\" diagnose capabilities"));
-    assert!(skill.contains("\"$AIONUI_HELPER_BIN\" diagnose overview"));
-    assert!(skill.contains("\"$AIONUI_HELPER_BIN\" diagnose conversations get"));
-    assert!(skill.contains("\"$AIONUI_HELPER_BIN\" diagnose http get"));
+    assert!(skill.contains("\"$PAVII_HELPER_BIN\" diagnose capabilities"));
+    assert!(skill.contains("\"$PAVII_HELPER_BIN\" diagnose overview"));
+    assert!(skill.contains("\"$PAVII_HELPER_BIN\" diagnose conversations get"));
+    assert!(skill.contains("\"$PAVII_HELPER_BIN\" diagnose http get"));
 }

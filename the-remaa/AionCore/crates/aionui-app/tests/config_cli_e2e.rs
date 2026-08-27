@@ -446,6 +446,9 @@ async fn config_mcp_oauth_logout_reads_status_before_and_after_write() {
 async fn config_capabilities_prints_agent_readable_contract_without_runtime_env() {
     let output = config_command()
         .arg("capabilities")
+        .env_remove("PAVII_BASE_URL")
+        .env_remove("PAVII_CONVERSATION_ID")
+        .env_remove("PAVII_USER_ID")
         .env_remove("AIONUI_BASE_URL")
         .env_remove("AIONUI_CONVERSATION_ID")
         .env_remove("AIONUI_USER_ID")
@@ -472,7 +475,7 @@ async fn config_capabilities_prints_agent_readable_contract_without_runtime_env(
     assert_eq!(stdout["data"]["input"]["default_mode"], "stdin_json");
     assert_eq!(
         stdout["data"]["input"]["selectors"]["assistant_id"]["current"],
-        "resolve via AIONUI_CONVERSATION_ID"
+        "resolve via PAVII_CONVERSATION_ID"
     );
 
     let domains = stdout["data"]["domains"]
@@ -1064,9 +1067,10 @@ async fn config_context_fails_with_stable_error_when_conversation_env_missing() 
 
     let output = config_command()
         .arg("context")
-        .env("AIONUI_BASE_URL", &base_url)
+        .env("PAVII_BASE_URL", &base_url)
+        .env_remove("PAVII_CONVERSATION_ID")
         .env_remove("AIONUI_CONVERSATION_ID")
-        .env("AIONUI_USER_ID", "user-current")
+        .env("PAVII_USER_ID", "user-current")
         .output()
         .await
         .unwrap();
@@ -1078,7 +1082,7 @@ async fn config_context_fails_with_stable_error_when_conversation_env_missing() 
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains(
-        "CONFIG_ENV_MISSING command=\"config context\" field=\"AIONUI_CONVERSATION_ID\": missing required environment variable"
+        "CONFIG_ENV_MISSING command=\"config context\" field=\"PAVII_CONVERSATION_ID\": missing required environment variable"
     ));
 }
 
@@ -1094,16 +1098,16 @@ fn builtin_config_skills_use_config_cli_not_python_or_cron_helper() {
             "pavii-config skill must not mention {forbidden}"
         );
     }
-    assert!(pavii_config.contains("\"$AIONUI_HELPER_BIN\" config context"));
-    assert!(pavii_config.contains("\"$AIONUI_HELPER_BIN\" config capabilities"));
+    assert!(pavii_config.contains("\"$PAVII_HELPER_BIN\" config context"));
+    assert!(pavii_config.contains("\"$PAVII_HELPER_BIN\" config capabilities"));
     assert!(pavii_config.contains("assistant_id\": \"current"));
     for command in [
-        "\"$AIONUI_HELPER_BIN\" config mcp servers",
-        "\"$AIONUI_HELPER_BIN\" config providers",
-        "\"$AIONUI_HELPER_BIN\" config settings",
-        "\"$AIONUI_HELPER_BIN\" config agents",
-        "\"$AIONUI_HELPER_BIN\" config cron jobs",
-        "\"$AIONUI_HELPER_BIN\" config skills external-paths",
+        "\"$PAVII_HELPER_BIN\" config mcp servers",
+        "\"$PAVII_HELPER_BIN\" config providers",
+        "\"$PAVII_HELPER_BIN\" config settings",
+        "\"$PAVII_HELPER_BIN\" config agents",
+        "\"$PAVII_HELPER_BIN\" config cron jobs",
+        "\"$PAVII_HELPER_BIN\" config skills external-paths",
     ] {
         assert!(
             pavii_config.contains(command),
@@ -1112,6 +1116,6 @@ fn builtin_config_skills_use_config_cli_not_python_or_cron_helper() {
     }
 
     assert!(!cron.contains("cron-helper"));
-    assert!(cron.contains("\"$AIONUI_HELPER_BIN\" config cron current list"));
+    assert!(cron.contains("\"$PAVII_HELPER_BIN\" config cron current list"));
     assert!(cron.contains("\"job_id\""));
 }
