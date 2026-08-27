@@ -597,6 +597,16 @@ export interface IMcpServer {
   transport: IMcpServerTransport;
   tools?: IMcpTool[];
   last_test_status?: 'connected' | 'disconnected' | 'error' | 'testing'; // Latest connectivity check result
+  /**
+   * Why the last check failed, already localized for display. Without this the
+   * engine's real diagnosis survived only as a 5-second toast and the row fell
+   * back to a guess — a `chrome-devtools` timeout was reported to the user as
+   * "Missing npx on this machine" (verified 2026-08-27: the same server had
+   * answered with 29 tools 56 minutes earlier).
+   */
+  last_test_error?: string;
+  /** Engine error code for the failure above, e.g. `MCP_TIMEOUT`. */
+  last_test_error_code?: string;
   last_connected?: number;
   created_at: number;
   updated_at: number;

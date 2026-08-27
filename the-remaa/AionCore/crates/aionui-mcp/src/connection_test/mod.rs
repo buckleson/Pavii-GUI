@@ -31,7 +31,14 @@ use protocol::{
 // Constants
 // ---------------------------------------------------------------------------
 
-const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
+/// Budget for the WHOLE check: spawn + (first-run package download) +
+/// initialize + tools/list. A cold `npx -y <server>@latest` fetches the
+/// package and its dependency tree before it can answer a handshake, which
+/// routinely outlives 30s — that is what failed in the field on 2026-08-27
+/// (32.8s, `error_class: timeout`) for a server that answered in 8.7s once
+/// its cache was warm. Ninety seconds covers the cold path; a genuinely dead
+/// server still fails on spawn long before this expires.
+const CONNECTION_TIMEOUT: Duration = Duration::from_secs(90);
 
 // ---------------------------------------------------------------------------
 // McpConnectionTestService

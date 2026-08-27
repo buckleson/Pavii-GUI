@@ -196,6 +196,8 @@ export const useMcpConnection = (
               ...(tool._meta ? { _meta: tool._meta } : {}),
             })),
             last_connected: Date.now(),
+            last_test_error: undefined,
+            last_test_error_code: undefined,
           });
           if (notify) {
             await globalMessageQueue.add(() => {
@@ -209,9 +211,14 @@ export const useMcpConnection = (
 
           // Connection test passed; nothing further to do
         } else {
-          // Record the latest failed availability test in local UI state.
-          await updateServerStatus('error');
+          // Record the latest failed availability test in local UI state,
+          // KEEPING the reason: the row used to show a name-based guess
+          // because this payload was dropped here.
           const errorMsg = truncateErrorMessage(formatMcpErrorMessage(t, result));
+          await updateServerStatus('error', {
+            last_test_error: errorMsg,
+            last_test_error_code: result.code,
+          });
           if (notify) {
             await globalMessageQueue.add(() => {
               try {

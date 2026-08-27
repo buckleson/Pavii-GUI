@@ -84,17 +84,27 @@ const getStatusPopoverContent = (
 
   const checkedAt = formatStatusTimestamp(server.updated_at);
 
+  // Show what actually failed. This used to be a guess keyed on the server's
+  // NAME — every failure of `chrome-devtools` rendered as "Missing npx on this
+  // machine", including the timeout that produced it in the field while npx
+  // was present and working (verified 2026-08-27). The engine's reason is now
+  // persisted on the row, so the guess is gone.
+  const timedOut = server.last_test_error_code === 'MCP_TIMEOUT';
   const reasonText =
-    server.builtin && server.name === 'chrome-devtools' && server.transport.type === 'stdio'
-      ? t?.('settings.mcpInlineCommandHint', {
-          command: server.transport.command,
-        }) || `Missing ${server.transport.command}. Install it and test again.`
-      : t?.('settings.mcpInlineConfigHint') || 'Configuration may be incorrect. Review the MCP JSON and test again.';
+    server.last_test_error ||
+    t?.('settings.mcpInlineConfigHint') ||
+    'Configuration may be incorrect. Review the MCP JSON and test again.';
 
   return (
     <div className='max-w-300px space-y-2 text-13px leading-20px'>
       <div className='font-medium text-t-primary'>{t?.('settings.mcpCheckFailedSummary') || 'Manual check failed'}</div>
       <div className='text-t-primary'>{reasonText}</div>
+      {timedOut ? (
+        <div className='text-12px leading-18px text-t-secondary'>
+          {t?.('settings.mcpTimeoutFirstRunHint') ||
+            'The first run downloads the server package, which can take a while. Test again.'}
+        </div>
+      ) : null}
       {checkedAt ? (
         <div className='text-12px leading-18px text-t-secondary'>{`${t?.('settings.mcpCheckedAtLabel') || 'Checked at:'} ${checkedAt}`}</div>
       ) : null}
@@ -114,12 +124,10 @@ const getStatusText = (
   }
 
   if (last_test_status === 'error') {
-    if (server.builtin && server.name === 'chrome-devtools' && server.transport.type === 'stdio') {
-      return (
-        t?.('settings.mcpLocalCommandUnavailable', {
-          command: server.transport.command,
-        }) || `Requires ${server.transport.command} on this machine`
-      );
+    // No name-based guessing here either: a timeout says "timed out", and
+    // anything else says "Failed" with the real reason in the popover.
+    if (server.last_test_error_code === 'MCP_TIMEOUT') {
+      return t?.('settings.mcpCheckTimedOut') || 'Timed out';
     }
     return t?.('settings.mcpCheckFailedSimple') || 'Failed';
   }
