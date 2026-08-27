@@ -6883,7 +6883,12 @@ mod pump_tests {
         let ContentBlock::Text(text) = &content[0] else {
             panic!("expected text first: {content:?}");
         };
-        assert_eq!(text, &format!("see\n\n{marker}\n{pdf}"));
+        // The image path STAYS in the text even though it also rides as a
+        // native image block. Stripping it (the old assertion) left an
+        // image-capable CLI able to see pixels but with no file to open, so
+        // "make a PDF from these images" dead-ended with the agent asking for
+        // local paths (reported live 2026-08-27).
+        assert_eq!(text, &format!("see\n\n{marker}\n{img}\n{pdf}"));
         let ContentBlock::ResourceLink { uri, .. } = &content[1] else {
             panic!("expected resource link second: {content:?}");
         };
