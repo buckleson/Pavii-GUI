@@ -34,3 +34,30 @@ async fn verified_registry_binary_agents_store_stable_registry_identity() {
         assert!(policy.get("supports_team").is_none());
     }
 }
+
+/// 041 repoints Kiro at `kiro-cli`. 003 had picked `kiro-cli-chat`, which the
+/// Unix installer ships but the Windows one does not: `%LOCALAPPDATA%\Kiro-Cli\`
+/// holds a single `kiro-cli.exe` that is itself the chat binary. Availability
+/// resolves one name against PATH with no alias fallback, so the old value made
+/// every Windows install report Kiro as not installed.
+#[tokio::test]
+async fn kiro_is_probed_by_its_cross_platform_cli_binary() {
+    let db = init_database_memory().await.unwrap();
+    let repo = SqliteAgentMetadataRepository::new(db.pool().clone());
+
+    let row = repo.find_builtin_by_backend("kiro").await.unwrap().unwrap();
+
+    assert_eq!(row.command.as_deref(), Some("kiro-cli"), "kiro command");
+    // `acp` stays the entry point -- hidden from the top-level help, but
+    // `kiro-cli acp --help` reports "Start Agent Client Protocol (ACP) agent".
+    assert_eq!(row.args.as_deref(), Some(r#"["acp"]"#), "kiro args");
+
+    let source: serde_json::Value = serde_json::from_str(row.agent_source_info.as_deref().unwrap()).unwrap();
+    assert_eq!(
+        source.get("binary_name").and_then(serde_json::Value::as_str),
+        Some("kiro-cli"),
+        "kiro binary_name must match the command it probes"
+    );
+    // Kiro is a direct-CLI agent: a bridge would make availability require npx.
+    assert!(source.get("bridge_binary").is_none(), "kiro must stay unbridged");
+}
