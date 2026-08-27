@@ -384,6 +384,62 @@
 - Affects: `packages/desktop/src/process/services/autoUpdaterService.ts`
 - Evidence: `packages/desktop/electron-builder.yml`, `.github/workflows/_build-reusable.yml`, `.github/workflows/release.yml`, `tests/unit/releasePackagingConfig.test.ts`
 
+### The in-app updater reads the public releases mirror
+
+- Status: accepted
+- Decision: The update feed points at the public `buckleson/Pavii-Gui-Releases` mirror rather than the source repository, and the Windows settle-poll after an update runs only in packaged Windows builds.
+- Rationale: The source repo is private, so an unauthenticated updater got 404s and no install could ever see a new version; the mirror is public by design. The settle-poll is a packaged-Windows concern only, and running it elsewhere produced spurious dev-mode work.
+- Affects: `packages/desktop/src/process/services/updateFeed.ts`
+- Evidence: commits `4330784`, `f81b2d1`; `tests/unit/bootstrap/noVendorUpdateEndpoint.test.ts`
+
+### An update that fails restores the previous installation
+
+- Status: accepted
+- Decision: The NSIS update path is transactional — it snapshots the existing install, and a failed replacement rolls back instead of leaving a half-removed directory; silent updates retry locked files; installations not written by this product are never touched; the registry entry survives a failed replacement.
+- Rationale: A user hit a cascade where a failed atomic replace destroyed a working install and then the registry entry pointed at nothing, leaving the app unlaunchable and un-repairable (E1003 then E1010). Cleanup that can delete a working install must be reversible.
+- Affects: `packages/desktop/build/installer/`
+- Evidence: commit `2c636e4`; `scripts/smoke-installer-rollback.js`, `scripts/build-with-builder.js`
+
+### Chat markdown renders in a shadow root, so every class ships with it
+
+- Status: accepted
+- Decision: Inline media cards (images, file chips, copy-path buttons) declare their styles in `ShadowView`'s own stylesheet under `pavii-inline-*`, not as UnoCSS utilities or Arco component classes.
+- Rationale: Chat markdown renders inside a shadow root where UnoCSS utilities and Arco styles do not exist. A card styled with utility classes renders unstyled there — this is what produced the oversized image with its caption overlapping.
+- Affects: `packages/desktop/src/renderer/components/Markdown/ShadowView.tsx`
+- Evidence: commit `21dcd41`; `packages/desktop/src/renderer/components/media/InlineImageCard.tsx`, `InlineFileChip.tsx`
+
+### Attachments are copied into the workspace and keep their path in the prompt
+
+- Status: accepted
+- Decision: Files and images attached in chat are copied into the agent's workspace as real readable files, and an image's path stays in the prompt text alongside the native media block.
+- Rationale: The agent CLI reads from disk; a native media block alone gave it pixels but no file it could open, so "read this file" failed. Stripping the path once the image rode as a native block removed the only handle the CLI had.
+- Affects: `the-remaa/AionCore/crates/aionui-conversation/`
+- Evidence: commits `e3e4d3c`, `7a182c9`, `15a6e12`; `resolve_chat_message` takes 5 params — grep the whole workspace for call sites before changing that signature
+
+### A failed MCP check reports the engine's reason, never a guess
+
+- Status: accepted
+- Decision: The MCP row persists `last_test_error` / `last_test_error_code` from the engine and renders that; name-matched guesses are gone, timeouts say so, and the connect budget is 90s.
+- Rationale: The UI printed "Missing npx on this machine" purely because the server was named `chrome-devtools`. Verified from this machine's engine log: the same server had connected with 29 tools in 8.7s, and the failure was a 30s timeout with npx present — a cold `npx -y …@latest` fetches a dependency tree before it can answer.
+- Affects: `packages/desktop/src/renderer/pages/settings/ToolsSettings/McpServerHeader.tsx`
+- Evidence: commit `a7f3b86`; `packages/desktop/src/common/config/storage.ts`
+
+### Everything the agent is told about carries a Pavii name
+
+- Status: accepted
+- Decision: Runtime context is exported under `PAVII_*` names alongside the original `AIONUI_*` ones, all four capabilities commands advertise the Pavii names, and every shipped skill instructs with them.
+- Rationale: The display-layer choke point brands what the UI renders, but not prose the agent writes itself. Skills told it to run `$AIONUI_HELPER_BIN …`, so it quoted the pre-rebrand name back to the user. The old names stay exported — they are a live contract for user scripts.
+- Affects: `the-remaa/AionCore/crates/aionui-ai-agent/src/types.rs`
+- Evidence: commits `282b3b6`, `bd9d24e`; `tests/unit/renderer/brandLeakGuard.test.ts` — an agent-facing name that is advertised but not exported is worse than the leak
+
+### Agent binaries are probed under the name that exists on every platform
+
+- Status: accepted
+- Decision: A builtin agent's `command` must name a binary present on all supported platforms; Kiro is probed as `kiro-cli`, not the Unix-only `kiro-cli-chat`.
+- Rationale: Availability resolves a single name against PATH with no alias fallback, so a platform-specific name makes the agent permanently undetectable there. Kiro's Windows installer ships one executable, `kiro-cli.exe`, which is itself the chat binary.
+- Affects: `the-remaa/AionCore/crates/aionui-db/migrations/041_kiro_cli_windows_command.sql`
+- Evidence: commit `b0ee834`; a rename alone is inert — the cached projection treats a stored `command_not_found` as still-missing and blocks the fresh probe, so the migration also drops the verdict it invalidates
+
 ## Implementation Context
 
 - Dev-mode engine resolution falls back to `<cwd>/resources/bundled-paviicore/<platform-arch>/` in `packages/desktop/src/process/backend/binaryResolver.ts`; run `node scripts/build-paviicore.js` once per checkout.
@@ -404,7 +460,7 @@
 - `preview.office.*` i18n values across 13 locales say "Pavii CLI" (keys like `officecliNotFound` are unchanged contracts); the sweep script pattern lives in the scratchpad, values-only.
 - Privacy posture: **this entry changed — the app is no longer telemetry-free.** It now ships PostHog product analytics, always on, from both processes; see the decision above and `docs/agent-context/privacy-audit.md`. Still true: the Rust engine has **no telemetry crates**; Sentry (`@sentry/electron`) is DSN-env-gated and no DSN exists in the repo, so crash reporting and `sendStartupLogReport` (which would upload gzipped app logs) remain inert; channel plugins are opt-in per user config. `analytics.json` now backs PostHog's `distinct_id` as well as Sentry's dormant device id. Known leaks outside the app: Google Analytics on the pavii.tech website, and secrets (e.g. Telegram bot token) written verbatim into engine logs.
 - **Never edit engine assets (`the-remaa/AionCore/**`) with PowerShell text/JSON cmdlets.** `Get-Content -Raw`decodes BOM-less UTF-8 as Windows-1252 and`Set-Content -Encoding utf8`(PS 5.1) writes a BOM: this silently mojibake'd 293 strings in`builtin-assistants/assistants.json`and the BOM made the engine reject the whole catalog, dropping all 20 builtin assistants (including the butler) from`/api/assistants`. Use the Edit/Write tools or a Node/bun script with explicit UTF-8 (no BOM). Symptom to watch for: `builtin` assistant count 0.
-- Release home is `buckleson/Pavii-GUI` (git `origin`; the previous `vjk7989/pavii-ai` is kept as remote `old-vjk7989`). The repo name is the single source of truth in `packages/desktop/src/process/services/updateFeed.ts` (`GITHUB_RELEASE_OWNER`/`GITHUB_RELEASE_REPO`, consumed by `updateBridge.ts`) and `packages/desktop/electron-builder.yml` `publish:`; `tests/unit/bootstrap/noVendorUpdateEndpoint.test.ts` pins both so they cannot drift apart. `.github/workflows/_build-reusable.yml` builds Windows x64/arm64, macOS x64/arm64, and Linux x64/arm64 and uploads Windows `.exe.blockmap` files. `.github/workflows/release.yml` mirrors the staged release assets, channel files, checksums, and Windows blockmaps to `buckleson/Pavii-Gui-Releases` with `PAVII_RELEASES_TOKEN`; that mirror is for website/download distribution, not the in-app updater source. The website repo `vjk7989/fluffy-lamp` is separate and unchanged.
+- Release home is `buckleson/Pavii-GUI` (git `origin`; the previous `vjk7989/pavii-ai` is kept as remote `old-vjk7989`). The repo name is the single source of truth in `packages/desktop/src/process/services/updateFeed.ts` (`GITHUB_RELEASE_OWNER`/`GITHUB_RELEASE_REPO`, consumed by `updateBridge.ts`) and `packages/desktop/electron-builder.yml` `publish:`; `tests/unit/bootstrap/noVendorUpdateEndpoint.test.ts` pins both so they cannot drift apart. `.github/workflows/_build-reusable.yml` builds Windows x64/arm64, macOS x64/arm64, and Linux x64/arm64 and uploads Windows `.exe.blockmap` files. `.github/workflows/release.yml` mirrors the staged release assets, channel files, checksums, and Windows blockmaps to `buckleson/Pavii-Gui-Releases` with `PAVII_RELEASES_TOKEN`. **That mirror is now also the in-app updater source** (changed in 2.2.2, commit `4330784`): the source repo is private, so an unauthenticated updater 404'd on every check. The website repo `vjk7989/fluffy-lamp` is separate and unchanged.
 - Encoding gate: `scripts/check-encoding.js` (`bun run check:encoding`) fails on a UTF-8 BOM, invalid UTF-8, cp1252 mojibake, or U+FFFD across git-tracked text files, and accepts explicit paths so the gitignored `resources/bundled-paviicore/` manifest can be checked too. Wired into `.pre-commit-config.yaml`, `justfile` (`check`, `push`), and `.github/workflows/_build-reusable.yml`. It deliberately does not check line endings (`.gitattributes` sets `* text=auto eol=lf`). Detection requires a character _pair_ so ordinary French/Turkish typography does not match; `ALLOWLIST` holds `sentry-feedback-resolutions/`, which quotes mangled strings as bug evidence. Focused tests: `tests/unit/scripts/checkEncoding.test.ts`.
 - BOM-tolerant JSON at build choke points: `packages/shared-scripts/src/read-json-file.js` (`readJsonFile` strips the BOM and throws naming the file; `writeJsonFile` writes BOM-free UTF-8). Used by `prepare-paviicore.js`, `verify-bundled-paviicore-resources.js`, `scripts/resolvePaviicoreVersion.js`, `scripts/prepareHubResources.js`, `scripts/build-with-builder.js`. Tests: `tests/unit/scripts/readJsonFile.test.ts`.
 - Engine builds go through `just engine-build` / `node scripts/build-paviicore.js`: runs `cargo test -p aionui-assistant builtin` (the only gate that reads the shipped assistant manifest) before `cargo build --release`, then writes `manifest.json` via Node and proves it parses back. Replaces the hand-typed steps behind both encoding incidents.
@@ -421,6 +477,14 @@
 - Dev-profile DB pollution (operational note): the `Pavii.Ai-Dev` profile's engine database is at migration 40 ("oauth client id"), installed 2026-08-21 by an engine run from the `wip/tools-mcp-directory` branch; main's engine ships 39 migrations, so dev runs refuse that database via the downgrade guard — by design, not a bug. Symptom: the dev-profile "Startup didn't complete" dialog. The production profile's database is at 39 and unaffected.
 - `scripts/resetpass.ts` supports `--desktop` to target the Electron app data dir. Dev ports: `.claude/launch.json` uses 25809 (was 33000); `docs/guides/webui.md` documents 25808/25809 (was 3000).
 - Profile page: `packages/desktop/src/renderer/pages/profile/` (`index.tsx`, pure functions in `profileStats.ts`, `ActivityHeatmap.tsx`, `ShareModal.tsx` canvas share card plus share-intent URLs, `shareCard.ts`); route `/profile` in `packages/desktop/src/renderer/components/layout/Router.tsx` is intentionally module-less for feedback preselection (see `tests/unit/feedback/resolveFeedbackModule.test.ts`); sidebar entry is `packages/desktop/src/renderer/components/layout/Sider/SiderNav/SiderProfileEntry.tsx`; sign-out lives on the profile page; MCP/skill insights are labelled "most attached" because invocation counts are not recorded anywhere.
+
+- Release gates key on the version read from the built `latest.yml` (`ARTIFACT_V`), not the tag: an `rc` tag and the package.json version differ, and gating on the tag failed the `v2.2.0-rc.1` publish. The mirror upload retries transient failures and asserts the uploaded asset count instead of trusting a clean exit.
+- Migration bytes are a shipped contract. A new `.sql` must be added to `tests/fixtures/migration-checksums.json` (add an entry; never edit an existing one) or `tests/unit/bootstrap/migrationChecksums.test.ts` fails the push gate. Do not edit a migration file while `cargo test` is compiling — the embedded and on-disk copies then disagree and sqlx reports `VersionMismatch(N)`, which looks like a real defect and is not.
+- Agent availability has two caches that behave differently, and this bites any catalog change: startup `hydrate` does a real PATH probe (`AvailabilityProjection::Probe`), but the agent **list** reads `Cached`, where `cached_snapshot_indicates_missing` treats a stored `command_not_found`/`command_missing`/`primary_missing`/`bridge_missing` as still-missing and `overlay_hydrated_availability` refuses to overlay the fresh probe onto any row carrying a snapshot. Only a manual health check clears it. A migration that repoints an agent's `command` must therefore also clear the snapshot columns, and `has_availability_snapshot` ORs six of them including `last_success_at`/`last_failure_at` — leaving one set keeps the row pinned. See `the-remaa/AionCore/crates/aionui-ai-agent/src/registry.rs`.
+- Post-030, `agent_metadata` rows carry both a surrogate `id` and a logical `agent_id` (both seeded from the pre-030 `id`). New migrations should match on `agent_source` + `backend` like `039_omp_direct_cli_launch.sql`, which survives that split.
+- Engine builds on this machine fail for disk, not code. Three distinct symptoms, all the same cause and all cleared by `cargo clean` rather than by editing source: truncated metadata (`E0786 found invalid metadata files`), a rustc crash (`STATUS_STACK_BUFFER_OVERRUN`, exit `0xc0000409`), and `fatal error LNK1180: insufficient disk space to complete link`. **`cargo test --workspace` does not currently fit on D:** — measured 2026-08-28, it grew `target/` to 14.7 GB, drove the drive to 0 bytes free, and still died at link time. Run per-crate suites locally (`cargo test -p <crate>`, which does fit) and let CI's engine preflight be the authoritative workspace gate; it runs the same command on a runner with adequate disk.
+- Piping a build or test command into `grep`/`tail` replaces its exit code with the filter's, so a failed run reports success. Redirect to a file and check `$?` — this masked both a failed `just push` and a failed workspace compile.
+- `cargo test -p <crate> --bins` does not build the integration targets under `tests/`. CI's engine preflight runs `cargo test --workspace`; a change to shared output or shipped asset text must be validated against that, or assertions in `tests/` fail only in CI. `cargo test` also stops at the first failing binary, so one reported failure can be hiding others.
 
 ## Deferred to the services phase
 
