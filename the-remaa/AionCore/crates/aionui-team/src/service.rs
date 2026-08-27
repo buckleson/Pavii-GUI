@@ -2636,8 +2636,14 @@ impl TeamSessionService {
                 TeamError::InvalidRequest("project service unavailable; cannot resolve file attachments".into())
             })?;
         let upload_root = std::env::temp_dir().join("aionui");
+        // No workspace to materialize into: a team send fans out to several
+        // member runtimes, each with its own workspace, so there is no single
+        // target directory the way a 1:1 conversation has. Team attachments
+        // therefore keep the path-only form (readable by members that can
+        // reach the upload store); giving members their own copies is a
+        // separate change, not a regression of this one.
         let resolved = project
-            .resolve_chat_message(user_id, content, &files, &upload_root)
+            .resolve_chat_message(user_id, content, &files, &upload_root, None)
             .await
             .map_err(|err| TeamError::InvalidRequest(err.to_string()))?;
         Ok((resolved.content, Some(resolved.files)))

@@ -10,7 +10,6 @@
 
 use std::path::Path;
 
-use aionui_common::constants::AIONUI_FILES_MARKER;
 use tracing::warn;
 
 use crate::types::PromptMediaCaps;
@@ -140,6 +139,9 @@ pub async fn read_media_bytes(attachment: &MediaAttachment) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    // Only the fixtures build marker blocks now: the production path keeps
+    // every attachment path in the text, so it no longer rewrites the marker.
+    use aionui_common::constants::AIONUI_FILES_MARKER;
 
     const CAPS_IMAGE: PromptMediaCaps = PromptMediaCaps {
         image: true,
