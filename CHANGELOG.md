@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.2.5](https://www.pavii.tech/products/dev-tools/) (2026-08-27)
+
+### Desktop
+
+#### Bug Fixes
+
+- **mcp:** a failed connection check now shows the reason the engine actually reported instead of guessing "Missing npx on this machine", timeouts say so and note that a first run downloads the server package, and the check allows 90s so a cold package download can finish
+- **brand:** the agent no longer shows pre-rebrand names — runtime context is exported and advertised under Pavii names (the old ones still work), every shipped skill instructs with them, and the built-in agent is called Pavii CLI instead of its internal id
+
+---
+
 ## [2.2.4](https://www.pavii.tech/products/dev-tools/) (2026-08-27)
 
 ### Desktop
