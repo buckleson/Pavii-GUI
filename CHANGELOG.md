@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.6](https://www.pavii.tech/products/dev-tools/) (2026-08-28)
+
+### Desktop
+
+#### Bug Fixes
+
+- **installer:** an install that cannot fit on the drive is now refused up front, naming how much space is free and how much is needed, instead of failing partway through extraction with a message about corrupt files — and on an update it stops before the previous version is touched, so nothing is lost. A drive whose free space cannot be read is allowed through rather than blocked.
+
+---
+
 ## [2.2.5](https://www.pavii.tech/products/dev-tools/) (2026-08-27)
 
 ### Desktop
