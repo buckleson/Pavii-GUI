@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.4](https://www.pavii.tech/products/dev-tools/) (2026-08-27)
+
+### Desktop
+
+#### Bug Fixes
+
+- **chat:** attached files and images are copied into the agent's workspace, so the agent can actually read them — and an image's path stays in the prompt alongside the pixels
+- **skills:** token-optimizer shows up and auto-injects on installs upgraded from older versions (a stale imported copy was shadowing it)
+- **ci:** the release mirror upload retries transient failures instead of failing the run
+
+---
+
 ## [2.2.3](https://www.pavii.tech/products/dev-tools/) (2026-08-27)
 
 ### Desktop

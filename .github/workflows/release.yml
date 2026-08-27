@@ -335,5 +335,16 @@ jobs:
               --notes-file release-notes.md
           fi
 
-          gh release upload "$TAG" release/* --repo "$MIRROR_REPO" --clobber
+          # GitHub's upload endpoint occasionally 400s transiently mid-batch
+          # (v2.2.3 died here with the asset actually landed). Retry the batch
+          # — --clobber makes it idempotent — and judge success by the final
+          # asset count matching the staged set, not by one upload's status.
+          expected=$(ls release | wc -l)
+          for attempt in 1 2 3; do
+            gh release upload "$TAG" release/* --repo "$MIRROR_REPO" --clobber && break
+            echo "mirror upload attempt $attempt failed; retrying"
+            sleep 10
+          done
+          mirrored=$(gh release view "$TAG" --repo "$MIRROR_REPO" --json assets -q '.assets | length')
           gh release view "$TAG" --repo "$MIRROR_REPO" --json assets -q '.assets[].name'
+          [ "$mirrored" -eq "$expected" ] || { echo "mirror has $mirrored of $expected assets"; exit 1; }
