@@ -8,6 +8,7 @@
 
 - **mcp:** a failed connection check now shows the reason the engine actually reported instead of guessing "Missing npx on this machine", timeouts say so and note that a first run downloads the server package, and the check allows 90s so a cold package download can finish
 - **brand:** the agent no longer shows pre-rebrand names — runtime context is exported and advertised under Pavii names (the old ones still work), every shipped skill instructs with them, and the built-in agent is called Pavii CLI instead of its internal id
+- **agents:** Kiro is detected on Windows — it was probed under a binary name only the macOS/Linux installer creates, so a working install still showed "not installed"; the stale result is cleared on upgrade rather than needing a manual re-check
 
 ---
 
