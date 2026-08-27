@@ -18,10 +18,10 @@ use crate::cli::{
 };
 use crate::commands::config_capabilities;
 
-const ENV_BASE_URL: &str = "AIONUI_BASE_URL";
-const ENV_CONVERSATION_ID: &str = "AIONUI_CONVERSATION_ID";
-const ENV_USER_ID: &str = "AIONUI_USER_ID";
-const ENV_RUNTIME_TOKEN: &str = "AIONUI_RUNTIME_TOKEN";
+const ENV_BASE_URL: &str = "PAVII_BASE_URL";
+const ENV_CONVERSATION_ID: &str = "PAVII_CONVERSATION_ID";
+const ENV_USER_ID: &str = "PAVII_USER_ID";
+const ENV_RUNTIME_TOKEN: &str = "PAVII_RUNTIME_TOKEN";
 
 pub async fn run_config(args: ConfigArgs) -> ExitCode {
     match run(args).await {
@@ -1259,26 +1259,34 @@ impl ConfigEnv {
     }
 }
 
+/// Read a Pavii-named runtime variable, falling back to its `AIONUI_*`
+/// predecessor so environments exporting only the old name still work.
+fn env_value(name: &str) -> Option<String> {
+    let read = |key: &str| {
+        std::env::var(key)
+            .ok()
+            .map(|value| value.trim().to_owned())
+            .filter(|value| !value.is_empty())
+    };
+    read(name).or_else(|| {
+        name.strip_prefix("PAVII_")
+            .and_then(|bare| read(&format!("AIONUI_{bare}")))
+    })
+}
+
 fn optional_env(name: &'static str) -> Option<String> {
-    std::env::var(name)
-        .ok()
-        .map(|value| value.trim().to_owned())
-        .filter(|value| !value.is_empty())
+    env_value(name)
 }
 
 fn required_env(command: &str, name: &'static str) -> Result<String, ConfigError> {
-    std::env::var(name)
-        .ok()
-        .map(|value| value.trim().to_owned())
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| {
-            ConfigError::new(
-                ConfigErrorCode::EnvMissing,
-                command,
-                "missing required environment variable",
-            )
-            .field("field", name)
-        })
+    env_value(name).ok_or_else(|| {
+        ConfigError::new(
+            ConfigErrorCode::EnvMissing,
+            command,
+            "missing required environment variable",
+        )
+        .field("field", name)
+    })
 }
 
 async fn fetch_current_conversation(
@@ -1807,7 +1815,7 @@ mod tests {
 
         assert_eq!(
             error.stderr_line(),
-            "CONFIG_ENV_MISSING command=\"config context\" field=\"AIONUI_CONVERSATION_ID\": missing required environment variable"
+            "CONFIG_ENV_MISSING command=\"config context\" field=\"PAVII_CONVERSATION_ID\": missing required environment variable"
         );
     }
 

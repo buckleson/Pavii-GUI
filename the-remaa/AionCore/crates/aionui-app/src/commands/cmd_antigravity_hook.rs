@@ -143,8 +143,14 @@ mod tests {
                 .as_str()
                 .unwrap_or_default()
                 .to_lowercase();
-            assert!(!reason.contains("aion"), "old brand leaked into a deny reason: {reason}");
-            assert!(reason.contains("pavii.ai"), "the reason should name the product: {reason}");
+            assert!(
+                !reason.contains("aion"),
+                "old brand leaked into a deny reason: {reason}"
+            );
+            assert!(
+                reason.contains("pavii.ai"),
+                "the reason should name the product: {reason}"
+            );
         }
     }
 

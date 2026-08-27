@@ -5,11 +5,14 @@ use std::process::ExitCode;
 
 use serde_json::{Value, json};
 
+/// Advertised to the agent, so these are the names it will quote back to the
+/// user — they must be the Pavii ones. The pre-rebrand `AIONUI_*` variables
+/// are still exported for existing scripts, just not advertised here.
 const RUNTIME_ENV: [&str; 4] = [
-    "AIONUI_HELPER_BIN",
-    "AIONUI_BASE_URL",
-    "AIONUI_CONVERSATION_ID",
-    "AIONUI_USER_ID",
+    "PAVII_HELPER_BIN",
+    "PAVII_BASE_URL",
+    "PAVII_CONVERSATION_ID",
+    "PAVII_USER_ID",
 ];
 
 pub(crate) fn run_capabilities() -> ExitCode {
@@ -41,17 +44,17 @@ fn data() -> Value {
             }
         },
         "runtime_context": {
-            "primary": "AIONUI_CONVERSATION_ID",
+            "primary": "PAVII_CONVERSATION_ID",
             "environment": RUNTIME_ENV,
             "selectors": {
                 "conversation_id": {
-                    "current": "resolve from AIONUI_CONVERSATION_ID"
+                    "current": "resolve from PAVII_CONVERSATION_ID"
                 },
                 "assistant_id": {
                     "current": "resolve via current conversation"
                 },
                 "user_id": {
-                    "current": "resolve from AIONUI_USER_ID"
+                    "current": "resolve from PAVII_USER_ID"
                 }
             }
         },
@@ -68,7 +71,7 @@ fn data() -> Value {
                 "contract": "agent-facing-config-cli",
                 "contract_command": "config capabilities",
                 "invocation": "paviicore config capabilities",
-                "runtime_required": ["AIONUI_BASE_URL", "AIONUI_CONVERSATION_ID", "AIONUI_USER_ID"],
+                "runtime_required": ["PAVII_BASE_URL", "PAVII_CONVERSATION_ID", "PAVII_USER_ID"],
                 "safety": {
                     "can_write": true,
                     "read_before_write": true,
@@ -82,8 +85,8 @@ fn data() -> Value {
                 "contract": "agent-facing-diagnose-cli",
                 "contract_command": "diagnose capabilities",
                 "invocation": "paviicore diagnose capabilities",
-                "runtime_required": ["AIONUI_BASE_URL", "AIONUI_CONVERSATION_ID", "AIONUI_USER_ID"],
-                "optional_runtime": ["AIONUI_LOG_DIR"],
+                "runtime_required": ["PAVII_BASE_URL", "PAVII_CONVERSATION_ID", "PAVII_USER_ID"],
+                "optional_runtime": ["PAVII_LOG_DIR"],
                 "safety": {
                     "can_write": false,
                     "read_only": true,
@@ -98,7 +101,7 @@ fn data() -> Value {
                 "contract": "agent-facing-team-cli",
                 "contract_command": "team capabilities",
                 "invocation": "paviicore team capabilities",
-                "runtime_required": ["AIONUI_BASE_URL", "AIONUI_CONVERSATION_ID", "AIONUI_USER_ID", "AIONUI_RUNTIME_TOKEN"],
+                "runtime_required": ["PAVII_BASE_URL", "PAVII_CONVERSATION_ID", "PAVII_USER_ID", "AIONUI_RUNTIME_TOKEN"],
                 "runtime_free_commands": ["team capabilities", "team help"],
                 "safety": {
                     "can_write": true,

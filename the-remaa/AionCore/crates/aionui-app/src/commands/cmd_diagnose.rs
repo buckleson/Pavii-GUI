@@ -14,11 +14,16 @@ use crate::cli::{
 };
 use crate::commands::diagnose_capabilities;
 
-const ENV_BASE_URL: &str = "AIONUI_BASE_URL";
-const ENV_CONVERSATION_ID: &str = "AIONUI_CONVERSATION_ID";
-const ENV_USER_ID: &str = "AIONUI_USER_ID";
-const ENV_RUNTIME_TOKEN: &str = "AIONUI_RUNTIME_TOKEN";
-const ENV_LOG_DIR: &str = "AIONUI_LOG_DIR";
+// Pavii-named runtime context. The engine exports both these and the
+// pre-rebrand `AIONUI_*` names, and `env_value` falls back to the old one, so
+// existing scripts keep working while everything the agent is told to use —
+// and therefore everything it can quote to the user — carries the product
+// name.
+const ENV_BASE_URL: &str = "PAVII_BASE_URL";
+const ENV_CONVERSATION_ID: &str = "PAVII_CONVERSATION_ID";
+const ENV_USER_ID: &str = "PAVII_USER_ID";
+const ENV_RUNTIME_TOKEN: &str = "PAVII_RUNTIME_TOKEN";
+const ENV_LOG_DIR: &str = "PAVII_LOG_DIR";
 const MAX_HTTP_OUTPUT_BYTES: usize = 200_000;
 const MAX_LOG_LINES: usize = 1000;
 const MAX_LOG_SEARCH_DEPTH: usize = 6;
@@ -62,7 +67,7 @@ fn run_context() -> Result<(), DiagnoseError> {
             "user_id": env.user_id,
             "conversation_id": env.conversation_id,
             "base_url": env.base_url,
-            "log_dir": std::env::var(ENV_LOG_DIR).ok().filter(|value| !value.trim().is_empty()),
+            "log_dir": env_value(ENV_LOG_DIR),
         }),
         meta_from_map(Map::new()),
         command,
@@ -211,7 +216,7 @@ fn run_logs_tail() -> Result<(), DiagnoseError> {
     let mut selectors = SelectorMeta::default();
     resolve_optional_log_conversation_selector(command, &mut payload, &mut selectors)?;
     let log_dir = optional_string_field(&payload, "log_dir")
-        .or_else(|| std::env::var(ENV_LOG_DIR).ok())
+        .or_else(|| env_value(ENV_LOG_DIR))
         .map(|value| value.trim().to_owned())
         .filter(|value| !value.is_empty())
         .ok_or_else(|| {
@@ -277,26 +282,34 @@ impl DiagnoseEnv {
     }
 }
 
+/// Read a Pavii-named runtime variable, falling back to its `AIONUI_*`
+/// predecessor so environments that only export the old name still work.
+fn env_value(name: &str) -> Option<String> {
+    let read = |key: &str| {
+        std::env::var(key)
+            .ok()
+            .map(|value| value.trim().to_owned())
+            .filter(|value| !value.is_empty())
+    };
+    read(name).or_else(|| {
+        name.strip_prefix("PAVII_")
+            .and_then(|bare| read(&format!("AIONUI_{bare}")))
+    })
+}
+
 fn optional_env(name: &'static str) -> Option<String> {
-    std::env::var(name)
-        .ok()
-        .map(|value| value.trim().to_owned())
-        .filter(|value| !value.is_empty())
+    env_value(name)
 }
 
 fn required_env(command: &str, name: &'static str) -> Result<String, DiagnoseError> {
-    std::env::var(name)
-        .ok()
-        .map(|value| value.trim().to_owned())
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| {
-            DiagnoseError::new(
-                DiagnoseErrorCode::EnvMissing,
-                command,
-                "missing required environment variable",
-            )
-            .field("field", name)
-        })
+    env_value(name).ok_or_else(|| {
+        DiagnoseError::new(
+            DiagnoseErrorCode::EnvMissing,
+            command,
+            "missing required environment variable",
+        )
+        .field("field", name)
+    })
 }
 
 async fn request_json(
@@ -1189,7 +1202,9 @@ mod tests {
 
         assert_eq!(
             error.stderr_line(),
-            "DIAGNOSE_ENV_MISSING command=\"diagnose context\" field=\"AIONUI_CONVERSATION_ID\": missing required environment variable"
+            // Names the Pavii variable: the message tells the user which one
+            // to set, and the pre-rebrand name is only a silent fallback.
+            "DIAGNOSE_ENV_MISSING command=\"diagnose context\" field=\"PAVII_CONVERSATION_ID\": missing required environment variable"
         );
     }
 

@@ -68,7 +68,10 @@ describe('brand leak guards', () => {
       /~\/\.aionui[\w/.-]*/g, // real data-dir paths
       /aionui-assistant\.[\w.{}-]+/g, // rule/avatar filename contract (incl. {locale})
       /avatars\/aionui-assistant\.\w+/g, // avatar asset path contract
-      /\baionrs\b/g, // agent-type wire token, display-mapped downstream
+      // Agent-type wire token. It is display-mapped for the UI, but agent
+      // prose has no display layer — the assets may only mention it to tell
+      // the agent NOT to surface it (checked separately below).
+      /\baionrs\b/g,
       /\.aionui\b/g, // dotfile/dir names
       // The identity rule must NAME the forbidden brands to forbid them.
       /Never describe yourself as AionUi, AionCore/g,
@@ -117,6 +120,36 @@ describe('brand leak guards', () => {
         .replace(/aionui-report-installer-failure\.ps1/g, '');
       expect(stripped, file).not.toMatch(/Aion[Uu]i/);
     }
+  });
+
+  it('never tells the agent to use a pre-rebrand identifier', () => {
+    // The agent quotes its instructions back to the user: shipped skills told
+    // it to run `$env:AIONUI_HELPER_BIN config …`, so the old brand appeared
+    // in chat as a command the user was asked to accept (reported live
+    // 2026-08-27, 73 occurrences across four assets). Instructions must name
+    // the Pavii variables; the AIONUI_* ones stay exported for compatibility
+    // but are never advertised.
+    const assetsRoots = [
+      resolve(__dirname, '../../../the-remaa/AionCore/crates/aionui-app/assets/builtin-skills'),
+      resolve(__dirname, '../../../the-remaa/AionCore/crates/aionui-app/assets/builtin-assistants/rules'),
+    ];
+    const offenders: string[] = [];
+    const walk = (dir: string): void => {
+      if (!existsSync(dir)) return;
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(full);
+        } else if (entry.name.endsWith('.md')) {
+          const text = readFileSync(full, 'utf-8');
+          // Naming one to forbid it is allowed; instructing its use is not.
+          const forbidden = /\$(?:env:)?AIONUI_\w+|"\$AIONUI_\w+"|%AIONUI_\w+%/.exec(text);
+          if (forbidden) offenders.push(`${entry.name}: ${forbidden[0]}`);
+        }
+      }
+    };
+    for (const root of assetsRoots) walk(root);
+    expect(offenders, offenders.join('\n')).toEqual([]);
   });
 
   it('keeps the broken weixin-file-send skill retired', async () => {

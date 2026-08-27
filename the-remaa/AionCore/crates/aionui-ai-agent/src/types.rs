@@ -68,6 +68,10 @@ impl BuildTaskOptions {
                     | AIONUI_HELPER_BIN_ENV
                     | AIONUI_BASE_URL_ENV
                     | AIONUI_RUNTIME_TOKEN_ENV
+                    | PAVII_USER_ID_ENV
+                    | PAVII_CONVERSATION_ID_ENV
+                    | PAVII_HELPER_BIN_ENV
+                    | PAVII_BASE_URL_ENV
             )
         });
         self.context
@@ -75,16 +79,28 @@ impl BuildTaskOptions {
             .push((AIONUI_USER_ID_ENV.to_owned(), user_id.to_owned()));
         self.context
             .runtime_env
+            .push((PAVII_USER_ID_ENV.to_owned(), user_id.to_owned()));
+        self.context
+            .runtime_env
             .push((AIONUI_CONVERSATION_ID_ENV.to_owned(), conversation_id.to_owned()));
+        self.context
+            .runtime_env
+            .push((PAVII_CONVERSATION_ID_ENV.to_owned(), conversation_id.to_owned()));
         if let Some(helper_bin) = helper_bin {
             self.context
                 .runtime_env
                 .push((AIONUI_HELPER_BIN_ENV.to_owned(), helper_bin.to_owned()));
+            self.context
+                .runtime_env
+                .push((PAVII_HELPER_BIN_ENV.to_owned(), helper_bin.to_owned()));
         }
         if let Some(base_url) = base_url {
             self.context
                 .runtime_env
                 .push((AIONUI_BASE_URL_ENV.to_owned(), base_url.to_owned()));
+            self.context
+                .runtime_env
+                .push((PAVII_BASE_URL_ENV.to_owned(), base_url.to_owned()));
         }
         if let Some(runtime_token) = runtime_token {
             self.context
@@ -97,7 +113,20 @@ impl BuildTaskOptions {
 
 pub const AIONUI_USER_ID_ENV: &str = "AIONUI_USER_ID";
 pub const AIONUI_CONVERSATION_ID_ENV: &str = "AIONUI_CONVERSATION_ID";
+/// Pavii-named aliases for the runtime context the agent is told about.
+/// Everything the helper advertises must have a Pavii name, or the agent
+/// quotes the pre-rebrand one back to the user.
+pub const PAVII_USER_ID_ENV: &str = "PAVII_USER_ID";
+pub const PAVII_CONVERSATION_ID_ENV: &str = "PAVII_CONVERSATION_ID";
+pub const PAVII_BASE_URL_ENV: &str = "PAVII_BASE_URL";
 pub const AIONUI_HELPER_BIN_ENV: &str = "AIONUI_HELPER_BIN";
+/// Pavii-named alias for [`AIONUI_HELPER_BIN_ENV`], exported with the same
+/// value. Shipped skills tell the agent to invoke the helper through this
+/// name, so the pre-rebrand identifier never reaches the user's screen when
+/// the agent quotes a command back (reported live 2026-08-27). The old name
+/// keeps being exported: it is a live contract for user scripts and any
+/// custom skill written against it.
+pub const PAVII_HELPER_BIN_ENV: &str = "PAVII_HELPER_BIN";
 pub const AIONUI_BASE_URL_ENV: &str = "AIONUI_BASE_URL";
 pub const AIONUI_RUNTIME_TOKEN_ENV: &str = "AIONUI_RUNTIME_TOKEN";
 pub const CONVERSATION_RUNTIME_CONTEXT_VERSION: u32 = 2;
@@ -266,6 +295,49 @@ mod tests {
                 .context
                 .runtime_env
                 .contains(&(AIONUI_RUNTIME_TOKEN_ENV.to_owned(), "runtime-token-1".to_owned()))
+        );
+        // Pavii-named aliases carry the same values: shipped skills instruct
+        // the agent through these, so the pre-rebrand names never reach the
+        // user when the agent quotes a command. The old names stay exported
+        // for user scripts written against them.
+        assert!(
+            options
+                .context
+                .runtime_env
+                .contains(&(PAVII_USER_ID_ENV.to_owned(), "user-1".to_owned()))
+        );
+        assert!(
+            options
+                .context
+                .runtime_env
+                .contains(&(PAVII_CONVERSATION_ID_ENV.to_owned(), "conv-1".to_owned()))
+        );
+        assert!(options.context.runtime_env.contains(&(
+            PAVII_HELPER_BIN_ENV.to_owned(),
+            "/Applications/AionUi/aioncore".to_owned()
+        )));
+        assert!(
+            options
+                .context
+                .runtime_env
+                .contains(&(PAVII_BASE_URL_ENV.to_owned(), "http://127.0.0.1:25808".to_owned()))
+        );
+        // Re-applying the context must not duplicate the aliases either.
+        options.apply_conversation_runtime_context(
+            "user-1",
+            "conv-1",
+            Some("/Applications/AionUi/aioncore"),
+            Some("http://127.0.0.1:25808"),
+            Some("runtime-token-1"),
+        );
+        assert_eq!(
+            options
+                .context
+                .runtime_env
+                .iter()
+                .filter(|(key, _)| key == PAVII_HELPER_BIN_ENV)
+                .count(),
+            1
         );
         assert_eq!(
             options

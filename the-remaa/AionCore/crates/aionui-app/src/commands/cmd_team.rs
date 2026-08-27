@@ -11,10 +11,10 @@ use serde_json::{Value, json};
 use crate::cli::{TeamArgs, TeamCommand, TeamTaskCommand};
 use crate::commands::team_capabilities;
 
-const ENV_BASE_URL: &str = "AIONUI_BASE_URL";
-const ENV_USER_ID: &str = "AIONUI_USER_ID";
-const ENV_CONVERSATION_ID: &str = "AIONUI_CONVERSATION_ID";
-const ENV_RUNTIME_TOKEN: &str = "AIONUI_RUNTIME_TOKEN";
+const ENV_BASE_URL: &str = "PAVII_BASE_URL";
+const ENV_USER_ID: &str = "PAVII_USER_ID";
+const ENV_CONVERSATION_ID: &str = "PAVII_CONVERSATION_ID";
+const ENV_RUNTIME_TOKEN: &str = "PAVII_RUNTIME_TOKEN";
 
 pub(crate) async fn run_team(args: TeamArgs) -> ExitCode {
     match run_team_inner(args).await {
@@ -118,16 +118,23 @@ fn runtime_env(command: &str) -> Result<RuntimeEnv, ExitCode> {
 }
 
 fn required_env(command: &str, name: &'static str) -> Result<String, ExitCode> {
-    std::env::var(name).map_err(|_| {
-        print_failure(
-            command,
-            "TEAM_CLI_ENV_MISSING",
-            TeamToolErrorPayload::new(
-                TeamToolErrorCode::RuntimeContextMissing,
-                format!("missing required environment variable: {name}"),
-            ),
-        )
-    })
+    // Pavii name first, pre-rebrand name as fallback.
+    let read = |key: &str| std::env::var(key).ok().filter(|value| !value.trim().is_empty());
+    read(name)
+        .or_else(|| {
+            name.strip_prefix("PAVII_")
+                .and_then(|bare| read(&format!("AIONUI_{bare}")))
+        })
+        .ok_or_else(|| {
+            print_failure(
+                command,
+                "TEAM_CLI_ENV_MISSING",
+                TeamToolErrorPayload::new(
+                    TeamToolErrorCode::RuntimeContextMissing,
+                    format!("missing required environment variable: {name}"),
+                ),
+            )
+        })
 }
 
 fn read_stdin_json_object(command: &str, tool: TeamToolName) -> Result<Value, ExitCode> {
