@@ -107,12 +107,18 @@ Var /GLOBAL AionUiSessionLogPath
 
 !macro AIONUI_LOG_EXTRACT_RESULT _METHOD
   ${IfNot} ${FileExists} "$INSTDIR\PaviiAi.exe"
+    ; Report how much room was left. A disk that filled DURING extraction
+    ; lands here, and the bare "could not extract" text reads as a corrupt
+    ; download -- sending the user to re-download when the real fix is to free
+    ; space. The number makes the difference visible in the dialog and the log.
+    !insertmacro AIONUI_MEASURE_FREE_MB
+    !insertmacro AIONUI_LOG_EVENT "event=extract result=fail method=${_METHOD} missing=PaviiAi.exe freeMb=$AionUiFreeMb requiredMb=${AIONUI_MIN_FREE_MB} instDir=$INSTDIR"
     !insertmacro AIONUI_FAIL_UX \
       "${AIONUI_E_EXTRACT_FAILED}" \
-      "event=extract result=fail method=${_METHOD} missing=PaviiAi.exe" \
+      "event=extract result=fail method=${_METHOD} missing=PaviiAi.exe freeMb=$AionUiFreeMb" \
       "${AIONUI_MSG_EXTRACT_FAILED_EN}" \
       "${AIONUI_MSG_EXTRACT_FAILED_ACTION_EN}" \
-      "extract result=fail method=${_METHOD} missing=PaviiAi.exe instDir=$INSTDIR"
+      "extract result=fail method=${_METHOD} missing=PaviiAi.exe$\r$\nFree space now: $AionUiFreeMb MB (a full install needs about ${AIONUI_MIN_FREE_MB} MB)$\r$\nInstall folder: $INSTDIR"
   ${Else}
     !insertmacro AIONUI_SLOG "event=extract result=ok method=${_METHOD} detail=customFiles_${AIONUI_TARGET_ARCH}"
   ${EndIf}

@@ -20,6 +20,9 @@
 !define AIONUI_MSG_BUNDLED_AIONCORE_INCOMPLETE_EN "Pavii.Ai installed, but the bundled Pavii Engine resources are incomplete."
 !define AIONUI_MSG_BUNDLED_AIONCORE_INCOMPLETE_ACTION_EN "Download a fresh installer and run it again. If it still fails, send the installer report to the Pavii.Ai team."
 
+!define AIONUI_MSG_DISK_INSUFFICIENT_EN "There is not enough free disk space to install Pavii.Ai."
+!define AIONUI_MSG_DISK_INSUFFICIENT_ACTION_EN "Free up space on the drive shown below, then run this installer again. Nothing was changed, so your existing installation (if any) still works."
+
 !define AIONUI_MSG_ARCH_MISMATCH_EN "Installation package architecture mismatch."
 !define AIONUI_MSG_ARCH_MISMATCH_ACTION_EN "Download the Pavii.Ai installer that matches this Windows architecture, then run it again."
 

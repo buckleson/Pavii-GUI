@@ -114,6 +114,10 @@ Var /GLOBAL AionUiAtomicSilentRetries
 
 !macro customRemoveFiles
   !insertmacro AIONUI_LOG_EVENT "remove-start instDir=$INSTDIR"
+  ; Earliest point where $INSTDIR is final and nothing has been touched yet:
+  ; the snapshot rename is still ahead. Running out of space AFTER this line
+  ; costs the user their working install; refusing here costs them nothing.
+  !insertmacro AIONUI_ASSERT_FREE_SPACE "pre-remove"
   StrCpy $AionUiAtomicFailedPath ""
   StrCpy $AionUiAtomicRemoveSucceeded "0"
   StrCpy $AionUiAtomicStagingDir ""

@@ -52,6 +52,64 @@ Var /GLOBAL AionUiOldSnapshotPath
   ${EndIf}
 !macroend
 
+/*
+ * Free-space gate (E1020).
+ *
+ * Until now E1020 was defined and never raised: nothing anywhere measured disk
+ * space, so running out of it surfaced as whatever happened to fail first --
+ * a half-written payload reported as E1010 "could not extract", which reads as
+ * a corrupt download and sends the user to re-download instead of freeing
+ * space. This checks before anything is mutated and says the true cause.
+ *
+ * Threshold: a complete install occupies 1022 MB (measured 2026-08-28;
+ * 704 MB of that is `resources`). On an update the previous install is
+ * RENAMED to the snapshot, which costs nothing on the same volume, so either
+ * path needs room for one fresh payload. The margin covers version growth,
+ * the installer's own temp extraction, and filesystem slack.
+ */
+!define AIONUI_MIN_FREE_MB 1536
+
+Var /GLOBAL AionUiFreeMbExit
+Var /GLOBAL AionUiFreeMb
+
+; Sets $AionUiFreeMb to the free megabytes on $INSTDIR's volume, or "" when it
+; cannot be measured. Never fails or prompts — callers decide what to do.
+!macro AIONUI_MEASURE_FREE_MB
+  StrCpy $AionUiFreeMb ""
+  ; AvailableFreeSpace, not TotalFreeSpace: it honours a per-user disk quota,
+  ; which is what this installer can actually write.
+  nsExec::ExecToStack `"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "& { \
+    $$ErrorActionPreference = 'SilentlyContinue'; \
+    $$root = [System.IO.Path]::GetPathRoot('$INSTDIR'); \
+    if (-not $$root) { exit }; \
+    $$drive = New-Object System.IO.DriveInfo $$root; \
+    if (-not $$drive.IsReady) { exit }; \
+    [Console]::Out.Write([string][math]::Floor($$drive.AvailableFreeSpace / 1MB)) \
+  }"`
+  Pop $AionUiFreeMbExit
+  Pop $AionUiFreeMb
+!macroend
+
+!macro AIONUI_ASSERT_FREE_SPACE _PHASE
+  !insertmacro AIONUI_MEASURE_FREE_MB
+
+  ${If} $AionUiFreeMb == ""
+    ; Fail OPEN. A broken probe must never block an install that would have
+    ; worked; the unknown is recorded so a support log still shows we looked.
+    !insertmacro AIONUI_LOG_EVENT "event=disk-check result=unknown phase=${_PHASE} exit=$AionUiFreeMbExit instDir=$INSTDIR"
+  ${ElseIf} $AionUiFreeMb < ${AIONUI_MIN_FREE_MB}
+    !insertmacro AIONUI_LOG_EVENT "event=disk-check result=insufficient phase=${_PHASE} freeMb=$AionUiFreeMb requiredMb=${AIONUI_MIN_FREE_MB} instDir=$INSTDIR"
+    !insertmacro AIONUI_FAIL_REPORTABLE_DIAGNOSTICS \
+      ${AIONUI_E_DISK_INSUFFICIENT} \
+      "event=session-end result=fail code=${AIONUI_E_DISK_INSUFFICIENT} phase=${_PHASE} fatal=1 freeMb=$AionUiFreeMb requiredMb=${AIONUI_MIN_FREE_MB}" \
+      "${AIONUI_MSG_DISK_INSUFFICIENT_EN}" \
+      "${AIONUI_MSG_DISK_INSUFFICIENT_ACTION_EN}" \
+      "Free space: $AionUiFreeMb MB$\r$\nRequired: ${AIONUI_MIN_FREE_MB} MB$\r$\nInstall folder: $INSTDIR"
+  ${Else}
+    !insertmacro AIONUI_LOG_EVENT "event=disk-check result=ok phase=${_PHASE} freeMb=$AionUiFreeMb requiredMb=${AIONUI_MIN_FREE_MB}"
+  ${EndIf}
+!macroend
+
 !macro AIONUI_FAIL_UX _CODE _DETAIL _MSG_EN _ACTION_EN _DIAGNOSTICS_EN
   !insertmacro AIONUI_ROLLBACK_OLD_SNAPSHOT
   !insertmacro AIONUI_SLOG "event=session-end result=fail code=${_CODE} detail=${_DETAIL}"
