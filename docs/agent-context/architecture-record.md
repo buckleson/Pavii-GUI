@@ -440,6 +440,46 @@
 - Affects: `the-remaa/AionCore/crates/aionui-db/migrations/041_kiro_cli_windows_command.sql`
 - Evidence: commit `b0ee834`; a rename alone is inert — the cached projection treats a stored `command_not_found` as still-missing and blocks the fresh probe, so the migration also drops the verdict it invalidates
 
+### An install that cannot fit on disk is refused before anything is touched
+
+- Status: accepted
+- Decision: `AIONUI_ASSERT_FREE_SPACE` runs at the top of `customRemoveFiles` and raises E1020 below 1536 MB free, measured with `AvailableFreeSpace` so per-user quotas count; it fails OPEN when the probe returns nothing.
+- Rationale: E1020 was declared for months and never raised — nothing measured disk — so a full disk surfaced as E1010 "could not extract", which reads as a corrupt download and sends the user to re-download instead of freeing space. On an update that failure lands after the snapshot rename, costing the user a working install.
+- Affects: `resources/windows/installer-errors-sentry.nsh`
+- Evidence: commit `7727d98`; threshold set against a measured 1022 MB payload; `scripts/smoke-installer-disk-gate.js`
+
+### The desktop shortcut is recreated from our own customInstall, not by electron-builder
+
+- Status: accepted
+- Decision: `AIONUI_ENSURE_DESKTOP_SHORTCUT` in `customInstall` creates the shortcut only when absent, naming it `${SHORTCUT_NAME}` and pointing at `${APP_EXECUTABLE_FILENAME}`.
+- Rationale: `createDesktopShortcut: true` creates on fresh/manual install and does nothing on auto-update, because `allowToChangeInstallationDirectory` makes `keepShortcuts` true only when `${isUpdated}`, and the template's `CreateShortCut` sits behind `keepShortcuts == "false"`. **Raising it to `"always"` does not help**: that branch needs `keepShortcuts == "true"` yet is guarded by `${ifNot} ${isUpdated}` — mutually exclusive, dead code here. Creating only when absent is deliberate; recreating always would resurrect an icon the user deleted on purpose.
+- Affects: `resources/windows/installer-update-verify.nsh`
+- Evidence: commit `05c18b0`; `${SHORTCUT_NAME}` ("Pavii.Ai") and `${PRODUCT_FILENAME}` ("PaviiAi", from `executableName`) differ and the uninstaller only deletes the former, so the other name orphans an icon; verified on the official 2.2.7 installer, log showing `result=kept` and `result=created updated=1`
+
+### The Linux .desktop Categories can only be set through linux.category
+
+- Status: accepted
+- Decision: set `linux.category`; never put `Categories` under `desktop.entry`.
+- Rationale: electron-builder writes `desktopMeta.Categories` from `linux.category` _after_ merging `desktop.entry`, so the latter is silently discarded — the app shipped `Categories=Utility;` while the config asked for Office too. `deb.depends` is now declared explicitly for the same reason: an inherited default can change under us.
+- Affects: `packages/desktop/electron-builder.yml`
+- Evidence: commit `05c18b0`; `LinuxTargetHelper.computeDesktopEntry`
+
+### The site CSP is delivered as meta and must be validated on every page
+
+- Status: accepted
+- Decision: the policy lives once in `.workspaces/fluffy-lamp/src/config/csp.mjs` and is injected twice — `MainLayout` for marketing pages and Starlight's `head` for docs. Any change is validated by loading **every page type** and watching for `securitypolicyviolation`.
+- Rationale: GitHub Pages cannot send custom headers, so `vercel.json` was inert and the live site had no security headers at all. The first policy was written from the dev-tools page's origins and applied site-wide, which **blocked `accounts.google.com/gsi/client` and took Google sign-in down on both the website and the desktop app** (the app opens `/login` in a browser — `paviiAuth.ts`). Static analysis cannot catch this class: the Firebase SDK builds its `googleapis.com` URLs at runtime.
+- Affects: `.workspaces/fluffy-lamp/src/config/csp.mjs`
+- Evidence: website commits `b2d8e76` (introduced) and `1d9462c` (fixed); auth-critical origins are `accounts.google.com`, `identitytoolkit`/`securetoken.googleapis.com`, the Firebase authDomain, and loopback `localhost`/`127.0.0.1` for the desktop token hand-off — removing any one breaks sign-in
+
+### macOS app bundles are copied with ditto and re-registered with LaunchServices
+
+- Status: accepted
+- Decision: the published install command uses `ditto`, refreshes the icon cache (`touch` + `killall Dock`), and runs `lsregister` + `mdimport`.
+- Rationale: three separate live failures, all from the shell-install path rather than the build. `cp -R` mishandles the symlinks in Electron's frameworks; replacing a bundle at a path that already held one leaves Finder/Dock/Launchpad showing the cached icon; and a Finder drag registers the app with LaunchServices while a script copy does not, so the app sits in `/Applications` invisible to Launchpad and Spotlight. The shipped `app.icns` was verified valid throughout.
+- Affects: `.workspaces/fluffy-lamp/src/pages/products/[id].astro`
+- Evidence: website commits `22387d6`, `9f4a11f`; ad-hoc `codesign` is load-bearing, not cosmetic — arm64 refuses to execute an unsigned binary and builds are ad-hoc signed only
+
 ## Implementation Context
 
 - Dev-mode engine resolution falls back to `<cwd>/resources/bundled-paviicore/<platform-arch>/` in `packages/desktop/src/process/backend/binaryResolver.ts`; run `node scripts/build-paviicore.js` once per checkout.
@@ -485,6 +525,11 @@
 - Engine builds on this machine fail for disk, not code. Three distinct symptoms, all the same cause and all cleared by `cargo clean` rather than by editing source: truncated metadata (`E0786 found invalid metadata files`), a rustc crash (`STATUS_STACK_BUFFER_OVERRUN`, exit `0xc0000409`), and `fatal error LNK1180: insufficient disk space to complete link`. **`cargo test --workspace` does not currently fit on D:** — measured 2026-08-28, it grew `target/` to 14.7 GB, drove the drive to 0 bytes free, and still died at link time. Run per-crate suites locally (`cargo test -p <crate>`, which does fit) and let CI's engine preflight be the authoritative workspace gate; it runs the same command on a runner with adequate disk.
 - Piping a build or test command into `grep`/`tail` replaces its exit code with the filter's, so a failed run reports success. Redirect to a file and check `$?` — this masked both a failed `just push` and a failed workspace compile.
 - `cargo test -p <crate> --bins` does not build the integration targets under `tests/`. CI's engine preflight runs `cargo test --workspace`; a change to shared output or shipped asset text must be validated against that, or assertions in `tests/` fail only in CI. `cargo test` also stops at the first failing binary, so one reported failure can be hiding others.
+
+- Installer NSIS test coverage is uneven and the gap moves. Five smokes compile real NSIS (`smoke-installer-{shortcut,disk-gate,rollback,self-lock,failure-messagebox}.js`), but each includes only the `.nsh` files it needs — **no smoke included `installer-update-verify.nsh` until `smoke-installer-shortcut.js` existed**, so that file had only ever been compiled by a full release build. When adding a macro there, check whether any smoke actually compiles it. The harness lifts macro text out of the shipped `.nsh` rather than copying it, and injects electron-builder's `nsis-resources` plugin dir so `WinShell::SetLnkAUMI` resolves for real.
+- A local `bun run build-win:x64` bundles the engine from `resources/bundled-paviicore/<key>/`, which is a **staged binary that goes stale**. On 2026-08-29 that staging was two days older than migration 041, so the locally built app hit the downgrade guard (`db_migration_version 41 > app_migration_version 40`) and refused to open the database — "Startup didn't complete". The guard behaved correctly; the build was wrong. CI is unaffected because it compiles the engine from vendored source. Refresh the staging (`node scripts/build-paviicore.js`) before any local packaging test, and expect to reinstall the official build afterwards.
+- NSIS installers **re-launch themselves** on the update path (two `session-begin` events in the JSONL log), so `Start-Process -Wait` returns on the parent while the install continues in a child. Measuring the installed version immediately after that returns the OLD version and looks like a failed install. Poll until no installer process remains.
+- The installer's JSONL log at `%TEMP%\aionui-installer-<version>-<date>-log.jsonl` is the primary diagnostic for any install question — it records the disk check, every verify step, the shortcut decision with `updated=` state, and `session-end`. Read it before theorising.
 
 ## Deferred to the services phase
 
