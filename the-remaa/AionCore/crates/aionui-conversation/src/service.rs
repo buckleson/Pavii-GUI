@@ -5855,7 +5855,27 @@ fn resolve_effective_assistant_mcp_ids(
 }
 
 fn assistant_mcp_row_is_injectable(row: &McpServerRow) -> bool {
-    row.name != TEAM_MCP_SERVER_NAME
+    if row.name == TEAM_MCP_SERVER_NAME {
+        return false;
+    }
+    // A disabled BUILTIN is skipped; a disabled user row is not.
+    //
+    // The distinction is that `enabled` means different things for the two. For
+    // a user's own server it is a toggle, and explicitly selecting a disabled
+    // one is a deliberate "run it anyway" -- see
+    // `explicitly_selected_disabled_mcp_row_remains_injectable`. For a builtin
+    // it is computed (`switch === true && resolution.ok` in
+    // runBackendMigrations.ts), so false can simply mean no usable provider
+    // resolved. Injecting that hands the agent a tool that can only fail: the
+    // image-gen server exits without a platform/model.
+    //
+    // Skipping it is also what lets a natively capable CLI use its own path --
+    // codex ships `image_generation` as a stable, default-on feature -- while a
+    // configured provider still wins, because then the row is enabled.
+    if row.builtin && !row.enabled {
+        return false;
+    }
+    true
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -6275,6 +6295,59 @@ mod tests {
             last_connected: None,
             original_json: None,
             builtin: false,
+            deleted_at: None,
+            created_at: 0,
+            updated_at: 0,
+        };
+        assert!(assistant_mcp_row_is_injectable(&row));
+    }
+
+    #[test]
+    fn disabled_builtin_mcp_row_is_not_injectable() {
+        // A builtin's `enabled` is COMPUTED, not a user override: the desktop
+        // sets `enabled = switch === true && resolution.ok`, so false can mean
+        // "no usable provider resolved". Handing such a server to an agent gives
+        // it a tool that can only error -- the image-gen server returns null
+        // without a platform/model. That is the opposite of a user deliberately
+        // selecting their own disabled row, which stays injectable above.
+        let row = McpServerRow {
+            id: "mcp-builtin-image".into(),
+            user_id: "user-1".into(),
+            name: "aionui-image-generation".into(),
+            description: None,
+            enabled: false,
+            transport_type: "stdio".into(),
+            transport_config: r#"{"command":"node"}"#.into(),
+            tools: None,
+            last_test_status: "disconnected".into(),
+            last_connected: None,
+            original_json: None,
+            builtin: true,
+            deleted_at: None,
+            created_at: 0,
+            updated_at: 0,
+        };
+        assert!(!assistant_mcp_row_is_injectable(&row));
+    }
+
+    #[test]
+    fn enabled_builtin_mcp_row_is_injectable() {
+        // The configured case must keep working: once a provider resolves, the
+        // builtin is injected for every agent, including ones that can generate
+        // images natively -- an explicit provider choice wins.
+        let row = McpServerRow {
+            id: "mcp-builtin-image-on".into(),
+            user_id: "user-1".into(),
+            name: "aionui-image-generation".into(),
+            description: None,
+            enabled: true,
+            transport_type: "stdio".into(),
+            transport_config: r#"{"command":"node"}"#.into(),
+            tools: None,
+            last_test_status: "connected".into(),
+            last_connected: None,
+            original_json: None,
+            builtin: true,
             deleted_at: None,
             created_at: 0,
             updated_at: 0,

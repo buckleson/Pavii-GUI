@@ -46,11 +46,17 @@ async function main() {
 
   server.tool(
     'aionui_image_generation',
-    `REQUIRED tool for generating or editing images. You MUST use this tool for ANY image generation request.
+    `Generate or edit images using the image model configured in Settings > Tools.
 
-CRITICAL: You (the AI assistant) CANNOT generate images directly. You MUST call this tool for:
-- Creating/generating any new images from text descriptions
-- Drawing, painting, or making any visual content
+Use this tool when you have no built-in way to produce images yourself. If you
+can already generate images natively, prefer your own capability -- the previous
+wording asserted that the assistant "CANNOT generate images directly", which is
+false for agents such as codex that ship image generation as a standard feature,
+and pushed them onto the weaker path.
+
+Use it for:
+- Creating/generating new images from text descriptions
+- Drawing, painting, or making visual content
 - Editing or modifying existing images
 
 Primary Functions:
