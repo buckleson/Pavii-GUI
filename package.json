@@ -187,6 +187,7 @@
   "devDependencies": {
     "@electron/fuses": "^1.8.0",
     "@electron/notarize": "^3.1.0",
+    "@electron/rebuild": "4.2.0",
     "@oxlint/plugins": "1.56.0",
     "@playwright/test": "^1.58.2",
     "@sentry/vite-plugin": "^5.1.1",

@@ -23,6 +23,10 @@ function isVxAvailable() {
   }
 }
 
+// prebuild-install fetches over the network; a miss can be transient.
+const PREBUILD_MAX_ATTEMPTS = 3;
+const PREBUILD_RETRY_BASE_MS = 2000;
+
 /**
  * Get bunx command for the current platform
  * Windows requires bunx.cmd, others use bunx
@@ -31,6 +35,31 @@ function isVxAvailable() {
  */
 function getBunxCommand() {
   return process.platform === 'win32' ? 'bun x' : 'bun x';
+}
+
+/**
+ * Resolve the electron-rebuild CLI from the pinned `@electron/rebuild` devDependency.
+ *
+ * Invoked by file path rather than through bunx on purpose: the package's `exports`
+ * map blocks subpath resolution, and its bin name does not match its package name.
+ * Resolving locally also keeps the build off the network. The deprecated
+ * `electron-rebuild` package this replaced was fetched unpinned on every build and
+ * pulled in `lzma-native`, which cannot compile against Python 3.12+ because
+ * node-gyp 9 imports the removed `distutils` module.
+ *
+ * @param {string} projectRoot - Directory containing node_modules
+ * @returns {string|null} Absolute path to the CLI, or null when it is not installed
+ */
+function resolveElectronRebuildCli(projectRoot) {
+  const cli = path.join(projectRoot, 'node_modules', '@electron', 'rebuild', 'lib', 'cli.js');
+  return fs.existsSync(cli) ? cli : null;
+}
+
+/**
+ * Block the current thread. Used only to space out prebuild-install retries.
+ */
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
 /**
@@ -128,8 +157,14 @@ function rebuildWithElectronRebuild(options) {
   const targetArch = normalizeArch(arch);
   const env = buildEnvironment(platform, targetArch, electronVersion);
 
-  const bunxCmd = getBunxCommand();
-  const rebuildCmd = `${bunxCmd} electron-rebuild --only ${modules.join(',')} --force --arch ${targetArch} --electron-version ${electronVersion}`;
+  const cli = resolveElectronRebuildCli(cwd);
+  if (!cli) {
+    throw new Error('@electron/rebuild is not installed. Run `bun install` before rebuilding native modules.');
+  }
+
+  // `--version` is the electron version in @electron/rebuild v4; the v3 package
+  // this replaced spelled it `--electron-version`.
+  const rebuildCmd = `node "${cli}" --only ${modules.join(',')} --force --arch ${targetArch} --version ${electronVersion}`;
 
   execSync(rebuildCmd, {
     stdio: 'inherit',
@@ -233,51 +268,71 @@ function rebuildSingleModule(options) {
 
   // Try prebuild-install first (required for Linux cross-compile)
   if (!forceRebuild || mustUsePrebuild) {
-    try {
-      env.npm_config_build_from_source = 'false';
-      const prebuildArgs = [
-        '--yes',
-        'prebuild-install',
-        '--runtime=electron',
-        `--target=${electronVersion}`,
-        `--platform=${platform}`,
-        `--arch=${targetArch}`,
-        '--force',
-      ];
+    env.npm_config_build_from_source = 'false';
+    const prebuildArgs = [
+      '--yes',
+      'prebuild-install',
+      '--runtime=electron',
+      `--target=${electronVersion}`,
+      `--platform=${platform}`,
+      `--arch=${targetArch}`,
+      '--force',
+    ];
 
-      const fullCmd = cmdPrefix
-        ? `${cmdPrefix} ${bunxCmd} ${prebuildArgs.join(' ')}`
-        : `${bunxCmd} ${prebuildArgs.join(' ')}`;
-      console.log(`     Running: ${fullCmd}`);
+    const fullCmd = cmdPrefix
+      ? `${cmdPrefix} ${bunxCmd} ${prebuildArgs.join(' ')}`
+      : `${bunxCmd} ${prebuildArgs.join(' ')}`;
 
-      if (useShell) {
-        execSync(fullCmd, {
-          cwd: moduleRoot,
-          env,
-          stdio: 'inherit',
-          shell: true,
-        });
-      } else {
-        execFileSync(bunxCmd, prebuildArgs, {
-          cwd: moduleRoot,
-          env,
-          stdio: 'inherit',
-          shell: true,
-        });
+    // The prebuilt binary is fetched over the network, so "not found" is not proof
+    // that no binary was published. A transient fetch failure broke the 2.2.8
+    // windows-arm64 release while the asset was available the whole time, so retry
+    // before falling back to a far slower and more fragile source build.
+    let lastError = null;
+    for (let attempt = 1; attempt <= PREBUILD_MAX_ATTEMPTS; attempt++) {
+      try {
+        const suffix = attempt > 1 ? ` (attempt ${attempt}/${PREBUILD_MAX_ATTEMPTS})` : '';
+        console.log(`     Running: ${fullCmd}${suffix}`);
+
+        if (useShell) {
+          execSync(fullCmd, {
+            cwd: moduleRoot,
+            env,
+            stdio: 'inherit',
+            shell: true,
+          });
+        } else {
+          execFileSync(bunxCmd, prebuildArgs, {
+            cwd: moduleRoot,
+            env,
+            stdio: 'inherit',
+            shell: true,
+          });
+        }
+
+        console.log(`     ✓ prebuild-install succeeded`);
+        return true;
+      } catch (error) {
+        lastError = error;
+        if (attempt < PREBUILD_MAX_ATTEMPTS) {
+          const delayMs = attempt * PREBUILD_RETRY_BASE_MS;
+          console.log(`     prebuild-install attempt ${attempt} failed, retrying in ${delayMs / 1000}s...`);
+          sleepSync(delayMs);
+        }
       }
-
-      console.log(`     ✓ prebuild-install succeeded`);
-      return true;
-    } catch (error) {
-      if (mustUsePrebuild) {
-        // For Linux cross-compile, prebuild-install MUST succeed
-        console.error(`     ✗ prebuild-install failed and cross-compilation from source not supported`);
-        console.error(`     Error: ${error.message}`);
-        return false;
-      }
-      // For other cases, fall back to rebuild
-      console.log(`     prebuild-install failed, falling back to electron-rebuild...`);
     }
+
+    if (mustUsePrebuild) {
+      // For Linux cross-compile, prebuild-install MUST succeed
+      console.error(
+        `     ✗ prebuild-install failed after ${PREBUILD_MAX_ATTEMPTS} attempts and cross-compilation from source not supported`
+      );
+      console.error(`     Error: ${lastError.message}`);
+      return false;
+    }
+    // For other cases, fall back to rebuild
+    console.log(
+      `     prebuild-install failed after ${PREBUILD_MAX_ATTEMPTS} attempts, falling back to electron-rebuild...`
+    );
   }
 
   // Use electron-rebuild to build from source
@@ -286,38 +341,24 @@ function rebuildSingleModule(options) {
     return false;
   }
 
+  const rebuildCli = resolveElectronRebuildCli(projectRoot);
+  if (!rebuildCli) {
+    console.error(`     ✗ @electron/rebuild is not installed. Run \`bun install\` before packaging.`);
+    return false;
+  }
+
   try {
     env.npm_config_build_from_source = 'true';
-    const rebuildArgs = [
-      '--yes',
-      'electron-rebuild',
-      '--only',
-      moduleName,
-      '--force',
-      `--platform=${platform}`,
-      `--arch=${targetArch}`,
-    ];
-
-    const fullCmd = cmdPrefix
-      ? `${cmdPrefix} ${bunxCmd} ${rebuildArgs.join(' ')}`
-      : `${bunxCmd} ${rebuildArgs.join(' ')}`;
+    const rebuildCmd = `node "${rebuildCli}" --only ${moduleName} --force --platform=${platform} --arch=${targetArch} --version ${electronVersion}`;
+    const fullCmd = cmdPrefix ? `${cmdPrefix} ${rebuildCmd}` : rebuildCmd;
     console.log(`     Running: ${fullCmd}`);
 
-    if (useShell) {
-      execSync(fullCmd, {
-        cwd: projectRoot,
-        env,
-        stdio: 'inherit',
-        shell: true,
-      });
-    } else {
-      execFileSync(bunxCmd, rebuildArgs, {
-        cwd: projectRoot,
-        env,
-        stdio: 'inherit',
-        shell: true,
-      });
-    }
+    execSync(fullCmd, {
+      cwd: projectRoot,
+      env,
+      stdio: 'inherit',
+      shell: true,
+    });
     return true;
   } catch (error) {
     console.error(`❌ Failed to rebuild ${moduleName}:`, error.message);
