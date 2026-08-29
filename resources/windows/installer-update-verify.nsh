@@ -195,6 +195,52 @@ Var /GLOBAL AionUiActiveMarkerResult
   ${EndIf}
 !macroend
 
+/*
+ * Desktop shortcut, restored on updates.
+ *
+ * electron-builder's own `addDesktopLink` only creates the shortcut when
+ * `$keepShortcuts == "false"`, and because `allowToChangeInstallationDirectory`
+ * is set, `setIsTryToKeepShortcuts` makes that true on a fresh or manual
+ * install but NOT on an auto-update. So an auto-updated install silently ends
+ * up with no desktop icon -- observed live on 2026-08-28 after updating to
+ * 2.2.6, where the Start-menu entry survived and the desktop one did not.
+ *
+ * Raising `createDesktopShortcut` to "always" does NOT fix this: it defines
+ * RECREATE_DESKTOP_SHORTCUT, whose branch is reachable only when
+ * `$keepShortcuts == "true"` (i.e. during an update) yet is itself guarded by
+ * `${ifNot} ${isUpdated}`. Those are mutually exclusive, so the branch is dead
+ * code for this configuration. Hence doing it here instead.
+ *
+ * Only creates the shortcut when it is ABSENT. Recreating unconditionally would
+ * resurrect an icon the user deliberately deleted on every single update, which
+ * is a worse bug than the one being fixed.
+ *
+ * Use ${SHORTCUT_NAME} for the .lnk and ${APP_EXECUTABLE_FILENAME} for the
+ * target -- they are NOT the same string here. PRODUCT_FILENAME follows
+ * `executableName` ("PaviiAi"), while SHORTCUT_NAME follows `shortcutName`
+ * ("Pavii.Ai"). Naming the link after PRODUCT_FILENAME would create
+ * "PaviiAi.lnk" while the uninstaller deletes "Pavii.Ai.lnk", orphaning an icon
+ * on every uninstall.
+ */
+!macro AIONUI_ENSURE_DESKTOP_SHORTCUT
+  ${If} ${FileExists} "$DESKTOP\${SHORTCUT_NAME}.lnk"
+    !insertmacro AIONUI_LOG_EVENT "event=desktop-shortcut result=kept path=$DESKTOP\${SHORTCUT_NAME}.lnk"
+  ${Else}
+    ClearErrors
+    CreateShortCut "$DESKTOP\${SHORTCUT_NAME}.lnk" "$INSTDIR\${APP_EXECUTABLE_FILENAME}" "" "$INSTDIR\${APP_EXECUTABLE_FILENAME}" 0 "" "" "${APP_DESCRIPTION}"
+    ${If} ${Errors}
+      ; Never fail an otherwise good install over a shortcut.
+      !insertmacro AIONUI_LOG_EVENT "event=desktop-shortcut result=fail path=$DESKTOP\${SHORTCUT_NAME}.lnk"
+    ${Else}
+      ; Match the AppUserModelID electron-builder sets, so taskbar pinning and
+      ; toast notifications attribute to the same app identity.
+      WinShell::SetLnkAUMI "$DESKTOP\${SHORTCUT_NAME}.lnk" "${APP_ID}"
+      System::Call 'Shell32::SHChangeNotify(i 0x8000000, i 0, i 0, i 0)'
+      !insertmacro AIONUI_LOG_EVENT "event=desktop-shortcut result=created updated=$AionUiIsUpdated path=$DESKTOP\${SHORTCUT_NAME}.lnk"
+    ${EndIf}
+  ${EndIf}
+!macroend
+
 !macro customInstall
   !insertmacro AIONUI_VERIFY_CORE_APP_FILES
   !insertmacro AIONUI_VERIFY_BUNDLED_AIONCORE_RESOURCES "${AIONUI_RUNTIME_KEY}"
@@ -209,6 +255,7 @@ Var /GLOBAL AionUiActiveMarkerResult
     StrCpy $AionUiRemoveResidueRoot "$INSTDIR"
     StrCpy $AionUiOldSnapshotPath ""
   ${EndIf}
+  !insertmacro AIONUI_ENSURE_DESKTOP_SHORTCUT
   !insertmacro AIONUI_CLEAR_ACTIVE_INSTALLER_MARKER
   !insertmacro AIONUI_SESSION_SUCCESS
 !macroend

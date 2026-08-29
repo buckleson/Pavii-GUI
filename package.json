@@ -73,6 +73,7 @@
     "test:smoke:installer:self-lock": "node scripts/smoke-installer-self-lock.js",
     "test:smoke:installer:rollback": "node scripts/smoke-installer-rollback.js",
     "test:smoke:installer:disk-gate": "node scripts/smoke-installer-disk-gate.js",
+    "test:smoke:installer:shortcut": "node scripts/smoke-installer-shortcut.js",
     "test:smoke:installer:rstrtmgr-ui": "node scripts/smoke-installer-rstrtmgr-ui.js",
     "prepare": "husky",
     "postinstall": "node scripts/postinstall.js",

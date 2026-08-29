@@ -182,7 +182,12 @@ linux:
     - AppImage
   icon: resources/app.png
   artifactName: ${productName}-${version}-${os}-${arch}.${ext}
-  category: Utility
+  # This is the ONLY place the .desktop Categories can be set. electron-builder
+  # writes `desktopMeta.Categories` from `linux.category` AFTER merging
+  # `desktop.entry` (LinuxTargetHelper.computeDesktopEntry), so a Categories key
+  # under `desktop.entry` is silently discarded — which is how this app shipped
+  # `Categories=Utility;` while the entry below asked for Office too.
+  category: Office;Utility;
   maintainer: Team Pavii <info@pavii.tech>
   vendor: Team Pavii
   synopsis: ${description}
@@ -194,12 +199,26 @@ linux:
       Comment: ${description}
       # electron-builder installs hicolor icons under the executable name
       Icon: PaviiAi
-      Categories: Office;Utility;
       Keywords: AI;assistant;chat;agent;
       # Electron's WM_CLASS derives from the app name — required so
       # GNOME/KDE docks associate the running window with this entry
       StartupWMClass: Pavii.Ai
       MimeType: x-scheme-handler/pavii;
+
+# Pinned rather than inherited. Without a `depends` list electron-builder
+# supplies its own default set, so an upgrade of electron-builder could silently
+# change what the .deb requires. These are that current default, made explicit.
+deb:
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libuuid1
+    - libsecret-1-0
 
 npmRebuild: false
 buildDependenciesFromSource: false
