@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.2.7](https://www.pavii.tech/products/dev-tools/) (2026-08-28)
+
+### Desktop
+
+#### Bug Fixes
+
+- **installer:** the desktop shortcut survives an update — it used to be created only on a first or manual install, so updating left you with the Start-menu entry and no desktop icon. A shortcut you deleted on purpose stays deleted.
+- **linux:** the application-menu entry is filed under Office as well as Utility, and the package now states the libraries it needs instead of relying on a default that could change underneath it.
+
+---
+
 ## [2.2.6](https://www.pavii.tech/products/dev-tools/) (2026-08-28)
 
 ### Desktop
