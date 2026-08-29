@@ -1480,6 +1480,10 @@ export const systemSettings = {
   getKeepAwake: httpGetClientSetting<boolean>('keepAwake'),
   setKeepAwake: httpPut<void, { enabled: boolean }>('/api/settings/client', (p) => ({ keepAwake: p.enabled })),
   changeLanguage: httpPatch<void, { language: string }>('/api/settings', (p) => ({ language: p.language })),
+  // Persisting the language (above) is an HTTP call, and HTTP-backed methods have a
+  // no-op `provider`. The main process still has to react — retitle the tray, switch
+  // its own i18n — so the side effects need a real IPC channel of their own.
+  notifyLanguageChanged: bridge.buildProvider<void, { language: string }>('system-settings:notify-language-changed'),
   languageChanged: wsEmitter<{ language: string }>('system-settings:language-changed'),
   getSaveUploadToWorkspace: httpGetClientSetting<boolean>('saveUploadToWorkspace'),
   setSaveUploadToWorkspace: httpPut<void, { enabled: boolean }>('/api/settings/client', (p) => ({
