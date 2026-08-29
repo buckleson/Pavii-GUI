@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.8](https://www.pavii.tech/products/dev-tools/) (2026-08-29)
+
+### Desktop
+
+#### Bug Fixes
+
+- **image generation:** an agent is no longer handed the built-in image tool when no image model is configured — it could only fail there. Agents that generate images themselves, such as Codex, now use their own capability instead, and the tool no longer tells them they cannot. Configure an image model and it is used as before, for every agent.
+
+---
+
 ## [2.2.7](https://www.pavii.tech/products/dev-tools/) (2026-08-28)
 
 ### Desktop
