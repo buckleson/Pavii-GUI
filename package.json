@@ -1,6 +1,6 @@
 {
   "name": "pavii-ai",
-  "version": "2.2.8",
+  "version": "2.2.9",
   "description": "Pavii.Ai — your personal AI workspace",
   "keywords": [],
   "license": "Apache-2.0",
@@ -187,6 +187,7 @@
   "devDependencies": {
     "@electron/fuses": "^1.8.0",
     "@electron/notarize": "^3.1.0",
+    "@electron/rebuild": "4.2.0",
     "@oxlint/plugins": "1.56.0",
     "@playwright/test": "^1.58.2",
     "@sentry/vite-plugin": "^5.1.1",

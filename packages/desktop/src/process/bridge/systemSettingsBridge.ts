@@ -39,11 +39,11 @@ export function initSystemSettingsBridge(): void {
     }
   });
 
-  // Language change notification, sync main process i18n and notify tray rebuild
-  ipcBridge.systemSettings.changeLanguage.provider(async ({ language }) => {
-    // Broadcast to all renderers FIRST (desktop + WebUI) for real-time sync.
-    // This must happen before the potentially slow main-process i18n switch.
-    ipcBridge.systemSettings.languageChanged.emit({ language });
+  // Language change notification, sync main process i18n and notify tray rebuild.
+  // Registered on notifyLanguageChanged, not on changeLanguage: the latter is an
+  // HTTP method whose `provider` is a no-op, so a handler placed there never runs.
+  ipcBridge.systemSettings.notifyLanguageChanged.provider(async ({ language }) => {
+    // Tray labels first — this is the visible half, and it is cheap.
     _languageChangeListener?.();
 
     // Update main process i18n (non-blocking – don't let a hang here block the provider)

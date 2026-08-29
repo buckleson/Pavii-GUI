@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.2.9](https://www.pavii.tech/products/dev-tools/) (2026-08-30)
+
+### Desktop
+
+#### Features
+
+- **skills:** an agent working in a project now reads `pavii-ard.md` and `pavii-hoff.md` before it starts and keeps them current as work happens, so a session opened days later continues from what the last one recorded instead of asking again. In a team the files live in the shared workspace and only the leader writes them; everyone reads.
+
+#### Bug Fixes
+
+- **settings:** changing the language now relabels the tray menu and switches the main process too, instead of only the window you changed it in.
+- **build:** a momentary failure downloading a prebuilt native binary no longer fails a release. The download is retried before falling back to building from source, and that fallback now uses a maintained, version-pinned toolchain instead of a deprecated one fetched fresh on every build — which could not compile against the build machines' Python and so had never actually worked.
+
+---
+
 ## [2.2.8](https://www.pavii.tech/products/dev-tools/) (2026-08-29)
 
 ### Desktop
