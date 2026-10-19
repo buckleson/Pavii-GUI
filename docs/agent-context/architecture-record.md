@@ -470,7 +470,7 @@
 - Decision: the policy lives once in `.workspaces/fluffy-lamp/src/config/csp.mjs` and is injected twice — `MainLayout` for marketing pages and Starlight's `head` for docs. Any change is validated by loading **every page type** and watching for `securitypolicyviolation`.
 - Rationale: GitHub Pages cannot send custom headers, so `vercel.json` was inert and the live site had no security headers at all. The first policy was written from the dev-tools page's origins and applied site-wide, which **blocked `accounts.google.com/gsi/client` and took Google sign-in down on both the website and the desktop app** (the app opens `/login` in a browser — `paviiAuth.ts`). Static analysis cannot catch this class: the Firebase SDK builds its `googleapis.com` URLs at runtime.
 - Affects: `.workspaces/fluffy-lamp/src/config/csp.mjs`
-- Evidence: website commits `b2d8e76` (introduced) and `1d9462c` (fixed); auth-critical origins are `accounts.google.com`, `identitytoolkit`/`securetoken.googleapis.com`, the Firebase authDomain, and loopback `localhost`/`127.0.0.1` for the desktop token hand-off — removing any one breaks sign-in
+- Evidence: website commits `b2d8e76` (introduced), `1d9462c` (Google fixed), `8e1b92f` (GitHub/SSO fixed: Firebase `signInWithPopup` injects `apis.google.com/js/api.js` before opening the popup, a path Google sign-in never takes, so verifying Google alone missed it); auth-critical origins are `accounts.google.com`, `apis.google.com`, `identitytoolkit`/`securetoken.googleapis.com`, the Firebase authDomain, and loopback `localhost`/`127.0.0.1` for the desktop token hand-off — removing any one breaks sign-in. **Validate every sign-in provider**, not one.
 
 ### macOS app bundles are copied with ditto and re-registered with LaunchServices
 
@@ -479,6 +479,38 @@
 - Rationale: three separate live failures, all from the shell-install path rather than the build. `cp -R` mishandles the symlinks in Electron's frameworks; replacing a bundle at a path that already held one leaves Finder/Dock/Launchpad showing the cached icon; and a Finder drag registers the app with LaunchServices while a script copy does not, so the app sits in `/Applications` invisible to Launchpad and Spotlight. The shipped `app.icns` was verified valid throughout.
 - Affects: `.workspaces/fluffy-lamp/src/pages/products/[id].astro`
 - Evidence: website commits `22387d6`, `9f4a11f`; ad-hoc `codesign` is load-bearing, not cosmetic — arm64 refuses to execute an unsigned binary and builds are ad-hoc signed only
+
+### A builtin MCP server is injected only when its computed enabled flag is true
+
+- Status: accepted
+- Decision: selected **builtin** MCP rows are skipped when `enabled` is false; user-added rows keep "selected but disabled still injects".
+- Rationale: for a builtin, `enabled` is computed (`switch === true && resolution.ok`), so false means no usable provider — the image-gen server could only fail. Skipping it lets Codex use its native, default-on image generation; a configured provider still wins for every agent. `prompt_capabilities.image` is deliberately not the gate (it means image _input_).
+- Affects: `the-remaa/AionCore/crates/aionui-conversation/src/service.rs`, `packages/desktop/src/process/resources/builtinMcp/imageGenServer.ts`
+- Evidence: commit `e5d38ed`; `explicitly_selected_disabled_mcp_row_remains_injectable` still passes
+
+### Side-effecting settings notify the main process over a real IPC provider
+
+- Status: accepted
+- Decision: the language-change side effects (tray relabel, main-process i18n) run on `notifyLanguageChanged`, an IPC provider beside `setCloseToTray`; persistence stays on the existing HTTP PATCH.
+- Rationale: HTTP-backed bridge methods return `provider: () => {}`, so a handler registered on one (`systemSettings.changeLanguage`) is legal and never runs. The `languageChanged` wsEmitter call was removed because nothing publishes that event.
+- Affects: `packages/desktop/src/common/adapter/ipcBridge.ts`, `packages/desktop/src/process/bridge/systemSettingsBridge.ts`
+- Evidence: commit `fa1a8c4`; `tests/unit/process/systemSettingsLanguageBridge.test.ts` pins the channel, not just the behaviour
+
+### Native module prebuilds are retried, and the source fallback uses pinned @electron/rebuild
+
+- Status: accepted
+- Decision: the prebuilt fetch retries with backoff; the fallback runs `@electron/rebuild` 4.2.0 from `node_modules` by file path with `--version`.
+- Rationale: 2.2.8 windows-arm64 failed on one transient "No prebuilt binaries found". The old fallback (`bun x --yes electron-rebuild` 3.2.9) had never worked on CI: its `lzma-native` needs node-gyp 9, which imports `distutils`, gone in the runners' Python 3.12+.
+- Affects: `scripts/rebuildNativeModules.js`
+- Evidence: commit `fa1a8c4`; `tests/unit/bootstrap/nativeRebuildRetry.test.ts` (structural)
+
+### Project context carries between agent sessions through pavii-context
+
+- Status: accepted
+- Decision: builtin auto-inject skill `pavii-context` makes the agent read and maintain `pavii-ard.md` and `pavii-hoff.md` in a project directory; in a team only the lead writes.
+- Rationale: the role comes from the injected `Role: lead|teammate` line, with `paviicore team context` as tiebreaker (it returns 401 outside a team, so any non-zero exit means "not in a team"). Cadence and leader-only writing are prose instructions because no engine hook enforces them. Skipped in scratch temp workspaces.
+- Affects: `the-remaa/AionCore/crates/aionui-app/assets/builtin-skills/auto-inject/pavii-context/SKILL.md`
+- Evidence: commit `fa1a8c4`; `the-remaa/AionCore/crates/aionui-app/tests/pavii_context_skill.rs`
 
 ## Implementation Context
 
