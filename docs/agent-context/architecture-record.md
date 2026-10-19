@@ -376,6 +376,14 @@
 - Affects: `.workspaces/fluffy-lamp/src/pages/login.astro`
 - Evidence: commit `dcffe50` in `vjk7989/fluffy-lamp`
 
+### Website GitHub sign-in links to an existing same-email account
+
+- Status: accepted
+- Decision: The GitHub OAuth App (`pavii-ai3`, owner `buckleson`) lists `https://pavii-ai3.firebaseapp.com/__/auth/handler` as a redirect URI next to `https://www.pavii.tech/`. When GitHub sign-in fails with `auth/account-exists-with-different-credential`, the login page keeps the GitHub credential (`credentialFromError`), asks the user to sign in with Google or email, then `linkWithCredential` attaches GitHub to that account inside `finish()`.
+- Rationale: Firebase's default "one account per email" setting rejects a second provider for the same email; linking keeps a single Firebase UID, so the desktop app sees the same user whichever provider is used. Switching Firebase to "multiple accounts per email" would create separate UIDs instead.
+- Affects: `.workspaces/fluffy-lamp/src/pages/login.astro`; GitHub OAuth App settings (outside the repo)
+- Evidence: Oct 19, 2026: missing redirect URI caused GitHub's "redirect_uri is not associated" page; after adding it, GitHub sign-in reached Firebase and returned `auth/account-exists-with-different-credential`.
+
 ### Windows in-app updates are silent and differential
 
 - Status: accepted
