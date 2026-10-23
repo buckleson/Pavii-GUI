@@ -346,13 +346,15 @@ describe('installCli', () => {
   it('on Windows leaves values without spaces unquoted', async () => {
     setPlatform('win32');
     dataDir = 'C:\\Pavii';
-    findBundledNpmMock.mockReturnValue('C:\\npm\\npm.cmd');
+    // Built with path.join so path.dirname splits it on every host OS (CI runs Linux).
+    const npm = path.join('C:\\npm', 'npm.cmd');
+    findBundledNpmMock.mockReturnValue(npm);
     existingFiles = new Set([winNpmCli('C:\\npm')]);
 
     await installCli('qwen');
 
     expect(execCall()).toMatchObject({
-      file: 'C:\\npm\\npm.cmd',
+      file: npm,
       args: ['install', '-g', '@qwen-code/qwen-code', '--prefix', path.join('C:\\Pavii', 'managed-tools')],
     });
   });
