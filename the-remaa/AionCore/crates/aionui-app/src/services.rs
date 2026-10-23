@@ -10,7 +10,9 @@ use aionui_ai_agent::{
 };
 use aionui_auth::{CookieConfig, JwtService, QrTokenStore, resolve_jwt_secret};
 use aionui_common::OnConversationDelete;
-use aionui_conversation::{ConversationService, runtime_state::ConversationRuntimeStateService};
+use aionui_conversation::{
+    ConversationService, PaviiIndexedAcpSessionRepository, runtime_state::ConversationRuntimeStateService,
+};
 use aionui_db::{
     Database, IAcpSessionRepository, IAgentMetadataRepository, IConversationRepository, IMcpServerRepository,
     IProjectStore, ISkillRepository, IUsageLedgerRepository, IUserRepository, SqliteAcpSessionRepository,
@@ -195,12 +197,18 @@ impl AppServices {
         // hydrate never waits beyond the inline budget per agent.
         agent_registry.spawn_slow_probe_recheck();
 
-        let acp_session_repo: Arc<dyn IAcpSessionRepository> =
-            Arc::new(SqliteAcpSessionRepository::new(database.pool().clone()));
-        let acp_agent_service = AcpSessionSyncService::new(acp_session_repo.clone());
-
         let conversation_repo: Arc<dyn IConversationRepository> =
             Arc::new(SqliteConversationRepository::new(database.pool().clone()));
+
+        // The agent runtime's session-bind writes (direct-CLI pump and
+        // AcpSessionSyncService) go through this repo; the decorator mirrors
+        // each bind into the workspace's `.pavii/sessions.json` (best-effort).
+        let acp_session_repo: Arc<dyn IAcpSessionRepository> = Arc::new(PaviiIndexedAcpSessionRepository::new(
+            Arc::new(SqliteAcpSessionRepository::new(database.pool().clone())),
+            conversation_repo.clone(),
+            work_dir.clone(),
+        ));
+        let acp_agent_service = AcpSessionSyncService::new(acp_session_repo.clone());
         let skill_repo: Arc<dyn ISkillRepository> = Arc::new(SqliteSkillRepository::new(database.pool().clone()));
 
         // Project-bind service (side branch). temp_root mirrors the existing

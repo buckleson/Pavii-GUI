@@ -87,3 +87,22 @@ pub struct UpsertConversationAssistantSnapshotParams<'a> {
     pub default_mcps_mode: &'a str,
     pub resolved_mcp_ids: &'a str,
 }
+
+/// One conversation projected for the per-user sessions index: the
+/// conversation columns the index needs plus its `acp_session` identity
+/// (NULL when the conversation owns no `acp_session` row).
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct ConversationSessionIndexRow {
+    pub id: String,
+    pub name: String,
+    #[sqlx(rename = "type")]
+    pub r#type: String,
+    /// JSON object: the conversation `extra` blob (workspace, backend, …).
+    pub extra: String,
+    pub created_at: TimestampMs,
+    pub updated_at: TimestampMs,
+    /// `acp_session.agent_id`; NULL without an `acp_session` row.
+    pub acp_agent_id: Option<String>,
+    /// `acp_session.session_id` (the CLI resume anchor); NULL until bound.
+    pub backend_session_id: Option<String>,
+}

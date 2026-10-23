@@ -8,6 +8,8 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import SystemModalContent from '@/renderer/components/settings/SettingsModal/contents/SystemModalContent';
 import AboutModalContent from '@/renderer/components/settings/SettingsModal/contents/AboutModalContent';
+import BackupRestoreSection from '@/renderer/components/settings/PaviiBackup/BackupRestoreSection';
+import { isElectronDesktop } from '@/renderer/utils/platform';
 import SettingsPageWrapper from './components/SettingsPageWrapper';
 
 const SystemSettings: React.FC = () => {
@@ -16,7 +18,18 @@ const SystemSettings: React.FC = () => {
 
   return (
     <SettingsPageWrapper contentClassName={isAboutPage ? 'max-w-640px' : undefined}>
-      {isAboutPage ? <AboutModalContent /> : <SystemModalContent />}
+      {isAboutPage ? (
+        <AboutModalContent />
+      ) : (
+        <>
+          <SystemModalContent />
+          {isElectronDesktop() && (
+            <div className='mt-16px'>
+              <BackupRestoreSection />
+            </div>
+          )}
+        </>
+      )}
     </SettingsPageWrapper>
   );
 };

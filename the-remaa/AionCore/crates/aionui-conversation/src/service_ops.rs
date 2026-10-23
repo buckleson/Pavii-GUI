@@ -332,16 +332,14 @@ impl ConversationService {
     ) -> Option<aionui_db::AgentMetadataRow> {
         // 1. The acp_session row is the primary identity source for ACP
         //    conversations (see session_context::resolve_acp_identity).
-        if let Ok(Some(session)) = self.acp_session_repo().get_for_user(user_id, conversation_id).await {
-            if !session.agent_id.is_empty() {
-                if let Ok(Some(row)) = self
-                    .agent_metadata_repo()
-                    .get_for_user(user_id, &session.agent_id)
-                    .await
-                {
-                    return Some(row);
-                }
-            }
+        if let Ok(Some(session)) = self.acp_session_repo().get_for_user(user_id, conversation_id).await
+            && !session.agent_id.is_empty()
+            && let Ok(Some(row)) = self
+                .agent_metadata_repo()
+                .get_for_user(user_id, &session.agent_id)
+                .await
+        {
+            return Some(row);
         }
 
         // 2. The assistant snapshot carries the agent id for every
@@ -350,26 +348,23 @@ impl ConversationService {
             .conversation_repo()
             .get_assistant_snapshot(user_id, conversation_id)
             .await
+            && !snapshot.agent_id.is_empty()
+            && let Ok(Some(row)) = self
+                .agent_metadata_repo()
+                .get_for_user(user_id, &snapshot.agent_id)
+                .await
         {
-            if !snapshot.agent_id.is_empty() {
-                if let Ok(Some(row)) = self
-                    .agent_metadata_repo()
-                    .get_for_user(user_id, &snapshot.agent_id)
-                    .await
-                {
-                    return Some(row);
-                }
-            }
+            return Some(row);
         }
 
         // 3. Fall back to the conversation row extras, mirroring the team
         //    adapter: an explicit agent_id first, then the backend builtin.
         let row = self.conversation_repo().get(user_id, conversation_id).await.ok()??;
         let extra: serde_json::Value = serde_json::from_str(&row.extra).ok()?;
-        if let Some(agent_id) = extra.get("agent_id").and_then(serde_json::Value::as_str) {
-            if let Ok(Some(metadata)) = self.agent_metadata_repo().get_for_user(user_id, agent_id).await {
-                return Some(metadata);
-            }
+        if let Some(agent_id) = extra.get("agent_id").and_then(serde_json::Value::as_str)
+            && let Ok(Some(metadata)) = self.agent_metadata_repo().get_for_user(user_id, agent_id).await
+        {
+            return Some(metadata);
         }
         let backend = extra.get("backend").and_then(serde_json::Value::as_str)?;
         self.agent_metadata_repo()

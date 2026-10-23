@@ -1,0 +1,14 @@
+{"type":"mode","mode":"default","sessionId":"sess-alpha"}
+{"type":"user","sessionId":"sess-alpha","cwd":"__CWD__","timestamp":"2026-01-02T10:00:00.000Z","uuid":"u-1","parentUuid":null,"isSidechain":false,"message":{"role":"user","content":"Please add a greeting helper"}}
+{"type":"user","sessionId":"sess-alpha","cwd":"__CWD__","timestamp":"2026-01-02T10:00:01.000Z","uuid":"u-2","parentUuid":"u-1","isSidechain":false,"isMeta":true,"message":{"role":"user","content":"meta caveat text"}}
+{"type":"assistant","sessionId":"sess-alpha","cwd":"__CWD__","timestamp":"2026-01-02T10:00:02.000Z","uuid":"a-1","parentUuid":"u-1","isSidechain":false,"message":{"role":"assistant","id":"msg_1","content":[{"type":"thinking","thinking":"private reasoning","signature":"sig"}]}}
+{"type":"assistant","sessionId":"sess-alpha","cwd":"__CWD__","timestamp":"2026-01-02T10:00:03.000Z","uuid":"a-2","parentUuid":"a-1","isSidechain":false,"message":{"role":"assistant","id":"msg_1","content":[{"type":"text","text":"Sure, adding it now."}]}}
+{"type":"assistant","sessionId":"sess-alpha","cwd":"__CWD__","timestamp":"2026-01-02T10:00:04.000Z","uuid":"a-3","parentUuid":"a-2","isSidechain":false,"message":{"role":"assistant","id":"msg_1","content":[{"type":"tool_use","id":"tool-1","name":"Write","input":{"file_path":"greet.ts"}}]}}
+{"type":"user","sessionId":"sess-alpha","cwd":"__CWD__","timestamp":"2026-01-02T10:00:05.000Z","uuid":"u-3","parentUuid":"a-3","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool-1","content":"ok"}]}}
+{"type":"assistant","sessionId":"sess-alpha","cwd":"__CWD__","timestamp":"2026-01-02T10:00:06.000Z","uuid":"a-4","parentUuid":"u-3","isSidechain":false,"message":{"role":"assistant","id":"msg_1","content":[{"type":"text","text":"Done."}]}}
+{"type":"user","sessionId":"sess-alpha","cwd":"__CWD__","timestamp":"2026-01-02T10:00:07.000Z","uuid":"s-1","parentUuid":null,"isSidechain":true,"message":{"role":"user","content":"sidechain task"}}
+{not valid json
+{"type":"attachment","sessionId":"sess-alpha","cwd":"__CWD__","timestamp":"2026-01-02T10:00:08.000Z","attachment":{"type":"file"}}
+{"type":"ai-title","aiTitle":"First title","sessionId":"sess-alpha"}
+{"type":"ai-title","aiTitle":"Greeting helper","sessionId":"sess-alpha"}
+{"type":"user","sessionId":"sess-alpha","cwd":"__CWD__","timestamp":"2026-01-02T10:05:00.000Z","uuid":"u-4","parentUuid":"a-4","isSidechain":false,"message":{"role":"user","content":"Thanks"}}

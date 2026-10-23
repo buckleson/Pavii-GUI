@@ -52,6 +52,10 @@ export interface IConfigStorageRefer {
   'skillsMarket.enabled'?: boolean;
   /** Agent CLI update checks: last automatic check and per-CLI results */
   'agentCli.updateState'?: AgentCliUpdateState;
+  /** `createdAt` of the default `.pavii` backup whose restore offer the user dismissed. */
+  'paviiData.restoreDismissedFor'?: string;
+  /** Epoch ms of the last automatic `.pavii` backup save. */
+  'paviiData.lastAutoSaveAt'?: number;
   /**
    * One-shot completion flag for the legacy `model.config` → backend providers
    * migration in {@link migrateProviders}. Once `true`, the migration is

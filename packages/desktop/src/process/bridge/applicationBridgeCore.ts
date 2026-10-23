@@ -11,6 +11,7 @@
  */
 import os from 'os';
 import path from 'path';
+import { app } from 'electron';
 import { ipcBridge } from '@/common';
 import { createSkillFileService } from '@process/services/skills';
 import { getSystemDir, ProcessEnv } from '@process/utils/initStorage';
@@ -39,6 +40,8 @@ export function initApplicationBridgeCore(): void {
   });
 
   ipcBridge.application.getPath.provider(({ name }) => {
+    // Documents can be relocated by the OS (e.g. OneDrive), so ask Electron.
+    if (name === 'documents') return Promise.resolve(app.getPath('documents'));
     // Resolve common paths without Electron
     const home = os.homedir();
     const map: Record<string, string> = {

@@ -23,6 +23,13 @@ vi.mock('@/renderer/components/settings/SettingsModal/contents/AboutModalContent
   default: () => <div data-testid='about-modal-content'>AboutModalContent</div>,
 }));
 
+const platformMocks = vi.hoisted(() => ({ isElectron: false }));
+vi.mock('@/renderer/utils/platform', () => ({ isElectronDesktop: () => platformMocks.isElectron }));
+
+vi.mock('@/renderer/components/settings/PaviiBackup/BackupRestoreSection', () => ({
+  default: () => <div data-testid='backup-restore-section'>BackupRestoreSection</div>,
+}));
+
 vi.mock('@/renderer/pages/settings/components/SettingsPageWrapper', () => ({
   default: ({ children, contentClassName }: { children: React.ReactNode; contentClassName?: string }) => (
     <div data-testid='settings-page-wrapper' {...(contentClassName ? { 'data-content-class': contentClassName } : {})}>
@@ -34,6 +41,7 @@ vi.mock('@/renderer/pages/settings/components/SettingsPageWrapper', () => ({
 describe('SystemSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    platformMocks.isElectron = false;
   });
 
   it('renders SystemModalContent when pathname is not /settings/about', () => {
@@ -68,5 +76,25 @@ describe('SystemSettings', () => {
     mockUseLocation.mockReturnValue({ pathname: '/settings/system' });
     render(<SystemSettings />);
     expect(screen.getByTestId('settings-page-wrapper')).toBeInTheDocument();
+  });
+
+  it('shows the backup & restore section on the system page in the desktop app', () => {
+    platformMocks.isElectron = true;
+    mockUseLocation.mockReturnValue({ pathname: '/settings/system' });
+    render(<SystemSettings />);
+    expect(screen.getByTestId('backup-restore-section')).toBeInTheDocument();
+  });
+
+  it('hides the backup & restore section outside the desktop app', () => {
+    mockUseLocation.mockReturnValue({ pathname: '/settings/system' });
+    render(<SystemSettings />);
+    expect(screen.queryByTestId('backup-restore-section')).not.toBeInTheDocument();
+  });
+
+  it('hides the backup & restore section on the about page even in the desktop app', () => {
+    platformMocks.isElectron = true;
+    mockUseLocation.mockReturnValue({ pathname: '/settings/about' });
+    render(<SystemSettings />);
+    expect(screen.queryByTestId('backup-restore-section')).not.toBeInTheDocument();
   });
 });

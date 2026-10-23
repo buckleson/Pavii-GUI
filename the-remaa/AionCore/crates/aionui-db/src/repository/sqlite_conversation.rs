@@ -4,12 +4,12 @@ use aionui_common::{PaginatedResult, TimestampMs};
 
 use crate::error::DbError;
 use crate::models::{
-    ConversationArtifactRow, ConversationAssistantSnapshotRow, ConversationRow, MessageRow,
-    UpsertConversationAssistantSnapshotParams,
+    ConversationArtifactRow, ConversationAssistantSnapshotRow, ConversationRow, ConversationSessionIndexRow,
+    MessageRow, UpsertConversationAssistantSnapshotParams,
 };
 use crate::repository::conversation::{
     ConversationFilters, ConversationRowUpdate, IConversationRepository, MessagePageCursor, MessagePageDirection,
-    MessagePageParams, MessagePageResult, MessageRowUpdate, MessageSearchRow, StaleRuntimeMessageRow,
+    MessagePageParams, MessagePageResult, MessageRowUpdate, MessageSearchRow, NewMessageParams, StaleRuntimeMessageRow,
 };
 
 /// Bump `conversations.updated_at` so the conversation-list sort
@@ -1027,6 +1027,108 @@ impl IConversationRepository for SqliteConversationRepository {
                 Err(error)
             }
         }
+    }
+
+    async fn insert_messages(
+        &self,
+        user_id: &str,
+        conversation_id: &str,
+        messages: &[NewMessageParams<'_>],
+    ) -> Result<u64, DbError> {
+        // Writer-lock-first transaction; see `insert_message_once` for why.
+        let mut connection = self.pool.acquire().await?;
+        sqlx::query("BEGIN IMMEDIATE").execute(&mut *connection).await?;
+
+        let result: Result<u64, DbError> = async {
+            // Ownership and emptiness are checked inside the transaction so
+            // a concurrent send cannot interleave with the import.
+            let exists: i64 =
+                sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM conversations WHERE user_id = ? AND id = ?)")
+                    .bind(user_id)
+                    .bind(conversation_id)
+                    .fetch_one(&mut *connection)
+                    .await?;
+            if exists == 0 {
+                return Err(DbError::NotFound(format!("Conversation '{conversation_id}' not found")));
+            }
+            let has_messages: i64 =
+                sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM messages WHERE conversation_id = ?)")
+                    .bind(conversation_id)
+                    .fetch_one(&mut *connection)
+                    .await?;
+            if has_messages != 0 {
+                return Err(DbError::Conflict(
+                    "IMPORT_CONVERSATION_NOT_EMPTY: messages can only be imported into an empty conversation".into(),
+                ));
+            }
+
+            let mut inserted: u64 = 0;
+            let mut latest_created_at: Option<TimestampMs> = None;
+            for message in messages {
+                // `generate_id()` is a monotonic UUIDv7, so minting in input
+                // order keeps the `(created_at, id)` sort stable for rows
+                // sharing a timestamp.
+                let id = aionui_common::generate_id();
+                sqlx::query(
+                    "INSERT INTO messages \
+                        (id, conversation_id, msg_id, type, content, position, \
+                         status, hidden, created_at, backend_turn_id) \
+                     VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, NULL)",
+                )
+                .bind(&id)
+                .bind(conversation_id)
+                .bind(&id)
+                .bind(message.message_type)
+                .bind(message.content)
+                .bind(message.position)
+                .bind(message.status)
+                .bind(message.created_at)
+                .execute(&mut *connection)
+                .await?;
+                inserted += 1;
+                latest_created_at = Some(latest_created_at.map_or(message.created_at, |t| t.max(message.created_at)));
+            }
+
+            // One recency bump for the whole batch.
+            if let Some(bump) = latest_created_at {
+                sqlx::query("UPDATE conversations SET updated_at = MAX(updated_at, ?) WHERE id = ?")
+                    .bind(bump)
+                    .bind(conversation_id)
+                    .execute(&mut *connection)
+                    .await?;
+            }
+
+            Ok(inserted)
+        }
+        .await;
+
+        match result {
+            Ok(inserted) => {
+                sqlx::query("COMMIT").execute(&mut *connection).await?;
+                Ok(inserted)
+            }
+            Err(error) => {
+                let _ = sqlx::query("ROLLBACK").execute(&mut *connection).await;
+                Err(error)
+            }
+        }
+    }
+
+    async fn list_session_index(&self, user_id: &str, limit: u32) -> Result<Vec<ConversationSessionIndexRow>, DbError> {
+        let rows = sqlx::query_as::<_, ConversationSessionIndexRow>(
+            "SELECT c.id, c.name, c.type, c.extra, c.created_at, c.updated_at, \
+                    a.agent_id AS acp_agent_id, a.session_id AS backend_session_id \
+             FROM conversations c \
+             LEFT JOIN acp_session a ON a.conversation_id = c.id \
+             WHERE c.user_id = ? \
+             ORDER BY c.updated_at DESC, c.id DESC \
+             LIMIT ?",
+        )
+        .bind(user_id)
+        .bind(i64::from(limit))
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
     }
 
     async fn resolve_backend_turn_anchor(

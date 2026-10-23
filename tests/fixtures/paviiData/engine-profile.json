@@ -1,0 +1,88 @@
+{
+  "providers": [
+    {
+      "id": "prov-openai",
+      "name": "Test OpenAI",
+      "platform": "openai",
+      "base_url": "https://api.example.test",
+      "api_key": "sk-fixture-openai",
+      "model_health": { "ok": true }
+    },
+    {
+      "id": "prov-bedrock",
+      "name": "Test Bedrock",
+      "platform": "bedrock",
+      "api_key": "",
+      "bedrock_config": {
+        "region": "us-east-1",
+        "access_key_id": "AKIAFIXTURE",
+        "secret_access_key": "fixture-secret-access"
+      }
+    }
+  ],
+  "agents": [
+    {
+      "id": "agent-custom-1",
+      "agent_source": "custom",
+      "name": "My Agent",
+      "command": "my-agent",
+      "args": ["--fast"],
+      "env": [{ "name": "MY_TOKEN", "value": "fixture-agent-token" }],
+      "enabled": true
+    },
+    {
+      "id": "agent-builtin-1",
+      "agent_source": "builtin",
+      "name": "Builtin",
+      "enabled": true,
+      "has_command_override": true,
+      "env_override_key_count": 1,
+      "linked_provider_id": "prov-openai"
+    },
+    { "id": "agent-builtin-2", "agent_source": "builtin", "name": "Untouched", "enabled": true }
+  ],
+  "overrides": {
+    "command_override": "custom-cli",
+    "env_override": [{ "name": "OVERRIDE_KEY", "value": "fixture-override-value" }]
+  },
+  "mcpServers": [
+    { "name": "builtin-mcp", "builtin": true, "enabled": true, "transport": { "type": "stdio", "command": "x" } },
+    {
+      "name": "user-mcp",
+      "builtin": false,
+      "enabled": true,
+      "description": "Fixture server",
+      "transport": { "type": "stdio", "command": "npx", "env": { "MCP_KEY": "fixture-mcp-key" } },
+      "original_json": "{\"command\":\"npx\",\"env\":{\"MCP_KEY\":\"fixture-mcp-key\"},\"headers\":{\"Authorization\":\"Bearer fixture\"}}"
+    }
+  ],
+  "assistants": [
+    {
+      "id": "asst-user-1",
+      "source": "user",
+      "name": "Writer",
+      "agent_id": "agent-builtin-1",
+      "enabled": true,
+      "sort_order": 2,
+      "description": null
+    },
+    {
+      "id": "bare:agent-builtin-1",
+      "source": "generated",
+      "name": "Builtin",
+      "agent_id": "agent-builtin-1",
+      "enabled": false,
+      "sort_order": 1
+    }
+  ],
+  "systemSettings": { "language": "en-US" },
+  "clientSettings": {
+    "theme": "dark",
+    "openai_api_key": "x1",
+    "apiKey": "x2",
+    "accessToken": "x3",
+    "client_secret": "x4",
+    "proxyPassword": "x5",
+    "fontSize": 14
+  }
+}

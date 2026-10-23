@@ -720,5 +720,30 @@
     "exited": "Exit {{code}}",
     "stop": "Stop",
     "truncated": "(earlier output truncated)"
+  },
+  "paviiData": {
+    "pastSessions": {
+      "button": "Past sessions",
+      "title": "Past sessions in {{folder}}",
+      "externalTitle": "Claude Code and Codex sessions",
+      "paviiTitle": "Pavii sessions in this folder",
+      "empty": "No past Claude Code or Codex sessions found for this folder",
+      "loadFailed": "Could not load past sessions",
+      "untitled": "Untitled session",
+      "imported": "Imported",
+      "open": "Open",
+      "messageCount": "{{count}} messages",
+      "unavailable": "{{backend}} sessions unavailable: {{reason}}",
+      "backend": {
+        "claude": "Claude Code",
+        "codex": "Codex"
+      },
+      "errors": {
+        "notFound": "This session could not be found",
+        "agentUnavailable": "The agent for this session is not available",
+        "readFailed": "Could not read this session",
+        "importFailed": "Could not import this session"
+      }
+    }
   }
 }

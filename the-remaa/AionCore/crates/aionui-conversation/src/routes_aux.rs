@@ -2,14 +2,15 @@
 
 use crate::state::ConversationRouterState;
 use aionui_api_types::{
-    ApiResponse, SetConfigOptionRequest, SetConfigOptionResponse, SideQuestionRequest, SideQuestionResponse,
-    SlashCommandItem, UsageLedgerDay, UsageLedgerResponse, WorkspaceBrowseQuery, WorkspaceEntry,
+    ApiResponse, ImportMessagesRequest, ImportMessagesResponse, SessionIndexEntry, SetBackendSessionRequest,
+    SetConfigOptionRequest, SetConfigOptionResponse, SideQuestionRequest, SideQuestionResponse, SlashCommandItem,
+    UsageLedgerDay, UsageLedgerResponse, WorkspaceBrowseQuery, WorkspaceEntry,
 };
 use aionui_auth::CurrentUser;
 use aionui_common::ApiError;
 use axum::Router;
 use axum::extract::rejection::JsonRejection;
-use axum::extract::{Extension, Json, Path, Query, State};
+use axum::extract::{DefaultBodyLimit, Extension, Json, Path, Query, State};
 use axum::routing::{get, post, put};
 
 /// Build the conversation-ops router (no auth layer applied — the caller is
@@ -25,8 +26,19 @@ pub fn conversation_ops_routes(state: ConversationRouterState) -> Router {
             put(set_config_option),
         )
         .route("/api/conversations/{id}/workspace", get(browse_workspace))
+        .route("/api/conversations/{id}/backend-session", put(set_backend_session))
+        // Import bodies may carry up to 20 MB of text plus JSON framing, above
+        // the global 10 MB body limit, so this route widens it for itself.
+        .route(
+            "/api/conversations/{id}/messages/import",
+            post(import_messages).layer(DefaultBodyLimit::max(IMPORT_BODY_LIMIT)),
+        )
+        .route("/api/conversations/sessions-index", get(sessions_index))
         .with_state(state)
 }
+
+/// Body cap for message import: the 20 MB text limit plus JSON framing.
+const IMPORT_BODY_LIMIT: usize = 32 * 1024 * 1024;
 
 // ── Route handlers ─────────────────────────────────────────────────
 
@@ -132,5 +144,45 @@ async fn browse_workspace(
             .browse_workspace(&user.id, &id, query)
             .await
             .map_err(ApiError::from)?,
+    )))
+}
+
+async fn set_backend_session(
+    State(state): State<ConversationRouterState>,
+    Extension(user): Extension<CurrentUser>,
+    Path(id): Path<String>,
+    body: Result<Json<SetBackendSessionRequest>, JsonRejection>,
+) -> Result<Json<ApiResponse<()>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    state
+        .service
+        .set_backend_session(&user.id, &id, req)
+        .await
+        .map_err(ApiError::from)?;
+    Ok(Json(ApiResponse::ok(())))
+}
+
+async fn import_messages(
+    State(state): State<ConversationRouterState>,
+    Extension(user): Extension<CurrentUser>,
+    Path(id): Path<String>,
+    body: Result<Json<ImportMessagesRequest>, JsonRejection>,
+) -> Result<Json<ApiResponse<ImportMessagesResponse>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    Ok(Json(ApiResponse::ok(
+        state
+            .service
+            .import_messages(&user.id, &id, req)
+            .await
+            .map_err(ApiError::from)?,
+    )))
+}
+
+async fn sessions_index(
+    State(state): State<ConversationRouterState>,
+    Extension(user): Extension<CurrentUser>,
+) -> Result<Json<ApiResponse<Vec<SessionIndexEntry>>>, ApiError> {
+    Ok(Json(ApiResponse::ok(
+        state.service.sessions_index(&user.id).await.map_err(ApiError::from)?,
     )))
 }

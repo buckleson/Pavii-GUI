@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::DbError;
 use crate::models::{
-    ConversationArtifactRow, ConversationAssistantSnapshotRow, ConversationRow, MessageRow,
-    UpsertConversationAssistantSnapshotParams,
+    ConversationArtifactRow, ConversationAssistantSnapshotRow, ConversationRow, ConversationSessionIndexRow,
+    MessageRow, UpsertConversationAssistantSnapshotParams,
 };
 
 /// Conversation + message data access abstraction.
@@ -157,6 +157,39 @@ pub trait IConversationRepository: Send + Sync {
     ) -> Result<u64, DbError> {
         Err(DbError::Init(
             "copy_messages_up_to is not supported by this repository".into(),
+        ))
+    }
+
+    /// Inserts a batch of new messages into an EMPTY conversation inside a
+    /// single transaction (the history-import path). Each row gets a fresh
+    /// time-ordered id (also used as `msg_id`); `created_at` is kept verbatim
+    /// and the conversation's `updated_at` is bumped once for the batch.
+    ///
+    /// Fails with `DbError::NotFound` when the conversation does not belong to
+    /// `user_id`, and `DbError::Conflict` when it already has messages —
+    /// both checked inside the transaction. Returns the number of inserted
+    /// rows. Default is unsupported so test doubles need not implement it.
+    async fn insert_messages(
+        &self,
+        _user_id: &str,
+        _conversation_id: &str,
+        _messages: &[NewMessageParams<'_>],
+    ) -> Result<u64, DbError> {
+        Err(DbError::Init(
+            "insert_messages is not supported by this repository".into(),
+        ))
+    }
+
+    /// Lists the user's conversations, newest `updated_at` first, joined with
+    /// their `acp_session` identity, capped at `limit` rows. Default is
+    /// unsupported so test doubles need not implement it.
+    async fn list_session_index(
+        &self,
+        _user_id: &str,
+        _limit: u32,
+    ) -> Result<Vec<ConversationSessionIndexRow>, DbError> {
+        Err(DbError::Init(
+            "list_session_index is not supported by this repository".into(),
         ))
     }
 
@@ -313,6 +346,20 @@ pub struct MessagePageResult {
     pub items: Vec<MessageRow>,
     pub has_more_before: bool,
     pub has_more_after: bool,
+}
+
+/// One message to insert through [`IConversationRepository::insert_messages`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewMessageParams<'a> {
+    /// Message type string (e.g. "text").
+    pub message_type: &'a str,
+    /// JSON object: type-specific message content.
+    pub content: &'a str,
+    /// One of: "left", "right", "center", "pop".
+    pub position: &'a str,
+    /// One of: "finish", "pending", "error", "work".
+    pub status: &'a str,
+    pub created_at: TimestampMs,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

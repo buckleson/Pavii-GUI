@@ -82,6 +82,7 @@ import { readCloseToTraySetting } from './process/utils/closeToTraySetting';
 // @ts-expect-error - electron-squirrel-startup doesn't have types
 import electronSquirrelStartup from 'electron-squirrel-startup';
 import { scheduleAgentCliAutoCheck } from './process/agentCli/scheduleAutoCheck';
+import { scheduleBackupAutoSave } from './process/paviiData/scheduleAutoSave';
 
 // ============ Single Instance Lock ============
 // Acquire lock early so the second instance quits before doing unnecessary work.
@@ -698,6 +699,11 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
   // the app updater so E2E/CI runs make no background update requests.
   if (!disableAutoUpdater) {
     scheduleAgentCliAutoCheck(mainWindow);
+  }
+
+  // Automatic .pavii backup (no secrets): after load + 45s. Same CI/E2E guard.
+  if (!disableAutoUpdater) {
+    scheduleBackupAutoSave(mainWindow);
   }
 
   // Load the renderer: dev server URL in development, built HTML file in production

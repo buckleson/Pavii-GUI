@@ -13,6 +13,7 @@ import { initNotificationBridge } from './notificationBridge';
 import { initWebuiBridge } from './webuiBridge';
 import { initThemeBridge } from './themeBridge';
 import { initAgentCliBridge } from '../agentCli/agentCliBridge';
+import { initPaviiDataBridge } from '../paviiData/paviiDataBridge';
 
 export type BridgeDependencies = Record<string, never>;
 
@@ -26,6 +27,7 @@ export function initAllBridges(_deps: BridgeDependencies = {}): void {
   initWebuiBridge();
   initThemeBridge();
   initAgentCliBridge();
+  initPaviiDataBridge();
 }
 
 export {

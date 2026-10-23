@@ -1253,5 +1253,61 @@
     "noMatches": "No provider matches \"{{keyword}}\"",
     "hasFreeTier": "Has a free tier",
     "add": "Add"
+  },
+  "paviiData": {
+    "title": "Backup & restore",
+    "description": "Pavii saves a backup of your setup automatically. Export a .pavii file to move your setup to another computer or account.",
+    "locationLabel": "Backup location",
+    "lastAutoSaveLabel": "Last automatic save",
+    "neverSaved": "Not saved yet",
+    "fileLabel": "Backup file",
+    "exportButton": "Export .pavii",
+    "importButton": "Import .pavii",
+    "dropHint": "Drop a .pavii file here to import it",
+    "dropInvalid": "Only .pavii files can be imported",
+    "fileFilterName": "Pavii backup",
+    "exportTitle": "Export backup",
+    "exportPasswordHint": "With a password, API keys and other secrets are included and encrypted. Without one, they are left out of the file.",
+    "passwordPlaceholder": "Password (optional)",
+    "confirmPasswordPlaceholder": "Confirm password",
+    "passwordMismatch": "Passwords do not match",
+    "exportContinue": "Choose location",
+    "exportSuccess": "Backup saved to {{path}}",
+    "exportFailed": "Could not export the backup",
+    "importTitle": "Import backup",
+    "importPasswordHint": "Enter the password used when this backup was exported. Without it, API keys and other secrets are skipped.",
+    "importContinue": "Import",
+    "errors": {
+      "invalidFile": "This is not a valid .pavii backup file",
+      "unsupportedVersion": "This backup was made by a newer version of Pavii",
+      "passwordRequired": "This backup needs its password to restore secrets",
+      "wrongPassword": "Wrong password",
+      "readFailed": "Could not read the backup file",
+      "unknown": "Could not import the backup"
+    },
+    "summaryTitle": "Restore complete",
+    "summarySecretsRestored": "API keys and other secrets were restored.",
+    "summarySecretsSkipped": "API keys and other secrets were not restored.",
+    "summaryRestored": "Restored {{count}}",
+    "summarySkipped": "Skipped {{count}}",
+    "summaryFailed": "Failed {{count}}",
+    "sections": {
+      "providers": "Model providers",
+      "agents": "Agents",
+      "mcpServers": "MCP servers",
+      "assistants": "Assistants",
+      "skills": "Skills",
+      "settings": "Settings",
+      "sessions": "Sessions"
+    },
+    "offer": {
+      "title": "Restore your setup",
+      "emptyProfile": "Restore your Pavii setup from a previous install?",
+      "newAccount": "A backup from another Pavii account was found. Restore its setup into this account?",
+      "backupDate": "Backup from {{date}}",
+      "passwordHint": "This backup includes encrypted API keys and other secrets. Enter its password to restore them, or leave it empty to skip them.",
+      "restore": "Restore",
+      "notNow": "Not now"
+    }
   }
 }

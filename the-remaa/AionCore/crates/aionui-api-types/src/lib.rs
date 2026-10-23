@@ -15,6 +15,7 @@ mod chat_file;
 mod confirmation;
 mod connection_test;
 mod conversation;
+mod conversation_import;
 mod cron;
 mod custom_agent;
 mod extension;
@@ -99,6 +100,9 @@ pub use conversation::{
     MessageResponse, MessageSearchItem, MessageSearchResponse, MessageStatusChangedPayload, PromptCapabilityView,
     SearchMessagesQuery, SendMessageRequest, SendMessageResponse, UpdateConversationArtifactRequest,
     UpdateConversationRequest,
+};
+pub use conversation_import::{
+    ImportMessageItem, ImportMessagesRequest, ImportMessagesResponse, SessionIndexEntry, SetBackendSessionRequest,
 };
 pub use cron::{
     CreateConversationCronRequest, CreateConversationCronResponse, CreateCronJobRequest, CronAgentConfigReadDto,

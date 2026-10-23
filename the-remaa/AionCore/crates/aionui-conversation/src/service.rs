@@ -686,6 +686,10 @@ impl ConversationService {
         &self.acp_session_repo
     }
 
+    pub(crate) fn workspace_root(&self) -> &Path {
+        &self.workspace_root
+    }
+
     pub(crate) fn agent_metadata_repo(&self) -> &Arc<dyn IAgentMetadataRepository> {
         &self.agent_metadata_repo
     }
@@ -1534,6 +1538,20 @@ impl ConversationService {
         if let Some(snapshot) = assistant_snapshot.as_ref() {
             self.persist_assistant_preferences_from_snapshot(user_id, snapshot)
                 .await?;
+        }
+
+        // Per-project session index (best-effort; never fails creation). Only
+        // user-chosen folders get one — auto temp workspaces are skipped.
+        if user_supplied_workspace.is_some() {
+            crate::pavii_index::sync_conversation_entry(
+                self.conversation_repo.as_ref(),
+                self.acp_session_repo.as_ref(),
+                &self.workspace_root,
+                user_id,
+                &id,
+                None,
+            )
+            .await;
         }
 
         let mut response = row_to_response(row, &self.workspace_root)?;

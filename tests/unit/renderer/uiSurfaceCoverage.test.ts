@@ -111,7 +111,12 @@ describe('e2e testid coverage', () => {
   // tests/unit/renderer/inlineImageCard.dom.test.tsx.
   // 151 → 152: the shown image's copy-location button (inline-image-copy),
   // driven by the same DOM suite.
-  const ORPHAN_BUDGET = 152;
+  // 152 → 161: the .pavii backup and past-sessions UI (pavii-backup-section,
+  // -password, -password-confirm, -summary, pavii-restore-offer, -password,
+  // past-sessions-btn, -drawer, past-session-item), driven by the DOM suites in
+  // tests/unit/renderer/paviiData/. Accepted: an e2e spec would need real
+  // Claude/Codex session files and a native save dialog.
+  const ORPHAN_BUDGET = 161;
 
   function collectTestIds(): Set<string> {
     const ids = new Set<string>();

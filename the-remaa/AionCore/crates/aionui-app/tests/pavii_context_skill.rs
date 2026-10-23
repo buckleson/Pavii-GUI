@@ -42,10 +42,14 @@ fn description_is_present_and_carries_the_trigger() {
 
     assert!(skill.contains("description:"), "description is required");
     assert!(
-        skill.contains("pavii-ard.md"),
-        "description must name the architecture record"
+        skill.contains(".pavii/PAVII.md"),
+        "description must name the context file"
     );
-    assert!(skill.contains("pavii-hoff.md"), "description must name the handoff");
+    assert!(
+        skill.contains("## Architecture record"),
+        "must name the architecture record section"
+    );
+    assert!(skill.contains("## Handoff"), "must name the handoff section");
     assert!(
         skill.contains("project directory"),
         "description must carry the project trigger"

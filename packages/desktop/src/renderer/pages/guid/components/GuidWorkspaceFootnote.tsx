@@ -13,6 +13,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import styles from '../index.module.css';
+import PastSessionsButton from './PastSessions/PastSessionsButton';
 
 type GuidWorkspaceFootnoteProps = {
   workspaceDir: string;
@@ -251,6 +252,7 @@ const GuidWorkspaceFootnote: React.FC<GuidWorkspaceFootnoteProps> = ({
               </span>
             </div>
           </Tooltip>
+          <PastSessionsButton folder={workspaceDir} />
           {dropdownEl}
         </>
       ) : (

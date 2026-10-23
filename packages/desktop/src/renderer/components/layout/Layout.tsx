@@ -41,6 +41,7 @@ import { IS_DISCONTINUED_BUILD } from '@/renderer/utils/discontinuedBuild';
 import brandLogo from '@renderer/assets/logos/brand/app.png';
 import PaviiSignInGate from '@renderer/components/base/PaviiSignInGate';
 import UpdateMigrationDialog from '@/renderer/components/settings/UpdateMigrationDialog';
+import RestoreOfferDialog from '@/renderer/components/settings/PaviiBackup/RestoreOfferDialog';
 import '@renderer/styles/layout.css';
 
 const SidebarIcon: React.FC<{ size?: number; strokeWidth?: number }> = ({ size = 18, strokeWidth = 4 }) => (
@@ -527,6 +528,7 @@ const Layout: React.FC<{
                   <UpdateModal />
                 </Suspense>
                 {IS_DISCONTINUED_BUILD && <UpdateMigrationDialog />}
+                <RestoreOfferDialog />
               </ArcoLayout.Content>
               {/* Hoisted preview region (project conversations only). Structurally
                   persistent: lives above the per-conversation subtree, so a

@@ -552,6 +552,14 @@
 - Affects: `the-remaa/AionCore/crates/aionui-ai-agent/src/provider_link.rs`, `the-remaa/AionCore/crates/aionui-ai-agent/src/factory/acp.rs`, `the-remaa/AionCore/crates/aionui-db/migrations/042_agent_linked_provider.sql`
 - Evidence: `the-remaa/AionCore/crates/aionui-ai-agent/src/provider_link_tests.rs`, `the-remaa/AionCore/crates/aionui-app/tests/agent_provider_link_e2e.rs`
 
+### `.pavii` data: per-project session index, CLI session import, portable backup
+
+- Status: accepted
+- Decision: the engine keeps `<workspace>/.pavii/sessions.json` (plus a self-ignoring `.pavii/.gitignore`) for user-chosen workspaces, updated at create and whenever the CLI session id binds; the `pavii-context` skill maintains `.pavii/PAVII.md` (it never deletes the old `pavii-ard.md`/`pavii-hoff.md`). The desktop main process lists past Claude Code sessions by parsing `~/.claude/projects/*/*.jsonl` (cwd match) and Codex threads through `codex app-server` `thread/list`/`thread/read`, and imports one as a Pavii conversation (create → `POST /messages/import` → `PUT /backend-session`) that resumes the CLI session. A `*.pavii` backup (settings, agents, MCP, assistants, custom skills, providers, session index) is auto-saved to `Documents/Pavii/backup.pavii` and offered for restore on an empty profile or a different Pavii account.
+- Rationale: Codex ids are taken from its own protocol (schema from codex-cli 0.147: `ThreadListParams.cwd`, `Thread.id` = `thread/resume` `threadId`), not from rollout files. Claude `--resume` only works from the original cwd, so the import uses the session's cwd as workspace. Secrets (provider keys, agent env overrides, MCP env/headers, client settings matching token/secret/password/credential) are only written when the user sets a backup password (scrypt + AES-256-GCM); auto-saves never contain them, and the engine rejects keyless providers, so without a password providers do not restore. The `.pavii` writer is best-effort and skips auto temp workspaces; it hooks the BackendBound bind through a repository decorator because `aionui-ai-agent` cannot see workspaces.
+- Affects: `the-remaa/AionCore/crates/aionui-conversation/src/pavii_index.rs`, `the-remaa/AionCore/crates/aionui-conversation/src/session_import.rs`, `packages/desktop/src/process/paviiData/`, `packages/desktop/src/renderer/components/settings/PaviiBackup/`, `packages/desktop/src/renderer/pages/guid/components/PastSessions/`
+- Evidence: `the-remaa/AionCore/crates/aionui-app/tests/conversation_import_e2e.rs`, `tests/unit/process/paviiData/`, `tests/unit/renderer/paviiData/`
+
 ### Startup agent probes run concurrently
 
 - Status: accepted

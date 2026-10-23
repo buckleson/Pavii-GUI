@@ -38,6 +38,13 @@ import type {
 import type { AgentCliCheckResult, AgentCliUpdateResult, AgentCliUpdateState } from '../types/agent/agentCliUpdate';
 import type { AgentCliInstallResult } from '../types/agent/openSourceClis';
 import type {
+  ExportBackupResult,
+  ExternalSessionList,
+  ImportBackupResult,
+  ImportExternalSessionResult,
+  RestoreOffer,
+} from '../types/agent/paviiData';
+import type {
   EnsureConversationRuntimeResponse,
   GetConfigOptionsResponse,
   SetConfigOptionRequest,
@@ -655,7 +662,7 @@ export const application = {
       arch: raw.arch,
     })
   ),
-  getPath: bridge.buildProvider<string, { name: 'desktop' | 'home' | 'downloads' }>('app.get-path'),
+  getPath: bridge.buildProvider<string, { name: 'desktop' | 'home' | 'downloads' | 'documents' }>('app.get-path'),
   /**
    * Per-install anonymous UUID (`userData/analytics.json`), shared by Sentry and
    * PostHog so renderer and main-process events belong to one install. Never a
@@ -779,6 +786,11 @@ export const dialog = {
       return nativeShowOpen.invoke(options);
     }) as typeof nativeShowOpen.invoke,
   },
+  /** Native save dialog; resolves to the chosen path, or undefined when cancelled. */
+  showSave: bridge.buildProvider<
+    string | undefined,
+    { defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }
+  >('show-save'),
 };
 
 // ---------------------------------------------------------------------------
@@ -1483,6 +1495,32 @@ export const agentCli = {
     (p) => `/api/agents/${encodeURIComponent(p.agentId)}/provider-link`,
     (p) => ({ provider_id: p.providerId })
   ),
+};
+
+// ---------------------------------------------------------------------------
+// .pavii data — past CLI sessions per folder, and the portable backup file.
+// Main-process providers (filesystem, CLI processes, crypto).
+// ---------------------------------------------------------------------------
+
+export const paviiData = {
+  listExternalSessions: bridge.buildProvider<ExternalSessionList, { folder: string }>(
+    'pavii-data:list-external-sessions'
+  ),
+  importExternalSession: bridge.buildProvider<
+    ImportExternalSessionResult,
+    { folder: string; backend: 'claude' | 'codex'; sessionId: string }
+  >('pavii-data:import-external-session'),
+  /** Without `path`, writes the default backup location; without `password`, secrets are left out. */
+  exportBackup: bridge.buildProvider<ExportBackupResult, { path?: string; password?: string }>(
+    'pavii-data:export-backup'
+  ),
+  importBackup: bridge.buildProvider<ImportBackupResult, { path: string; password?: string }>(
+    'pavii-data:import-backup'
+  ),
+  getRestoreOffer: bridge.buildProvider<RestoreOffer | null, void>('pavii-data:get-restore-offer'),
+  dismissRestoreOffer: bridge.buildProvider<void, void>('pavii-data:dismiss-restore-offer'),
+  /** Default backup path and the time of the last automatic save (epoch ms), for the settings section. */
+  getBackupInfo: bridge.buildProvider<{ path: string; lastAutoSaveAt?: number }, void>('pavii-data:get-backup-info'),
 };
 
 // ---------------------------------------------------------------------------

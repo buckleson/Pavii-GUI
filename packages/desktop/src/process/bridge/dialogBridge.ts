@@ -7,14 +7,17 @@
 import { BrowserWindow, dialog } from 'electron';
 import { ipcBridge } from '@/common';
 
+/** The focused window, else the first one: dialogs then open in front and modal on Windows. */
+const getParentWindow = (): BrowserWindow | undefined =>
+  BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+
 export function initDialogBridge(): void {
   ipcBridge.dialog.showOpen.provider((options) => {
-    // Get the focused window or the first available window as parent
-    // This ensures the dialog appears in front on Windows and has proper modal behavior
-    const parentWindow = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+    const parentWindow = getParentWindow();
     const dialogOptions = {
       defaultPath: options?.defaultPath,
       properties: options?.properties,
+      filters: options?.filters,
     };
 
     const showDialogPromise = parentWindow
@@ -24,5 +27,14 @@ export function initDialogBridge(): void {
     return showDialogPromise.then((res) => {
       return res.filePaths;
     });
+  });
+
+  ipcBridge.dialog.showSave.provider(async (options) => {
+    const parentWindow = getParentWindow();
+    const dialogOptions = { defaultPath: options?.defaultPath, filters: options?.filters };
+    const res = parentWindow
+      ? await dialog.showSaveDialog(parentWindow, dialogOptions)
+      : await dialog.showSaveDialog(dialogOptions);
+    return res.canceled || !res.filePath ? undefined : res.filePath;
   });
 }
