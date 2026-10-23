@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.11](https://www.pavii.tech/products/dev-tools/) (2026-10-23)
+
+### Desktop
+
+#### Features
+
+- **sessions:** every project folder you work in now gets a `.pavii` folder that records which agent ran each conversation and its CLI session, so a later session or another agent can see what happened and pick it up. It ignores itself in git. The project notes agents keep now live in `.pavii/PAVII.md`.
+- **sessions:** **Past sessions** next to the folder picker on a new chat lists the Claude Code and Codex sessions you already ran in that folder. Open one to read its history in Pavii and keep going in the same CLI session.
+- **backup:** **Settings → System → Backup & restore** exports and imports a `.pavii` file with your settings, agents, MCP servers, assistants, custom skills, model providers and session list. API keys and other secrets are only included when you set a backup password. Pavii also keeps `Documents/Pavii/backup.pavii` up to date and offers to restore it after a reinstall or when you sign in with a different account.
+
+---
+
 ## [2.2.10](https://www.pavii.tech/products/dev-tools/) (2026-10-23)
 
 ### Desktop
