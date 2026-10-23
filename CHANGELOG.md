@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.2.10](https://www.pavii.tech/products/dev-tools/) (2026-10-23)
+
+### Desktop
+
+#### Features
+
+- **agents:** each agent CLI Pavii can update now has a **Check update** button next to Test Connection. When a newer release exists the card shows "Update available" and an **Update to <version>** button that runs the update after you confirm. Claude Code, Codex, Gemini CLI, OpenCode and Kiro are also checked in the background, 30 seconds after launch at most every two days and when you start a conversation with one; nothing is installed without your OK.
+- **agents:** a new **Open source** tab lists ten open-source agent CLIs (OpenClaw, Hermes, OpenCode, Codex, Pi, Gemini CLI, Goose, DeepAgents, Qwen Code, Kilo Code) with their license and source link. Ones Pavii can install get an **Install** button; the rest link to their official install guide. They are the same agents as on the All tab, so status, tests and updates match in both places.
+- **agents:** optional **Use my Pavii key** switch for supported open-source CLIs: Pavii passes an API key you already saved in Model settings to that CLI when it starts it. Off by default, and only for CLIs whose key variable was verified against their source.
+
+#### Bug Fixes
+
+- **agents:** a CLI installed while Pavii is running is now found by Test Connection straight away, instead of only after a restart, and a passing test makes the agent usable immediately.
+
+#### Performance
+
+- **startup:** the engine now looks for all agent CLIs in parallel, so the window appears in about half the time on a machine with a long PATH.
+
+---
+
 ## [2.2.9](https://www.pavii.tech/products/dev-tools/) (2026-08-30)
 
 ### Desktop
