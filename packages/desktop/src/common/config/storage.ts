@@ -56,6 +56,8 @@ export interface IConfigStorageRefer {
   'paviiData.restoreDismissedFor'?: string;
   /** Epoch ms of the last automatic `.pavii` backup save. */
   'paviiData.lastAutoSaveAt'?: number;
+  /** User dismissed the first-run recommended agent tools prompt. */
+  'recommendedTools.firstRunDismissed'?: boolean;
   /**
    * One-shot completion flag for the legacy `model.config` → backend providers
    * migration in {@link migrateProviders}. Once `true`, the migration is

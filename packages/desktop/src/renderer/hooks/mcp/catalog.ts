@@ -1,5 +1,6 @@
 import { mcpService } from '@/common/adapter/ipcBridge';
 import type { IMcpServer, IMcpServerTransport, ISessionMcpServer } from '@/common/config/storage';
+import { RECOMMENDED_TOOLS } from '@/common/types/agent/recommendedTools';
 import { getClientBusinessSetting } from '@/renderer/services/clientBusinessSettings';
 
 type BackendMcpTransport = Exclude<IMcpServerTransport, { type: 'streamable_http' }>;
@@ -61,11 +62,32 @@ export const toBackendMcpPayload = (
   builtin: Boolean(server.builtin),
 });
 
-export const toSessionMcpServer = (server: Pick<IMcpServer, 'id' | 'name' | 'transport'>): ISessionMcpServer => ({
-  id: server.id,
-  name: server.name,
-  transport: server.transport,
-});
+/** Builtin code-map rows whose wrapper takes the conversation workspace as its last argument. */
+const WORKSPACE_ARG_MCP_NAMES = new Set(
+  RECOMMENDED_TOOLS.filter((tool) => tool.codeBaseOnly).map((tool) => tool.mcpServerName)
+);
+
+/**
+ * Session snapshot of an MCP row. The engine passes a session MCP server no
+ * workspace, so for the builtin code-map rows (`pavii-trail`, `pavii-graphify`)
+ * a custom workspace is appended to the stdio args.
+ */
+export const toSessionMcpServer = (
+  server: Pick<IMcpServer, 'id' | 'name' | 'transport'> & { builtin?: boolean },
+  customWorkspace?: string
+): ISessionMcpServer => {
+  const { transport } = server;
+  const appendWorkspace =
+    customWorkspace &&
+    server.builtin === true &&
+    WORKSPACE_ARG_MCP_NAMES.has(server.name) &&
+    transport.type === 'stdio';
+  return {
+    id: server.id,
+    name: server.name,
+    transport: appendWorkspace ? { ...transport, args: [...(transport.args ?? []), customWorkspace] } : transport,
+  };
+};
 
 export const ensureBackendMcpCatalog = async (): Promise<{
   userServers: IMcpServer[];

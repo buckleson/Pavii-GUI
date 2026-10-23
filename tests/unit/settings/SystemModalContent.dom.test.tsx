@@ -311,3 +311,55 @@ describe('SystemModalContent directory settings', () => {
     });
   });
 });
+
+describe('SystemModalContent STE100 reply style switch', () => {
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    configServiceMock.get.mockImplementation(() => undefined);
+    configServiceMock.set.mockResolvedValue(undefined);
+    clientBusinessSettingsMocks.getClientBusinessSetting.mockResolvedValue(undefined);
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    });
+    systemInfoMock.mockResolvedValue(defaultSystemInfo);
+  });
+
+  const ste100Switch = () => screen.getByTestId('ste100-replies-switch');
+
+  it('is on when the preference was never set', async () => {
+    renderContent();
+    await waitFor(() => expect(ste100Switch()).toHaveAttribute('aria-checked', 'true'));
+  });
+
+  it('is off when the stored preference is false', async () => {
+    configServiceMock.get.mockImplementation(((key: string) =>
+      key === 'replyStyle.ste100' ? false : undefined) as never);
+    renderContent();
+    await waitFor(() => expect(ste100Switch()).toHaveAttribute('aria-checked', 'false'));
+  });
+
+  it('writes the preference when toggled off', async () => {
+    renderContent();
+    await waitFor(() => expect(ste100Switch()).toHaveAttribute('aria-checked', 'true'));
+    fireEvent.click(ste100Switch());
+    expect(configServiceMock.set).toHaveBeenCalledWith('replyStyle.ste100', false);
+  });
+
+  it('rolls the switch and the local value back when saving fails', async () => {
+    configServiceMock.set.mockImplementation((() => Promise.reject(new Error('offline'))) as never);
+    renderContent();
+    await waitFor(() => expect(ste100Switch()).toHaveAttribute('aria-checked', 'true'));
+    fireEvent.click(ste100Switch());
+    await waitFor(() => expect(configServiceMock.setLocal).toHaveBeenCalledWith('replyStyle.ste100', true));
+    expect(ste100Switch()).toHaveAttribute('aria-checked', 'true');
+  });
+});

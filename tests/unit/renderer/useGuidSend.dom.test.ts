@@ -12,6 +12,11 @@ import { useGuidSend, type GuidSendDeps } from '@/renderer/pages/guid/hooks/useG
 const createConversationInvokeMock = vi.fn();
 const swrMutateMock = vi.fn();
 const checkIfStaleMock = vi.fn();
+const { configGetMock } = vi.hoisted(() => ({ configGetMock: vi.fn() }));
+
+vi.mock('@/common/config/configService', () => ({
+  configService: { get: (...args: unknown[]) => configGetMock(...args) },
+}));
 
 vi.mock('@/common', () => ({
   ipcBridge: {
@@ -81,6 +86,9 @@ const createDeps = (): GuidSendDeps => ({
   localeKey: 'zh-CN',
 });
 
+const argsOf = (servers: Array<{ id: string; transport: { args?: string[] } }>, id: string) =>
+  servers.find((server) => server.id === id)?.transport.args;
+
 describe('useGuidSend', () => {
   beforeEach(() => {
     createConversationInvokeMock.mockReset();
@@ -89,6 +97,128 @@ describe('useGuidSend', () => {
     swrMutateMock.mockResolvedValue(undefined);
     checkIfStaleMock.mockReset();
     checkIfStaleMock.mockResolvedValue(undefined);
+    configGetMock.mockReset();
+    configGetMock.mockReturnValue(undefined);
+  });
+
+  describe('STE100 reply style', () => {
+    const sendAndGetDisabledBuiltins = async (deps: GuidSendDeps) => {
+      const { result } = renderHook(() => useGuidSend(deps));
+      await act(async () => {
+        await result.current.handleSend();
+      });
+      return createConversationInvokeMock.mock.calls[0][0].assistant?.conversation_overrides
+        ?.disabled_builtin_skill_ids as string[] | undefined;
+    };
+
+    const prefIs = (value: unknown) =>
+      configGetMock.mockImplementation((key: string) => (key === 'replyStyle.ste100' ? value : undefined));
+
+    it('excludes the ste100-replies builtin skill when the setting is off', async () => {
+      prefIs(false);
+      const deps = createDeps();
+      deps.guidDisabledBuiltinSkills = ['todo-tracker'];
+      expect(await sendAndGetDisabledBuiltins(deps)).toEqual(['todo-tracker', 'ste100-replies']);
+    });
+
+    it('excludes ste100-replies when the setting is off and nothing else is excluded', async () => {
+      prefIs(false);
+      expect(await sendAndGetDisabledBuiltins(createDeps())).toEqual(['ste100-replies']);
+    });
+
+    it('does not add ste100-replies twice when it is already excluded', async () => {
+      prefIs(false);
+      const deps = createDeps();
+      deps.assistantDefaultDisabledBuiltinSkillIds = ['ste100-replies'];
+      expect(await sendAndGetDisabledBuiltins(deps)).toEqual(['ste100-replies']);
+    });
+
+    it('leaves the exclusions unchanged when the setting is on', async () => {
+      prefIs(true);
+      const deps = createDeps();
+      deps.guidDisabledBuiltinSkills = ['todo-tracker'];
+      expect(await sendAndGetDisabledBuiltins(deps)).toEqual(['todo-tracker']);
+    });
+
+    it('treats an absent setting as on', async () => {
+      prefIs(undefined);
+      expect(await sendAndGetDisabledBuiltins(createDeps())).toBeUndefined();
+    });
+  });
+
+  describe('code-map MCP workspace argument', () => {
+    const WORKSPACE = 'D:\\Repos\\my app';
+    const builtinRow = (name: string) =>
+      ({
+        id: `${name}-id`,
+        name,
+        enabled: true,
+        builtin: true,
+        transport: { type: 'stdio', command: 'node', args: ['/script.js', name, '/data'] },
+      }) as IMcpServer;
+    const userRow = {
+      id: 'mcp-user',
+      name: 'User MCP',
+      enabled: true,
+      builtin: false,
+      transport: { type: 'stdio', command: 'user', args: ['--flag'] },
+    } as IMcpServer;
+
+    const codeMapDeps = (dir: string) => {
+      const deps = createDeps();
+      deps.dir = dir;
+      deps.availableMcpServers = [userRow, builtinRow('pavii-trail'), builtinRow('pavii-headroom')];
+      deps.selectedMcpServerIds = ['mcp-user', 'pavii-trail-id', 'pavii-headroom-id'];
+      return deps;
+    };
+
+    const sendAndGetSessionServers = async (deps: GuidSendDeps) => {
+      const { result } = renderHook(() => useGuidSend(deps));
+      await act(async () => {
+        await result.current.handleSend();
+      });
+      return createConversationInvokeMock.mock.calls[0][0].extra.selected_session_mcp_servers as Array<{
+        id: string;
+        transport: { args?: string[] };
+      }>;
+    };
+
+    it('appends a custom workspace to the Trail row only (ACP)', async () => {
+      const servers = await sendAndGetSessionServers(codeMapDeps(WORKSPACE));
+
+      expect(argsOf(servers, 'pavii-trail-id')).toEqual(['/script.js', 'pavii-trail', '/data', WORKSPACE]);
+      expect(argsOf(servers, 'pavii-headroom-id')).toEqual(['/script.js', 'pavii-headroom', '/data']);
+    });
+
+    it('leaves args unchanged when no custom workspace was chosen', async () => {
+      const servers = await sendAndGetSessionServers(codeMapDeps(''));
+
+      expect(argsOf(servers, 'pavii-trail-id')).toEqual(['/script.js', 'pavii-trail', '/data']);
+    });
+
+    it('appends the workspace for aionrs, where user rows are sent too, and leaves user rows unchanged', async () => {
+      const deps = codeMapDeps(WORKSPACE);
+      deps.selectedAssistantBackend = 'aionrs';
+      deps.current_model = { id: 'p1', name: 'Gemini', use_model: 'gemini-2.5-pro' } as never;
+
+      const servers = await sendAndGetSessionServers(deps);
+
+      expect(argsOf(servers, 'pavii-trail-id')).toEqual(['/script.js', 'pavii-trail', '/data', WORKSPACE]);
+      expect(argsOf(servers, 'mcp-user')).toEqual(['--flag']);
+    });
+
+    it('appends the workspace to assistant-default MCP rows when nothing was selected locally', async () => {
+      const deps = codeMapDeps(WORKSPACE);
+      deps.selectedAssistantBackend = 'aionrs';
+      deps.current_model = { id: 'p1', name: 'Gemini', use_model: 'gemini-2.5-pro' } as never;
+      deps.selectedMcpServerIds = undefined;
+      deps.assistantDefaultMcpIds = ['pavii-trail-id'];
+
+      const servers = await sendAndGetSessionServers(deps);
+
+      expect(servers).toHaveLength(1);
+      expect(argsOf(servers, 'pavii-trail-id')).toEqual(['/script.js', 'pavii-trail', '/data', WORKSPACE]);
+    });
   });
 
   it('asks for a background update check of the CLI once an ACP conversation is created', async () => {

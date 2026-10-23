@@ -116,7 +116,13 @@ describe('e2e testid coverage', () => {
   // past-sessions-btn, -drawer, past-session-item), driven by the DOM suites in
   // tests/unit/renderer/paviiData/. Accepted: an e2e spec would need real
   // Claude/Codex session files and a native save dialog.
-  const ORPHAN_BUDGET = 161;
+  // 161 → 167: the recommended agent tools UI (recommended-tools-offer,
+  // -install, -not-now, -close, recommended-tools-section) and the STE100
+  // reply style switch (ste100-replies-switch), driven by the DOM suites in
+  // tests/unit/renderer/recommendedTools/ and
+  // tests/unit/settings/SystemModalContent.dom.test.tsx. Accepted: an e2e spec
+  // would download and install real third-party tools.
+  const ORPHAN_BUDGET = 167;
 
   function collectTestIds(): Set<string> {
     const ids = new Set<string>();

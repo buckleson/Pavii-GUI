@@ -560,6 +560,14 @@
 - Affects: `the-remaa/AionCore/crates/aionui-conversation/src/pavii_index.rs`, `the-remaa/AionCore/crates/aionui-conversation/src/session_import.rs`, `packages/desktop/src/process/paviiData/`, `packages/desktop/src/renderer/components/settings/PaviiBackup/`, `packages/desktop/src/renderer/pages/guid/components/PastSessions/`
 - Evidence: `the-remaa/AionCore/crates/aionui-app/tests/conversation_import_e2e.rs`, `tests/unit/process/paviiData/`, `tests/unit/renderer/paviiData/`
 
+### Recommended agent tools install on a user click, run telemetry-off, keep graphs outside the repo
+
+- Status: accepted
+- Decision: Trail-Code (npm), Headroom and graphify (PyPI via a pinned, checksum-verified uv) install into `<data>/managed-tools` only when the user clicks Install (first-run dialog or Settings → Tools). They reach agents as builtin MCP rows `pavii-trail` / `pavii-headroom` / `pavii-graphify`, each running `builtinMcp/codeGraphMcp.ts`, which serves no tools outside a code base and keeps graphs in `<data>/code-graphs/<hash>/<tool>/`. Headroom is MCP tools only; it is not put in front of the API. A builtin auto-inject skill `ste100-replies` makes agents reply in Simplified Technical English, switched off per conversation through `disabled_builtin_skill_ids` when the `replyStyle.ste100` client preference is false.
+- Rationale: keeps the "no silent third-party installs" decision above. The tools' own setup commands (`trail init`, `headroom wrap`, `graphify install`) write `~/.claude*`, `~/.codex`, CLAUDE.md or git hooks, so Pavii never runs them. The engine passes a stdio MCP server no cwd or workspace (`aionui-ai-agent/src/mcp_resolve.rs`), so the renderer appends the custom workspace to the trail/graphify row args (`renderer/hooks/mcp/catalog.ts`). Builtin rows reach a session only when selected (assistant defaults or the user's choice); by user decision, installed tools are not preselected. uv's Python install sets `UV_PYTHON_INSTALL_BIN=0` and `UV_PYTHON_INSTALL_REGISTRY=0` so nothing lands outside Pavii's folder.
+- Affects: `packages/desktop/src/process/agentCli/recommendedTools/`, `packages/desktop/src/process/resources/builtinMcp/codeGraphMcp.ts`, `packages/desktop/src/process/utils/runBackendMigrations.ts`, `the-remaa/AionCore/crates/aionui-app/assets/builtin-skills/auto-inject/ste100-replies/SKILL.md`
+- Evidence: `tests/unit/process/agentCli/recommendedTools/`, `tests/unit/renderer/recommendedTools/`, `the-remaa/AionCore/crates/aionui-app/tests/ste100_replies_skill.rs`
+
 ### Startup agent probes run concurrently
 
 - Status: accepted

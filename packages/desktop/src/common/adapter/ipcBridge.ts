@@ -45,6 +45,11 @@ import type {
   RestoreOffer,
 } from '../types/agent/paviiData';
 import type {
+  InstallRecommendedToolsResult,
+  RecommendedToolId,
+  RecommendedToolStatus,
+} from '../types/agent/recommendedTools';
+import type {
   EnsureConversationRuntimeResponse,
   GetConfigOptionsResponse,
   SetConfigOptionRequest,
@@ -1521,6 +1526,21 @@ export const paviiData = {
   dismissRestoreOffer: bridge.buildProvider<void, void>('pavii-data:dismiss-restore-offer'),
   /** Default backup path and the time of the last automatic save (epoch ms), for the settings section. */
   getBackupInfo: bridge.buildProvider<{ path: string; lastAutoSaveAt?: number }, void>('pavii-data:get-backup-info'),
+};
+
+// ---------------------------------------------------------------------------
+// Recommended agent tools (Trail-Code, Headroom, graphify) — installed by the
+// main process into managed-tools only after the user clicks Install.
+// ---------------------------------------------------------------------------
+
+export const recommendedTools = {
+  getStatus: bridge.buildProvider<RecommendedToolStatus[], void>('recommended-tools:get-status'),
+  install: bridge.buildProvider<InstallRecommendedToolsResult, { tools: RecommendedToolId[] }>(
+    'recommended-tools:install'
+  ),
+  /** True when the first-run prompt should show (nothing installed, not dismissed). */
+  getFirstRunOffer: bridge.buildProvider<boolean, void>('recommended-tools:get-first-run-offer'),
+  dismissFirstRunOffer: bridge.buildProvider<void, void>('recommended-tools:dismiss-first-run-offer'),
 };
 
 // ---------------------------------------------------------------------------

@@ -21,7 +21,7 @@ vi.mock('@/common/adapter/ipcBridge', () => ({
   mcpService: mcpServiceMock,
 }));
 
-import { ensureBackendMcpCatalog } from '@/renderer/hooks/mcp/catalog';
+import { ensureBackendMcpCatalog, toSessionMcpServer } from '@/renderer/hooks/mcp/catalog';
 
 describe('ensureBackendMcpCatalog', () => {
   beforeEach(() => {
@@ -82,5 +82,74 @@ describe('ensureBackendMcpCatalog', () => {
     expect(result.userServers).toEqual([]);
     expect(result.builtinServers).toEqual([]);
     expect(result.allServers).toEqual([]);
+  });
+});
+
+const stdioRow = (name: string, builtin?: boolean, args: string[] = ['/script.js', name, '/data']) => ({
+  id: `${name}-id`,
+  name,
+  builtin,
+  transport: { type: 'stdio' as const, command: 'node', args, env: { DO_NOT_TRACK: '1' } },
+});
+
+describe('toSessionMcpServer', () => {
+  const WORKSPACE = 'D:\\Repos\\my app';
+
+  it.each(['pavii-trail', 'pavii-graphify'])('appends the custom workspace as the last arg of builtin %s', (name) => {
+    expect(toSessionMcpServer(stdioRow(name, true), WORKSPACE)).toEqual({
+      id: `${name}-id`,
+      name,
+      transport: {
+        type: 'stdio',
+        command: 'node',
+        args: ['/script.js', name, '/data', WORKSPACE],
+        env: { DO_NOT_TRACK: '1' },
+      },
+    });
+  });
+
+  it('does not mutate the stored row when appending the workspace', () => {
+    const row = stdioRow('pavii-trail', true);
+    toSessionMcpServer(row, WORKSPACE);
+    expect(row.transport.args).toEqual(['/script.js', 'pavii-trail', '/data']);
+  });
+
+  it('starts a new args list when the builtin row has none', () => {
+    const row = stdioRow('pavii-trail', true);
+    const session = toSessionMcpServer({ ...row, transport: { type: 'stdio', command: 'node' } }, WORKSPACE);
+    expect(session.transport).toEqual(expect.objectContaining({ args: [WORKSPACE] }));
+  });
+
+  it('leaves Headroom unchanged because it does not take a workspace', () => {
+    const row = stdioRow('pavii-headroom', true);
+    expect(toSessionMcpServer(row, WORKSPACE).transport).toBe(row.transport);
+  });
+
+  it.each([
+    ['a non-pavii builtin row', stdioRow('pavii-browser', true)],
+    ['a user row named like a code-map tool', stdioRow('pavii-trail', false)],
+    ['a row without the builtin flag', stdioRow('pavii-graphify')],
+  ])('leaves %s unchanged', (_label, row) => {
+    expect(toSessionMcpServer(row, WORKSPACE).transport).toBe(row.transport);
+  });
+
+  it('leaves a non-stdio builtin code-map row unchanged', () => {
+    const row = {
+      id: 'trail-http',
+      name: 'pavii-trail',
+      builtin: true,
+      transport: { type: 'http' as const, url: 'http://localhost:1' },
+    };
+    expect(toSessionMcpServer(row, WORKSPACE).transport).toBe(row.transport);
+  });
+
+  it.each([undefined, ''])('leaves args unchanged when the workspace is %j', (workspace) => {
+    const row = stdioRow('pavii-trail', true);
+    expect(toSessionMcpServer(row, workspace).transport).toBe(row.transport);
+  });
+
+  it('copies only id, name and transport into the session snapshot', () => {
+    const row = { ...stdioRow('user-tool', false), enabled: true, description: 'x' };
+    expect(Object.keys(toSessionMcpServer(row))).toEqual(['id', 'name', 'transport']);
   });
 });

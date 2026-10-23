@@ -106,6 +106,7 @@ const SKILL_CATEGORY_BY_NAME: Readonly<Record<string, SkillCategoryId>> = {
   handoff: 'workflow',
   'loop-me': 'workflow',
   'token-optimizer': 'workflow',
+  'ste100-replies': 'workflow',
   wizard: 'workflow',
 
   // Setup & Troubleshooting

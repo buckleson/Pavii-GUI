@@ -15,6 +15,8 @@ import { useTranslation } from 'react-i18next';
 import ToolsModalContent from '@/renderer/components/settings/SettingsModal/contents/ToolsModalContent';
 import SettingsPageWrapper from '../components/SettingsPageWrapper';
 import SettingsPageHeader from '../components/SettingsPageHeader';
+import { isElectronDesktop } from '@/renderer/utils/platform';
+import RecommendedToolsSection from './RecommendedToolsSection';
 
 const ToolsSettings: React.FC = () => {
   const { t } = useTranslation();
@@ -29,6 +31,7 @@ const ToolsSettings: React.FC = () => {
             defaultValue: 'Configure MCP servers and built-in tools such as image generation.',
           })}
         />
+        {isElectronDesktop() && <RecommendedToolsSection />}
         <ToolsModalContent />
       </div>
     </SettingsPageWrapper>

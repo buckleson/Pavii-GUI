@@ -7,6 +7,8 @@
 import { ipcBridge } from '@/common';
 import { type ChatFileRef, chatFileRefPath } from '@/common/types/chatFile';
 import type { IMcpServer, TProviderWithModel } from '@/common/config/storage';
+import { configService } from '@/common/config/configService';
+import { STE100_PREF_KEY, STE100_SKILL_NAME } from '@/common/types/agent/recommendedTools';
 import { toSessionMcpServer } from '@/renderer/hooks/mcp/catalog';
 import { emitter } from '@/renderer/utils/emitter';
 import { ANALYTICS_EVENTS, track } from '@/renderer/services/analytics/posthog';
@@ -110,11 +112,18 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
 
     const isCustomWorkspace = !!dir;
     const finalWorkspace = dir || '';
+    // Code-map MCP rows get the workspace as an argument; only a custom one is known here.
+    const sessionMcpWorkspace = isCustomWorkspace ? finalWorkspace : undefined;
 
     const assistantConversationId = selectedAssistantId;
     const assistantBackend = selectedAssistantBackend;
     const enabled_skills_to_send = guidEnabledSkills ?? assistantDefaultSkillIds;
-    const excludeBuiltinSkills = guidDisabledBuiltinSkills ?? assistantDefaultDisabledBuiltinSkillIds;
+    const baseExcludedBuiltinSkills = guidDisabledBuiltinSkills ?? assistantDefaultDisabledBuiltinSkillIds;
+    // STE100 reply style is on unless the user explicitly turned it off in Settings → System.
+    const excludeBuiltinSkills =
+      configService.get(STE100_PREF_KEY) === false && !baseExcludedBuiltinSkills?.includes(STE100_SKILL_NAME)
+        ? [...(baseExcludedBuiltinSkills ?? []), STE100_SKILL_NAME]
+        : baseExcludedBuiltinSkills;
     const selectedAllMcpServerIds = selectedMcpServerIds ?? [];
     const selectedMcpServerIdSet = new Set(selectedAllMcpServerIds);
     const selectedUserMcpServerIds = availableMcpServers
@@ -122,10 +131,10 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
       .map((server) => server.id);
     const selectedAllSessionMcpServers = availableMcpServers
       .filter((server) => selectedMcpServerIdSet.has(server.id))
-      .map((server) => toSessionMcpServer(server));
+      .map((server) => toSessionMcpServer(server, sessionMcpWorkspace));
     const selectedSessionMcpServers = availableMcpServers
       .filter((server) => selectedMcpServerIdSet.has(server.id) && server.builtin === true)
-      .map((server) => toSessionMcpServer(server));
+      .map((server) => toSessionMcpServer(server, sessionMcpWorkspace));
     const defaultSelectedMcpServerIds = assistantDefaultMcpIds;
     const defaultSelectedUserMcpServerIds = availableMcpServers
       .filter((server) => (defaultSelectedMcpServerIds ?? []).includes(server.id) && server.builtin !== true)
@@ -139,7 +148,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
         ? selectedAllSessionMcpServers
         : availableMcpServers
             .filter((server) => (defaultSelectedMcpServerIds ?? []).includes(server.id))
-            .map((server) => toSessionMcpServer(server));
+            .map((server) => toSessionMcpServer(server, sessionMcpWorkspace));
 
     // `current_model` is the aionrs provider selection and means nothing to a
     // CLI agent, which owns its own model list. Used as a blanket fallback it

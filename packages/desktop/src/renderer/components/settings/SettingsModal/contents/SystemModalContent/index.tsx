@@ -7,6 +7,7 @@
 import { ipcBridge } from '@/common';
 import type { IGpuStatus, IStartOnBootStatus } from '@/common/adapter/ipcBridge';
 import { configService } from '@/common/config/configService';
+import { STE100_PREF_KEY } from '@/common/types/agent/recommendedTools';
 import AionScrollArea from '@/renderer/components/base/AionScrollArea';
 import FeedbackButton from '@/renderer/components/base/FeedbackButton';
 import { getClientBusinessSetting, setClientBusinessSetting } from '@/renderer/services/clientBusinessSettings';
@@ -73,6 +74,7 @@ const SystemModalContent: React.FC = () => {
   const [previewLimitMb, setPreviewLimitMb] = useState<number>(DEFAULT_TEXT_PREVIEW_LIMIT_MB);
   const previewLimitDraftRef = useRef<string>(String(DEFAULT_TEXT_PREVIEW_LIMIT_MB));
   const [saveUploadToWorkspace, setSaveUploadToWorkspace] = useState(false);
+  const [ste100Replies, setSte100Replies] = useState(true);
 
   useEffect(() => {
     if (!isDesktop) {
@@ -112,6 +114,7 @@ const SystemModalContent: React.FC = () => {
     setNotificationEnabled(configService.get('system.notificationEnabled') ?? true);
     setCronNotificationEnabled(configService.get('system.cronNotificationEnabled') ?? false);
     setSaveUploadToWorkspace(configService.get('upload.saveToWorkspace') ?? false);
+    setSte100Replies(configService.get(STE100_PREF_KEY) ?? true);
   }, [isDesktop]);
 
   useEffect(() => {
@@ -322,6 +325,14 @@ const SystemModalContent: React.FC = () => {
     });
   }, []);
 
+  const handleSte100RepliesChange = useCallback((checked: boolean) => {
+    setSte100Replies(checked);
+    configService.set(STE100_PREF_KEY, checked).catch(() => {
+      setSte100Replies(!checked);
+      configService.setLocal(STE100_PREF_KEY, !checked);
+    });
+  }, []);
+
   // Get system directory info
   const { data: systemInfo } = useSWR('system.dir.info', () => ipcBridge.application.systemInfo.invoke());
 
@@ -420,6 +431,14 @@ const SystemModalContent: React.FC = () => {
       key: 'saveUploadToWorkspace',
       label: t('settings.saveUploadToWorkspace'),
       component: <Switch checked={saveUploadToWorkspace} onChange={handleSaveUploadToWorkspaceChange} />,
+    },
+    {
+      key: 'ste100Replies',
+      label: t('settings.replyStyle.ste100'),
+      description: t('settings.replyStyle.ste100Desc'),
+      component: (
+        <Switch checked={ste100Replies} onChange={handleSte100RepliesChange} data-testid='ste100-replies-switch' />
+      ),
     },
   ];
 

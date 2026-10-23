@@ -14,6 +14,7 @@ import { initWebuiBridge } from './webuiBridge';
 import { initThemeBridge } from './themeBridge';
 import { initAgentCliBridge } from '../agentCli/agentCliBridge';
 import { initPaviiDataBridge } from '../paviiData/paviiDataBridge';
+import { initRecommendedToolsBridge } from '../agentCli/recommendedTools/bridge';
 
 export type BridgeDependencies = Record<string, never>;
 
@@ -28,6 +29,7 @@ export function initAllBridges(_deps: BridgeDependencies = {}): void {
   initThemeBridge();
   initAgentCliBridge();
   initPaviiDataBridge();
+  initRecommendedToolsBridge();
 }
 
 export {

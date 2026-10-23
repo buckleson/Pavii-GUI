@@ -1309,5 +1309,42 @@
       "restore": "Restore",
       "notNow": "Not now"
     }
+  },
+  "recommendedTools": {
+    "title": "Install recommended tools",
+    "description": "Optional tools that help agents work with your code.",
+    "note": "They install into Pavii's own folder and run with telemetry off.",
+    "sectionTitle": "Recommended tools",
+    "sectionDescription": "Optional agent tools that install into Pavii's own folder and run with telemetry off.",
+    "purpose": {
+      "trail": "Maps your code so agents find files and callers fast",
+      "headroom": "Compresses large tool output to save tokens",
+      "graphify": "Builds a knowledge graph of your code base"
+    },
+    "source": "Source",
+    "install": "Install",
+    "notNow": "Not now",
+    "close": "Close",
+    "installed": "Installed",
+    "installedVersion": "Installed {{version}}",
+    "installSucceeded": "Installed",
+    "installFailed": "Install failed: {{error}}",
+    "installedToast": "{{name}} installed",
+    "installFailedToast": "{{name}} install failed: {{error}}",
+    "docs": "Troubleshooting docs",
+    "statusLoadFailed": "Could not load the status of recommended tools",
+    "errors": {
+      "unsupportedPlatform": "This platform is not supported",
+      "downloadFailed": "The download failed. Check your network connection.",
+      "checksumMismatch": "The downloaded file did not match its checksum",
+      "npmMissing": "The bundled npm was not found",
+      "timeout": "The install took too long and was stopped",
+      "commandFailed": "The install command failed",
+      "unknown": "An unknown error occurred"
+    }
+  },
+  "replyStyle": {
+    "ste100": "Reply in Simplified Technical English (STE100)",
+    "ste100Desc": "Agents reply in short, clear sentences with a controlled vocabulary. Applies to new conversations."
   }
 }

@@ -16,8 +16,12 @@ import {
   type ImageGenerationMcpEnvResolveResult,
 } from '@/common/config/imageGenerationMcpEnv';
 import { BUILTIN_IMAGE_GEN_NAME, type IMcpServer, type IProvider } from '@/common/config/storage';
+import { RECOMMENDED_TOOLS, RECOMMENDED_TOOLS_ENV } from '@/common/types/agent/recommendedTools';
+import { onRecommendedToolsInstalled } from '@process/agentCli/recommendedTools/install';
+import { getRecommendedToolStatus } from '@process/agentCli/recommendedTools/status';
 import { getBuiltinMcpScriptPath, type ProcessConfig as ProcessConfigType } from './initStorage';
 import { migrateAssistantsToBackend } from './migrateAssistants';
+import { getDataPath } from './utils';
 
 type ConfigFile = typeof ProcessConfigType;
 type MigrationStepResult = boolean;
@@ -38,6 +42,8 @@ const BUILTIN_CHROME_DEVTOOLS_NAME = 'chrome-devtools';
  * happens in the side preview panel where the user can watch it.
  */
 const BUILTIN_BROWSER_SCRIPT = 'builtin-mcp-browser';
+/** Wrapper that serves Trail / Headroom / graphify (process/resources/builtinMcp/codeGraphMcp.ts). */
+const RECOMMENDED_TOOL_MCP_SCRIPT = 'builtin-mcp-code-graph';
 
 const LEGACY_BACKEND_CLIENT_PREFERENCE_KEYS = [
   'assistants',
@@ -199,6 +205,105 @@ function buildBuiltinBrowserServer(): McpImportServer {
   };
 }
 
+/**
+ * Builtin rows for the recommended tools: `node <wrapper> <toolId> <dataDir>`
+ * (the renderer appends the conversation workspace for the code-map tools).
+ * `enabled` mirrors whether the tool is installed. Returns no rows when the
+ * data dir or install state cannot be read, so the rest of the bootstrap runs.
+ */
+function buildRecommendedToolServers(): McpImportServer[] {
+  let dataDir: string;
+  let installedIds: Set<string>;
+  try {
+    dataDir = getDataPath();
+    installedIds = new Set(
+      getRecommendedToolStatus()
+        .filter((status) => status.installed)
+        .map((status) => status.id)
+    );
+  } catch (error) {
+    console.warn('[Migration] recommended tool MCP rows skipped: could not read tool state', error);
+    return [];
+  }
+  const scriptPath = getBuiltinMcpScriptPath(RECOMMENDED_TOOL_MCP_SCRIPT);
+  return RECOMMENDED_TOOLS.map((tool) => {
+    const serverConfig = {
+      command: 'node',
+      args: [scriptPath, tool.id, dataDir],
+      env: { ...RECOMMENDED_TOOLS_ENV },
+    };
+    return {
+      name: tool.mcpServerName,
+      description: `${tool.name} (${tool.license}), installed from Settings > Tools.`,
+      enabled: installedIds.has(tool.id),
+      builtin: true,
+      transport: { type: 'stdio', ...serverConfig },
+      original_json: JSON.stringify({ mcpServers: { [tool.mcpServerName]: serverConfig } }, null, 2),
+    };
+  });
+}
+
+/**
+ * Realign existing recommended-tool rows with the current script path, data
+ * dir and install state. A row is always disabled when its tool is not
+ * installed; it is enabled only when `enableInstalled` is set (right after an
+ * install), so a user who turned an installed tool off keeps it off.
+ */
+async function alignRecommendedToolServers(
+  existing: IMcpServer[],
+  desired: McpImportServer[],
+  enableInstalled: boolean
+): Promise<number> {
+  const existingByName = new Map(existing.map((server) => [server.name, server]));
+  let updated = 0;
+  for (const server of desired) {
+    const current = existingByName.get(server.name);
+    if (!current) continue;
+    if (!isSameStdioTransport(current.transport, server.transport) || current.original_json !== server.original_json) {
+      await mcpService.updateServer.invoke({
+        id: current.id,
+        data: { transport: server.transport, original_json: server.original_json },
+      });
+      updated += 1;
+    }
+    const shouldToggle = server.enabled === true ? enableInstalled && !current.enabled : current.enabled;
+    if (shouldToggle) {
+      await mcpService.toggleServer.invoke({ id: current.id });
+      updated += 1;
+    }
+  }
+  return updated;
+}
+
+/** After an install: add missing recommended-tool rows and enable the newly installed ones. */
+async function refreshRecommendedToolServers(): Promise<void> {
+  const desired = buildRecommendedToolServers();
+  const existing = (await mcpService.listServers.invoke()) ?? [];
+  const existingNames = new Set(existing.map((server) => server.name));
+  const missing = desired.filter((server) => !existingNames.has(server.name));
+  if (missing.length > 0) {
+    await mcpService.batchImportServers.invoke({ servers: missing });
+  }
+  const updated = await alignRecommendedToolServers(existing, desired, true);
+  console.info(
+    '[Migration] recommended tool MCP rows refreshed after install, imported %d, updated %d',
+    missing.length,
+    updated
+  );
+}
+
+let recommendedToolsListenerRegistered = false;
+
+function registerRecommendedToolsListener(): void {
+  if (recommendedToolsListenerRegistered) return;
+  recommendedToolsListenerRegistered = true;
+  onRecommendedToolsInstalled(() => {
+    void refreshRecommendedToolServers().catch((error) => {
+      console.warn('[Migration] recommended tool MCP refresh failed', error);
+    });
+  });
+}
+
 function buildDefaultMcpServers(): McpImportServer[] {
   const chromeConfig = {
     command: 'npx',
@@ -219,6 +324,7 @@ function buildDefaultMcpServers(): McpImportServer[] {
       original_json: JSON.stringify({ mcpServers: { [BUILTIN_CHROME_DEVTOOLS_NAME]: chromeConfig } }, null, 2),
     },
     buildBuiltinBrowserServer(),
+    ...buildRecommendedToolServers(),
   ];
 }
 
@@ -479,11 +585,16 @@ async function ensureBootstrapMcpServersInDb(configFile: ConfigFile): Promise<vo
     }
   }
 
+  // Same drift repair for the recommended-tool rows (script path, data dir, install state).
+  const recommendedToolUpdates = await alignRecommendedToolServers(existing, buildRecommendedToolServers(), false);
+  registerRecommendedToolsListener();
+
   console.info(
-    '[Migration] MCP bootstrap completed, imported %d missing defaults, updated image server: %s, updated browser server: %s, image config source: %s, image enabled: %s',
+    '[Migration] MCP bootstrap completed, imported %d missing defaults, updated image server: %s, updated browser server: %s, recommended tool updates: %d, image config source: %s, image enabled: %s',
     missing.length,
     imageServerUpdated ? 'yes' : 'no',
     browserServerUpdated ? 'yes' : 'no',
+    recommendedToolUpdates,
     imageConfigSource,
     imageConfig?.switch === true ? 'yes' : 'no'
   );
