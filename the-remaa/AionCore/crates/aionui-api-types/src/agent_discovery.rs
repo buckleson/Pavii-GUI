@@ -249,6 +249,11 @@ pub struct AgentMetadata {
     /// Computed in decode_row and projected to `AgentManagementRow`.
     #[serde(skip)]
     pub env_override_key_count: usize,
+    /// Internal carrier: the saved model provider this agent is linked to.
+    /// Read in decode_row; consumed by the spawn path and projected to
+    /// `AgentManagementRow`.
+    #[serde(skip)]
+    pub linked_provider_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -319,6 +324,14 @@ pub struct AgentManagementRow {
     pub has_command_override: bool,
     #[serde(default)]
     pub env_override_key_count: usize,
+    /// Saved model provider this agent is linked to (`None` = no link).
+    #[serde(default)]
+    pub linked_provider_id: Option<String>,
+    /// Provider `platform` values this agent's backend can be linked to —
+    /// the platforms whose API key the CLI is verified to read from its
+    /// environment. Empty when the backend supports no provider link.
+    #[serde(default)]
+    pub provider_link_platforms: Vec<String>,
 }
 
 #[cfg(test)]
@@ -378,6 +391,7 @@ mod tests {
             handshake: AgentHandshake::default(),
             has_command_override: false,
             env_override_key_count: 0,
+            linked_provider_id: None,
         };
         let v = serde_json::to_value(&meta).unwrap();
         assert_eq!(v["id"], "abc12345");

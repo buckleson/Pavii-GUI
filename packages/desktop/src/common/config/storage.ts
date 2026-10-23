@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { AgentCliUpdateState } from '@/common/types/agent/agentCliUpdate';
 import type { SpeechToTextConfig } from '@/common/types/provider/speech';
 import type { Theme } from '@/common/theme/types';
 import { buildStorage } from '@/common/platform/storage';
@@ -49,6 +50,8 @@ export interface IConfigStorageRefer {
   // Automatically preview newly created Office files in the current workspace
   // Skills Market: whether the external skills market source is enabled
   'skillsMarket.enabled'?: boolean;
+  /** Agent CLI update checks: last automatic check and per-CLI results */
+  'agentCli.updateState'?: AgentCliUpdateState;
   /**
    * One-shot completion flag for the legacy `model.config` → backend providers
    * migration in {@link migrateProviders}. Once `true`, the migration is

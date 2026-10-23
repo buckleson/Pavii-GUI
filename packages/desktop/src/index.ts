@@ -81,6 +81,7 @@ import {
 import { readCloseToTraySetting } from './process/utils/closeToTraySetting';
 // @ts-expect-error - electron-squirrel-startup doesn't have types
 import electronSquirrelStartup from 'electron-squirrel-startup';
+import { scheduleAgentCliAutoCheck } from './process/agentCli/scheduleAutoCheck';
 
 // ============ Single Instance Lock ============
 // Acquire lock early so the second instance quits before doing unnecessary work.
@@ -691,6 +692,12 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
       });
   } else {
     console.log('[AionUi] Auto-updater disabled via env/CI guard');
+  }
+
+  // Agent CLI update check: after load + 30s, at most every 48h. Same guard as
+  // the app updater so E2E/CI runs make no background update requests.
+  if (!disableAutoUpdater) {
+    scheduleAgentCliAutoCheck(mainWindow);
   }
 
   // Load the renderer: dev server URL in development, built HTML file in production

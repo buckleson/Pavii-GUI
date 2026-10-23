@@ -111,6 +111,16 @@ pub trait IAgentMetadataRepository: Send + Sync {
         env_override: Option<&str>,
     ) -> Result<(), DbError>;
 
+    /// Write only the `linked_provider_id` column (`None` clears the link) for
+    /// a row visible to `user_id`. Returns `true` if a row was updated,
+    /// `false` when no visible row matches `id`.
+    async fn set_linked_provider_for_user(
+        &self,
+        user_id: &str,
+        id: &str,
+        provider_id: Option<&str>,
+    ) -> Result<bool, DbError>;
+
     /// Toggle the `enabled` flag. Returns `true` if a row was updated.
     async fn set_enabled(&self, id: &str, enabled: bool) -> Result<bool, DbError>;
 

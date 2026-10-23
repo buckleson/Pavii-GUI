@@ -68,7 +68,20 @@ pub(super) async fn build(
 
     // Resolve the catalog row — prefer explicit agent_id, fall
     // back to a vendor-label match for legacy payloads.
-    let meta = resolve_catalog_metadata(&deps.agent_registry, &config, &ctx.user_id).await?;
+    let mut meta = resolve_catalog_metadata(&deps.agent_registry, &config, &ctx.user_id).await?;
+
+    // Opt-in provider link: append the linked provider's credentials to
+    // `meta.env` once, here, so BOTH spawn paths below see them — the ACP
+    // command spec (`resolve_agent_command_spec`) and the direct-CLI spawn env
+    // (`session_agent::assemble_spawn_env`). Existing names (seed env / user
+    // env override) are never overwritten. No link = no-op.
+    crate::provider_link::inject_linked_provider_env(
+        &mut meta,
+        deps.provider_repo.as_ref(),
+        &deps.encryption_key,
+        &ctx.user_id,
+    )
+    .await;
 
     // Trust the catalog row over the client-supplied `backend` when an
     // `agent_id` was provided. The frontend collapses row-scoped rows
@@ -914,6 +927,7 @@ mod tests {
             handshake: aionui_api_types::AgentHandshake::default(),
             has_command_override: false,
             env_override_key_count: 0,
+            linked_provider_id: None,
         };
 
         let spec = resolve_agent_command_spec(

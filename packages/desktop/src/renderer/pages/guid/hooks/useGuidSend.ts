@@ -250,6 +250,11 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
         return;
       }
 
+      // Background update check for this CLI if its last check is over 48h old.
+      if (assistantBackend) {
+        void ipcBridge.agentCli.checkIfStale.invoke({ backend: assistantBackend }).catch(() => {});
+      }
+
       track(ANALYTICS_EVENTS.conversationStarted, {
         agent_kind: 'acp',
         has_files: files.length > 0,

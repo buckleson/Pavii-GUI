@@ -21,8 +21,14 @@ fn skill_body() -> String {
 fn frontmatter_name_matches_directory_name() {
     let skill = skill_body();
 
-    assert!(skill.starts_with("---\n") || skill.starts_with("---\r\n"), "frontmatter must open the file");
-    assert!(skill.contains("\nname: pavii-context"), "frontmatter name must match the directory name");
+    assert!(
+        skill.starts_with("---\n") || skill.starts_with("---\r\n"),
+        "frontmatter must open the file"
+    );
+    assert!(
+        skill.contains("\nname: pavii-context"),
+        "frontmatter name must match the directory name"
+    );
 
     let dir_name = skill_dir().file_name().unwrap().to_string_lossy().into_owned();
     assert_eq!(dir_name, "pavii-context");
@@ -35,9 +41,15 @@ fn description_is_present_and_carries_the_trigger() {
     let skill = skill_body();
 
     assert!(skill.contains("description:"), "description is required");
-    assert!(skill.contains("pavii-ard.md"), "description must name the architecture record");
+    assert!(
+        skill.contains("pavii-ard.md"),
+        "description must name the architecture record"
+    );
     assert!(skill.contains("pavii-hoff.md"), "description must name the handoff");
-    assert!(skill.contains("project directory"), "description must carry the project trigger");
+    assert!(
+        skill.contains("project directory"),
+        "description must carry the project trigger"
+    );
 }
 
 /// The role rule is the whole team behaviour. `Role: lead` writes, `Role: teammate`
@@ -46,10 +58,19 @@ fn description_is_present_and_carries_the_trigger() {
 fn skill_states_the_team_role_rule() {
     let skill = skill_body();
 
-    assert!(skill.contains("Role: lead"), "must name the leader role verbatim as injected");
-    assert!(skill.contains("Role: teammate"), "must name the teammate role verbatim as injected");
+    assert!(
+        skill.contains("Role: lead"),
+        "must name the leader role verbatim as injected"
+    );
+    assert!(
+        skill.contains("Role: teammate"),
+        "must name the teammate role verbatim as injected"
+    );
     assert!(skill.contains("Read only"), "a teammate must be told not to write");
-    assert!(skill.contains("team context"), "must give the helper fallback for an unclear role");
+    assert!(
+        skill.contains("team context"),
+        "must give the helper fallback for an unclear role"
+    );
 }
 
 /// With no workspace selected the cwd is a throwaway per-conversation temp dir.
@@ -60,8 +81,14 @@ fn skill_guards_against_scratch_workspaces() {
 
     assert!(skill.contains(".git"), "must name a project marker");
     assert!(skill.contains("package.json"), "must name a project marker");
-    assert!(skill.contains("scratch workspace"), "must say what a markerless directory is");
-    assert!(skill.contains("read nothing, write nothing"), "must say what to do there");
+    assert!(
+        skill.contains("scratch workspace"),
+        "must say what a markerless directory is"
+    );
+    assert!(
+        skill.contains("read nothing, write nothing"),
+        "must say what to do there"
+    );
 }
 
 #[test]

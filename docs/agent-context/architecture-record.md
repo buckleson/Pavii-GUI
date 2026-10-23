@@ -520,6 +520,62 @@
 - Affects: `the-remaa/AionCore/crates/aionui-app/assets/builtin-skills/auto-inject/pavii-context/SKILL.md`
 - Evidence: commit `fa1a8c4`; `the-remaa/AionCore/crates/aionui-app/tests/pavii_context_skill.rs`
 
+### Agent CLI update checks run in the main process, off the launch path
+
+- Status: accepted
+- Decision: `packages/desktop/src/process/agentCli/` checks catalog CLIs (claude, codex, gemini, opencode, kiro) against `registry.npmjs.org/<pkg>/latest` 30s after `did-finish-load` at most every 48h, on conversation start when a result is over 48h old, and from the Agents page button; updates run only after the user confirms.
+- Rationale: user decision — notify plus one-click, never silent installs; "up to date" means the latest release, not the engine's pinned `VERIFIED_*_VERSION`. Update method is `npm install -g` only when the binary sits in `npm prefix -g`, else the CLI's own updater (verified from `--help`: `claude update`, `codex update`, `opencode upgrade`), else manual. Kiro's updater is unverified, so it is manual-only. Windows `.cmd` shims run through `cmd.exe` because `execFile` cannot execute them. The renderer cannot import the catalog, so `AGENT_CLI_UPDATE_BACKENDS` duplicates its backend list and a test pins the two together.
+- Affects: `packages/desktop/src/process/agentCli/cliUpdateService.ts`, `packages/desktop/src/process/agentCli/scheduleAutoCheck.ts`, `packages/desktop/src/renderer/pages/settings/AgentSettings/AgentCard.tsx`
+- Evidence: `tests/unit/process/agentCli/cliUpdateService.test.ts`, `tests/unit/process/agentCli/cliCatalog.test.ts`; outbound call recorded in `docs/agent-context/privacy-audit.md`
+
+### A CLI installed after launch is found through an engine PATH override
+
+- Status: accepted
+- Decision: Test connection on a `missing` agent first posts the re-read user PATH to `POST /api/agents/refresh-path`, which sets a process-wide override used by `resolve_command_path` and `agent_process_env`, then re-probes the registry; a manual check that comes back online also `reload_one`s the cached registry entry.
+- Rationale: the engine's PATH is fixed at spawn, so a CLI whose installer adds a new PATH folder stayed `command_not_found` until restart. The override avoids `std::env::set_var` (unsound with threads). `get_for_user` re-probes live, so the reload must key on the cached `registry.get(id)` entry, not on the probed `meta`.
+- Affects: `the-remaa/AionCore/crates/aionui-runtime/src/resolver.rs`, `the-remaa/AionCore/crates/aionui-ai-agent/src/services/availability/mod.rs`, `packages/desktop/src/process/agentCli/agentCliBridge.ts`
+- Evidence: `the-remaa/AionCore/crates/aionui-ai-agent/tests/agent_path_override_integration.rs`, `the-remaa/AionCore/crates/aionui-app/tests/agent_refresh_path_e2e.rs`
+
+### The Agents page "Open source" tab is a filtered view of the same agents
+
+- Status: accepted
+- Decision: the tab lists the official agents whose backend is in `OPEN_SOURCE_CLIS` (10 CLIs, GitHub-star order) using the same `ManagedAgent` objects as "All", adding license and repo links plus Install (npm kind), Install guide (docs kind) or an npx note; installs run the bundled npm into Pavii's managed-tools folder.
+- Rationale: one engine row per CLI keeps status, Test connection and update state identical in both tabs. The list is static, verified against the GitHub API (licenses) and registry.npmjs.org (packages, binaries); no network refresh. Hermes' npm package is an unofficial wrapper, so it uses its docs link. Claude Code and Kiro are excluded (no open-source license). Managed-tools installs are updated with the same bundled npm and `--prefix`.
+- Affects: `packages/desktop/src/common/types/agent/openSourceClis.ts`, `packages/desktop/src/process/agentCli/installCli.ts`, `packages/desktop/src/renderer/pages/settings/AgentSettings/LocalAgents.tsx`
+- Evidence: `tests/unit/process/agentCli/installCli.test.ts`, `tests/unit/settings/agentFilters.test.ts`, `tests/unit/renderer/LocalAgents.dom.test.tsx`
+
+### Saved provider keys reach an agent CLI only through an opt-in link
+
+- Status: accepted
+- Decision: `agent_metadata.linked_provider_id` (migration 042, an id only) is set via `PUT /api/agents/{id}/provider-link`; at spawn `factory/acp.rs` calls `provider_link::inject_linked_provider_env`, which decrypts that provider for the spawning user and appends the mapped env vars to an owned copy of the metadata, never overwriting an existing name.
+- Rationale: off by default because e.g. an OpenAI key could silently replace a CLI's subscription login. Each backend-to-env-var mapping is cited to upstream source in `provider_link.rs`; Codex (its app-server ignores `OPENAI_API_KEY`) and OpenClaw (the gateway holds credentials) have none. The OpenAI preset is stored as platform `custom`, so key-only CLIs (opencode, kilo, pi, goose) can link only Anthropic/Gemini providers. The link is one value per machine like other agent overrides; another user's spawn finds no provider and injects nothing. Linking a disabled provider, or one without a base URL where the mapping needs one, is accepted and skipped at spawn with a warn log. `AgentEnvEntry` derives `Debug`/`Serialize` with the plaintext value, so post-injection metadata must never be logged with `?` or returned from an API.
+- Affects: `the-remaa/AionCore/crates/aionui-ai-agent/src/provider_link.rs`, `the-remaa/AionCore/crates/aionui-ai-agent/src/factory/acp.rs`, `the-remaa/AionCore/crates/aionui-db/migrations/042_agent_linked_provider.sql`
+- Evidence: `the-remaa/AionCore/crates/aionui-ai-agent/src/provider_link_tests.rs`, `the-remaa/AionCore/crates/aionui-app/tests/agent_provider_link_e2e.rs`
+
+### Startup agent probes run concurrently
+
+- Status: accepted
+- Decision: `hydrate` and `refresh_availability` decode and PATH-probe every agent row on the blocking pool in parallel (`run_blocking_concurrently` in `registry.rs`), keeping input order.
+- Rationale: each miss walks all PATH entries times PATHEXT and shim suffixes (about 85 ms with 88 entries); 43 rows probed one after another held engine readiness for about 3 s. Warm launch went from window created at 6.6 s / shown at 11.5 s to 3.2 s / 6.9 s.
+- Affects: `the-remaa/AionCore/crates/aionui-ai-agent/src/registry.rs`
+- Evidence: `the-remaa/AionCore/crates/aionui-ai-agent/tests/agent_path_override_integration.rs` (`concurrent_hydrate_keeps_every_row_and_records_unavailable_reasons`)
+
+### Open-source agent CLIs install into the managed-tools folder
+
+- Status: accepted
+- Decision: the Agents page "Open source" tab lists `OPEN_SOURCE_CLIS` (`packages/desktop/src/common/types/agent/openSourceClis.ts`) with repo, license and install kind. `npm` entries install on click with the bundled npm (`npm install -g <pkg> --prefix <managed-tools>`), `npx` entries need no install, `docs` entries link to the official guide. After an install the renderer runs the PATH refresh, so the agent comes online without a restart.
+- Rationale: the managed-tools folder is already on the main-process PATH before the engine spawns, so no system-wide npm or admin rights are needed. Hermes's npm package is an unofficial wrapper, so it is `docs`. `installCli.ts` is loaded lazily from the bridge, so nothing runs at launch.
+- Affects: `packages/desktop/src/process/agentCli/installCli.ts`, `packages/desktop/src/renderer/pages/settings/AgentSettings/LocalAgents.tsx`, `packages/desktop/src/renderer/pages/settings/AgentSettings/agentFilters.ts`
+- Evidence: `tests/unit/process/agentCli/installCli.test.ts`, `tests/unit/renderer/LocalAgents.dom.test.tsx`, `tests/unit/settings/agentFilters.test.ts`
+
+### An agent can opt in to a saved provider's key
+
+- Status: accepted
+- Decision: migration 042 adds a nullable `agent_metadata.linked_provider_id`, set through `PUT /api/agents/{id}/provider-link` and the AgentCard "Use my Pavii key" control. At spawn, `inject_linked_provider_env` decrypts that provider's key and appends it to `meta.env` under the variable the CLI is verified to read; `BACKEND_MAPPINGS` in `provider_link.rs` is the single source of truth and cites the upstream source for every entry.
+- Rationale: NULL by default, so existing spawns are unchanged. The key is never copied into the agent row. A variable already in `meta.env` (seed or user override) wins. A missing, disabled or unsupported provider is logged by id only and never fails the spawn. Entries with a base-URL variable are injected only when the provider has a base URL, so a third-party key never reaches a vendor's default endpoint. Unlisted backends (`codex`, whose `app-server` ignores env keys, and `openclaw`) offer no link.
+- Affects: `the-remaa/AionCore/crates/aionui-ai-agent/src/provider_link.rs`, `the-remaa/AionCore/crates/aionui-ai-agent/src/routes/agent.rs`, `the-remaa/AionCore/crates/aionui-db/migrations/042_agent_linked_provider.sql`, `packages/desktop/src/renderer/pages/settings/AgentSettings/AgentCard.tsx`
+- Evidence: unit tests in `provider_link.rs` and `registry_tests.rs`; `tests/unit/renderer/AgentCard.dom.test.tsx`; checksum pinned in `tests/fixtures/migration-checksums.json`
+
 ## Implementation Context
 
 - Dev-mode engine resolution falls back to `<cwd>/resources/bundled-paviicore/<platform-arch>/` in `packages/desktop/src/process/backend/binaryResolver.ts`; run `node scripts/build-paviicore.js` once per checkout.
@@ -569,6 +625,9 @@
 - Installer NSIS test coverage is uneven and the gap moves. Five smokes compile real NSIS (`smoke-installer-{shortcut,disk-gate,rollback,self-lock,failure-messagebox}.js`), but each includes only the `.nsh` files it needs — **no smoke included `installer-update-verify.nsh` until `smoke-installer-shortcut.js` existed**, so that file had only ever been compiled by a full release build. When adding a macro there, check whether any smoke actually compiles it. The harness lifts macro text out of the shipped `.nsh` rather than copying it, and injects electron-builder's `nsis-resources` plugin dir so `WinShell::SetLnkAUMI` resolves for real.
 - A local `bun run build-win:x64` bundles the engine from `resources/bundled-paviicore/<key>/`, which is a **staged binary that goes stale**. On 2026-08-29 that staging was two days older than migration 041, so the locally built app hit the downgrade guard (`db_migration_version 41 > app_migration_version 40`) and refused to open the database — "Startup didn't complete". The guard behaved correctly; the build was wrong. CI is unaffected because it compiles the engine from vendored source. Refresh the staging (`node scripts/build-paviicore.js`) before any local packaging test, and expect to reinstall the official build afterwards.
 - NSIS installers **re-launch themselves** on the update path (two `session-begin` events in the JSONL log), so `Start-Process -Wait` returns on the parent while the install continues in a child. Measuring the installed version immediately after that returns the OLD version and looks like a failed install. Poll until no installer process remains.
+- `scripts/build-paviicore.js` looks for the binary in `the-remaa/AionCore/target/release/`; with `CARGO_TARGET_DIR` redirected (on this machine build caches live on `G:/pavii-super/` because D: is nearly full) the build succeeds but the script reports "Engine binary missing", and the copy plus manifest steps must be finished by hand.
+- The bundled Node runtime (`resources/bundled-paviicore/<key>/managed-resources/node/node-v*/`) ships `npm.cmd` without `node_modules/npm`, so its npm cannot run (`MODULE_NOT_FOUND npm-cli.js`). Agent CLI installs therefore use the engine's managed runtime at `<getDataPath()>/runtime/node/node-v*/`, which has a complete npm, and accept a bundled npm only when `npm-cli.js` exists (`hasNpmCli` in `packages/desktop/src/process/agentCli/installCli.ts`). `ensureOpencodeInstalled` in `packages/web-host/src/ensure-opencode.ts` still uses the bundled npm directly, so its npm fallback fails the same way (pre-existing, not changed).
+- `aionui-runtime` has 8 unit tests that fail on Windows on the unchanged code (node_runtime, spawn and shell_env tests asserting Unix paths); they are not regressions.
 - The installer's JSONL log at `%TEMP%\aionui-installer-<version>-<date>-log.jsonl` is the primary diagnostic for any install question — it records the disk check, every verify step, the shortcut decision with `updated=` state, and `session-end`. Read it before theorising.
 
 ## Deferred to the services phase
@@ -590,6 +649,8 @@
 - Slash-command persistence gate: full app suite 4613 passed / 6 skipped / 2 todo; engine tests `cargo test -p aionui-ai-agent --test cached_slash_commands` (6 tests) and `cargo test -p aionui-app --test auxiliary_e2e` (17 tests) both green; live production check returned 200 with 18 commands for the conversation that previously 404'd.
 - Runtime verification: WebUI login page renders at `bun run webui` (post chunk fix); desktop app reaches `backendManager.start ready` with engine detection including OpenCode; live end-to-end sign-in confirmed via loopback callback (`[PaviiAuth] signed in as <user>` in main-process logs).
 - Kiro `acp` entry point, verified against the real binary (2026-08-28, kiro-cli 2.20.0 on Windows): driving a JSON-RPC `initialize` into `kiro-cli acp` over stdio returns `protocolVersion: 1`, `agentInfo.name "Kiro CLI Agent"`, and `agentCapabilities` that match the `agent_capabilities` seeded for Kiro in `003_agent_acp_capabilities.sql` field for field — `loadSession: true`, `promptCapabilities {image: true, audio: false, embeddedContext: false}`, `mcpCapabilities {http: true, sse: false}`, `sessionCapabilities {}`. It answers before any `kiro-cli login` and returns `authMethods: []`, confirming 003's premise that this entry point serves ACP unauthenticated. This proves the `["acp"]` args and the capabilities row, not just the binary name.
+
+- Agent CLI updates gate: `tests/unit/process/agentCli/`, `tests/unit/renderer/AgentCard.dom.test.tsx`, `tests/unit/renderer/LocalAgents.dom.test.tsx`, `tests/unit/renderer/useGuidSend.dom.test.ts`; engine `cargo test -p aionui-ai-agent` and `cargo test -p aionui-app --test agent_refresh_path_e2e`. Live check in the desktop app: the auto-check logs `[AgentCli] auto-check done`, and the Agents page shows "Update to <version>" for outdated CLIs.
 
 - Test discovery trap: `vitest.config.ts` includes only `packages/web-host/src/**/*.test.ts` for that package, so anything under `packages/web-host/tests/` never executes. The package-local `packages/web-host/vitest.config.ts` does include `tests/**`, which is what made those files look covered. That directory is now gone (its one real assertion moved into `packages/web-host/src/start-web-host.test.ts`, the rest deleted); new web-host tests must live in `packages/web-host/src/`. `startWebHost` registers OpenCode on PATH for real unless stubbed, so an unstubbed call mutates `process.env` for the remainder of the run.
 

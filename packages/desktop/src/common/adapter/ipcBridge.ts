@@ -35,6 +35,8 @@ import type {
   SetAssistantStateRequest,
   UpdateAssistantRequest,
 } from '../types/agent/assistantTypes';
+import type { AgentCliCheckResult, AgentCliUpdateResult, AgentCliUpdateState } from '../types/agent/agentCliUpdate';
+import type { AgentCliInstallResult } from '../types/agent/openSourceClis';
 import type {
   EnsureConversationRuntimeResponse,
   GetConfigOptionsResponse,
@@ -1460,6 +1462,27 @@ export const theme = {
   setActive: bridge.buildProvider<void, Theme>('theme:set-active'),
   // any window → main: pull the currently cached resolved theme on load (null if none yet)
   requestCurrent: bridge.buildProvider<Theme | null, void>('theme:request-current'),
+};
+
+// ---------------------------------------------------------------------------
+// Agent CLIs — update checks run in the main process (child processes, npm
+// registry); refreshPath hands the re-read PATH to the engine.
+// ---------------------------------------------------------------------------
+
+export const agentCli = {
+  getState: bridge.buildProvider<AgentCliUpdateState, void>('agent-cli:get-state'),
+  check: bridge.buildProvider<AgentCliCheckResult | undefined, { backend: string }>('agent-cli:check'),
+  update: bridge.buildProvider<AgentCliUpdateResult, { backend: string }>('agent-cli:update'),
+  checkIfStale: bridge.buildProvider<void, { backend: string }>('agent-cli:check-if-stale'),
+  refreshPath: bridge.buildProvider<void, void>('agent-cli:refresh-path'),
+  stateChanged: bridge.buildEmitter<AgentCliUpdateState>('agent-cli:state-changed'),
+  /** Install an open-source CLI (npm kind only) into Pavii's managed-tools folder. */
+  install: bridge.buildProvider<AgentCliInstallResult, { backend: string }>('agent-cli:install'),
+  /** Opt in (providerId) or out (null) of passing a saved Pavii provider key to this agent at launch. */
+  setProviderLink: httpPut<void, { agentId: string; providerId: string | null }>(
+    (p) => `/api/agents/${encodeURIComponent(p.agentId)}/provider-link`,
+    (p) => ({ provider_id: p.providerId })
+  ),
 };
 
 // ---------------------------------------------------------------------------

@@ -15,12 +15,16 @@ import AionModal from '@/renderer/components/base/AionModal';
 import { AionSearchInput } from '@/renderer/components/base';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { useManagedAgents } from '@/renderer/hooks/agent/useManagedAgents';
+import { useAgentCliUpdates } from '@/renderer/hooks/agent/useAgentCliUpdates';
+import { AGENT_CLI_UPDATE_BACKENDS } from '@/common/types/agent/agentCliUpdate';
+import { findOpenSourceCli, type OpenSourceCli } from '@/common/types/agent/openSourceClis';
+import { useProvidersQuery } from '@/renderer/hooks/agent/useModelProviderList';
 import { openExternalUrl } from '@/renderer/utils/platform';
-import { Button, Message, Typography } from '@arco-design/web-react';
+import { Button, Message, Modal, Typography } from '@arco-design/web-react';
 import TalkToButlerButton from '@/renderer/components/base/TalkToButlerButton';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import AgentCard from './AgentCard';
+import AgentCard, { type AgentCardCliUpdate, type AgentCardOpenSource } from './AgentCard';
 import { isDeprecatedRuntimeAgentType } from '@/renderer/utils/model/agentTypeSupportPolicy';
 import InlineAgentEditor, { type CustomAgentDraft } from './InlineAgentEditor';
 import { getBoundAssistants, useAssistantsForAgents } from './BoundAssistants';
@@ -49,6 +53,12 @@ const LocalAgents: React.FC = () => {
   // also refreshes assistant list caches because generated-assistant availability
   // can change after health checks or custom-agent mutations.
   const { agents: allAgents, isRefreshing, refreshCatalog } = useManagedAgents();
+  const cliUpdates = useAgentCliUpdates();
+  // Saved providers, loaded once for the page; feeds the open-source "Use my Pavii key" control.
+  const { data: providers } = useProvidersQuery();
+  const [installingAgentId, setInstallingAgentId] = useState<string | null>(null);
+  const [failedInstallIds, setFailedInstallIds] = useState<ReadonlySet<string>>(() => new Set());
+  const [savingLinkAgentId, setSavingLinkAgentId] = useState<string | null>(null);
 
   // Hide deprecated runtime backends (nanobot / openclaw-gateway / remote / gemini)
   // — they are no longer offered as agents and shouldn't appear on the detection page.
@@ -168,6 +178,14 @@ const LocalAgents: React.FC = () => {
     async (agentId: string) => {
       try {
         setTestingAgentId(agentId);
+        // A CLI installed while the app is running may live in a PATH folder
+        // the engine has not seen yet; hand it the current PATH first.
+        if (allAgents.find((a) => a.id === agentId)?.status === 'missing') {
+          // Best effort: a failed refresh must not block the check itself.
+          await ipcBridge.agentCli.refreshPath.invoke().catch((error: unknown) => {
+            console.warn('agent PATH refresh failed:', error);
+          });
+        }
         const result = await ipcBridge.acpConversation.checkManagedAgentHealthById.invoke({ id: agentId });
         await refreshCatalog();
         switch (result.status) {
@@ -197,8 +215,178 @@ const LocalAgents: React.FC = () => {
         setTestingAgentId(null);
       }
     },
+    [allAgents, refreshCatalog, t]
+  );
+
+  const { check: checkCliUpdate, update: runCliUpdate } = cliUpdates;
+
+  const handleCheckUpdate = useCallback(
+    async (agent: ManagedAgent, backend: string) => {
+      try {
+        const result = await checkCliUpdate(backend);
+        if (!result?.installed) {
+          Message.warning(t('settings.agentManagement.updateCheckNotInstalled', { name: agent.name }));
+        } else if (result.updateAvailable) {
+          Message.info(t('settings.agentManagement.updateFound', { name: agent.name, version: result.latestVersion }));
+        } else if (!result.latestVersion) {
+          Message.info(
+            t('settings.agentManagement.updateCheckUnknown', {
+              name: agent.name,
+              version: result.installedVersion ?? '?',
+            })
+          );
+        } else {
+          Message.success(
+            t('settings.agentManagement.upToDate', { name: agent.name, version: result.installedVersion ?? '?' })
+          );
+        }
+      } catch (error) {
+        console.error('agent CLI update check failed:', error);
+        Message.error(t('settings.agentManagement.updateCheckError'));
+      }
+    },
+    [checkCliUpdate, t]
+  );
+
+  const handleUpdate = useCallback(
+    (agent: ManagedAgent, backend: string) => {
+      const current = cliUpdates.results[backend];
+      if (!current) return;
+      if (current.method === 'manual') {
+        Modal.info({
+          title: t('settings.agentManagement.updateManualTitle', { name: agent.name }),
+          content: current.updateCommand
+            ? t('settings.agentManagement.updateManualCommand', { command: current.updateCommand })
+            : t('settings.agentManagement.updateManualInstaller', { name: agent.name }),
+        });
+        return;
+      }
+      const run = async () => {
+        try {
+          const outcome = await runCliUpdate(backend);
+          if (outcome.success) {
+            Message.success(
+              t('settings.agentManagement.updateSuccess', {
+                name: agent.name,
+                version: outcome.result?.installedVersion ?? current.latestVersion,
+              })
+            );
+            void handleTestConnection(agent.id);
+          } else {
+            console.error('agent CLI update failed:', outcome.error, outcome.output);
+            Message.error(
+              t('settings.agentManagement.updateFailed', { name: agent.name, command: current.updateCommand })
+            );
+          }
+        } catch (error) {
+          console.error('agent CLI update failed:', error);
+          Message.error(
+            t('settings.agentManagement.updateFailed', { name: agent.name, command: current.updateCommand })
+          );
+        }
+      };
+      Modal.confirm({
+        title: t('settings.agentManagement.updateConfirmTitle', {
+          name: agent.name,
+          version: current.latestVersion,
+        }),
+        content: t('settings.agentManagement.updateConfirmContent', { command: current.updateCommand }),
+        okText: t('settings.agentManagement.updateConfirmOk'),
+        onOk: () => {
+          void run();
+        },
+      });
+    },
+    [cliUpdates.results, handleTestConnection, runCliUpdate, t]
+  );
+
+  const markInstallFailed = useCallback((agentId: string, failed: boolean) => {
+    setFailedInstallIds((prev) => {
+      if (prev.has(agentId) === failed) return prev;
+      const next = new Set(prev);
+      if (failed) next.add(agentId);
+      else next.delete(agentId);
+      return next;
+    });
+  }, []);
+
+  const handleInstall = useCallback(
+    async (agent: ManagedAgent, cli: OpenSourceCli) => {
+      setInstallingAgentId(agent.id);
+      let succeeded = false;
+      try {
+        const result = await ipcBridge.agentCli.install.invoke({ backend: cli.backend });
+        succeeded = Boolean(result?.success);
+        if (!succeeded) console.error('agent CLI install failed:', result?.error, result?.output);
+      } catch (error) {
+        console.error('agent CLI install failed:', error);
+      } finally {
+        setInstallingAgentId(null);
+      }
+      markInstallFailed(agent.id, !succeeded);
+      if (!succeeded) {
+        Message.error(t('settings.agentManagement.openSourceInstallFailed', { name: agent.name }));
+        return;
+      }
+      Message.success(t('settings.agentManagement.openSourceInstallSuccess', { name: agent.name }));
+      // Best effort: the engine needs the new managed-tools folder on its PATH.
+      await ipcBridge.agentCli.refreshPath.invoke().catch((error: unknown) => {
+        console.warn('agent PATH refresh failed:', error);
+      });
+      await handleTestConnection(agent.id);
+    },
+    [handleTestConnection, markInstallFailed, t]
+  );
+
+  const handleProviderLinkChange = useCallback(
+    async (agent: ManagedAgent, providerId: string | null) => {
+      setSavingLinkAgentId(agent.id);
+      try {
+        await ipcBridge.agentCli.setProviderLink.invoke({ agentId: agent.id, providerId });
+        await refreshCatalog();
+      } catch (error) {
+        console.error('set agent provider link failed:', error);
+        Message.error(t('settings.agentManagement.providerLinkError', { name: agent.name }));
+      } finally {
+        setSavingLinkAgentId(null);
+      }
+    },
     [refreshCatalog, t]
   );
+
+  const openSourceFor = (agent: ManagedAgent): AgentCardOpenSource | undefined => {
+    const cli = findOpenSourceCli(agent.backend);
+    if (!cli) return undefined;
+    const platforms = agent.provider_link_platforms ?? [];
+    const linkable = platforms.length
+      ? (providers ?? []).filter((provider) => platforms.includes(provider.platform))
+      : [];
+    return {
+      cli,
+      installing: installingAgentId === agent.id,
+      installFailed: failedInstallIds.has(agent.id),
+      onInstall: () => void handleInstall(agent, cli),
+      providerLink: linkable.length
+        ? {
+            providers: linkable.map((provider) => ({ id: provider.id, name: provider.name })),
+            saving: savingLinkAgentId === agent.id,
+            onChange: (providerId) => void handleProviderLinkChange(agent, providerId),
+          }
+        : undefined,
+    };
+  };
+
+  const cliUpdateFor = (agent: ManagedAgent): AgentCardCliUpdate | undefined => {
+    const backend = agent.backend;
+    if (!backend || !AGENT_CLI_UPDATE_BACKENDS.includes(backend) || agent.status === 'missing') return undefined;
+    return {
+      result: cliUpdates.results[backend],
+      checking: cliUpdates.checkingBackend === backend,
+      updating: cliUpdates.updatingBackend === backend,
+      onCheck: () => void handleCheckUpdate(agent, backend),
+      onUpdate: () => handleUpdate(agent, backend),
+    };
+  };
 
   return (
     <div data-testid='agent-management-page' className='flex flex-col gap-16px'>
@@ -259,6 +447,11 @@ const LocalAgents: React.FC = () => {
             label: t('settings.agentManagement.filterUnavailable', { defaultValue: 'Unavailable' }),
             count: officialFilterStats.unavailable,
           },
+          {
+            key: 'openSource',
+            label: t('settings.agentManagement.filterOpenSource'),
+            count: officialFilterStats.openSource,
+          },
         ]}
         activeTab={agentFilter}
         onTabChange={(key) => setAgentFilter(key as AgentAvailabilityFilter)}
@@ -280,6 +473,8 @@ const LocalAgents: React.FC = () => {
               onTestConnection={() => void handleTestConnection(agent.id)}
               onConfigure={() => openAgentConfig(agent.id)}
               isTesting={testingAgentId === agent.id}
+              cliUpdate={cliUpdateFor(agent)}
+              openSource={agentFilter === 'openSource' ? openSourceFor(agent) : undefined}
             />
           ))}
           {visibleOfficialAgents.length === 0 && (

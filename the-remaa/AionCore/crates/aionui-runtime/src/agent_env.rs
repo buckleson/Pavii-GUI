@@ -20,7 +20,11 @@ static FULL_SHELL_ENV: OnceCell<Vec<(OsString, OsString)>> = OnceCell::const_new
 /// Electron `spawn(..., { env })` behavior without spreading shell variables to
 /// unrelated backend code.
 pub async fn agent_process_env() -> Vec<(OsString, OsString)> {
-    let current_env: Vec<(OsString, OsString)> = std::env::vars_os().collect();
+    let mut current_env: Vec<(OsString, OsString)> = std::env::vars_os().collect();
+    if let Some(path) = crate::path_override() {
+        current_env.retain(|(key, _)| !key.eq_ignore_ascii_case("PATH"));
+        current_env.push((OsString::from("PATH"), path));
+    }
     let shell_env = full_shell_env().await.to_vec();
     let env = build_agent_process_env(current_env.clone(), shell_env.clone());
     tracing::info!(
@@ -350,5 +354,76 @@ printf '%s\n' \
 
         std::fs::write(path, contents).unwrap();
         std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    fn env_lookup(env: &[(OsString, OsString)], key: &str) -> Option<OsString> {
+        env.iter()
+            .find(|(name, _)| name.to_string_lossy().eq_ignore_ascii_case(key))
+            .map(|(_, value)| value.clone())
+    }
+
+    /// Clears the process-global PATH override even if an assertion panics.
+    struct ClearOverrideOnDrop;
+
+    impl Drop for ClearOverrideOnDrop {
+        fn drop(&mut self) {
+            crate::set_path_override(None);
+        }
+    }
+
+    #[tokio::test]
+    async fn agent_process_env_uses_path_override_instead_of_process_path() {
+        // Child process: isolates the global override from every other test,
+        // and drops SHELL so the (Unix) login-shell probe is skipped and fast.
+        if !crate::test_support::run_in_env_child(
+            "agent_env::tests::agent_process_env_uses_path_override_instead_of_process_path",
+            |command| {
+                command.env_remove("SHELL");
+            },
+        ) {
+            return;
+        }
+        let _reset = ClearOverrideOnDrop;
+        let override_dir = tempfile::tempdir().unwrap();
+        crate::set_path_override(Some(override_dir.path().as_os_str().to_owned()));
+
+        let env = agent_process_env().await;
+
+        let path = env_lookup(&env, "PATH").expect("PATH should be present");
+        let entries: Vec<PathBuf> = std::env::split_paths(&path).collect();
+        assert_eq!(
+            entries,
+            vec![override_dir.path().to_path_buf()],
+            "override must replace the process PATH entirely"
+        );
+        let path_keys = env
+            .iter()
+            .filter(|(name, _)| name.to_string_lossy().eq_ignore_ascii_case("PATH"))
+            .count();
+        assert_eq!(path_keys, 1, "exactly one PATH key must reach the agent");
+    }
+
+    #[tokio::test]
+    async fn agent_process_env_keeps_process_path_without_override() {
+        if !crate::test_support::run_in_env_child(
+            "agent_env::tests::agent_process_env_keeps_process_path_without_override",
+            |command| {
+                command.env_remove("SHELL");
+            },
+        ) {
+            return;
+        }
+        let _reset = ClearOverrideOnDrop;
+        crate::set_path_override(None);
+        let Some(process_path) = std::env::var_os("PATH") else {
+            return;
+        };
+        let first_process_entry = std::env::split_paths(&process_path).find(|p| !p.as_os_str().is_empty());
+
+        let env = agent_process_env().await;
+
+        let path = env_lookup(&env, "PATH").expect("PATH should be present");
+        let first_agent_entry = std::env::split_paths(&path).next();
+        assert_eq!(first_agent_entry, first_process_entry);
     }
 }

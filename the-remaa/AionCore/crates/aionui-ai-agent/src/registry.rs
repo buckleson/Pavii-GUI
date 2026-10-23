@@ -273,10 +273,7 @@ impl AgentRegistry {
             .await
             .map_err(|e| AgentError::internal(format!("load agent_metadata: {e}")))?;
 
-        let candidates: Vec<_> = rows
-            .into_iter()
-            .filter_map(|row| decode_row(row, AvailabilityProjection::Probe))
-            .collect();
+        let candidates = decode_rows_concurrently(rows).await;
         let validated = validate_cli_candidates(candidates, self.probe_policy).await;
 
         let mut map = HashMap::with_capacity(validated.len());
@@ -385,16 +382,14 @@ impl AgentRegistry {
     /// Useful after PATH has changed (e.g. `launchctl setenv`).
     pub async fn refresh_availability(&self) {
         let snapshot: Vec<AgentMetadata> = self.by_id.read().await.values().cloned().collect();
-        let candidates: Vec<_> = snapshot
-            .into_iter()
-            .map(|mut meta| {
-                let (path, reason) = probe_with_reason(&meta);
-                meta.resolved_command = path;
-                meta.available = meta.resolved_command.is_some() || is_internal_commandless_agent(&meta);
-                let reason = if meta.available { None } else { reason };
-                (meta, reason)
-            })
-            .collect();
+        let candidates = run_blocking_concurrently(snapshot, |mut meta| {
+            let (path, reason) = probe_with_reason(&meta);
+            meta.resolved_command = path;
+            meta.available = meta.resolved_command.is_some() || is_internal_commandless_agent(&meta);
+            let reason = if meta.available { None } else { reason };
+            Some((meta, reason))
+        })
+        .await;
         let validated = validate_cli_candidates(candidates, self.probe_policy).await;
 
         let mut results = Vec::with_capacity(validated.len());
@@ -670,6 +665,7 @@ fn is_visible(meta: &AgentMetadata) -> bool {
 fn agent_management_row(meta: AgentMetadata, reason: Option<&UnavailableReason>) -> AgentManagementRow {
     let status = derive_management_status(&meta, reason);
     let diagnostics = derive_management_diagnostics(&meta, status, reason);
+    let provider_link_platforms = crate::provider_link::link_platforms_for_backend(meta.backend.as_deref());
     let handshake = meta.handshake;
     AgentManagementRow {
         id: meta.id,
@@ -709,6 +705,8 @@ fn agent_management_row(meta: AgentMetadata, reason: Option<&UnavailableReason>)
         last_failure_at: meta.last_failure_at,
         has_command_override: meta.has_command_override,
         env_override_key_count: meta.env_override_key_count,
+        linked_provider_id: meta.linked_provider_id,
+        provider_link_platforms,
     }
 }
 
@@ -775,6 +773,38 @@ enum AvailabilityProjection {
     Cached,
     /// Resolve the spawn command against the current runtime environment.
     Probe,
+}
+
+/// Decode and PATH-probe every row in parallel. Each lookup is a blocking
+/// filesystem walk over every PATH entry (and, on Windows, every PATHEXT and
+/// shim suffix), so probing ~40 rows one after another held engine startup
+/// for seconds.
+async fn decode_rows_concurrently(rows: Vec<AgentMetadataRow>) -> Vec<(AgentMetadata, Option<UnavailableReason>)> {
+    run_blocking_concurrently(rows, |row| decode_row(row, AvailabilityProjection::Probe)).await
+}
+
+/// Run a blocking `f` over every item on the blocking pool, keeping input
+/// order and dropping items that return `None` or whose task panicked.
+async fn run_blocking_concurrently<I, O, F>(items: Vec<I>, f: F) -> Vec<O>
+where
+    I: Send + 'static,
+    O: Send + 'static,
+    F: Fn(I) -> Option<O> + Send + Sync + Copy + 'static,
+{
+    let tasks = items
+        .into_iter()
+        .map(|item| tokio::task::spawn_blocking(move || f(item)));
+    futures_util::future::join_all(tasks)
+        .await
+        .into_iter()
+        .filter_map(|joined| match joined {
+            Ok(result) => result,
+            Err(error) => {
+                warn!(%error, "agent probe task failed");
+                None
+            }
+        })
+        .collect()
 }
 
 /// Turn a DB row into the public `AgentMetadata`.
@@ -864,6 +894,7 @@ fn decode_row(
         handshake,
         has_command_override: false,
         env_override_key_count: 0,
+        linked_provider_id: row.linked_provider_id.filter(|id| !id.trim().is_empty()),
     };
 
     // ── Self-repair overrides ──────────────────────────────────────
@@ -2125,6 +2156,7 @@ mod tests {
             last_success_at: None,
             last_failure_at: None,
             env_override: None,
+            linked_provider_id: None,
             created_at: 0,
             updated_at: 0,
         };
@@ -2174,6 +2206,7 @@ mod tests {
             env_override: Some(
                 r#"[{"name":"ANTHROPIC_API_KEY","value":"sk-x"},{"name":"PATH","value":"/evil"}]"#.to_string(),
             ),
+            linked_provider_id: None,
             created_at: 0,
             updated_at: 0,
         };
@@ -2230,6 +2263,7 @@ mod tests {
             env_override: Some(
                 r#"[{"name":"ANTHROPIC_API_KEY","value":"sk-x","description":""},{"name":"PATH","value":"/evil","description":""}]"#.to_string(),
             ),
+            linked_provider_id: None,
             created_at: 0,
             updated_at: 0,
         };

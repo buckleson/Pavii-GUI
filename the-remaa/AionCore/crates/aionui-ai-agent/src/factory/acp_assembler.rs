@@ -192,6 +192,7 @@ mod tests {
             handshake: aionui_api_types::AgentHandshake::default(),
             has_command_override: false,
             env_override_key_count: 0,
+            linked_provider_id: None,
         }
     }
 

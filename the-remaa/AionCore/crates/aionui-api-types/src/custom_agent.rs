@@ -19,6 +19,16 @@ pub struct SetAgentOverridesRequest {
     pub env_override: Option<Vec<AgentEnvEntry>>,
 }
 
+/// Request body for `PUT /api/agents/{id}/provider-link`.
+///
+/// `Some(id)` links the agent to one of the caller's saved model providers;
+/// `None` (or an omitted field) clears the link.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetAgentProviderLinkRequest {
+    #[serde(default)]
+    pub provider_id: Option<String>,
+}
+
 /// Response body for `GET /api/agents/{id}/overrides`.
 #[derive(Debug, Clone, Serialize)]
 pub struct AgentOverridesResponse {
@@ -66,6 +76,13 @@ pub struct CustomAgentAdvancedOverrides {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SetEnabledRequest {
     pub enabled: bool,
+}
+
+/// Request body for `POST /api/agents/refresh-path`: the user's current PATH,
+/// re-read by the desktop shell so CLIs installed after launch are found.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RefreshAgentPathRequest {
+    pub path: String,
 }
 
 /// Response body for `DELETE /api/agents/custom/{id}`.

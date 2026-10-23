@@ -779,6 +779,7 @@ fn stub_agent_metadata_rows() -> Vec<AgentMetadataRow> {
         last_failure_at: None,
         command_override: None,
         env_override: None,
+        linked_provider_id: None,
         created_at: 1,
         updated_at: 1,
     })
@@ -886,6 +887,14 @@ impl IAgentMetadataRepository for StubAgentMetadataRepo {
     async fn set_enabled(&self, _id: &str, _enabled: bool) -> Result<bool, DbError> {
         Ok(false)
     }
+    async fn set_linked_provider_for_user(
+        &self,
+        _user_id: &str,
+        _id: &str,
+        _provider_id: Option<&str>,
+    ) -> Result<bool, aionui_db::DbError> {
+        Ok(false)
+    }
     async fn set_enabled_for_user(&self, _user_id: &str, id: &str, enabled: bool) -> Result<bool, DbError> {
         self.set_enabled(id, enabled).await
     }
@@ -939,6 +948,7 @@ fn claude_metadata_row() -> AgentMetadataRow {
         last_failure_at: None,
         command_override: None,
         env_override: None,
+        linked_provider_id: None,
         created_at: 1,
         updated_at: 1,
     }
@@ -1041,6 +1051,14 @@ impl IAgentMetadataRepository for ClaudeNativeSkillMetadataRepo {
         self.update_agent_overrides(id, command_override, env_override).await
     }
     async fn set_enabled(&self, _id: &str, _enabled: bool) -> Result<bool, DbError> {
+        Ok(false)
+    }
+    async fn set_linked_provider_for_user(
+        &self,
+        _user_id: &str,
+        _id: &str,
+        _provider_id: Option<&str>,
+    ) -> Result<bool, aionui_db::DbError> {
         Ok(false)
     }
     async fn set_enabled_for_user(&self, _user_id: &str, id: &str, enabled: bool) -> Result<bool, DbError> {

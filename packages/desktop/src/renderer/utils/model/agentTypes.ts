@@ -156,6 +156,10 @@ export type ManagedAgent = Omit<AgentMetadata, 'available' | 'handshake'> & {
   available_models?: unknown;
   available_commands?: unknown;
   handshake?: AgentHandshake;
+  /** Saved Pavii provider whose key is passed to this agent at launch (opt-in). */
+  linked_provider_id?: string | null;
+  /** Provider platforms whose key this agent can use; empty or absent = no verified mapping. */
+  provider_link_platforms?: string[];
 };
 
 /**

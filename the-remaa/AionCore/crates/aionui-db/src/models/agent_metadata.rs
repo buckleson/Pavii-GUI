@@ -68,6 +68,10 @@ pub struct AgentMetadataRow {
 
     pub command_override: Option<String>,
     pub env_override: Option<String>,
+    /// Opt-in link to one of the user's saved model providers. When set, the
+    /// spawn path injects that provider's API key into the env var(s) the
+    /// agent CLI is verified to read. Stores only the provider id, never a key.
+    pub linked_provider_id: Option<String>,
 
     pub created_at: TimestampMs,
     pub updated_at: TimestampMs,

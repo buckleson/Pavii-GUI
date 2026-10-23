@@ -22,6 +22,7 @@ pub mod mcp_resolve;
 pub mod media;
 pub(crate) mod persistence;
 pub mod protocol;
+pub mod provider_link;
 pub mod registry;
 pub mod routes;
 pub(crate) mod runtime_status;

@@ -1,16 +1,47 @@
+use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
+use std::sync::RwLock;
+
+/// PATH that replaces the process `$PATH` for command lookups and agent
+/// spawns. The desktop shell sets it when the user's PATH changed after the
+/// engine started (a CLI installed while the app is running), so detection
+/// does not need a restart. Kept here instead of `std::env::set_var`, which is
+/// unsound in a multi-threaded process.
+static PATH_OVERRIDE: RwLock<Option<OsString>> = RwLock::new(None);
+
+/// Replace the PATH used for command resolution and agent subprocesses.
+/// An empty value clears the override.
+pub fn set_path_override(path: Option<OsString>) {
+    let value = path.filter(|p| !p.is_empty());
+    *PATH_OVERRIDE.write().unwrap_or_else(|e| e.into_inner()) = value;
+}
+
+/// The PATH set by [`set_path_override`], if any.
+pub fn path_override() -> Option<OsString> {
+    PATH_OVERRIDE.read().unwrap_or_else(|e| e.into_inner()).clone()
+}
+
+fn which_any(cmd: &str) -> Option<PathBuf> {
+    match path_override() {
+        Some(path) => {
+            let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            which::which_in(cmd, Some(OsStr::new(&path)), cwd).ok()
+        }
+        None => which::which(cmd).ok(),
+    }
+}
 
 /// Resolve a command name to an absolute path.
 ///
 /// Commands are resolved from the startup-enhanced `$PATH` via
-/// `which::which`.
+/// `which::which`, or from the PATH override when one is set.
 ///
 /// On Windows, if a bare name lookup fails we retry with the common
 /// shim suffixes (`.cmd`, `.ps1`, `.bat`). Tools installed via npm
 /// global / pnpm / yarn typically ship as `name.cmd`, and a user with a
 /// trimmed `PATHEXT` would otherwise see them as missing.
 pub fn resolve_command_path(cmd: &str) -> Option<PathBuf> {
-    which::which(cmd).ok().or_else(|| windows_shim_fallback(cmd))
+    which_any(cmd).or_else(|| windows_shim_fallback(cmd))
 }
 
 #[cfg(windows)]
@@ -20,7 +51,7 @@ fn windows_shim_fallback(cmd: &str) -> Option<PathBuf> {
         return None;
     }
     for ext in ["cmd", "ps1", "bat"] {
-        if let Ok(p) = which::which(format!("{cmd}.{ext}")) {
+        if let Some(p) = which_any(&format!("{cmd}.{ext}")) {
             return Some(p);
         }
     }
@@ -130,6 +161,155 @@ mod tests {
             found.to_string_lossy().to_lowercase().ends_with("widget.cmd"),
             "expected the .cmd shim; got {}",
             found.display()
+        );
+    }
+
+    // ---- PATH override -------------------------------------------------
+    //
+    // The override is process-global. Each test below re-runs itself in a
+    // child test process (`run_in_env_child`), so setting it can never leak
+    // into, or race with, any other test in this binary. The guard still
+    // clears it on exit (including panics) as a second line of defence.
+
+    const OVERRIDE_WIDGET: &str = "aionui-path-override-widget";
+
+    struct ClearOverrideOnDrop;
+
+    impl Drop for ClearOverrideOnDrop {
+        fn drop(&mut self) {
+            set_path_override(None);
+        }
+    }
+
+    fn fresh_override_child(test_name: &str) -> bool {
+        crate::test_support::run_in_env_child(test_name, |_| {})
+    }
+
+    /// Create a fake CLI named `name` inside `dir` and return its path.
+    #[cfg(unix)]
+    fn write_fake_cli(dir: &Path, name: &str) -> PathBuf {
+        use std::os::unix::fs::PermissionsExt;
+        let bin = dir.join(name);
+        std::fs::write(&bin, b"#!/bin/sh\necho hi\n").unwrap();
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+        bin
+    }
+
+    /// Create a fake npm-style CLI shim (`name.cmd`) inside `dir`.
+    #[cfg(windows)]
+    fn write_fake_cli(dir: &Path, name: &str) -> PathBuf {
+        let shim = dir.join(format!("{name}.cmd"));
+        std::fs::write(&shim, b"@echo off\r\necho hi\r\n").unwrap();
+        shim
+    }
+
+    fn assert_resolved_inside(found: &Path, dir: &Path) {
+        let found = std::fs::canonicalize(found).unwrap();
+        let dir = std::fs::canonicalize(dir).unwrap();
+        assert!(
+            found.starts_with(&dir),
+            "expected {} to resolve inside {}",
+            found.display(),
+            dir.display()
+        );
+    }
+
+    #[test]
+    fn path_override_makes_command_in_override_dir_resolvable() {
+        if !fresh_override_child("resolver::tests::path_override_makes_command_in_override_dir_resolvable") {
+            return;
+        }
+        let _reset = ClearOverrideOnDrop;
+        let tmp = tempfile::TempDir::new().unwrap();
+        write_fake_cli(tmp.path(), OVERRIDE_WIDGET);
+
+        assert_eq!(path_override(), None);
+        assert!(
+            resolve_command_path(OVERRIDE_WIDGET).is_none(),
+            "fake CLI must not be on the process PATH before the override"
+        );
+
+        set_path_override(Some(tmp.path().as_os_str().to_owned()));
+
+        assert_eq!(path_override().as_deref(), Some(tmp.path().as_os_str()));
+        let found = resolve_command_path(OVERRIDE_WIDGET).expect("override dir must be searched");
+        assert_resolved_inside(&found, tmp.path());
+    }
+
+    #[test]
+    fn clearing_path_override_with_none_restores_process_path_lookup() {
+        if !fresh_override_child("resolver::tests::clearing_path_override_with_none_restores_process_path_lookup") {
+            return;
+        }
+        let _reset = ClearOverrideOnDrop;
+        let tmp = tempfile::TempDir::new().unwrap();
+        write_fake_cli(tmp.path(), OVERRIDE_WIDGET);
+
+        set_path_override(Some(tmp.path().as_os_str().to_owned()));
+        assert!(resolve_command_path(OVERRIDE_WIDGET).is_some());
+
+        set_path_override(None);
+
+        assert_eq!(path_override(), None);
+        assert!(
+            resolve_command_path(OVERRIDE_WIDGET).is_none(),
+            "after clearing, lookups must fall back to the process PATH"
+        );
+    }
+
+    #[test]
+    fn empty_path_override_is_treated_as_cleared() {
+        if !fresh_override_child("resolver::tests::empty_path_override_is_treated_as_cleared") {
+            return;
+        }
+        let _reset = ClearOverrideOnDrop;
+        let tmp = tempfile::TempDir::new().unwrap();
+        write_fake_cli(tmp.path(), OVERRIDE_WIDGET);
+
+        set_path_override(Some(tmp.path().as_os_str().to_owned()));
+        assert!(path_override().is_some());
+
+        set_path_override(Some(OsString::new()));
+
+        assert_eq!(
+            path_override(),
+            None,
+            "an empty PATH must clear the override, not store \"\""
+        );
+        assert!(resolve_command_path(OVERRIDE_WIDGET).is_none());
+    }
+
+    #[test]
+    fn empty_path_override_on_fresh_state_stays_cleared() {
+        if !fresh_override_child("resolver::tests::empty_path_override_on_fresh_state_stays_cleared") {
+            return;
+        }
+        let _reset = ClearOverrideOnDrop;
+
+        set_path_override(Some(OsString::new()));
+
+        assert_eq!(path_override(), None);
+    }
+
+    #[test]
+    fn path_override_replaces_rather_than_extends_process_path() {
+        if !fresh_override_child("resolver::tests::path_override_replaces_rather_than_extends_process_path") {
+            return;
+        }
+        let _reset = ClearOverrideOnDrop;
+        // A command that is always on the process PATH of a test machine.
+        let always_present = if cfg!(windows) { "cmd" } else { "sh" };
+        if resolve_command_path(always_present).is_none() {
+            // Unusual sandbox without the system shell on PATH; nothing to prove.
+            return;
+        }
+        let empty = tempfile::TempDir::new().unwrap();
+
+        set_path_override(Some(empty.path().as_os_str().to_owned()));
+
+        assert!(
+            resolve_command_path(always_present).is_none(),
+            "with an override set, the process PATH must not be searched"
         );
     }
 }

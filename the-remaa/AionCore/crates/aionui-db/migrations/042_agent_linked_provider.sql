@@ -1,0 +1,12 @@
+-- Migration 042: opt-in link from an agent to one saved model provider.
+--
+-- NULL (the default for every existing and newly seeded row) = no link, so
+-- spawns are byte-identical to before. When set, the engine decrypts that
+-- provider's API key at spawn time and hands it to the agent CLI through the
+-- environment variable(s) the CLI is verified to read (see the ai-agent
+-- crate's provider-link mapping). The key itself is never copied here; this
+-- column only stores the provider id.
+--
+-- Plain ADD COLUMN, matching 035/036: SQLite has no `ADD COLUMN IF NOT
+-- EXISTS`, and sqlx records each migration so it runs exactly once.
+ALTER TABLE agent_metadata ADD COLUMN linked_provider_id TEXT NULL;

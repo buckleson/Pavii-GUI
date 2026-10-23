@@ -120,6 +120,8 @@ fn test_agent_row(id: &str, backend: Option<&str>, agent_type: AgentType, name: 
         last_failure_at: None,
         has_command_override: false,
         env_override_key_count: 0,
+        linked_provider_id: None,
+        provider_link_platforms: Vec::new(),
     }
 }
 

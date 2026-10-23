@@ -6,6 +6,8 @@
 //!
 //! - `GET  /api/agents/management` — list diagnostics-first agent rows
 //! - `POST /api/agents/custom/try-connect` — test custom agent configuration (e.g. ACP connection)
+//! - `POST /api/agents/refresh-path` — re-detect CLIs against the user's current PATH
+//! - `PUT  /api/agents/{id}/provider-link` — link/unlink a saved model provider
 
 use axum::Router;
 use axum::extract::rejection::JsonRejection;
@@ -14,8 +16,9 @@ use axum::routing::{get, patch, post, put};
 
 use aionui_api_types::{
     AgentLogoEntry, AgentManagementRow, AgentMetadata, AgentOverridesResponse, ApiResponse, CustomAgentUpsertRequest,
-    DeleteCustomAgentResponse, ProviderHealthCheckRequest, ProviderHealthCheckResponse, SetAgentOverridesRequest,
-    SetEnabledRequest, TryConnectCustomAgentRequest, TryConnectCustomAgentResponse,
+    DeleteCustomAgentResponse, ProviderHealthCheckRequest, ProviderHealthCheckResponse, RefreshAgentPathRequest,
+    SetAgentOverridesRequest, SetAgentProviderLinkRequest, SetEnabledRequest, TryConnectCustomAgentRequest,
+    TryConnectCustomAgentResponse,
 };
 use aionui_auth::CurrentUser;
 use aionui_common::ApiError;
@@ -28,12 +31,14 @@ pub fn agent_routes(state: AgentRouterState) -> Router {
         .route("/api/agents/logos", get(list_agent_logos))
         .route("/api/agents/management", get(list_management_agents))
         .route("/api/agents/{id}/health-check", post(health_check_by_id))
+        .route("/api/agents/refresh-path", post(refresh_path))
         .route("/api/agents/provider-health-check", post(provider_health_check))
         .route("/api/agents/{id}/enabled", patch(set_agent_enabled))
         .route(
             "/api/agents/{id}/overrides",
             get(get_agent_overrides).put(set_agent_overrides),
         )
+        .route("/api/agents/{id}/provider-link", put(set_agent_provider_link))
         .route("/api/agents/custom", post(create_custom))
         .route("/api/agents/custom/{id}", put(update_custom).delete(delete_custom))
         .route("/api/agents/custom/try-connect", post(try_connect_custom))
@@ -78,6 +83,16 @@ async fn health_check_by_id(
             .await
             .map_err(agent_error_to_api_error)?,
     )))
+}
+
+async fn refresh_path(
+    State(state): State<AgentRouterState>,
+    Extension(_user): Extension<CurrentUser>,
+    body: Result<Json<RefreshAgentPathRequest>, JsonRejection>,
+) -> Result<Json<ApiResponse<()>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    state.service.refresh_agent_path(req.path).await;
+    Ok(Json(ApiResponse::ok(())))
 }
 
 async fn provider_health_check(
@@ -198,4 +213,19 @@ async fn set_agent_overrides(
             .await
             .map_err(agent_error_to_api_error)?,
     )))
+}
+
+async fn set_agent_provider_link(
+    State(state): State<AgentRouterState>,
+    Extension(user): Extension<CurrentUser>,
+    Path(id): Path<String>,
+    body: Result<Json<SetAgentProviderLinkRequest>, JsonRejection>,
+) -> Result<Json<ApiResponse<()>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    state
+        .service
+        .set_agent_provider_link(&user.id, &id, req)
+        .await
+        .map_err(agent_error_to_api_error)?;
+    Ok(Json(ApiResponse::ok(())))
 }

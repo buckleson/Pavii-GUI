@@ -11,12 +11,18 @@ import { useGuidSend, type GuidSendDeps } from '@/renderer/pages/guid/hooks/useG
 
 const createConversationInvokeMock = vi.fn();
 const swrMutateMock = vi.fn();
+const checkIfStaleMock = vi.fn();
 
 vi.mock('@/common', () => ({
   ipcBridge: {
     conversation: {
       create: {
         invoke: (...args: unknown[]) => createConversationInvokeMock(...args),
+      },
+    },
+    agentCli: {
+      checkIfStale: {
+        invoke: (...args: unknown[]) => checkIfStaleMock(...args),
       },
     },
   },
@@ -81,6 +87,41 @@ describe('useGuidSend', () => {
     createConversationInvokeMock.mockResolvedValue({ id: 'conv-1' });
     swrMutateMock.mockReset();
     swrMutateMock.mockResolvedValue(undefined);
+    checkIfStaleMock.mockReset();
+    checkIfStaleMock.mockResolvedValue(undefined);
+  });
+
+  it('asks for a background update check of the CLI once an ACP conversation is created', async () => {
+    const { result } = renderHook(() => useGuidSend(createDeps()));
+
+    await act(async () => {
+      await result.current.handleSend();
+    });
+
+    expect(checkIfStaleMock).toHaveBeenCalledWith({ backend: 'claude' });
+  });
+
+  it('still navigates to the conversation when the background update check rejects', async () => {
+    checkIfStaleMock.mockRejectedValue(new Error('ipc down'));
+    const deps = createDeps();
+    const { result } = renderHook(() => useGuidSend(deps));
+
+    await act(async () => {
+      await result.current.handleSend();
+    });
+
+    expect(deps.navigate).toHaveBeenCalledWith('/conversation/conv-1');
+  });
+
+  it('does not request an update check when the conversation could not be created', async () => {
+    createConversationInvokeMock.mockResolvedValue(null);
+    const { result } = renderHook(() => useGuidSend(createDeps()));
+
+    await act(async () => {
+      await result.current.handleSend();
+    });
+
+    expect(checkIfStaleMock).not.toHaveBeenCalled();
   });
 
   it('passes selected mode into assistant conversation overrides when creating a preset ACP conversation', async () => {

@@ -27,6 +27,7 @@ use crate::registry::AgentRegistry;
 pub struct AgentService {
     registry: Arc<AgentRegistry>,
     broadcaster: Arc<dyn EventBroadcaster>,
+    provider_repo: Arc<dyn IProviderRepository>,
     provider_health: ProviderHealthCheckService,
     availability: AgentAvailabilityService,
 }
@@ -40,10 +41,11 @@ impl AgentService {
         data_dir: PathBuf,
     ) -> Arc<Self> {
         let provider_health = ProviderHealthCheckService::new(provider_repo.clone(), encryption_key, data_dir.clone());
-        let availability = AgentAvailabilityService::new(registry.clone(), provider_repo);
+        let availability = AgentAvailabilityService::new(registry.clone(), provider_repo.clone());
         Arc::new(Self {
             registry,
             broadcaster,
+            provider_repo,
             provider_health,
             availability,
         })
@@ -104,6 +106,14 @@ impl AgentService {
 
     pub async fn health_check_agent_by_id(&self, user_id: &str, id: &str) -> Result<AgentManagementRow, AgentError> {
         self.availability.run_manual_health_check(user_id, id).await
+    }
+
+    /// Re-detect every agent against `path`, the user's current PATH as
+    /// re-read by the desktop shell. Lets a CLI installed after the engine
+    /// started be found without a restart.
+    pub async fn refresh_agent_path(&self, path: String) {
+        aionui_runtime::set_path_override(Some(path.into()));
+        self.registry.refresh_availability().await;
     }
 
     pub async fn provider_health_check(
@@ -168,6 +178,73 @@ impl AgentService {
             .map_err(|e| AgentError::internal(format!("repo.update_agent_overrides_for_user: {e}")))?;
 
         self.availability.run_manual_health_check(user_id, id).await
+    }
+
+    /// Link the agent to one of the caller's saved model providers
+    /// (`provider_id = Some`) or clear the link (`None` / blank).
+    ///
+    /// Errors: unknown agent -> NotFound; unknown provider (or one owned by
+    /// another user) -> NotFound; a provider whose platform has no verified
+    /// env mapping for this agent's backend -> BadRequest.
+    pub async fn set_agent_provider_link(
+        &self,
+        user_id: &str,
+        id: &str,
+        req: aionui_api_types::SetAgentProviderLinkRequest,
+    ) -> Result<(), AgentError> {
+        let repo = self.registry.repo_handle();
+        let row = repo
+            .get_for_user(user_id, id)
+            .await
+            .map_err(|e| AgentError::internal(format!("repo.get_for_user: {e}")))?
+            .ok_or_else(|| AgentError::not_found(format!("Agent '{id}' not found")))?;
+
+        let provider_id = req
+            .provider_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned);
+
+        if let Some(provider_id) = provider_id.as_deref() {
+            let provider = self
+                .provider_repo
+                .find_by_id(user_id, provider_id)
+                .await
+                .map_err(|e| AgentError::internal(format!("provider_repo.find_by_id: {e}")))?
+                .ok_or_else(|| AgentError::not_found(format!("Provider '{provider_id}' not found")))?;
+            let backend = row.backend.as_deref();
+            if crate::provider_link::link_platforms_for_backend(backend).is_empty() {
+                return Err(AgentError::bad_request(format!(
+                    "Agent '{id}' does not support linking a model provider"
+                )));
+            }
+            if crate::provider_link::mapping_for(backend, &provider.platform).is_none() {
+                return Err(AgentError::bad_request(format!(
+                    "Provider platform '{}' is not supported by agent '{id}'",
+                    provider.platform
+                )));
+            }
+        }
+
+        let updated = repo
+            .set_linked_provider_for_user(user_id, id, provider_id.as_deref())
+            .await
+            .map_err(|e| AgentError::internal(format!("repo.set_linked_provider_for_user: {e}")))?;
+        if !updated {
+            return Err(AgentError::not_found(format!("Agent '{id}' not found")));
+        }
+        tracing::info!(
+            agent_id = %id,
+            provider_id = provider_id.as_deref().unwrap_or(""),
+            linked = provider_id.is_some(),
+            "agent provider link updated"
+        );
+
+        // The link lives on the machine-level catalog row; refresh the cache
+        // so management reads reflect it. Spawns re-read the row per build.
+        self.registry.reload_one(id).await?;
+        Ok(())
     }
 
     pub async fn get_agent_overrides(

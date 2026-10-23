@@ -80,6 +80,15 @@ impl AgentAvailabilityService {
         )
         .await;
         self.persist_snapshot_for_user(user_id, id, &snapshot).await?;
+        // A passing check for an agent the in-memory registry still treats as
+        // unavailable (CLI installed after startup) re-probes that one row, so
+        // the agent is usable now instead of only after the next launch.
+        // `meta` above is a live re-probe, so the stale verdict lives only in
+        // the registry's cached entry.
+        let cached_unavailable = self.registry.get(id).await.is_none_or(|cached| !cached.available);
+        if snapshot.status == "online" && cached_unavailable {
+            self.registry.reload_one(id).await?;
+        }
         self.management_row_by_id(user_id, id)
             .await?
             .ok_or_else(|| AgentError::not_found(format!("Agent '{id}' not found")))
@@ -658,6 +667,7 @@ mod tests {
             handshake: AgentHandshake::default(),
             has_command_override: false,
             env_override_key_count: 0,
+            linked_provider_id: None,
         };
 
         let snapshot = run_probe(
@@ -924,6 +934,7 @@ mod tests {
             handshake: AgentHandshake::default(),
             has_command_override: false,
             env_override_key_count: 0,
+            linked_provider_id: None,
         };
 
         let snapshot = run_probe(

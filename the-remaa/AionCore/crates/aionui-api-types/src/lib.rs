@@ -108,7 +108,7 @@ pub use cron::{
 };
 pub use custom_agent::{
     AgentOverridesResponse, CustomAgentAdvancedOverrides, CustomAgentUpsertRequest, DeleteCustomAgentResponse,
-    SetAgentOverridesRequest, SetEnabledRequest,
+    RefreshAgentPathRequest, SetAgentOverridesRequest, SetAgentProviderLinkRequest, SetEnabledRequest,
 };
 pub use extension::{
     DisableExtensionRequest, EnableExtensionRequest, ExtensionSummaryResponse, GetI18nRequest, GetPermissionsRequest,

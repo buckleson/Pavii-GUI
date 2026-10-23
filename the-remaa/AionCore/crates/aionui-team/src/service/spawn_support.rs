@@ -299,6 +299,7 @@ mod tests {
             last_failure_at: None,
             command_override: None,
             env_override: None,
+            linked_provider_id: None,
             created_at: 0,
             updated_at: 0,
         }
@@ -805,6 +806,14 @@ mod tests {
             Ok(false)
         }
 
+        async fn set_linked_provider_for_user(
+            &self,
+            _user_id: &str,
+            _id: &str,
+            _provider_id: Option<&str>,
+        ) -> Result<bool, aionui_db::DbError> {
+            Ok(false)
+        }
         async fn set_enabled_for_user(&self, _user_id: &str, id: &str, enabled: bool) -> Result<bool, DbError> {
             self.set_enabled(id, enabled).await
         }

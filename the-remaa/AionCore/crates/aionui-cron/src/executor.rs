@@ -3585,6 +3585,14 @@ mod tests {
         async fn set_enabled(&self, _id: &str, _enabled: bool) -> Result<bool, aionui_db::DbError> {
             Ok(false)
         }
+        async fn set_linked_provider_for_user(
+            &self,
+            _user_id: &str,
+            _id: &str,
+            _provider_id: Option<&str>,
+        ) -> Result<bool, aionui_db::DbError> {
+            Ok(false)
+        }
         async fn set_enabled_for_user(
             &self,
             _user_id: &str,

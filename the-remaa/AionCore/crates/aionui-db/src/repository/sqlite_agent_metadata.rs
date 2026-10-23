@@ -37,7 +37,7 @@ const AGENT_METADATA_SAFE_COLUMNS: &str = "\
     am.sort_order, \
     am.last_check_status, am.last_check_kind, am.last_check_error_code, am.last_check_error_message, \
     am.last_check_guidance, am.last_check_latency_ms, am.last_check_at, am.last_success_at, am.last_failure_at, \
-    am.command_override, am.env_override, \
+    am.command_override, am.env_override, am.linked_provider_id, \
     am.created_at, am.updated_at";
 
 /// FROM clause for the catalog. No per-user join — every field is machine-level.
@@ -104,6 +104,7 @@ struct AgentMetadataSafeRow {
     last_failure_at: Option<aionui_common::TimestampMs>,
     command_override: Option<String>,
     env_override: Option<String>,
+    linked_provider_id: Option<String>,
     created_at: aionui_common::TimestampMs,
     updated_at: aionui_common::TimestampMs,
 }
@@ -147,6 +148,7 @@ impl AgentMetadataSafeRow {
             last_failure_at: row.try_get("last_failure_at")?,
             command_override: row.try_get("command_override")?,
             env_override: row.try_get("env_override")?,
+            linked_provider_id: row.try_get("linked_provider_id")?,
             created_at: row.try_get("created_at")?,
             updated_at: row.try_get("updated_at")?,
         })
@@ -223,6 +225,7 @@ impl AgentMetadataSafeRow {
                 last_failure_at: self.last_failure_at,
                 command_override: self.command_override,
                 env_override: self.env_override,
+                linked_provider_id: self.linked_provider_id,
                 created_at: self.created_at,
                 updated_at: self.updated_at,
             },
@@ -627,6 +630,29 @@ impl IAgentMetadataRepository for SqliteAgentMetadataRepository {
     ) -> Result<(), DbError> {
         // Machine-level: the acting user does not change which binary runs.
         self.update_agent_overrides(id, command_override, env_override).await
+    }
+
+    async fn set_linked_provider_for_user(
+        &self,
+        user_id: &str,
+        id: &str,
+        provider_id: Option<&str>,
+    ) -> Result<bool, DbError> {
+        // Lives on the single catalog row like the other overrides; user_id
+        // scopes visibility only. The spawn path re-resolves the provider for
+        // the spawning user, so a link set by one user can never hand their
+        // key to another user (that user's provider lookup simply misses).
+        if self.get_for_user(user_id, id).await?.is_none() {
+            return Ok(false);
+        }
+        let now = now_ms();
+        let result = sqlx::query("UPDATE agent_metadata SET linked_provider_id = ?, updated_at = ? WHERE agent_id = ?")
+            .bind(provider_id)
+            .bind(now)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(result.rows_affected() > 0)
     }
 
     async fn set_enabled(&self, id: &str, enabled: bool) -> Result<bool, DbError> {
@@ -1341,5 +1367,93 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(global_override.as_deref(), Some("/tmp/claude"));
+    }
+
+    #[tokio::test]
+    async fn linked_provider_id_defaults_to_none_for_seed_rows() {
+        let (repo, _db) = setup().await;
+        let row = repo.get("2d23ff1c").await.unwrap().expect("seed row");
+        assert_eq!(row.linked_provider_id, None);
+    }
+
+    #[tokio::test]
+    async fn set_linked_provider_round_trips_and_clears() {
+        let (repo, _db) = setup().await;
+
+        assert!(
+            repo.set_linked_provider_for_user(USER_A, "2d23ff1c", Some("prov-1"))
+                .await
+                .unwrap()
+        );
+        let linked = repo.get_for_user(USER_A, "2d23ff1c").await.unwrap().unwrap();
+        assert_eq!(linked.linked_provider_id.as_deref(), Some("prov-1"));
+        assert_eq!(
+            repo.get("2d23ff1c")
+                .await
+                .unwrap()
+                .unwrap()
+                .linked_provider_id
+                .as_deref(),
+            Some("prov-1")
+        );
+        assert!(
+            repo.list_all()
+                .await
+                .unwrap()
+                .iter()
+                .any(|r| r.id == "2d23ff1c" && r.linked_provider_id.as_deref() == Some("prov-1"))
+        );
+
+        assert!(
+            repo.set_linked_provider_for_user(USER_A, "2d23ff1c", None)
+                .await
+                .unwrap()
+        );
+        let cleared = repo.get_for_user(USER_A, "2d23ff1c").await.unwrap().unwrap();
+        assert_eq!(cleared.linked_provider_id, None);
+    }
+
+    #[tokio::test]
+    async fn set_linked_provider_on_unknown_agent_returns_false() {
+        let (repo, _db) = setup().await;
+        assert!(
+            !repo
+                .set_linked_provider_for_user(USER_A, "no-such-agent", Some("prov-1"))
+                .await
+                .unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn set_linked_provider_on_another_users_custom_agent_returns_false_and_keeps_row() {
+        let (repo, _db) = setup().await;
+        repo.upsert_for_user(USER_A, &custom_params("custom-owned", "User A Custom"))
+            .await
+            .unwrap();
+
+        assert!(
+            !repo
+                .set_linked_provider_for_user(USER_B, "custom-owned", Some("prov-b"))
+                .await
+                .unwrap()
+        );
+        let row = repo.get_for_user(USER_A, "custom-owned").await.unwrap().unwrap();
+        assert_eq!(row.linked_provider_id, None, "another user's write must not land");
+    }
+
+    #[tokio::test]
+    async fn set_linked_provider_leaves_other_overrides_untouched() {
+        let (repo, _db) = setup().await;
+        repo.update_agent_overrides_for_user(USER_A, "2d23ff1c", Some("/tmp/claude"), Some("[]"))
+            .await
+            .unwrap();
+
+        repo.set_linked_provider_for_user(USER_A, "2d23ff1c", Some("prov-1"))
+            .await
+            .unwrap();
+
+        let row = repo.get("2d23ff1c").await.unwrap().unwrap();
+        assert_eq!(row.command_override.as_deref(), Some("/tmp/claude"));
+        assert_eq!(row.linked_provider_id.as_deref(), Some("prov-1"));
     }
 }

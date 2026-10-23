@@ -12,11 +12,20 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
+import { findOpenSourceCli, type OpenSourceCli } from '@/common/types/agent/openSourceClis';
 
 // Project convention: t() echoes the key so labels are assertable.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }),
 }));
+
+const { openExternalUrl } = vi.hoisted(() => ({
+  openExternalUrl: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('@/renderer/utils/platform', async () => {
+  const actual = await vi.importActual<typeof import('@/renderer/utils/platform')>('@/renderer/utils/platform');
+  return { ...actual, openExternalUrl };
+});
 
 import AgentCard from '@renderer/pages/settings/AgentSettings/AgentCard';
 
@@ -208,5 +217,276 @@ describe('AgentCard (official variant)', () => {
 
     fireEvent.click(screen.getByText('common.edit'));
     expect(onConfigure).toHaveBeenCalled();
+  });
+});
+
+const onlineClaude = {
+  id: 'acp-claude',
+  name: 'Claude Code',
+  agent_type: 'acp',
+  agent_source: 'builtin',
+  backend: 'claude',
+  enabled: true,
+  installed: true,
+  status: 'online',
+};
+
+const renderWithCliUpdate = (cliUpdate?: React.ComponentProps<typeof AgentCard>['cliUpdate']) =>
+  render(
+    <AgentCard
+      type='official'
+      agent={onlineClaude as never}
+      boundAssistants={[]}
+      onTestConnection={vi.fn()}
+      onConfigure={vi.fn()}
+      cliUpdate={cliUpdate}
+    />
+  );
+
+const cliResult = (updateAvailable: boolean) => ({
+  backend: 'claude',
+  name: 'Claude Code',
+  installed: true,
+  installedVersion: '2.1.300',
+  latestVersion: '2.1.301',
+  updateAvailable,
+  method: 'npm' as const,
+  updateCommand: 'npm install -g @anthropic-ai/claude-code@latest',
+  checkedAt: 1,
+});
+
+describe('AgentCard (CLI update controls)', () => {
+  it('renders no update controls when the CLI cannot be updated', () => {
+    renderWithCliUpdate(undefined);
+
+    expect(screen.queryByTestId('agent-row-check-update-acp-claude')).toBeNull();
+    expect(screen.queryByTestId('agent-row-update-acp-claude')).toBeNull();
+    expect(screen.queryByTestId('agent-row-update-badge-acp-claude')).toBeNull();
+  });
+
+  it('calls onCheck from the Check update button without opening the configuration page', () => {
+    const onCheck = vi.fn();
+    const onConfigure = vi.fn();
+    render(
+      <AgentCard
+        type='official'
+        agent={onlineClaude as never}
+        boundAssistants={[]}
+        onTestConnection={vi.fn()}
+        onConfigure={onConfigure}
+        cliUpdate={{ checking: false, updating: false, onCheck, onUpdate: vi.fn() }}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('agent-row-check-update-acp-claude'));
+    expect(onCheck).toHaveBeenCalledTimes(1);
+    expect(onConfigure).not.toHaveBeenCalled();
+  });
+
+  it('keeps the Check update button and hides the badge when the CLI is up to date', () => {
+    renderWithCliUpdate({
+      result: cliResult(false),
+      checking: false,
+      updating: false,
+      onCheck: vi.fn(),
+      onUpdate: vi.fn(),
+    });
+
+    expect(screen.getByTestId('agent-row-check-update-acp-claude')).toBeInTheDocument();
+    expect(screen.queryByTestId('agent-row-update-badge-acp-claude')).toBeNull();
+  });
+
+  it('shows the update badge and an Update button that calls onUpdate when an update is available', () => {
+    const onUpdate = vi.fn();
+    renderWithCliUpdate({ result: cliResult(true), checking: false, updating: false, onCheck: vi.fn(), onUpdate });
+
+    expect(screen.getByTestId('agent-row-update-badge-acp-claude')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('agent-row-update-acp-claude'));
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+  });
+});
+
+type OpenSourceProp = NonNullable<React.ComponentProps<typeof AgentCard>['openSource']>;
+
+const cliFor = (backend: string): OpenSourceCli => {
+  const cli = findOpenSourceCli(backend);
+  if (!cli) throw new Error(`no open-source CLI for ${backend}`);
+  return cli;
+};
+
+const osAgent = (overrides: Record<string, unknown> = {}) => ({
+  id: 'os-1',
+  name: 'OpenCode',
+  agent_type: 'acp',
+  agent_source: 'builtin',
+  backend: 'opencode',
+  enabled: true,
+  installed: false,
+  status: 'missing',
+  ...overrides,
+});
+
+const osProp = (backend: string, overrides: Partial<OpenSourceProp> = {}): OpenSourceProp => ({
+  cli: cliFor(backend),
+  installing: false,
+  installFailed: false,
+  onInstall: vi.fn(),
+  ...overrides,
+});
+
+const renderOpenSource = (
+  agent: Record<string, unknown>,
+  openSource: OpenSourceProp | undefined,
+  onConfigure: () => void = vi.fn()
+) =>
+  render(
+    <AgentCard
+      type='official'
+      agent={agent as never}
+      boundAssistants={[]}
+      onTestConnection={vi.fn()}
+      onConfigure={onConfigure}
+      openSource={openSource}
+    />
+  );
+
+describe('AgentCard (open-source extras)', () => {
+  it('renders no license, repo, or install controls without the openSource prop', () => {
+    renderOpenSource(osAgent(), undefined);
+
+    expect(screen.queryByTestId('agent-row-license-os-1')).toBeNull();
+    expect(screen.queryByTestId('agent-row-repo-os-1')).toBeNull();
+    expect(screen.queryByTestId('agent-row-install-os-1')).toBeNull();
+  });
+
+  it('shows the license tag from the CLI entry', () => {
+    renderOpenSource(osAgent(), osProp('opencode'));
+
+    expect(screen.getByTestId('agent-row-license-os-1')).toHaveTextContent('MIT');
+  });
+
+  it('opens the repo URL from the repo link without opening the configuration page', () => {
+    openExternalUrl.mockClear();
+    const onConfigure = vi.fn();
+    renderOpenSource(osAgent(), osProp('opencode'), onConfigure);
+
+    fireEvent.click(screen.getByTestId('agent-row-repo-os-1'));
+    expect(openExternalUrl).toHaveBeenCalledWith('https://github.com/sst/opencode');
+    expect(onConfigure).not.toHaveBeenCalled();
+  });
+
+  it('calls onInstall from the Install button of a missing npm CLI without opening configuration', () => {
+    const onInstall = vi.fn();
+    const onConfigure = vi.fn();
+    renderOpenSource(osAgent(), osProp('opencode', { onInstall }), onConfigure);
+
+    fireEvent.click(screen.getByTestId('agent-row-install-os-1'));
+    expect(onInstall).toHaveBeenCalledTimes(1);
+    expect(onConfigure).not.toHaveBeenCalled();
+  });
+
+  it('shows an Install guide that opens the docs URL for a missing docs-only CLI', () => {
+    openExternalUrl.mockClear();
+    renderOpenSource(osAgent({ backend: 'goose', name: 'Goose' }), osProp('goose'));
+
+    expect(screen.queryByTestId('agent-row-install-os-1')).toBeNull();
+    fireEvent.click(screen.getByTestId('agent-row-install-guide-os-1'));
+    expect(openExternalUrl).toHaveBeenCalledWith('https://goose-docs.ai/docs/getting-started/installation');
+  });
+
+  it('shows the npx note and no install actions for a missing npx CLI', () => {
+    renderOpenSource(osAgent({ backend: 'pi', name: 'Pi' }), osProp('pi'));
+
+    expect(screen.getByText('settings.agentManagement.openSourceNpx')).toBeInTheDocument();
+    expect(screen.queryByTestId('agent-row-install-os-1')).toBeNull();
+    expect(screen.queryByTestId('agent-row-install-guide-os-1')).toBeNull();
+  });
+
+  it('hides the Install button once the CLI is installed and online', () => {
+    renderOpenSource(osAgent({ status: 'online', installed: true }), osProp('opencode', { installFailed: true }));
+
+    expect(screen.queryByTestId('agent-row-install-os-1')).toBeNull();
+    expect(screen.queryByTestId('agent-row-install-help-os-1')).toBeNull();
+  });
+
+  it('shows the install help button only after a failed install', () => {
+    const { rerender } = renderOpenSource(osAgent(), osProp('opencode'));
+    expect(screen.queryByTestId('agent-row-install-help-os-1')).toBeNull();
+
+    rerender(
+      <AgentCard
+        type='official'
+        agent={osAgent() as never}
+        boundAssistants={[]}
+        onTestConnection={vi.fn()}
+        onConfigure={vi.fn()}
+        openSource={osProp('opencode', { installFailed: true })}
+      />
+    );
+    expect(screen.getByTestId('agent-row-install-help-os-1')).toBeInTheDocument();
+  });
+
+  it('does not render the key control when no providerLink is passed', () => {
+    renderOpenSource(osAgent(), osProp('opencode'));
+
+    expect(screen.queryByTestId('agent-row-provider-link-os-1')).toBeNull();
+  });
+});
+
+const providerLinkFor = (onChange: (id: string | null) => void) => ({
+  providers: [
+    { id: 'p1', name: 'Provider One' },
+    { id: 'p2', name: 'Provider Two' },
+  ],
+  saving: false,
+  onChange,
+});
+
+const renderLinked = (linked: string | null, onChange: (id: string | null) => void) => (
+  <AgentCard
+    type='official'
+    agent={osAgent({ status: 'online', installed: true, linked_provider_id: linked }) as never}
+    boundAssistants={[]}
+    onTestConnection={vi.fn()}
+    onConfigure={vi.fn()}
+    openSource={osProp('opencode', { providerLink: providerLinkFor(onChange) })}
+  />
+);
+
+describe('AgentCard (provider key control)', () => {
+  it('switching on with no saved link calls onChange with the first provider', () => {
+    const onChange = vi.fn();
+    render(renderLinked(null, onChange));
+
+    fireEvent.click(screen.getByTestId('agent-row-provider-link-switch-os-1'));
+    expect(onChange).toHaveBeenCalledWith('p1');
+  });
+
+  it('switching off an existing link calls onChange with null', () => {
+    const onChange = vi.fn();
+    render(renderLinked('p2', onChange));
+
+    fireEvent.click(screen.getByTestId('agent-row-provider-link-switch-os-1'));
+    expect(onChange).toHaveBeenCalledWith(null);
+  });
+
+  it('selects the linked provider and follows linked_provider_id changes on rerender', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(renderLinked('p1', onChange));
+    const select = screen.getByTestId('agent-row-provider-link-select-os-1');
+    expect(select).toHaveTextContent('Provider One');
+
+    rerender(renderLinked('p2', onChange));
+    expect(screen.getByTestId('agent-row-provider-link-select-os-1')).toHaveTextContent('Provider Two');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the first provider when the saved link points at a provider that is gone', () => {
+    const onChange = vi.fn();
+    render(renderLinked('deleted-provider', onChange));
+
+    // The switch still reflects the saved (stale) link, so turning it off clears it.
+    fireEvent.click(screen.getByTestId('agent-row-provider-link-switch-os-1'));
+    expect(onChange).toHaveBeenCalledWith(null);
   });
 });
