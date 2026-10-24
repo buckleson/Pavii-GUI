@@ -1,622 +1,80 @@
 ---
 name: pavii-config
 description: >-
-  Configure Pavii.Ai itself through the bundled Pavii Engine config CLI: create and edit assistants, update assistant rules, inspect and import skills, manage MCP servers, configure model providers, update settings, manage agents, configure scheduled tasks, and manage app configuration from an agent conversation. Use when the user wants you to set up or modify a Pavii.Ai assistant, attach skills, change an assistant's system prompt, add MCP or model provider configuration, schedule recurring work, or otherwise configure their Pavii.Ai installation, including when the user needs to know whether assistant changes affect the current conversation or only new conversations.
+  Configure Pavii.Ai with its config CLI. Use when the user asks to set up or change assistants, their rules (system prompts), skills, MCP servers, model providers, settings, agents, or scheduled tasks, or whether assistant changes affect this conversation.
 ---
 
 # Pavii.Ai Config
 
-Configure Pavii.Ai with the bundled agent-facing CLI. Do not discover ports, do
-not call raw backend paths, and do not depend on tools outside the bundled
-`Pavii Engine` binary.
+Configure Pavii.Ai with the bundled agent-facing CLI. Do not discover ports, do not call raw backend paths, and do not depend on tools outside the bundled `Pavii Engine` binary.
 
 ## Rules
 
 1. Use only `"$PAVII_HELPER_BIN" config ...`.
-2. Never pass, inline, export, echo, or set any `AIONUI_...` environment variable, and never show one to the user — the Pavii-named variables above are the ones to use and to mention.
-3. Listings return internal identifiers — agent types such as `aionrs`, row ids such as `632f31d2`, and legacy stored names. These are implementation details: never put them in anything the user reads. Call the built-in agent **Pavii CLI** (or "the built-in engine"), and refer to assistants and agents by their display name. Use the ids only inside commands.
-4. Put all command input in stdin JSON.
-5. Do not use flags for business fields.
-6. Use `"$PAVII_HELPER_BIN" config capabilities` when unsure which config command or stdin fields are supported.
-7. Read context before changing the current assistant.
-8. Read before writing, then read back after writing.
-9. Use `"assistant_id": "current"` when the user asks to change the assistant used by this conversation.
-10. Use `"conversation_id": "current"` when a command accepts a conversation selector.
-11. Do not show internal ids unless the user needs them for a follow-up operation.
-12. Never reveal provider keys, MCP headers, environment values, or other secrets.
-13. If the CLI fails, report the stable `CONFIG_...` error from stderr in normal prose and do not claim the change was made.
-14. After assistant changes, explain both persistence and effect timing. Saving and read-back do not mean the current running conversation has reloaded the changed runtime behavior.
+2. Never pass, inline, export, echo, or set any `AIONUI_...` environment variable, and never show one to the user — use and mention only the Pavii-named variables.
+3. Listings return internal identifiers — agent types such as `aionrs`, row ids such as `632f31d2`, and legacy stored names. Never put them in anything the user reads. Call the built-in agent **Pavii CLI** (or "the built-in engine"), and refer to assistants and agents by display name. Use ids only inside commands, and show them only if the user needs them for a follow-up operation.
+4. Put all command input in stdin JSON (heredoc `<<'JSON'`). Do not use flags for business fields.
+5. When unsure which command or stdin fields are supported, run `"$PAVII_HELPER_BIN" config capabilities`.
+6. Read context before changing the current assistant. Read before writing, then read back after writing.
+7. Use `"assistant_id": "current"` when the user asks to change the assistant used by this conversation. Use `"conversation_id": "current"` when a command accepts a conversation selector.
+8. Never reveal provider keys, MCP headers, stdio/agent env values, secret override values, or other secrets. Do not repeat secret values from the user's input. (CLI output redacts sensitive fields by default.)
+9. If the CLI fails, report the stable `CONFIG_...` error from stderr in normal prose and do not claim the change was made.
+10. After assistant changes, explain both persistence and effect timing (below). Saving and read-back do not mean the running conversation reloaded the changed behavior.
+11. Configuration changes affect the user's live app. Keep changes narrow, show what changed in plain language, and avoid raw JSON unless the user asks for implementation detail.
 
 ## Output
 
-Successful commands print a JSON envelope:
+Success prints `{"success": true, "data": {}, "meta": {"schema_version": 1}}`. Failure prints one stable error line to stderr; treat stderr as authoritative.
 
-```json
-{
-  "success": true,
-  "data": {},
-  "meta": {
-    "schema_version": 1
-  }
-}
-```
+`"$PAVII_HELPER_BIN" config capabilities` returns `data.domains[].commands[]`: supported command paths, input mode, stdin fields, selector fields, read-back behavior, destructive behavior, context requirements, and fields redacted from output.
 
-Failures print one stable error line to stderr. Treat stderr as authoritative.
+`"$PAVII_HELPER_BIN" config context` reads the current user, conversation, assistant, and local runtime context. If `data.assistant` is `null`, the conversation has no assistant: ask which assistant to edit before changing rules or defaults.
 
-## Capability Discovery
+## Assistant change timing
 
-Ask Pavii Engine what this version supports:
+Configuration persists immediately, but running conversations may keep the assistant snapshot taken when they started.
 
-```bash
-"$PAVII_HELPER_BIN" config capabilities
-```
+- Identity fields (`name`, `description`, `avatar`, recommended prompts): saved immediately; if the open UI shows old values, tell the user to refresh or reopen the assistant view.
+- Runtime fields (`agent_id`, `defaults` — model, permission, skills, MCPs via `defaults.mcps` not `default_mcp_ids`, thought level — `enabled_skills`, and rules): apply to **new conversations** created from that assistant only. Say the change was saved and read back, and that it affects new conversations only.
+- Skills and MCP defaults are not injected into the current runtime. A tool already available here can be used; otherwise the user should start a new conversation with the assistant.
 
-The result is a JSON envelope whose `data.domains[].commands[]` entries list
-supported command paths, input mode, expected stdin fields, selector fields,
-read-back behavior, destructive behavior, context requirements, and fields
-redacted from ordinary output.
+## Commands
 
-## Context
+Prefix each with `"$PAVII_HELPER_BIN" config`. Stdin fields in parentheses. Full stdin examples: `references/examples.md`.
 
-Read the current user, conversation, assistant, and local runtime context:
+**Assistants**
+- `assistants list`; `assistants get` (`assistant_id`, `locale`)
+- `assistants create` (`name`, `description`, `agent_id`, `prompts[]`, `enabled_skills[]`)
+- `assistants update` (`assistant_id`, `locale`, metadata fields, `defaults` e.g. `{"permission": {"mode": "fixed", "value": "plan"}}`, `enabled_skills`)
+- `assistants state` (`assistant_id`, `enabled`, `sort_order`)
+- `assistants rule read` (`assistant_id`, `locale`); `assistants rule write` (`assistant_id`, `locale`, `content`)
 
-```bash
-"$PAVII_HELPER_BIN" config context
-```
+Use the user's actual locale (examples use `en-US`). Assistant rules are the system prompt. Preserve the user's existing useful rule instructions unless they ask to replace them. After a rule write or delete, say it was saved and read back but applies only to new conversations from this assistant; the current conversation keeps its rule snapshot.
 
-If `data.assistant` is `null`, the current conversation is not backed by an
-assistant. Ask the user which assistant to edit before changing assistant
-rules or defaults.
+**Skills**
+- `skills list`; `skills info` (`skill_path`) to inspect before import; `skills import` (`skill_path`: skill, parent, or zip)
+- Attach skills with `assistants update` (`enabled_skills`): read the assistant first, merge locally, send the full intended list — never append blindly. Do not say new skills are available in this conversation unless the runtime already exposes them.
+- `"$PAVII_HELPER_BIN" config skills external-paths list`; `skills external-paths add` (`name`, `path`); `skills external-paths remove` (`path`)
+- `skills market enable`; `skills market disable`
 
-## Assistant Change Timing
+**MCP servers**
+- `"$PAVII_HELPER_BIN" config mcp servers list`; `mcp servers create` (`name`, `transport`: `{"type": "stdio", "command", "args", "env"}`); `mcp servers update` (`server_id`, fields)
+- `mcp test-connection` (`name`, `transport`); `mcp oauth check-status` (`server_url`)
 
-Pavii.Ai persists assistant configuration immediately, but running conversations
-may keep the assistant snapshot created when the conversation started. Use this
-timing model when reporting successful assistant changes:
+**Providers**
+- `"$PAVII_HELPER_BIN" config providers list`; `providers create` (`name`, `platform`, `base_url`, `api_key`); `providers update` (`provider_id`, fields)
+- `providers detect-protocol` (`base_url`, `api_key`); `providers models fetch` (`provider_id`); `providers health-check` (`provider_id`, `model`)
 
-- Identity fields such as name, description, avatar, and recommended prompts are
-  saved immediately. If the open UI still shows old values, tell the user to
-  refresh or reopen the assistant view.
-- Runtime fields such as agent, default model, default permission, default
-  skills, default MCPs, thought level, and rules apply to new conversations
-  created from that assistant. Do not claim they change the current running
-  conversation.
-- Skills and MCP defaults are not retroactively injected into the current agent
-  runtime. If a tool is already available in the current conversation, it can be
-  used; otherwise the user should start a new conversation with the assistant.
+**Settings**
+- `"$PAVII_HELPER_BIN" config settings get`; `settings patch` — supported fields: `language`, `notification_enabled`, `cron_notification_enabled`, `command_queue_enabled`, `save_upload_to_workspace` (unknown fields are silently ignored)
+- `settings client get`; `settings client put` — free-form key-value map (e.g. `"ui.zoomFactor": 1.2`); `null` removes a key; no fixed schema, so ask the user or read back first to discover keys
 
-When reporting a successful runtime-field change, say that the change was saved
-and read back, then state that it will affect new conversations only.
+**Agents**
+- `"$PAVII_HELPER_BIN" config agents list`; `agents enable` (`agent_id`, `enabled`)
+- `agents overrides get` (`agent_id`); `agents overrides set` (`agent_id`, `command_override`)
+- `agents custom create` (`name`, `command`); `agents custom update` (`agent_id`, `name`, `command`); `agents custom try-connect` (`command`; tests reachability, persists nothing); delete is also supported (see `config capabilities`)
 
-## Assistants
-
-List assistants:
-
-```bash
-"$PAVII_HELPER_BIN" config assistants list
-```
-
-Inspect the current assistant:
-
-```bash
-"$PAVII_HELPER_BIN" config assistants get <<'JSON'
-{
-  "assistant_id": "current",
-  "locale": "en-US"
-}
-JSON
-```
-
-Examples use English sample text and `en-US`. For real localized assistant
-content, use the user's actual locale.
-
-Create an assistant:
-
-```bash
-"$PAVII_HELPER_BIN" config assistants create <<'JSON'
-{
-  "name": "Requirements Analyst",
-  "description": "Turn rough product ideas into clear PRDs",
-  "agent_id": "2d23ff1c",
-  "prompts": [
-    "Turn this feature idea into a PRD",
-    "Review this PRD and identify confusing parts for new users"
-  ],
-  "enabled_skills": ["pavii-config"]
-}
-JSON
-```
-
-Update assistant metadata or defaults:
-
-```bash
-"$PAVII_HELPER_BIN" config assistants update <<'JSON'
-{
-  "assistant_id": "current",
-  "locale": "en-US",
-  "description": "Updated assistant description",
-  "defaults": {
-    "permission": {
-      "mode": "fixed",
-      "value": "plan"
-    }
-  }
-}
-JSON
-```
-
-For `name`, `description`, `avatar`, or recommended prompt changes, report that
-the change is saved and may require refreshing or reopening the UI to see. For
-`agent_id`, `defaults`, `enabled_skills`, or other runtime defaults (MCP
-defaults are set via `defaults.mcps`, not `default_mcp_ids`), report that the
-saved change applies to new conversations only.
-
-Enable, disable, or reorder an assistant:
-
-```bash
-"$PAVII_HELPER_BIN" config assistants state <<'JSON'
-{
-  "assistant_id": "current",
-  "enabled": true,
-  "sort_order": 10
-}
-JSON
-```
-
-## Assistant Rules
-
-Assistant rules are the system prompt that defines assistant behavior.
-
-Read the current assistant rule:
-
-```bash
-"$PAVII_HELPER_BIN" config assistants rule read <<'JSON'
-{
-  "assistant_id": "current",
-  "locale": "en-US"
-}
-JSON
-```
-
-Write the current assistant rule:
-
-```bash
-"$PAVII_HELPER_BIN" config assistants rule write <<'JSON'
-{
-  "assistant_id": "current",
-  "locale": "en-US",
-  "content": "# Role\nYou are..."
-}
-JSON
-```
-
-For rule edits, preserve the user's existing useful instructions unless the
-user explicitly asks to replace them.
-
-After a successful rule write or delete, always tell the user that the rule was
-saved and read back, but it applies only to new conversations created from this
-assistant. The current conversation continues using the rule snapshot it started
-with.
-
-## Skills
-
-List available skills:
-
-```bash
-"$PAVII_HELPER_BIN" config skills list
-```
-
-Inspect a skill directory before importing:
-
-```bash
-"$PAVII_HELPER_BIN" config skills info <<'JSON'
-{
-  "skill_path": "/absolute/path/to/skill"
-}
-JSON
-```
-
-Import a skill:
-
-```bash
-"$PAVII_HELPER_BIN" config skills import <<'JSON'
-{
-  "skill_path": "/absolute/path/to/skill-or-parent-or-zip"
-}
-JSON
-```
-
-Attach skills to an assistant by updating the assistant's full skill list:
-
-```bash
-"$PAVII_HELPER_BIN" config assistants update <<'JSON'
-{
-  "assistant_id": "current",
-  "enabled_skills": ["pavii-config", "cron"]
-}
-JSON
-```
-
-Do not append blindly. Read the assistant first, merge the list locally, then
-send the full intended `enabled_skills` value.
-
-Enabled skills are assistant defaults for new conversations. Do not tell the
-user that newly attached skills are available in the current conversation unless
-the current runtime already exposes them.
-
-Manage external skill paths:
-
-```bash
-"$PAVII_HELPER_BIN" config skills external-paths list
-```
-
-```bash
-"$PAVII_HELPER_BIN" config skills external-paths add <<'JSON'
-{
-  "name": "Team Skills",
-  "path": "/absolute/path/to/team-skills"
-}
-JSON
-```
-
-```bash
-"$PAVII_HELPER_BIN" config skills external-paths remove <<'JSON'
-{
-  "path": "/absolute/path/to/team-skills"
-}
-JSON
-```
-
-Enable or disable the skills market:
-
-```bash
-"$PAVII_HELPER_BIN" config skills market enable
-```
-
-```bash
-"$PAVII_HELPER_BIN" config skills market disable
-```
-
-## MCP Servers
-
-List MCP servers:
-
-```bash
-"$PAVII_HELPER_BIN" config mcp servers list
-```
-
-Create an MCP server:
-
-```bash
-"$PAVII_HELPER_BIN" config mcp servers create <<'JSON'
-{
-  "name": "Local Tools",
-  "transport": {
-    "type": "stdio",
-    "command": "my-mcp-server",
-    "args": [],
-    "env": {}
-  }
-}
-JSON
-```
-
-Update an MCP server:
-
-```bash
-"$PAVII_HELPER_BIN" config mcp servers update <<'JSON'
-{
-  "server_id": "mcp_123",
-  "description": "Updated description"
-}
-JSON
-```
-
-Test a server configuration:
-
-```bash
-"$PAVII_HELPER_BIN" config mcp test-connection <<'JSON'
-{
-  "name": "Local Tools",
-  "transport": {
-    "type": "stdio",
-    "command": "my-mcp-server",
-    "args": []
-  }
-}
-JSON
-```
-
-OAuth helpers:
-
-```bash
-"$PAVII_HELPER_BIN" config mcp oauth check-status <<'JSON'
-{
-  "server_url": "https://mcp.example.com"
-}
-JSON
-```
-
-Never show MCP headers or stdio env values to the user. CLI output redacts
-sensitive fields by default.
-
-## Providers
-
-List model providers:
-
-```bash
-"$PAVII_HELPER_BIN" config providers list
-```
-
-Create a provider:
-
-```bash
-"$PAVII_HELPER_BIN" config providers create <<'JSON'
-{
-  "name": "OpenAI",
-  "platform": "openai",
-  "base_url": "https://api.openai.com/v1",
-  "api_key": "sk-..."
-}
-JSON
-```
-
-Update a provider:
-
-```bash
-"$PAVII_HELPER_BIN" config providers update <<'JSON'
-{
-  "provider_id": "provider_123",
-  "api_key": "sk-..."
-}
-JSON
-```
-
-Detect protocol, fetch models, or run a provider health check:
-
-```bash
-"$PAVII_HELPER_BIN" config providers detect-protocol <<'JSON'
-{
-  "base_url": "https://api.example.com/v1",
-  "api_key": "..."
-}
-JSON
-```
-
-```bash
-"$PAVII_HELPER_BIN" config providers models fetch <<'JSON'
-{
-  "provider_id": "provider_123"
-}
-JSON
-```
-
-```bash
-"$PAVII_HELPER_BIN" config providers health-check <<'JSON'
-{
-  "provider_id": "provider_123",
-  "model": "gpt-4.1"
-}
-JSON
-```
-
-Never reveal provider keys. Do not repeat secret values from the user's input.
-
-## Settings
-
-Read backend settings:
-
-```bash
-"$PAVII_HELPER_BIN" config settings get
-```
-
-Patch backend settings:
-
-```bash
-"$PAVII_HELPER_BIN" config settings patch <<'JSON'
-{
-  "language": "en-US",
-  "notification_enabled": true
-}
-JSON
-```
-
-Supported patch fields: `language`, `notification_enabled`, `cron_notification_enabled`,
-`command_queue_enabled`, `save_upload_to_workspace`. Unknown fields are silently ignored.
-
-Read or update client preferences:
-
-```bash
-"$PAVII_HELPER_BIN" config settings client get
-```
-
-```bash
-"$PAVII_HELPER_BIN" config settings client put <<'JSON'
-{
-  "ui.zoomFactor": 1.2
-}
-JSON
-```
-
-Client preferences are a free-form key-value map. Pass `null` to remove a key. Ask the
-user or read back first to discover keys in use — there is no fixed schema.
-
-## Agents
-
-List available agents:
-
-```bash
-"$PAVII_HELPER_BIN" config agents list
-```
-
-Enable or disable an agent:
-
-```bash
-"$PAVII_HELPER_BIN" config agents enable <<'JSON'
-{
-  "agent_id": "codex",
-  "enabled": true
-}
-JSON
-```
-
-Read or set per-agent overrides:
-
-```bash
-"$PAVII_HELPER_BIN" config agents overrides get <<'JSON'
-{
-  "agent_id": "codex"
-}
-JSON
-```
-
-```bash
-"$PAVII_HELPER_BIN" config agents overrides set <<'JSON'
-{
-  "agent_id": "codex",
-  "command_override": "/absolute/path/to/codex"
-}
-JSON
-```
-
-Create, update, delete, or try-connect a custom agent:
-
-```bash
-"$PAVII_HELPER_BIN" config agents custom create <<'JSON'
-{
-  "name": "Custom Agent",
-  "command": "/absolute/path/to/agent-cli"
-}
-JSON
-```
-
-```bash
-"$PAVII_HELPER_BIN" config agents custom update <<'JSON'
-{
-  "agent_id": "custom_agent_123",
-  "name": "Custom Agent",
-  "command": "/absolute/path/to/agent-cli"
-}
-JSON
-```
-
-Test whether a custom agent binary is reachable (does not persist anything):
-
-```bash
-"$PAVII_HELPER_BIN" config agents custom try-connect <<'JSON'
-{
-  "command": "/absolute/path/to/agent-cli"
-}
-JSON
-```
-
-Do not reveal agent env values or secret override values.
-
-## Scheduled Tasks
-
-For tasks tied to the current conversation, use the cron current commands.
-
-List current conversation tasks:
-
-```bash
-"$PAVII_HELPER_BIN" config cron current list
-```
-
-Create a task:
-
-```bash
-"$PAVII_HELPER_BIN" config cron current create <<'JSON'
-{
-  "name": "Daily Summary",
-  "schedule": "0 18 * * MON-FRI",
-  "schedule_description": "Weekdays at 6:00 PM",
-  "message": "Review the conversation context and produce a concise end-of-day summary."
-}
-JSON
-```
-
-Update a task:
-
-```bash
-"$PAVII_HELPER_BIN" config cron current update <<'JSON'
-{
-  "job_id": "cron_123",
-  "name": "Daily Summary",
-  "schedule": "0 18 * * MON-FRI",
-  "schedule_description": "Weekdays at 6:00 PM",
-  "message": "Review the conversation context and produce a concise end-of-day summary."
-}
-JSON
-```
-
-After a successful create or update, explain the task name and schedule in
-normal user-facing language. Do not show `cron_...` ids unless needed.
-
-For global cron job administration, use `config cron jobs`.
-
-List all cron jobs:
-
-```bash
-"$PAVII_HELPER_BIN" config cron jobs list
-```
-
-Create a cron job:
-
-```bash
-"$PAVII_HELPER_BIN" config cron jobs create <<'JSON'
-{
-  "name": "Weekly Report",
-  "schedule": { "kind": "cron", "expr": "0 9 * * MON", "tz": "Asia/Shanghai" },
-  "message": "Produce the weekly report.",
-  "conversation_id": "current",
-  "created_by": "user"
-}
-JSON
-```
-
-The `schedule` field is a tagged object, not a flat string:
-
-- `{ "kind": "cron", "expr": "<cron-expr>", "tz": "<IANA-tz>" }` — recurring cron schedule
-- `{ "kind": "every", "every_ms": <milliseconds> }` — fixed interval
-- `{ "kind": "at", "at_ms": <epoch-ms> }` — one-shot at a specific time
-
-`conversation_id` and `created_by` are required. `message` carries the task text.
-Use `"conversation_id": "current"` to attach the job to the current conversation.
-
-Update, run, or manage a cron job skill:
-
-Note: `cron jobs` uses the tagged `schedule` object (same shape as create). This
-is different from `cron current`, where `schedule` is a flat cron string.
-
-```bash
-"$PAVII_HELPER_BIN" config cron jobs update <<'JSON'
-{
-  "job_id": "cron_123",
-  "name": "Weekly Report",
-  "schedule": { "kind": "cron", "expr": "0 10 * * MON" }
-}
-JSON
-```
-
-```bash
-"$PAVII_HELPER_BIN" config cron jobs run <<'JSON'
-{
-  "job_id": "cron_123"
-}
-JSON
-```
-
-```bash
-"$PAVII_HELPER_BIN" config cron jobs skill save <<'JSON'
-{
-  "job_id": "cron_123",
-  "content": "# Skill\nTask-specific instructions."
-}
-JSON
-```
-
-## Safety
-
-Configuration changes affect the user's live app. Keep changes narrow, show
-what changed in plain language, and avoid exposing raw JSON unless the user
-asks for implementation detail.
+**Scheduled tasks**
+- Current conversation: `cron current list`; `cron current create` (`name`, `schedule` as a flat 5-field cron string, `schedule_description`, `message`); `cron current update` (same plus `job_id`). After success, state the task name and schedule in plain language; do not show `cron_...` ids unless needed.
+- Global: `"$PAVII_HELPER_BIN" config cron jobs list`; `cron jobs create` (`name`, `schedule`, `message`, `conversation_id`, `created_by` — the last two required; `"conversation_id": "current"` attaches to this conversation); `cron jobs update` (`job_id`, fields); `cron jobs run` (`job_id`); `cron jobs skill save` (`job_id`, `content`).
+- `cron jobs` `schedule` is a tagged object, not a string: `{"kind": "cron", "expr": "<cron-expr>", "tz": "<IANA-tz>"}` (recurring), `{"kind": "every", "every_ms": <ms>}` (interval), `{"kind": "at", "at_ms": <epoch-ms>}` (one-shot).

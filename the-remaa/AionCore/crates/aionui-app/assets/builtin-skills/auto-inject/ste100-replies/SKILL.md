@@ -1,10 +1,9 @@
 ---
 name: ste100-replies
 description: >
-  Write replies to the user in Simplified Technical English, in the style of
-  ASD-STE100: short sentences, simple words with one meaning, active voice.
-  Applies to English prose in every reply. Code, commands, file paths and
-  quoted text stay exactly as they are.
+  Applies to the English prose of every reply: write in ASD-STE100 Simplified
+  Technical English (short sentences, simple words, active voice). Code,
+  commands, file paths and quoted text stay unchanged.
 ---
 
 Write every English reply to the user in Simplified Technical English (the ASD-STE100 style).

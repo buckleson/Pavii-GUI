@@ -17,17 +17,14 @@ pub fn build_team_tool_usage(role: TeamPromptRole, transport: TeamToolTransport)
 fn render_mcp_usage(role: TeamPromptRole, descriptors: &[TeamToolDescriptor]) -> String {
     let mut text = String::from(
         "You MUST use the `team_*` MCP tools for ALL team coordination.\n\
-Your platform may provide similarly named built-in tools. Do NOT use those.\n\
-Always use the `team_*` MCP tool versions.\n\
-Use `slot_id` values for all agent targets.\n\n\
-If a single `team_*` MCP tool call fails because of invalid arguments, schema mismatch, or role/permission constraints,\n\
-use \"$AIONUI_HELPER_BIN\" team capabilities or \"$AIONUI_HELPER_BIN\" team help to inspect the Team contract,\n\
+Do NOT use similarly named built-in tools from your platform.\n\
+If a `team_*` call fails (invalid arguments, schema mismatch, role/permission), run\n\
+\"$AIONUI_HELPER_BIN\" team capabilities (exact schema) or \"$AIONUI_HELPER_BIN\" team help,\n\
 then retry the MCP tool call with corrected arguments.\n\
-If the `team_*` MCP tools are unavailable, missing, disconnected, or continue to fail after correction,\n\
-use the Team CLI fallback through \"$AIONUI_HELPER_BIN\" team ... commands to continue Team coordination.\n\n\
-For exact schema, run team capabilities.\n\n\
-| When | MCP tool | Input summary |\n\
-| --- | --- | --- |\n",
+If the `team_*` MCP tools are unavailable, disconnected, or still fail after correction,\n\
+use the Team CLI fallback: \"$AIONUI_HELPER_BIN\" team ... commands.\n\n\
+| When | MCP tool | Input |\n\
+|---|---|---|\n",
     );
     for tool in descriptors {
         text.push_str(&format!(
@@ -43,21 +40,17 @@ For exact schema, run team capabilities.\n\n\
 
 fn render_cli_usage(role: TeamPromptRole, descriptors: &[TeamToolDescriptor]) -> String {
     let mut text = String::from(
-        "You MUST use the Pavii Team CLI for ALL team coordination:\n\
-\"$AIONUI_HELPER_BIN\" team ...\n\n\
-Run \"$AIONUI_HELPER_BIN\" team capabilities when you need command names,\n\
-stdin JSON schema, required fields, enum values, permissions, examples,\n\
-or error meanings.\n\n\
-Run \"$AIONUI_HELPER_BIN\" team help when you need a short readable guide.\n\n\
+        "You MUST use the Pavii Team CLI for ALL team coordination: \"$AIONUI_HELPER_BIN\" team ...\n\
+Run \"$AIONUI_HELPER_BIN\" team capabilities for exact schema: command names, stdin JSON schema,\n\
+required fields, enum values, permissions, examples, and error meanings.\n\
+Run \"$AIONUI_HELPER_BIN\" team help for a short readable guide.\n\
 Do not guess team_id, slot_id, role, permissions, or internal tokens.\n\
 Do not claim you used MCP tools in CLI transport.\n\
-Use slot_id values from this prompt, team context, or team members results\n\
-for all agent targets.\n\n\
-If the CLI returns schema_validation_failed, unknown_command, or permission_denied,\n\
-consult team capabilities or team help, correct the call, and retry at most once.\n\n\
-For exact schema, run team capabilities.\n\n\
-| When | CLI command | Canonical tool | Input summary |\n\
-| --- | --- | --- | --- |\n",
+Use slot_id values from this prompt, team context, or team members results for all agent targets.\n\
+On schema_validation_failed, unknown_command, or permission_denied: consult team capabilities\n\
+or team help, correct the call, and retry at most once.\n\n\
+| When | CLI command | Canonical tool | Input |\n\
+|---|---|---|---|\n",
     );
     for tool in descriptors {
         text.push_str(&format!(

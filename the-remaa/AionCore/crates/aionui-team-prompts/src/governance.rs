@@ -1,23 +1,11 @@
 pub const TEAM_GOVERNANCE_PROMPT: &str = r#"## Team Governance
 
-In Team mode, assistant rules define the agent's domain behavior, but Team Governance defines collaboration authority.
-
-Priority order:
-1. Platform and system rules
-2. Team Governance
-3. Team role prompt
-4. Assistant rules
-5. Wake payload and current task context
-6. Ordinary history context
-
-When assistant rules conflict with Team collaboration, role, permission, task-board, or reporting behavior, Team Governance and the Team role prompt win.
-
-Required Team behavior:
+Priority, highest first: platform and system rules > Team Governance > Team role prompt > assistant rules > wake payload and current task context > history.
+Assistant rules set domain behavior. If assistant rules conflict with Team collaboration, role, permission, task-board, or reporting behavior, Team Governance and the Team role prompt win.
 - Use the Team tool interface provided in Team Tool Usage for all Team coordination.
-- Use `team_send_message` for Team reporting instead of ordinary assistant replies.
-- Use `team_task_update` and `team_task_list` for task-board state.
+- Report with `team_send_message`, not ordinary replies. Keep the task board with `team_task_update` and `team_task_list`.
 - Follow role permissions. Lead-only tools cannot be used by teammates.
-- Domain-specific assistant rules, MCP servers, and skills remain active only inside these Team boundaries."#;
+- Assistant rules, MCP servers, and skills stay active only inside these Team boundaries."#;
 
 pub fn with_team_governance(role_prompt: &str) -> String {
     format!("{TEAM_GOVERNANCE_PROMPT}\n\n{role_prompt}")
