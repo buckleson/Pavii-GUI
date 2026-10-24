@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.2.12](https://www.pavii.tech/products/dev-tools/) (2026-10-24)
+
+### Desktop
+
+#### Features
+
+- **tools:** Pavii now has four built-in agent tools: **Pavii Code Map** (find files, callers and the impact of a change), **Pavii Graph** (project structure), **Pavii Compress** (shrinks large tool output to save tokens) and **Pavii Reach** (web search, web pages, video subtitles and feeds). Pavii installs them in the background after the first start, into its own folder, with their telemetry turned off. Every agent you start in Pavii gets them in every new chat. They do not change your global CLI setup, so the same agents started outside Pavii do not get them.
+- **tools:** **Settings → Tools → Pavii agent tools** shows each tool's status, a switch to turn it off for all chats, and **Retry** if an install failed. The open-source projects they are based on are credited on the About page.
+- **replies:** agents reply in ASD-STE100 Simplified Technical English (short, clear sentences). Turn it off in **Settings → System**.
+
+#### Performance
+
+- **prompts:** the built-in assistant rules, the default skills and the team prompts are 34–57% shorter, so every chat sends fewer tokens. Long reference detail now loads only when an agent needs it.
+
+#### Bug Fixes
+
+- **tools:** Python-based tools use their own Python copy, so a later change to your system Python cannot break them.
+
+---
+
 ## [2.2.11](https://www.pavii.tech/products/dev-tools/) (2026-10-23)
 
 ### Desktop
