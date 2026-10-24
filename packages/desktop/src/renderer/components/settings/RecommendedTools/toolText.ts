@@ -10,6 +10,7 @@ const PURPOSE_KEYS: Record<RecommendedToolId, string> = {
   trail: 'settings.recommendedTools.purpose.trail',
   headroom: 'settings.recommendedTools.purpose.headroom',
   graphify: 'settings.recommendedTools.purpose.graphify',
+  reach: 'settings.recommendedTools.purpose.reach',
 };
 
 const INSTALL_ERROR_KEYS: Record<string, string> = {
@@ -21,7 +22,7 @@ const INSTALL_ERROR_KEYS: Record<string, string> = {
   'command-failed': 'settings.recommendedTools.errors.commandFailed',
 };
 
-/** i18n key of a recommended tool's one-line purpose. */
+/** i18n key of a Pavii agent tool's one-line purpose. */
 export function toolPurposeKey(id: RecommendedToolId): string {
   return PURPOSE_KEYS[id];
 }

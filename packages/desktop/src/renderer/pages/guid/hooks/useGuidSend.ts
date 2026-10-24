@@ -6,10 +6,10 @@
 
 import { ipcBridge } from '@/common';
 import { type ChatFileRef, chatFileRefPath } from '@/common/types/chatFile';
-import type { IMcpServer, TProviderWithModel } from '@/common/config/storage';
+import type { IMcpServer, ISessionMcpServer, TProviderWithModel } from '@/common/config/storage';
 import { configService } from '@/common/config/configService';
 import { STE100_PREF_KEY, STE100_SKILL_NAME } from '@/common/types/agent/recommendedTools';
-import { toSessionMcpServer } from '@/renderer/hooks/mcp/catalog';
+import { toSessionMcpServer, withPaviiToolSessionServers } from '@/renderer/hooks/mcp/catalog';
 import { emitter } from '@/renderer/utils/emitter';
 import { ANALYTICS_EVENTS, track } from '@/renderer/services/analytics/posthog';
 import { updateWorkspaceTime } from '@/renderer/utils/workspace/workspaceHistory';
@@ -149,6 +149,9 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
         : availableMcpServers
             .filter((server) => (defaultSelectedMcpServerIds ?? []).includes(server.id))
             .map((server) => toSessionMcpServer(server, sessionMcpWorkspace));
+    // Enabled Pavii agent tool rows join every new chat, whatever was selected.
+    const withPaviiTools = (servers: ISessionMcpServer[]) =>
+      withPaviiToolSessionServers(servers, availableMcpServers, sessionMcpWorkspace);
 
     // `current_model` is the aionrs provider selection and means nothing to a
     // CLI agent, which owns its own model list. Used as a blanket fallback it
@@ -195,7 +198,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
             workspace: finalWorkspace,
             custom_workspace: isCustomWorkspace,
             selected_mcp_server_ids: selectedUserMcpServerIdsToSend,
-            selected_session_mcp_servers: selectedSessionMcpServersToSend,
+            selected_session_mcp_servers: withPaviiTools(selectedSessionMcpServersToSend),
           },
         });
 
@@ -250,8 +253,9 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
           custom_workspace: isCustomWorkspace,
           default_files: files.map(chatFileRefPath),
           selected_mcp_server_ids: selectedUserMcpServerIdsToSend,
-          selected_session_mcp_servers:
-            selectedMcpServerIds !== undefined ? selectedSessionMcpServers : selectedSessionMcpServersToSend,
+          selected_session_mcp_servers: withPaviiTools(
+            selectedMcpServerIds !== undefined ? selectedSessionMcpServers : selectedSessionMcpServersToSend
+          ),
         },
       });
       if (!conversation || !conversation.id) {

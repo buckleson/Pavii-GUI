@@ -13,16 +13,19 @@ import {
 } from '@/common/types/agent/recommendedTools';
 import RecommendedToolInfo from '@/renderer/components/settings/RecommendedTools/RecommendedToolInfo';
 import { installErrorKey } from '@/renderer/components/settings/RecommendedTools/toolText';
-import { openExternalUrl } from '@/renderer/utils/platform';
-import { Button, Message, Tag } from '@arco-design/web-react';
+import { Button, Message, Switch, Tag } from '@arco-design/web-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-/** Settings → Tools: install status of the recommended agent tools, with per-tool Install. */
+/**
+ * Settings → Tools: the Pavii agent tools. Each shows its status, an on/off
+ * switch (off: agents do not get the tool; installed files stay) and Retry
+ * when the last install failed. Tools install automatically at first start.
+ */
 const RecommendedToolsSection: React.FC = () => {
   const { t } = useTranslation();
   const [statuses, setStatuses] = useState<RecommendedToolStatus[]>([]);
-  const [installingId, setInstallingId] = useState<RecommendedToolId | null>(null);
+  const [busy, setBusy] = useState<{ id: RecommendedToolId; action: 'retry' | 'toggle' } | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -35,46 +38,90 @@ const RecommendedToolsSection: React.FC = () => {
 
   useEffect(() => {
     void refresh();
+    // The automatic install may finish while this page is open.
+    return ipcBridge.recommendedTools.autoInstallFinished.on(() => {
+      void refresh();
+    });
   }, [refresh]);
 
-  const showFailure = useCallback(
-    (tool: RecommendedTool, error: string | undefined) => {
-      Message.error({
-        content: (
-          <span>
-            {t('settings.recommendedTools.installFailedToast', { name: tool.name, error: t(installErrorKey(error)) })}{' '}
-            <Button type='text' size='mini' onClick={() => void openExternalUrl(tool.docsUrl)}>
-              {t('settings.recommendedTools.docs')}
-            </Button>
-          </span>
-        ),
-        duration: 8000,
-      });
-    },
-    [t]
-  );
-
-  const handleInstall = useCallback(
+  const handleRetry = useCallback(
     async (tool: RecommendedTool) => {
-      setInstallingId(tool.id);
+      setBusy({ id: tool.id, action: 'retry' });
       try {
         const result = await ipcBridge.recommendedTools.install.invoke({ tools: [tool.id] });
         const outcome = result.outcomes.find((item) => item.id === tool.id);
         if (outcome?.success) {
           Message.success(t('settings.recommendedTools.installedToast', { name: tool.name }));
         } else {
-          showFailure(tool, outcome?.error);
+          Message.error(
+            t('settings.recommendedTools.installFailedToast', {
+              name: tool.name,
+              error: t(installErrorKey(outcome?.error)),
+            })
+          );
         }
       } catch (error) {
-        console.error('[RecommendedToolsSection] Install failed:', error);
-        showFailure(tool, undefined);
+        console.error('[RecommendedToolsSection] Retry failed:', error);
+        Message.error(
+          t('settings.recommendedTools.installFailedToast', { name: tool.name, error: t(installErrorKey(undefined)) })
+        );
       } finally {
-        setInstallingId(null);
+        setBusy(null);
         await refresh();
       }
     },
-    [refresh, showFailure, t]
+    [refresh, t]
   );
+
+  const handleToggle = useCallback(
+    async (tool: RecommendedTool, enabled: boolean) => {
+      setBusy({ id: tool.id, action: 'toggle' });
+      try {
+        await ipcBridge.recommendedTools.setEnabled.invoke({ id: tool.id, enabled });
+      } catch (error) {
+        console.error('[RecommendedToolsSection] Switching the tool failed:', error);
+        Message.error(t('settings.recommendedTools.toggleFailed', { name: tool.name }));
+      } finally {
+        setBusy(null);
+        await refresh();
+      }
+    },
+    [refresh, t]
+  );
+
+  const renderStatus = (tool: RecommendedTool, status: RecommendedToolStatus | undefined) => {
+    if (status?.installing || (busy?.action === 'retry' && busy.id === tool.id)) {
+      return <Tag color='arcoblue'>{t('settings.recommendedTools.installing')}</Tag>;
+    }
+    if (status?.installed) {
+      return (
+        <Tag color='green'>
+          {status.version
+            ? t('settings.recommendedTools.installedVersion', { version: status.version })
+            : t('settings.recommendedTools.installed')}
+        </Tag>
+      );
+    }
+    if (status?.lastError) {
+      return (
+        <div className='flex items-center gap-8px'>
+          <Tag color='red'>
+            {t('settings.recommendedTools.installFailed', { error: t(installErrorKey(status.lastError)) })}
+          </Tag>
+          <Button
+            type='primary'
+            size='small'
+            disabled={busy !== null}
+            onClick={() => void handleRetry(tool)}
+            data-testid={`recommended-tool-retry-${tool.id}`}
+          >
+            {t('settings.recommendedTools.retry')}
+          </Button>
+        </div>
+      );
+    }
+    return <Tag>{t('settings.recommendedTools.pending')}</Tag>;
+  };
 
   return (
     <div className='px-[12px] md:px-[32px] py-16px bg-2 rd-16px' data-testid='recommended-tools-section'>
@@ -90,25 +137,16 @@ const RecommendedToolsSection: React.FC = () => {
               data-testid={`recommended-tool-status-${tool.id}`}
             >
               <RecommendedToolInfo tool={tool} />
-              <div className='flex-shrink-0'>
-                {status?.installed ? (
-                  <Tag color='green'>
-                    {status.version
-                      ? t('settings.recommendedTools.installedVersion', { version: status.version })
-                      : t('settings.recommendedTools.installed')}
-                  </Tag>
-                ) : (
-                  <Button
-                    type='primary'
-                    size='small'
-                    loading={installingId === tool.id}
-                    disabled={installingId !== null && installingId !== tool.id}
-                    onClick={() => void handleInstall(tool)}
-                    data-testid={`recommended-tool-install-${tool.id}`}
-                  >
-                    {t('settings.recommendedTools.install')}
-                  </Button>
-                )}
+              <div className='flex-shrink-0 flex items-center gap-12px'>
+                {renderStatus(tool, status)}
+                <Switch
+                  size='small'
+                  checked={status?.enabled === true}
+                  disabled={!status?.installed || busy !== null}
+                  onChange={(checked: boolean) => void handleToggle(tool, checked)}
+                  aria-label={t('settings.recommendedTools.toggleLabel', { name: tool.name })}
+                  data-testid={`recommended-tool-switch-${tool.id}`}
+                />
               </div>
             </div>
           );

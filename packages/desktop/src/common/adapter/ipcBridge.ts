@@ -1529,8 +1529,8 @@ export const paviiData = {
 };
 
 // ---------------------------------------------------------------------------
-// Recommended agent tools (Trail-Code, Headroom, graphify) — installed by the
-// main process into managed-tools only after the user clicks Install.
+// Pavii agent tools (Code Map, Compress, Graph, Reach) — installed by the main
+// process into managed-tools automatically at first start; Retry in Settings.
 // ---------------------------------------------------------------------------
 
 export const recommendedTools = {
@@ -1538,9 +1538,10 @@ export const recommendedTools = {
   install: bridge.buildProvider<InstallRecommendedToolsResult, { tools: RecommendedToolId[] }>(
     'recommended-tools:install'
   ),
-  /** True when the first-run prompt should show (nothing installed, not dismissed). */
-  getFirstRunOffer: bridge.buildProvider<boolean, void>('recommended-tools:get-first-run-offer'),
-  dismissFirstRunOffer: bridge.buildProvider<void, void>('recommended-tools:dismiss-first-run-offer'),
+  /** Turn a tool on or off for all chats (enables / disables its builtin MCP row). */
+  setEnabled: bridge.buildProvider<void, { id: RecommendedToolId; enabled: boolean }>('recommended-tools:set-enabled'),
+  /** The automatic background install finished; carries one outcome per attempted tool. */
+  autoInstallFinished: bridge.buildEmitter<InstallRecommendedToolsResult>('recommended-tools.auto-install-finished'),
 };
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import { mcpService } from '@/common/adapter/ipcBridge';
 import type { IMcpServer, IMcpServerTransport, ISessionMcpServer } from '@/common/config/storage';
-import { RECOMMENDED_TOOLS } from '@/common/types/agent/recommendedTools';
+import { RECOMMENDED_TOOL_MCP_NAMES, RECOMMENDED_TOOLS } from '@/common/types/agent/recommendedTools';
 import { getClientBusinessSetting } from '@/renderer/services/clientBusinessSettings';
 
 type BackendMcpTransport = Exclude<IMcpServerTransport, { type: 'streamable_http' }>;
@@ -69,7 +69,7 @@ const WORKSPACE_ARG_MCP_NAMES = new Set(
 
 /**
  * Session snapshot of an MCP row. The engine passes a session MCP server no
- * workspace, so for the builtin code-map rows (`pavii-trail`, `pavii-graphify`)
+ * workspace, so for the builtin code-map rows (`pavii-code-map`, `pavii-graph`)
  * a custom workspace is appended to the stdio args.
  */
 export const toSessionMcpServer = (
@@ -87,6 +87,35 @@ export const toSessionMcpServer = (
     name: server.name,
     transport: appendWorkspace ? { ...transport, args: [...(transport.args ?? []), customWorkspace] } : transport,
   };
+};
+
+const PAVII_TOOL_MCP_NAMES = new Set(RECOMMENDED_TOOL_MCP_NAMES);
+
+/**
+ * Add every enabled builtin Pavii agent tool row (Code Map, Compress, Graph,
+ * Search) to a new chat's session MCP servers, whatever the user or assistant
+ * selected. A row already in `selected` (same id or name) is not added twice.
+ * Turning a tool off in Settings → Tools disables its row, so it joins no chat.
+ */
+export const withPaviiToolSessionServers = (
+  selected: ISessionMcpServer[],
+  available: IMcpServer[],
+  customWorkspace?: string
+): ISessionMcpServer[] => {
+  const ids = new Set(selected.map((server) => server.id));
+  const names = new Set(selected.map((server) => server.name));
+  const added = available
+    .filter(
+      (server) =>
+        server.builtin === true &&
+        server.enabled &&
+        PAVII_TOOL_MCP_NAMES.has(server.name) &&
+        !ids.has(server.id) &&
+        !names.has(server.name)
+    )
+    .filter((server, index, list) => list.findIndex((other) => other.name === server.name) === index)
+    .map((server) => toSessionMcpServer(server, customWorkspace));
+  return added.length > 0 ? [...selected, ...added] : selected;
 };
 
 export const ensureBackendMcpCatalog = async (): Promise<{

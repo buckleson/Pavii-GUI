@@ -55,7 +55,7 @@ vi.mock('@renderer/components/base/PaviiSignInGate', () => ({ default: () => nul
 vi.mock('@/renderer/components/layout/Titlebar', () => ({ default: () => null }));
 vi.mock('@/renderer/components/settings/UpdateModal', () => ({ default: () => null }));
 vi.mock('@/renderer/components/settings/PaviiBackup/RestoreOfferDialog', () => ({ default: () => null }));
-vi.mock('@/renderer/components/settings/RecommendedTools/RecommendedToolsDialog', () => ({ default: () => null }));
+vi.mock('@/renderer/components/settings/RecommendedTools/RecommendedToolsNotice', () => ({ default: () => null }));
 vi.mock('@renderer/hooks/system/useDeepLink', () => ({ useDeepLink: () => {} }));
 vi.mock('@renderer/hooks/system/notification/useNotificationClick', () => ({ useNotificationClick: () => {} }));
 vi.mock('@renderer/hooks/system/notification/useBrowserNotification', () => ({ useBrowserNotification: () => {} }));

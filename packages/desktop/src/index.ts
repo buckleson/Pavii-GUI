@@ -83,6 +83,7 @@ import { readCloseToTraySetting } from './process/utils/closeToTraySetting';
 import electronSquirrelStartup from 'electron-squirrel-startup';
 import { scheduleAgentCliAutoCheck } from './process/agentCli/scheduleAutoCheck';
 import { scheduleBackupAutoSave } from './process/paviiData/scheduleAutoSave';
+import { scheduleRecommendedToolsAutoInstall } from './process/agentCli/recommendedTools/scheduleAutoInstall';
 
 // ============ Single Instance Lock ============
 // Acquire lock early so the second instance quits before doing unnecessary work.
@@ -704,6 +705,12 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
   // Automatic .pavii backup (no secrets): after load + 45s. Same CI/E2E guard.
   if (!disableAutoUpdater) {
     scheduleBackupAutoSave(mainWindow);
+  }
+
+  // Automatic install of the Pavii agent tools: after load + 60s, each missing
+  // tool once per app version (failures are retried from Settings). Same CI/E2E guard.
+  if (!disableAutoUpdater) {
+    scheduleRecommendedToolsAutoInstall(mainWindow);
   }
 
   // Load the renderer: dev server URL in development, built HTML file in production

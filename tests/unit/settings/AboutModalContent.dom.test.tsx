@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   updateCheckMock: vi.fn(),
   messageInfoMock: vi.fn(),
   messageErrorMock: vi.fn(),
+  openExternalUrlMock: vi.fn(),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -23,7 +24,9 @@ vi.mock('react-i18next', () => ({
         ? 'Preparing install...'
         : key === 'settings.updateReadyInstall'
           ? `${params?.version} is ready, install now`
-          : key,
+          : key === 'settings.builtinToolsCreditsItem'
+            ? `${params?.name} | ${params?.upstream} | ${params?.license}`
+            : key,
   }),
 }));
 
@@ -51,7 +54,7 @@ vi.mock('@/common', () => ({
 
 vi.mock('@/renderer/utils/platform', () => ({
   isElectronDesktop: () => true,
-  openExternalUrl: vi.fn(),
+  openExternalUrl: mocks.openExternalUrlMock,
 }));
 
 vi.mock('@/renderer/components/settings/SettingsModal/settingsViewContext', () => ({
@@ -235,5 +238,50 @@ describe('AboutModalContent analytics disclosure', () => {
     // There is genuinely no runtime opt-out — POSTHOG_DISABLED is a build-time
     // Vite define. The copy must not imply otherwise.
     expect(body.toLowerCase()).toContain('no way to turn this off');
+  });
+});
+
+describe('AboutModalContent upstream credits for the Pavii agent tools', () => {
+  beforeEach(() => {
+    vi.stubGlobal('__APP_VERSION__', '2.1.13');
+    mocks.openExternalUrlMock.mockResolvedValue(undefined);
+    mocks.updateCheckMock.mockResolvedValue({
+      success: true,
+      data: { currentVersion: '2.1.13', updateAvailable: false, latest: null },
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const creditOf = (id: string) => within(screen.getByTestId(`about-builtin-tool-${id}`));
+
+  it('shows the credits title and the note about changes', () => {
+    render(<AboutModalContent />);
+    const block = within(screen.getByTestId('about-builtin-tools'));
+    expect(block.getByText('settings.builtinToolsCreditsTitle')).toBeInTheDocument();
+    expect(block.getByText('settings.builtinToolsCreditsNote')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['trail', 'Pavii Code Map | Trail-Code | MIT', 'Copyright (c) 2026 Context Graph Engine contributors'],
+    ['headroom', 'Pavii Compress | Headroom | Apache-2.0', 'Copyright 2025 Headroom Contributors'],
+    ['graphify', 'Pavii Graph | graphify | Apache-2.0', 'Copyright 2026 Safi Shamsi and the Graphify contributors'],
+    ['reach', 'Pavii Reach | Agent Reach | MIT', 'Copyright (c) 2025 Agent Eyes'],
+  ])('credits %s with its upstream name, license and copyright', (id, item, copyright) => {
+    render(<AboutModalContent />);
+    expect(creditOf(id).getByText(item)).toBeInTheDocument();
+    expect(creditOf(id).getByText(copyright)).toBeInTheDocument();
+  });
+
+  it('opens the upstream repository from the credit link', async () => {
+    render(<AboutModalContent />);
+    fireEvent.click(creditOf('reach').getByText('https://github.com/Panniantong/Agent-Reach'));
+    await waitFor(() =>
+      expect(mocks.openExternalUrlMock).toHaveBeenCalledWith('https://github.com/Panniantong/Agent-Reach')
+    );
   });
 });

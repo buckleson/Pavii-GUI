@@ -16,7 +16,12 @@ import {
   type ImageGenerationMcpEnvResolveResult,
 } from '@/common/config/imageGenerationMcpEnv';
 import { BUILTIN_IMAGE_GEN_NAME, type IMcpServer, type IProvider } from '@/common/config/storage';
-import { RECOMMENDED_TOOLS, RECOMMENDED_TOOLS_ENV } from '@/common/types/agent/recommendedTools';
+import {
+  RECOMMENDED_TOOLS,
+  RECOMMENDED_TOOLS_ENV,
+  type RecommendedTool,
+  type RecommendedToolId,
+} from '@/common/types/agent/recommendedTools';
 import { onRecommendedToolsInstalled } from '@process/agentCli/recommendedTools/install';
 import { getRecommendedToolStatus } from '@process/agentCli/recommendedTools/status';
 import { getBuiltinMcpScriptPath, type ProcessConfig as ProcessConfigType } from './initStorage';
@@ -42,7 +47,7 @@ const BUILTIN_CHROME_DEVTOOLS_NAME = 'chrome-devtools';
  * happens in the side preview panel where the user can watch it.
  */
 const BUILTIN_BROWSER_SCRIPT = 'builtin-mcp-browser';
-/** Wrapper that serves Trail / Headroom / graphify (process/resources/builtinMcp/codeGraphMcp.ts). */
+/** Wrapper that serves Code Map / Compress / Graph (process/resources/builtinMcp/codeGraphMcp.ts). */
 const RECOMMENDED_TOOL_MCP_SCRIPT = 'builtin-mcp-code-graph';
 
 const LEGACY_BACKEND_CLIENT_PREFERENCE_KEYS = [
@@ -181,6 +186,12 @@ function isSameStdioTransport(left: IMcpServer['transport'], right: IMcpServer['
   );
 }
 
+/** Same stdio command/args/env, or same http/sse/streamable_http URL and headers. */
+function isSameTransport(left: IMcpServer['transport'], right: IMcpServer['transport']): boolean {
+  if (left.type === 'stdio' || right.type === 'stdio') return isSameStdioTransport(left, right);
+  return left.type === right.type && left.url === right.url && areStringRecordsEqual(left.headers, right.headers);
+}
+
 function buildBuiltinBrowserServer(): McpImportServer {
   const scriptPath = getBuiltinMcpScriptPath(BUILTIN_BROWSER_SCRIPT);
   const serverConfig = {
@@ -206,8 +217,9 @@ function buildBuiltinBrowserServer(): McpImportServer {
 }
 
 /**
- * Builtin rows for the recommended tools: `node <wrapper> <toolId> <dataDir>`
- * (the renderer appends the conversation workspace for the code-map tools).
+ * Builtin rows for the Pavii agent tools: `node <wrapper> <toolId> <dataDir>`
+ * (the renderer appends the conversation workspace for the code-map tools),
+ * or an http row for a tool with a remote endpoint (Pavii Reach → pavii-search).
  * `enabled` mirrors whether the tool is installed. Returns no rows when the
  * data dir or install state cannot be read, so the rest of the bootstrap runs.
  */
@@ -226,47 +238,66 @@ function buildRecommendedToolServers(): McpImportServer[] {
     return [];
   }
   const scriptPath = getBuiltinMcpScriptPath(RECOMMENDED_TOOL_MCP_SCRIPT);
-  return RECOMMENDED_TOOLS.map((tool) => {
-    const serverConfig = {
-      command: 'node',
-      args: [scriptPath, tool.id, dataDir],
-      env: { ...RECOMMENDED_TOOLS_ENV },
-    };
+  return RECOMMENDED_TOOLS.map((tool) => buildRecommendedToolServer(tool, scriptPath, dataDir, installedIds));
+}
+
+function buildRecommendedToolServer(
+  tool: RecommendedTool,
+  scriptPath: string,
+  dataDir: string,
+  installedIds: Set<string>
+): McpImportServer {
+  const base = {
+    name: tool.mcpServerName,
+    description: `${tool.name}: Pavii agent tool, based on ${tool.upstreamName} (${tool.license}). Turn it on or off in Settings > Tools.`,
+    enabled: installedIds.has(tool.id),
+    builtin: true,
+  };
+  if (tool.mcpUrl) {
+    const serverConfig = { type: 'http' as const, url: tool.mcpUrl };
     return {
-      name: tool.mcpServerName,
-      description: `${tool.name} (${tool.license}), installed from Settings > Tools.`,
-      enabled: installedIds.has(tool.id),
-      builtin: true,
-      transport: { type: 'stdio', ...serverConfig },
+      ...base,
+      transport: serverConfig,
       original_json: JSON.stringify({ mcpServers: { [tool.mcpServerName]: serverConfig } }, null, 2),
     };
-  });
+  }
+  const serverConfig = {
+    command: 'node',
+    args: [scriptPath, tool.id, dataDir],
+    env: { ...RECOMMENDED_TOOLS_ENV },
+  };
+  return {
+    ...base,
+    transport: { type: 'stdio', ...serverConfig },
+    original_json: JSON.stringify({ mcpServers: { [tool.mcpServerName]: serverConfig } }, null, 2),
+  };
 }
 
 /**
- * Realign existing recommended-tool rows with the current script path, data
- * dir and install state. A row is always disabled when its tool is not
- * installed; it is enabled only when `enableInstalled` is set (right after an
- * install), so a user who turned an installed tool off keeps it off.
+ * Realign existing Pavii tool rows with the current transport (script path,
+ * data dir, URL) and install state. A row is always disabled when its tool is
+ * not installed; it is enabled only when its name is in `enableNames` (the
+ * tools that just installed), so a user who turned an installed tool off
+ * keeps it off.
  */
 async function alignRecommendedToolServers(
   existing: IMcpServer[],
   desired: McpImportServer[],
-  enableInstalled: boolean
+  enableNames: ReadonlySet<string> = new Set()
 ): Promise<number> {
   const existingByName = new Map(existing.map((server) => [server.name, server]));
   let updated = 0;
   for (const server of desired) {
     const current = existingByName.get(server.name);
     if (!current) continue;
-    if (!isSameStdioTransport(current.transport, server.transport) || current.original_json !== server.original_json) {
+    if (!isSameTransport(current.transport, server.transport) || current.original_json !== server.original_json) {
       await mcpService.updateServer.invoke({
         id: current.id,
         data: { transport: server.transport, original_json: server.original_json },
       });
       updated += 1;
     }
-    const shouldToggle = server.enabled === true ? enableInstalled && !current.enabled : current.enabled;
+    const shouldToggle = server.enabled === true ? enableNames.has(server.name) && !current.enabled : current.enabled;
     if (shouldToggle) {
       await mcpService.toggleServer.invoke({ id: current.id });
       updated += 1;
@@ -275,8 +306,8 @@ async function alignRecommendedToolServers(
   return updated;
 }
 
-/** After an install: add missing recommended-tool rows and enable the newly installed ones. */
-async function refreshRecommendedToolServers(): Promise<void> {
+/** After an install: add missing Pavii tool rows and enable the rows of `installedIds` only. */
+async function refreshRecommendedToolServers(installedIds: RecommendedToolId[]): Promise<void> {
   const desired = buildRecommendedToolServers();
   const existing = (await mcpService.listServers.invoke()) ?? [];
   const existingNames = new Set(existing.map((server) => server.name));
@@ -284,7 +315,10 @@ async function refreshRecommendedToolServers(): Promise<void> {
   if (missing.length > 0) {
     await mcpService.batchImportServers.invoke({ servers: missing });
   }
-  const updated = await alignRecommendedToolServers(existing, desired, true);
+  const enableNames = new Set(
+    RECOMMENDED_TOOLS.filter((tool) => installedIds.includes(tool.id)).map((tool) => tool.mcpServerName)
+  );
+  const updated = await alignRecommendedToolServers(existing, desired, enableNames);
   console.info(
     '[Migration] recommended tool MCP rows refreshed after install, imported %d, updated %d',
     missing.length,
@@ -297,8 +331,8 @@ let recommendedToolsListenerRegistered = false;
 function registerRecommendedToolsListener(): void {
   if (recommendedToolsListenerRegistered) return;
   recommendedToolsListenerRegistered = true;
-  onRecommendedToolsInstalled(() => {
-    void refreshRecommendedToolServers().catch((error) => {
+  onRecommendedToolsInstalled((installedIds) => {
+    void refreshRecommendedToolServers(installedIds).catch((error) => {
       console.warn('[Migration] recommended tool MCP refresh failed', error);
     });
   });
@@ -586,7 +620,7 @@ async function ensureBootstrapMcpServersInDb(configFile: ConfigFile): Promise<vo
   }
 
   // Same drift repair for the recommended-tool rows (script path, data dir, install state).
-  const recommendedToolUpdates = await alignRecommendedToolServers(existing, buildRecommendedToolServers(), false);
+  const recommendedToolUpdates = await alignRecommendedToolServers(existing, buildRecommendedToolServers());
   registerRecommendedToolsListener();
 
   console.info(

@@ -16,14 +16,13 @@ import { exeName, getRecommendedToolPaths, type RecommendedToolPaths } from './p
 /** Launcher files whose presence means the tool is installed. */
 const launcherCandidates = (tool: RecommendedTool, paths: RecommendedToolPaths): string[] => {
   if (tool.runtime === 'node') {
-    const shim = process.platform === 'win32' ? 'trail.cmd' : 'trail';
+    const shim = process.platform === 'win32' ? `${tool.launcher}.cmd` : tool.launcher;
     return paths.npmBinDirs.map((dir) => path.join(dir, shim));
   }
-  const launcher = tool.id === 'graphify' ? 'graphify-mcp' : tool.id;
-  return [path.join(paths.uvToolBinDir, exeName(launcher))];
+  return [path.join(paths.uvToolBinDir, exeName(tool.launcher))];
 };
 
-/** Installed state of each recommended tool; the version is the pinned one when installed. */
+/** Installed state of each Pavii agent tool; the version is the pinned one when installed. */
 export function getRecommendedToolStatus(): RecommendedToolStatus[] {
   const paths = getRecommendedToolPaths();
   return RECOMMENDED_TOOLS.map((tool) => {

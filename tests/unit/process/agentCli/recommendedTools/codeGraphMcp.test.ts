@@ -201,7 +201,7 @@ describe('codeGraphMcp no-tools server', () => {
 
     expect(h.runFileMock).not.toHaveBeenCalled();
     expect(h.spawnMock).not.toHaveBeenCalled();
-    expect(stderrText()).toContain('usage: codeGraphMcp <trail|headroom|graphify>');
+    expect(stderrText()).toContain('usage: codeGraphMcp <trail|headroom|graphify|reach>');
 
     sendLine(
       JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2024-11-05' } })
@@ -215,7 +215,7 @@ describe('codeGraphMcp no-tools server', () => {
         result: {
           protocolVersion: '2024-11-05',
           capabilities: { tools: {} },
-          serverInfo: { name: 'pavii-bogus', version: '1.0.0' },
+          serverInfo: { name: 'pavii-unknown', version: '1.0.0' },
         },
       },
       { jsonrpc: '2.0', id: 'a', result: { tools: [] } },
@@ -243,10 +243,10 @@ describe('codeGraphMcp no-tools server', () => {
     expect(exitSpy).toHaveBeenCalledWith(0);
   });
 
-  it('serves no tools when the data dir argument is missing', async () => {
+  it('serves no tools under the pavii-unknown name when the data dir argument is missing', async () => {
     await runWrapper('trail');
     expect(h.runFileMock).not.toHaveBeenCalled();
-    expectNoToolsServer('pavii-trail');
+    expectNoToolsServer('pavii-unknown');
   });
 
   it('names the server pavii-unknown when no arguments are given', async () => {
@@ -256,7 +256,10 @@ describe('codeGraphMcp no-tools server', () => {
 });
 
 describe('codeGraphMcp code-map tool gating', () => {
-  it.each(['trail', 'graphify'])('serves no tools for %s without a workspace', async (toolId) => {
+  it.each([
+    ['trail', 'pavii-code-map'],
+    ['graphify', 'pavii-graph'],
+  ])('serves no tools for %s without a workspace', async (toolId, serverName) => {
     installTrail('trail');
     h.files.set(uvBin('graphify'), 1);
     h.files.set(uvBin('graphify-mcp'), 1);
@@ -264,7 +267,7 @@ describe('codeGraphMcp code-map tool gating', () => {
     await runWrapper(toolId, DATA_DIR);
 
     expect(h.runFileMock).not.toHaveBeenCalled();
-    expectNoToolsServer(`pavii-${toolId}`);
+    expectNoToolsServer(serverName);
   });
 
   it('serves no tools when the workspace is not a code base', async () => {
@@ -274,7 +277,7 @@ describe('codeGraphMcp code-map tool gating', () => {
     await runWrapper('trail', DATA_DIR, WORKSPACE);
 
     expect(h.runFileMock).not.toHaveBeenCalled();
-    expectNoToolsServer('pavii-trail');
+    expectNoToolsServer('pavii-code-map');
   });
 
   it('serves no tools when the workspace cannot be read', async () => {
@@ -283,7 +286,7 @@ describe('codeGraphMcp code-map tool gating', () => {
     await runWrapper('trail', DATA_DIR, path.resolve('/does/not/exist'));
 
     expect(h.runFileMock).not.toHaveBeenCalled();
-    expectNoToolsServer('pavii-trail');
+    expectNoToolsServer('pavii-code-map');
   });
 
   it.each([
@@ -314,7 +317,7 @@ describe('codeGraphMcp code-map tool gating', () => {
     await runWrapper('trail', DATA_DIR, WORKSPACE);
 
     expect(h.runFileMock).not.toHaveBeenCalled();
-    expectNoToolsServer('pavii-trail');
+    expectNoToolsServer('pavii-code-map');
   });
 
   it('serves no tools when graphify-mcp is missing even though graphify is installed', async () => {
@@ -324,7 +327,7 @@ describe('codeGraphMcp code-map tool gating', () => {
     await runWrapper('graphify', DATA_DIR, WORKSPACE);
 
     expect(h.runFileMock).not.toHaveBeenCalled();
-    expectNoToolsServer('pavii-graphify');
+    expectNoToolsServer('pavii-graph');
   });
 });
 
@@ -397,7 +400,7 @@ describe('codeGraphMcp Trail launch', () => {
 
     await runWrapper('trail', DATA_DIR, WORKSPACE);
 
-    expectNoToolsServer('pavii-trail');
+    expectNoToolsServer('pavii-code-map');
   });
 
   it('uses one graph dir per workspace regardless of path case on win32', async () => {
@@ -488,7 +491,19 @@ describe('codeGraphMcp Headroom launch', () => {
 
   it('serves no tools when Headroom is not installed', async () => {
     await runWrapper('headroom', DATA_DIR);
-    expectNoToolsServer('pavii-headroom');
+    expectNoToolsServer('pavii-compress');
+  });
+});
+
+describe('codeGraphMcp remote http tools', () => {
+  it('launches nothing for Reach, whose row is a remote http server, and reports pavii-search', async () => {
+    h.files.set(uvBin('agent-reach'), 1);
+    addCodeBase();
+
+    await runWrapper('reach', DATA_DIR, WORKSPACE);
+
+    expect(h.runFileMock).not.toHaveBeenCalled();
+    expectNoToolsServer('pavii-search');
   });
 });
 
@@ -563,7 +578,7 @@ describe('codeGraphMcp rebuild decision', () => {
 
     expect(h.writeFileSyncMock).not.toHaveBeenCalled();
     expect(stderrText()).toContain('graph build failed (code 2, timed out): boom');
-    expectNoToolsServer('pavii-trail');
+    expectNoToolsServer('pavii-code-map');
   });
 
   it('serves the stale graph when a rebuild fails but an earlier build exists', async () => {
@@ -587,7 +602,7 @@ describe('codeGraphMcp rebuild decision', () => {
     await runWrapper('trail', DATA_DIR, WORKSPACE);
 
     expect(stderrText()).toContain('unexpected error: EACCES');
-    expectNoToolsServer('pavii-trail');
+    expectNoToolsServer('pavii-code-map');
   });
 });
 

@@ -107,6 +107,7 @@ const SKILL_CATEGORY_BY_NAME: Readonly<Record<string, SkillCategoryId>> = {
   'loop-me': 'workflow',
   'token-optimizer': 'workflow',
   'ste100-replies': 'workflow',
+  'pavii-tools': 'workflow',
   wizard: 'workflow',
 
   // Setup & Troubleshooting

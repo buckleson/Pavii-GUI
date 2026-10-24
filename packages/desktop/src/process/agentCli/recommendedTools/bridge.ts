@@ -5,21 +5,20 @@
  */
 
 /**
- * Recommended agent tools bridge. The services are imported on first use,
+ * Pavii agent tools bridge. The services are imported on first use,
  * so registering these handlers costs nothing at launch.
  */
 
 import { ipcBridge } from '@/common';
 import { RECOMMENDED_TOOLS } from '@/common/types/agent/recommendedTools';
 
-const loadStatus = () => import('./status');
+const loadToolState = () => import('./toolState');
 const loadInstaller = () => import('./install');
-const loadFirstRunOffer = () => import('./firstRunOffer');
 
 export function initRecommendedToolsBridge(): void {
   ipcBridge.recommendedTools.getStatus.provider(async () => {
     try {
-      return (await loadStatus()).getRecommendedToolStatus();
+      return await (await loadToolState()).getRecommendedToolStates();
     } catch (error) {
       console.warn('[RecommendedTools] status failed:', error);
       return RECOMMENDED_TOOLS.map((tool) => ({ id: tool.id, installed: false }));
@@ -33,19 +32,12 @@ export function initRecommendedToolsBridge(): void {
       return { outcomes: tools.map((id) => ({ id, success: false, error: 'command-failed' })) };
     }
   });
-  ipcBridge.recommendedTools.getFirstRunOffer.provider(async () => {
+  ipcBridge.recommendedTools.setEnabled.provider(async ({ id, enabled }) => {
     try {
-      return await (await loadFirstRunOffer()).getFirstRunOffer();
+      await (await loadToolState()).setRecommendedToolEnabled(id, enabled);
     } catch (error) {
-      console.warn('[RecommendedTools] first-run offer check failed:', error);
-      return false;
-    }
-  });
-  ipcBridge.recommendedTools.dismissFirstRunOffer.provider(async () => {
-    try {
-      await (await loadFirstRunOffer()).dismissFirstRunOffer();
-    } catch (error) {
-      console.warn('[RecommendedTools] dismissing the first-run offer failed:', error);
+      console.warn('[RecommendedTools] switching the tool failed:', error);
+      throw error;
     }
   });
 }

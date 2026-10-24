@@ -60,12 +60,13 @@ describe('registerManagedToolsOnPath', () => {
   // The function reads process.platform internally; derive the expected entry
   // the same way so the test holds on every platform.
   const [expectedEntry] = getManagedToolsPathEntries(dataDir);
+  const uvBinEntry = join(getManagedToolsDir(dataDir), 'uv-bin');
 
-  it('prepends the missing entry to an existing PATH', () => {
+  it('prepends the missing entries (npm tools, then uv-bin) to an existing PATH', () => {
     const original = absFixture('somewhere', 'bin');
     const env: NodeJS.ProcessEnv = { PATH: original };
     registerManagedToolsOnPath(dataDir, env);
-    expect(env.PATH).toBe([expectedEntry, original].join(delimiter));
+    expect(env.PATH).toBe([expectedEntry, uvBinEntry, original].join(delimiter));
   });
 
   it('is idempotent — a second call adds no duplicate entries', () => {
@@ -74,22 +75,40 @@ describe('registerManagedToolsOnPath', () => {
     const afterFirst = env.PATH;
     registerManagedToolsOnPath(dataDir, env);
     expect(env.PATH).toBe(afterFirst);
-    const occurrences = (env.PATH ?? '').split(delimiter).filter((part) => part === expectedEntry);
+  });
+
+  it('adds uv-bin only once across repeated calls', () => {
+    const env: NodeJS.ProcessEnv = { PATH: absFixture('somewhere', 'bin') };
+    registerManagedToolsOnPath(dataDir, env);
+    registerManagedToolsOnPath(dataDir, env);
+    const occurrences = (env.PATH ?? '').split(delimiter).filter((part) => part === uvBinEntry);
     expect(occurrences).toHaveLength(1);
   });
 
-  it('leaves PATH untouched when the entry is already present mid-list', () => {
-    const path = [absFixture('first'), expectedEntry, absFixture('last')].join(delimiter);
+  it('leaves PATH untouched when every entry is already present mid-list', () => {
+    const path = [absFixture('first'), expectedEntry, uvBinEntry, absFixture('last')].join(delimiter);
     const env: NodeJS.ProcessEnv = { PATH: path };
     registerManagedToolsOnPath(dataDir, env);
     expect(env.PATH).toBe(path);
   });
 
-  it('handles an undefined PATH by creating one that starts with the entry', () => {
+  it('adds only uv-bin when the npm tools entry is already present', () => {
+    const path = [absFixture('first'), expectedEntry].join(delimiter);
+    const env: NodeJS.ProcessEnv = { PATH: path };
+    registerManagedToolsOnPath(dataDir, env);
+    expect(env.PATH).toBe([uvBinEntry, path].join(delimiter));
+  });
+
+  it('handles an undefined PATH by creating one that starts with the entries', () => {
     const env: NodeJS.ProcessEnv = {};
     registerManagedToolsOnPath(dataDir, env);
-    expect(env.PATH).toBeDefined();
-    expect((env.PATH ?? '').split(delimiter)[0]).toBe(expectedEntry);
+    expect((env.PATH ?? '').split(delimiter).slice(0, 2)).toEqual([expectedEntry, uvBinEntry]);
+  });
+
+  it('changes only the env passed in, never process.env', () => {
+    const before = process.env.PATH;
+    registerManagedToolsOnPath(dataDir, { PATH: absFixture('somewhere', 'bin') });
+    expect(process.env.PATH).toBe(before);
   });
 });
 

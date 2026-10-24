@@ -61,6 +61,7 @@ describe('getRecommendedToolStatus on Windows', () => {
       { id: 'trail', installed: false },
       { id: 'headroom', installed: false },
       { id: 'graphify', installed: false },
+      { id: 'reach', installed: false },
     ]);
   });
 
@@ -80,6 +81,11 @@ describe('getRecommendedToolStatus on Windows', () => {
     expect(installedIds()).toEqual(['headroom', 'graphify']);
   });
 
+  it('detects agent-reach.exe in the uv bin folder', () => {
+    existing.add(path.join(UV_BIN, 'agent-reach.exe'));
+    expect(installedIds()).toEqual(['reach']);
+  });
+
   it('does not count graphify as installed from graphify.exe alone', () => {
     existing.add(path.join(UV_BIN, 'graphify.exe'));
     expect(installedIds()).toEqual([]);
@@ -93,7 +99,8 @@ describe('getRecommendedToolStatus on POSIX', () => {
     existing.add(path.join(TOOLS_DIR, 'trail'));
     existing.add(path.join(UV_BIN, 'headroom'));
     existing.add(path.join(UV_BIN, 'graphify-mcp'));
-    expect(installedIds()).toEqual(['trail', 'headroom', 'graphify']);
+    existing.add(path.join(UV_BIN, 'agent-reach'));
+    expect(installedIds()).toEqual(['trail', 'headroom', 'graphify', 'reach']);
   });
 
   it('does not accept a Windows .exe launcher', () => {

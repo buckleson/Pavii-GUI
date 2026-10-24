@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Divider, Typography, Button, Switch, Message } from '@arco-design/web-react';
+import { Divider, Typography, Button, Switch, Message, Link } from '@arco-design/web-react';
 import { Github, Instagram, Right } from '@icon-park/react';
 import { LinkedinGlyph, MediumGlyph, SubstackGlyph, XGlyph } from '@renderer/components/icons/BrandGlyphs';
 import React, { useEffect, useState } from 'react';
@@ -14,6 +14,7 @@ import { useSettingsViewMode } from '../settingsViewContext';
 import { isElectronDesktop, openExternalUrl } from '@/renderer/utils/platform';
 import FeedbackReportModal from './FeedbackReportModal';
 import { ipcBridge } from '@/common';
+import { RECOMMENDED_TOOLS } from '@/common/types/agent/recommendedTools';
 import { getIncludePrerelease, runUpdateCheck } from '@/renderer/components/settings/checkForUpdatesShared';
 import { UPDATE_AVAILABLE_EVENT } from '@/renderer/components/settings/useUpdateNotificationController';
 import { IS_DISCONTINUED_BUILD } from '@/renderer/utils/discontinuedBuild';
@@ -273,6 +274,35 @@ const AboutModalContent: React.FC = () => {
               >
                 <Typography.Text className='text-14px text-t-primary'>{item.title}</Typography.Text>
                 <div className='text-t-secondary group-hover:text-t-primary transition-colors'>{item.icon}</div>
+              </div>
+            ))}
+          </div>
+
+          {/*
+            Upstream credit for the Pavii agent tools (Settings → Tools). The
+            Apache-2.0 tools require a statement of changes: none to the code.
+          */}
+          <Divider className='my-16px' />
+          <div className='flex flex-col gap-8px px-16px' data-testid='about-builtin-tools'>
+            <Typography.Text className='text-13px text-t-primary font-500'>
+              {t('settings.builtinToolsCreditsTitle')}
+            </Typography.Text>
+            <Typography.Text className='text-12px text-t-secondary'>
+              {t('settings.builtinToolsCreditsNote')}
+            </Typography.Text>
+            {RECOMMENDED_TOOLS.map((tool) => (
+              <div key={tool.id} className='flex flex-col gap-2px' data-testid={`about-builtin-tool-${tool.id}`}>
+                <Typography.Text className='text-12px text-t-primary'>
+                  {t('settings.builtinToolsCreditsItem', {
+                    name: tool.name,
+                    upstream: tool.upstreamName,
+                    license: tool.license,
+                  })}
+                </Typography.Text>
+                <Typography.Text className='text-12px text-t-secondary'>{tool.upstreamCopyright}</Typography.Text>
+                <Link className='text-12px' onClick={() => void openLink(tool.repoUrl)}>
+                  {tool.repoUrl}
+                </Link>
               </div>
             ))}
           </div>

@@ -5,12 +5,14 @@
  */
 
 /**
- * Built-in stdio MCP wrapper for the recommended agent tools.
+ * Built-in stdio MCP wrapper for the Pavii agent tools (Code Map, Compress,
+ * Graph). Pavii Reach has no wrapper: its row (pavii-search) is a remote http
+ * MCP server.
  *
  * Launched as `node codeGraphMcp.js <toolId> <dataDir> [workspace]`. The
  * engine gives a session MCP server no workspace (the stdio spec is only
  * command/args/env), so the renderer appends the conversation's custom
- * workspace as the last argument. For the code-map tools (Trail, graphify) the
+ * workspace as the last argument. For the code-map tools (Code Map, Graph) the
  * wrapper builds the graph under `<dataDir>/code-graphs/` (never in the
  * workspace), then hands stdio to the real MCP server. Missing tool, missing
  * workspace, a workspace that is not a code base, or a failed first build →
@@ -134,6 +136,7 @@ const resolveLaunches = (
   dataDir: string,
   workspace: string | undefined
 ): { build?: Launch; serve: Launch; graphDir?: string } | undefined => {
+  if (tool.mcpUrl) return undefined;
   const layout = toolLayout(dataDir);
   if (tool.id === 'headroom') {
     const headroom = existingFile([path.join(layout.uvToolBinDir, exeName('headroom'))]);
@@ -162,8 +165,8 @@ const resolveLaunches = (
   };
 };
 
-/** Minimal MCP server that offers no tools. */
-const serveNoTools = (toolId: string): void => {
+/** Minimal MCP server that offers no tools; `serverName` is the row name it reports. */
+const serveNoTools = (serverName: string): void => {
   const send = (message: object): void => {
     process.stdout.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`);
   };
@@ -183,7 +186,7 @@ const serveNoTools = (toolId: string): void => {
         result: {
           protocolVersion: request.params?.protocolVersion ?? '2025-06-18',
           capabilities: { tools: {} },
-          serverInfo: { name: `pavii-${toolId}`, version: '1.0.0' },
+          serverInfo: { name: serverName, version: '1.0.0' },
         },
       });
     } else if (request.method === 'tools/list') {
@@ -225,18 +228,18 @@ async function main(): Promise<void> {
   const tool = RECOMMENDED_TOOLS.find((candidate) => candidate.id === toolId);
   if (!tool || !dataDir) {
     log(`usage: codeGraphMcp <${RECOMMENDED_TOOLS.map((t) => t.id).join('|')}> <dataDir> [workspace]`);
-    serveNoTools(toolId ?? 'unknown');
+    serveNoTools('pavii-unknown');
     return;
   }
   const launches = resolveLaunches(tool, dataDir, workspace);
   if (!launches) {
-    serveNoTools(tool.id);
+    serveNoTools(tool.mcpServerName);
     return;
   }
   if (launches.build && launches.graphDir && workspace) {
     const ready = await ensureGraph(launches.build, launches.graphDir, workspace);
     if (!ready) {
-      serveNoTools(tool.id);
+      serveNoTools(tool.mcpServerName);
       return;
     }
   }
@@ -245,5 +248,5 @@ async function main(): Promise<void> {
 
 void main().catch((error: unknown) => {
   log(`unexpected error: ${error instanceof Error ? error.message : String(error)}`);
-  serveNoTools(process.argv[2] ?? 'unknown');
+  serveNoTools(RECOMMENDED_TOOLS.find((tool) => tool.id === process.argv[2])?.mcpServerName ?? 'pavii-unknown');
 });

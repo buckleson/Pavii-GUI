@@ -167,8 +167,8 @@ describe('useGuidSend', () => {
     const codeMapDeps = (dir: string) => {
       const deps = createDeps();
       deps.dir = dir;
-      deps.availableMcpServers = [userRow, builtinRow('pavii-trail'), builtinRow('pavii-headroom')];
-      deps.selectedMcpServerIds = ['mcp-user', 'pavii-trail-id', 'pavii-headroom-id'];
+      deps.availableMcpServers = [userRow, builtinRow('pavii-code-map'), builtinRow('pavii-compress')];
+      deps.selectedMcpServerIds = ['mcp-user', 'pavii-code-map-id', 'pavii-compress-id'];
       return deps;
     };
 
@@ -183,17 +183,17 @@ describe('useGuidSend', () => {
       }>;
     };
 
-    it('appends a custom workspace to the Trail row only (ACP)', async () => {
+    it('appends a custom workspace to the Code Map row only (ACP)', async () => {
       const servers = await sendAndGetSessionServers(codeMapDeps(WORKSPACE));
 
-      expect(argsOf(servers, 'pavii-trail-id')).toEqual(['/script.js', 'pavii-trail', '/data', WORKSPACE]);
-      expect(argsOf(servers, 'pavii-headroom-id')).toEqual(['/script.js', 'pavii-headroom', '/data']);
+      expect(argsOf(servers, 'pavii-code-map-id')).toEqual(['/script.js', 'pavii-code-map', '/data', WORKSPACE]);
+      expect(argsOf(servers, 'pavii-compress-id')).toEqual(['/script.js', 'pavii-compress', '/data']);
     });
 
     it('leaves args unchanged when no custom workspace was chosen', async () => {
       const servers = await sendAndGetSessionServers(codeMapDeps(''));
 
-      expect(argsOf(servers, 'pavii-trail-id')).toEqual(['/script.js', 'pavii-trail', '/data']);
+      expect(argsOf(servers, 'pavii-code-map-id')).toEqual(['/script.js', 'pavii-code-map', '/data']);
     });
 
     it('appends the workspace for aionrs, where user rows are sent too, and leaves user rows unchanged', async () => {
@@ -203,7 +203,7 @@ describe('useGuidSend', () => {
 
       const servers = await sendAndGetSessionServers(deps);
 
-      expect(argsOf(servers, 'pavii-trail-id')).toEqual(['/script.js', 'pavii-trail', '/data', WORKSPACE]);
+      expect(argsOf(servers, 'pavii-code-map-id')).toEqual(['/script.js', 'pavii-code-map', '/data', WORKSPACE]);
       expect(argsOf(servers, 'mcp-user')).toEqual(['--flag']);
     });
 
@@ -212,12 +212,60 @@ describe('useGuidSend', () => {
       deps.selectedAssistantBackend = 'aionrs';
       deps.current_model = { id: 'p1', name: 'Gemini', use_model: 'gemini-2.5-pro' } as never;
       deps.selectedMcpServerIds = undefined;
-      deps.assistantDefaultMcpIds = ['pavii-trail-id'];
+      deps.assistantDefaultMcpIds = ['pavii-code-map-id'];
 
       const servers = await sendAndGetSessionServers(deps);
 
-      expect(servers).toHaveLength(1);
-      expect(argsOf(servers, 'pavii-trail-id')).toEqual(['/script.js', 'pavii-trail', '/data', WORKSPACE]);
+      expect(servers.map((server) => server.id)).toEqual(['pavii-code-map-id', 'pavii-compress-id']);
+      expect(argsOf(servers, 'pavii-code-map-id')).toEqual(['/script.js', 'pavii-code-map', '/data', WORKSPACE]);
+    });
+  });
+
+  describe('Pavii agent tool rows', () => {
+    const paviiRow = (name: string, enabled = true) =>
+      ({
+        id: `${name}-id`,
+        name,
+        enabled,
+        builtin: true,
+        transport: { type: 'stdio', command: 'node', args: ['/script.js', name, '/data'] },
+      }) as IMcpServer;
+
+    const sessionServerIds = async (deps: GuidSendDeps) => {
+      const { result } = renderHook(() => useGuidSend(deps));
+      await act(async () => {
+        await result.current.handleSend();
+      });
+      const servers = createConversationInvokeMock.mock.calls[0][0].extra.selected_session_mcp_servers as Array<{
+        id: string;
+      }>;
+      return servers.map((server) => server.id);
+    };
+
+    it('adds enabled Pavii tool rows to a new ACP chat even when none was selected', async () => {
+      const deps = createDeps();
+      deps.availableMcpServers = [paviiRow('pavii-search'), paviiRow('pavii-compress')];
+      deps.selectedMcpServerIds = [];
+
+      expect(await sessionServerIds(deps)).toEqual(['pavii-search-id', 'pavii-compress-id']);
+    });
+
+    it('does not add a Pavii tool row the user turned off', async () => {
+      const deps = createDeps();
+      deps.availableMcpServers = [paviiRow('pavii-search', false), paviiRow('pavii-compress')];
+      deps.selectedMcpServerIds = [];
+
+      expect(await sessionServerIds(deps)).toEqual(['pavii-compress-id']);
+    });
+
+    it('adds enabled Pavii tool rows to a new aionrs chat without sending them twice', async () => {
+      const deps = createDeps();
+      deps.selectedAssistantBackend = 'aionrs';
+      deps.current_model = { id: 'p1', name: 'Gemini', use_model: 'gemini-2.5-pro' } as never;
+      deps.availableMcpServers = [paviiRow('pavii-search'), paviiRow('pavii-compress')];
+      deps.selectedMcpServerIds = ['pavii-search-id'];
+
+      expect(await sessionServerIds(deps)).toEqual(['pavii-search-id', 'pavii-compress-id']);
     });
   });
 

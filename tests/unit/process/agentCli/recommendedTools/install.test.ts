@@ -5,7 +5,8 @@
  *
  * Unit tests for the recommended tools installer: the exact npm and
  * `uv tool install` commands, the managed-tools env passed to uv, how each
- * failure kind is reported, and the "installed" listener contract.
+ * failure kind is reported, the serial install queue, the stored install
+ * records and the "installed" listener contract.
  */
 
 import path from 'node:path';
@@ -22,6 +23,8 @@ const mocks = vi.hoisted(() => ({
   mkdirSync: vi.fn(),
   findManagedNpm: vi.fn(),
   ensureUv: vi.fn(),
+  configGet: vi.fn(),
+  configSet: vi.fn(),
 }));
 
 vi.mock('node:child_process', async (importOriginal) => {
@@ -34,7 +37,9 @@ vi.mock('node:fs', async (importOriginal) => {
   return { ...actual, mkdirSync: mocks.mkdirSync, default: { ...actual, mkdirSync: mocks.mkdirSync } };
 });
 
-vi.mock('electron', () => ({ net: { fetch: vi.fn() } }));
+vi.mock('electron', () => ({ net: { fetch: vi.fn() }, app: { getVersion: () => '9.9.9' } }));
+
+vi.mock('@process/utils/initStorage', () => ({ ProcessConfig: { get: mocks.configGet, set: mocks.configSet } }));
 
 vi.mock('@pavii/web-host', () => ({
   getManagedToolsDir: (dataDir: string) => path.join(dataDir, 'managed-tools'),
@@ -51,7 +56,12 @@ vi.mock('@process/agentCli/recommendedTools/uv', async (importOriginal) => {
   return { ...actual, ensureUv: mocks.ensureUv };
 });
 
-import { installRecommendedTools, onRecommendedToolsInstalled } from '@process/agentCli/recommendedTools/install';
+import {
+  getInstallingToolIds,
+  getInstallRecords,
+  installRecommendedTools,
+  onRecommendedToolsInstalled,
+} from '@process/agentCli/recommendedTools/install';
 import { UvError } from '@process/agentCli/recommendedTools/uv';
 
 const TOOLS_DIR = path.join(DATA_DIR, 'managed-tools');
@@ -76,6 +86,8 @@ beforeEach(() => {
   replies = {};
   mocks.findManagedNpm.mockReturnValue(NPM);
   mocks.ensureUv.mockResolvedValue(UV);
+  mocks.configGet.mockResolvedValue(undefined);
+  mocks.configSet.mockResolvedValue(undefined);
   mocks.execFile.mockImplementation((file: string, _args: string[], _options: ExecOptions, callback: ExecCallback) => {
     const reply = replies[file]?.shift() ?? { error: null };
     callback(reply.error, reply.stdout ?? '', reply.stderr ?? '');
@@ -149,6 +161,30 @@ describe('installRecommendedTools: Python tools via uv', () => {
   it('turns off the uv Python launcher and registry entries', async () => {
     await installRecommendedTools(['headroom']);
     expect(callsTo(UV)[0][2].env).toMatchObject({ UV_PYTHON_INSTALL_BIN: '0', UV_PYTHON_INSTALL_REGISTRY: '0' });
+  });
+
+  it('installs Reach with yt-dlp executables linked, flag placed before the package spec', async () => {
+    await installRecommendedTools(['reach']);
+    expect(callsTo(UV)[0][1]).toEqual([
+      'tool',
+      'install',
+      '--managed-python',
+      '--python',
+      '3.12',
+      '--with-executables-from',
+      'yt-dlp',
+      'agent-reach @ https://github.com/Panniantong/Agent-Reach/archive/f65526cbaaad3879473acc1ba6dbefd195caf2be.zip',
+    ]);
+  });
+
+  it('runs the Reach install without a shell, so the spec with spaces stays one argument', async () => {
+    await installRecommendedTools(['reach']);
+    expect(callsTo(UV)[0][2].shell).toBe(false);
+  });
+
+  it('adds no --with-executables-from flag for a tool without executablesFrom', async () => {
+    await installRecommendedTools(['graphify']);
+    expect(callsTo(UV)[0][1]).not.toContain('--with-executables-from');
   });
 
   it('sets every telemetry switch on the uv command', async () => {
@@ -238,5 +274,102 @@ describe('onRecommendedToolsInstalled', () => {
     onRecommendedToolsInstalled(listener)();
     await installRecommendedTools(['headroom']);
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe('installRecommendedTools: install records', () => {
+  it('stores a success record with the app version for each attempt', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1234);
+    await installRecommendedTools(['headroom']);
+    expect(mocks.configSet).toHaveBeenCalledWith('recommendedTools.installResults', {
+      headroom: { appVersion: '9.9.9', success: true, at: 1234 },
+    });
+  });
+
+  it('stores the error code of a failed attempt and keeps the other records', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(5);
+    mocks.configGet.mockResolvedValue({ trail: { appVersion: '1.0.0', success: true, at: 1 } });
+    mocks.findManagedNpm.mockReturnValue(null);
+    await installRecommendedTools(['trail', 'headroom']);
+    expect(mocks.configSet).toHaveBeenLastCalledWith('recommendedTools.installResults', {
+      trail: { appVersion: '9.9.9', success: false, error: 'npm-missing', at: 5 },
+      headroom: { appVersion: '9.9.9', success: true, at: 5 },
+    });
+  });
+
+  it('only logs when writing the record fails and still returns the outcome', async () => {
+    mocks.configSet.mockRejectedValue(new Error('disk full'));
+    await expect(installRecommendedTools(['headroom'])).resolves.toEqual({
+      outcomes: [{ id: 'headroom', success: true }],
+    });
+    expect(console.warn).toHaveBeenCalledWith(
+      '[RecommendedTools] recording the install result failed:',
+      expect.any(Error)
+    );
+  });
+
+  it('reads an empty record set when the config cannot be read', async () => {
+    mocks.configGet.mockRejectedValue(new Error('corrupt'));
+    await expect(getInstallRecords()).resolves.toEqual({});
+  });
+});
+
+describe('installRecommendedTools: queue', () => {
+  /** Hold every uv command until `release` is called. */
+  const holdUv = () => {
+    const callbacks: ExecCallback[] = [];
+    mocks.execFile.mockImplementation(
+      (file: string, _args: string[], _options: ExecOptions, callback: ExecCallback) => {
+        if (file === UV) callbacks.push(callback);
+        else callback(null, '', '');
+      }
+    );
+    return {
+      started: () => callbacks.length,
+      release: () => callbacks.splice(0).forEach((callback) => callback(null, '', '')),
+    };
+  };
+  const flush = async () => {
+    for (let index = 0; index < 20; index += 1) await Promise.resolve();
+  };
+
+  it('reports queued tools as installing until their install finishes', async () => {
+    const uv = holdUv();
+    const run = installRecommendedTools(['headroom']);
+    expect(getInstallingToolIds()).toEqual(['headroom']);
+    await flush();
+    uv.release();
+    await run;
+    expect(getInstallingToolIds()).toEqual([]);
+  });
+
+  it('starts a second request only after the first one finished', async () => {
+    const uv = holdUv();
+    const first = installRecommendedTools(['headroom']);
+    const second = installRecommendedTools(['graphify']);
+    await flush();
+    expect(uv.started()).toBe(1);
+    uv.release();
+    await first;
+    await flush();
+    expect(uv.started()).toBe(1);
+    uv.release();
+    await expect(second).resolves.toEqual({ outcomes: [{ id: 'graphify', success: true }] });
+  });
+
+  it('does not queue a tool twice while it is already queued', async () => {
+    const uv = holdUv();
+    const first = installRecommendedTools(['headroom']);
+    const duplicate = installRecommendedTools(['headroom', 'headroom']);
+    await flush();
+    uv.release();
+    await first;
+    await expect(duplicate).resolves.toEqual({ outcomes: [] });
+    expect(callsTo(UV)).toHaveLength(1);
+  });
+
+  it('installs a duplicated id in one request only once', async () => {
+    const { outcomes } = await installRecommendedTools(['headroom', 'headroom']);
+    expect(outcomes).toEqual([{ id: 'headroom', success: true }]);
   });
 });

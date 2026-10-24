@@ -254,34 +254,67 @@ describe('runBackendMigrations', () => {
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('runBackendMigrations recommended tool MCP rows', () => {
-  type ToolRow = { name: string; toolId: 'trail' | 'headroom' | 'graphify'; label: string };
+  type ToolId = 'trail' | 'headroom' | 'graphify' | 'reach';
+  type ToolRow = { name: string; toolId: ToolId; description: string };
   const TOOL_ROWS: ToolRow[] = [
-    { name: 'pavii-trail', toolId: 'trail', label: 'Trail-Code (MIT)' },
-    { name: 'pavii-headroom', toolId: 'headroom', label: 'Headroom (Apache-2.0)' },
-    { name: 'pavii-graphify', toolId: 'graphify', label: 'graphify (Apache-2.0)' },
+    {
+      name: 'pavii-code-map',
+      toolId: 'trail',
+      description:
+        'Pavii Code Map: Pavii agent tool, based on Trail-Code (MIT). Turn it on or off in Settings > Tools.',
+    },
+    {
+      name: 'pavii-compress',
+      toolId: 'headroom',
+      description:
+        'Pavii Compress: Pavii agent tool, based on Headroom (Apache-2.0). Turn it on or off in Settings > Tools.',
+    },
+    {
+      name: 'pavii-graph',
+      toolId: 'graphify',
+      description:
+        'Pavii Graph: Pavii agent tool, based on graphify (Apache-2.0). Turn it on or off in Settings > Tools.',
+    },
+    {
+      name: 'pavii-search',
+      toolId: 'reach',
+      description: 'Pavii Reach: Pavii agent tool, based on Agent Reach (MIT). Turn it on or off in Settings > Tools.',
+    },
   ];
+  const [CODE_MAP, COMPRESS, GRAPH, SEARCH] = TOOL_ROWS;
   const SCRIPT = '/mock/builtin-mcp-code-graph.js';
+  const EXA_URL = 'https://mcp.exa.ai/mcp';
 
-  const desiredConfig = (toolId: string) => ({
-    command: 'node',
-    args: [SCRIPT, toolId, '/mock-data'],
-    env: { ...RECOMMENDED_TOOLS_ENV },
-  });
+  /** Desired MCP config as stored in original_json. */
+  const desiredConfig = (row: ToolRow): Record<string, unknown> =>
+    row.toolId === 'reach'
+      ? { type: 'http', url: EXA_URL }
+      : { command: 'node', args: [SCRIPT, row.toolId, '/mock-data'], env: { ...RECOMMENDED_TOOLS_ENV } };
+
+  const desiredTransport = (row: ToolRow): IMcpServer['transport'] =>
+    (row.toolId === 'reach'
+      ? { type: 'http', url: EXA_URL }
+      : { type: 'stdio', ...desiredConfig(row) }) as IMcpServer['transport'];
+
+  const desiredJson = (row: ToolRow) => JSON.stringify({ mcpServers: { [row.name]: desiredConfig(row) } }, null, 2);
 
   const toolRow = (row: ToolRow, overrides: Partial<IMcpServer> = {}): IMcpServer => ({
     id: `${row.toolId}-id`,
     name: row.name,
-    description: `${row.label}, installed from Settings > Tools.`,
+    description: row.description,
     enabled: false,
     builtin: true,
-    transport: { type: 'stdio', ...desiredConfig(row.toolId) },
+    transport: desiredTransport(row),
     created_at: 1,
     updated_at: 1,
-    original_json: JSON.stringify({ mcpServers: { [row.name]: desiredConfig(row.toolId) } }, null, 2),
+    original_json: desiredJson(row),
     ...overrides,
   });
 
-  const installed = (...ids: string[]) =>
+  const allRows = (enabled: Partial<Record<ToolId, boolean>> = {}) =>
+    TOOL_ROWS.map((row) => toolRow(row, { enabled: enabled[row.toolId] ?? false }));
+
+  const installed = (...ids: ToolId[]) =>
     getRecommendedToolStatusMock.mockReturnValue(
       TOOL_ROWS.map((row) => ({ id: row.toolId, installed: ids.includes(row.toolId) }))
     );
@@ -298,8 +331,8 @@ describe('runBackendMigrations recommended tool MCP rows', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
-  it('imports missing rows as `node <script> <toolId> <dataDir>` enabled only when installed', async () => {
-    installed('trail');
+  it('imports missing rows (stdio wrapper or http endpoint) enabled only when installed', async () => {
+    installed('trail', 'reach');
     listServersMock.mockResolvedValue([imageServer()]);
 
     await runBackendMigrations(configFile as never);
@@ -308,23 +341,28 @@ describe('runBackendMigrations recommended tool MCP rows', () => {
     expect(rows).toEqual(
       TOOL_ROWS.map((row) => ({
         name: row.name,
-        description: `${row.label}, installed from Settings > Tools.`,
-        enabled: row.toolId === 'trail',
+        description: row.description,
+        enabled: row.toolId === 'trail' || row.toolId === 'reach',
         builtin: true,
-        transport: { type: 'stdio', ...desiredConfig(row.toolId) },
-        original_json: JSON.stringify({ mcpServers: { [row.name]: desiredConfig(row.toolId) } }, null, 2),
+        transport: desiredTransport(row),
+        original_json: desiredJson(row),
       }))
     );
   });
 
+  it('imports Pavii Reach as an http row pointing to the Exa MCP endpoint', async () => {
+    installed();
+    listServersMock.mockResolvedValue([imageServer()]);
+
+    await runBackendMigrations(configFile as never);
+
+    const search = importedServers().find((server) => server.name === 'pavii-search');
+    expect(search?.transport).toEqual({ type: 'http', url: 'https://mcp.exa.ai/mcp' });
+  });
+
   it('leaves aligned rows alone on launch', async () => {
-    installed('trail');
-    listServersMock.mockResolvedValue([
-      imageServer(),
-      toolRow(TOOL_ROWS[0], { enabled: true }),
-      toolRow(TOOL_ROWS[1]),
-      toolRow(TOOL_ROWS[2]),
-    ]);
+    installed('trail', 'reach');
+    listServersMock.mockResolvedValue([imageServer(), ...allRows({ trail: true, reach: true })]);
 
     await runBackendMigrations(configFile as never);
 
@@ -336,11 +374,12 @@ describe('runBackendMigrations recommended tool MCP rows', () => {
   it('realigns a row whose transport drifted (old script path / data dir)', async () => {
     listServersMock.mockResolvedValue([
       imageServer(),
-      toolRow(TOOL_ROWS[0], {
+      toolRow(CODE_MAP, {
         transport: { type: 'stdio', command: 'node', args: ['/old/builtin-mcp-code-graph.js', 'trail', '/old-data'] },
       }),
-      toolRow(TOOL_ROWS[1]),
-      toolRow(TOOL_ROWS[2]),
+      toolRow(COMPRESS),
+      toolRow(GRAPH),
+      toolRow(SEARCH),
     ]);
 
     await runBackendMigrations(configFile as never);
@@ -348,19 +387,67 @@ describe('runBackendMigrations recommended tool MCP rows', () => {
     expect(updateServerMock).toHaveBeenCalledOnce();
     expect(updateServerMock).toHaveBeenCalledWith({
       id: 'trail-id',
-      data: {
-        transport: { type: 'stdio', ...desiredConfig('trail') },
-        original_json: JSON.stringify({ mcpServers: { 'pavii-trail': desiredConfig('trail') } }, null, 2),
-      },
+      data: { transport: desiredTransport(CODE_MAP), original_json: desiredJson(CODE_MAP) },
+    });
+  });
+
+  it('realigns an http row whose URL drifted', async () => {
+    listServersMock.mockResolvedValue([
+      imageServer(),
+      toolRow(CODE_MAP),
+      toolRow(COMPRESS),
+      toolRow(GRAPH),
+      toolRow(SEARCH, { transport: { type: 'http', url: 'https://old.example/mcp' } }),
+    ]);
+
+    await runBackendMigrations(configFile as never);
+
+    expect(updateServerMock).toHaveBeenCalledOnce();
+    expect(updateServerMock).toHaveBeenCalledWith({
+      id: 'reach-id',
+      data: { transport: desiredTransport(SEARCH), original_json: desiredJson(SEARCH) },
+    });
+  });
+
+  it('realigns an http row that gained headers', async () => {
+    listServersMock.mockResolvedValue([
+      imageServer(),
+      toolRow(CODE_MAP),
+      toolRow(COMPRESS),
+      toolRow(GRAPH),
+      toolRow(SEARCH, { transport: { type: 'http', url: EXA_URL, headers: { 'X-Key': 'a' } } }),
+    ]);
+
+    await runBackendMigrations(configFile as never);
+
+    expect(updateServerMock).toHaveBeenCalledOnce();
+    expect(updateServerMock).toHaveBeenCalledWith(expect.objectContaining({ id: 'reach-id' }));
+  });
+
+  it('realigns an old stdio row of a tool that now uses an http endpoint', async () => {
+    listServersMock.mockResolvedValue([
+      imageServer(),
+      toolRow(CODE_MAP),
+      toolRow(COMPRESS),
+      toolRow(GRAPH),
+      toolRow(SEARCH, { transport: { type: 'stdio', command: 'node', args: [SCRIPT, 'reach', '/mock-data'] } }),
+    ]);
+
+    await runBackendMigrations(configFile as never);
+
+    expect(updateServerMock).toHaveBeenCalledWith({
+      id: 'reach-id',
+      data: { transport: desiredTransport(SEARCH), original_json: desiredJson(SEARCH) },
     });
   });
 
   it('realigns a row whose stored JSON drifted while the transport matches', async () => {
     listServersMock.mockResolvedValue([
       imageServer(),
-      toolRow(TOOL_ROWS[0]),
-      toolRow(TOOL_ROWS[1], { original_json: '{}' }),
-      toolRow(TOOL_ROWS[2]),
+      toolRow(CODE_MAP),
+      toolRow(COMPRESS, { original_json: '{}' }),
+      toolRow(GRAPH),
+      toolRow(SEARCH),
     ]);
 
     await runBackendMigrations(configFile as never);
@@ -370,13 +457,8 @@ describe('runBackendMigrations recommended tool MCP rows', () => {
   });
 
   it('keeps an installed row the user turned off disabled on launch', async () => {
-    installed('trail', 'headroom', 'graphify');
-    listServersMock.mockResolvedValue([
-      imageServer(),
-      toolRow(TOOL_ROWS[0], { enabled: false }),
-      toolRow(TOOL_ROWS[1], { enabled: true }),
-      toolRow(TOOL_ROWS[2], { enabled: false }),
-    ]);
+    installed('trail', 'headroom', 'graphify', 'reach');
+    listServersMock.mockResolvedValue([imageServer(), ...allRows({ headroom: true })]);
 
     await runBackendMigrations(configFile as never);
 
@@ -385,12 +467,7 @@ describe('runBackendMigrations recommended tool MCP rows', () => {
 
   it('turns a row off on launch when its tool is no longer installed', async () => {
     installed('headroom');
-    listServersMock.mockResolvedValue([
-      imageServer(),
-      toolRow(TOOL_ROWS[0], { enabled: true }),
-      toolRow(TOOL_ROWS[1], { enabled: true }),
-      toolRow(TOOL_ROWS[2], { enabled: false }),
-    ]);
+    listServersMock.mockResolvedValue([imageServer(), ...allRows({ trail: true, headroom: true })]);
 
     await runBackendMigrations(configFile as never);
 
@@ -418,7 +495,7 @@ describe('runBackendMigrations recommended tool MCP rows', () => {
     async ({ breakIt }) => {
       breakIt();
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      listServersMock.mockResolvedValue([imageServer(), toolRow(TOOL_ROWS[0], { enabled: true })]);
+      listServersMock.mockResolvedValue([imageServer(), toolRow(CODE_MAP, { enabled: true })]);
 
       await runBackendMigrations(configFile as never);
 
@@ -436,15 +513,28 @@ describe('runBackendMigrations recommended tool MCP rows', () => {
   );
 
   describe('after an install', () => {
+    type InstallListener = (installedIds: ToolId[]) => void;
+
     const loadFresh = async () => {
       vi.resetModules();
       return import('@/process/utils/runBackendMigrations');
     };
 
-    const installListener = (): (() => void) => {
-      const listener = onRecommendedToolsInstalledMock.mock.calls.at(-1)?.[0] as (() => void) | undefined;
+    const installListener = (): InstallListener => {
+      const listener = onRecommendedToolsInstalledMock.mock.calls.at(-1)?.[0] as InstallListener | undefined;
       if (!listener) throw new Error('install listener was not registered');
       return listener;
+    };
+
+    /** Run one launch, then clear the import/update/toggle mocks and return the install listener. */
+    const launch = async (): Promise<InstallListener> => {
+      const fresh = await loadFresh();
+      listServersMock.mockResolvedValue([imageServer()]);
+      await fresh.runBackendMigrations(configFile as never);
+      batchImportServersMock.mockClear();
+      updateServerMock.mockClear();
+      toggleServerMock.mockClear();
+      return installListener();
     };
 
     it('subscribes to installs only once across launches', async () => {
@@ -457,46 +547,41 @@ describe('runBackendMigrations recommended tool MCP rows', () => {
       expect(onRecommendedToolsInstalledMock).toHaveBeenCalledOnce();
     });
 
-    it('imports missing rows and turns newly installed tools on', async () => {
-      const fresh = await loadFresh();
-      listServersMock.mockResolvedValue([imageServer()]);
-      await fresh.runBackendMigrations(configFile as never);
-      const listener = installListener();
-
-      batchImportServersMock.mockClear();
-      toggleServerMock.mockClear();
+    it('imports missing rows and turns the just-installed tools on', async () => {
+      const listener = await launch();
       installed('trail', 'graphify');
-      listServersMock.mockResolvedValue([toolRow(TOOL_ROWS[0], { enabled: false })]);
+      listServersMock.mockResolvedValue([toolRow(CODE_MAP, { enabled: false })]);
 
-      listener();
+      listener(['trail', 'graphify']);
       await flush();
 
-      expect(batchImportServersMock).toHaveBeenCalledOnce();
       expect(importedServers().map((server) => [server.name, server.enabled])).toEqual([
-        ['pavii-headroom', false],
-        ['pavii-graphify', true],
+        ['pavii-compress', false],
+        ['pavii-graph', true],
+        ['pavii-search', false],
       ]);
       expect(toggleServerMock).toHaveBeenCalledOnce();
       expect(toggleServerMock).toHaveBeenCalledWith({ id: 'trail-id' });
     });
 
+    it('keeps an already-installed tool the user turned off disabled when another tool installs', async () => {
+      const listener = await launch();
+      installed('trail', 'reach');
+      listServersMock.mockResolvedValue(allRows({ trail: false, reach: false }));
+
+      listener(['reach']);
+      await flush();
+
+      expect(toggleServerMock).toHaveBeenCalledOnce();
+      expect(toggleServerMock).toHaveBeenCalledWith({ id: 'reach-id' });
+    });
+
     it('does not import or toggle when every row already matches', async () => {
-      const fresh = await loadFresh();
-      listServersMock.mockResolvedValue([imageServer()]);
-      await fresh.runBackendMigrations(configFile as never);
-      const listener = installListener();
-
-      batchImportServersMock.mockClear();
-      updateServerMock.mockClear();
-      toggleServerMock.mockClear();
+      const listener = await launch();
       installed('trail');
-      listServersMock.mockResolvedValue([
-        toolRow(TOOL_ROWS[0], { enabled: true }),
-        toolRow(TOOL_ROWS[1]),
-        toolRow(TOOL_ROWS[2]),
-      ]);
+      listServersMock.mockResolvedValue(allRows({ trail: true }));
 
-      listener();
+      listener(['trail']);
       await flush();
 
       expect(batchImportServersMock).not.toHaveBeenCalled();
@@ -505,20 +590,11 @@ describe('runBackendMigrations recommended tool MCP rows', () => {
     });
 
     it('turns a not-installed row off during the refresh', async () => {
-      const fresh = await loadFresh();
-      listServersMock.mockResolvedValue([imageServer()]);
-      await fresh.runBackendMigrations(configFile as never);
-      const listener = installListener();
+      const listener = await launch();
+      installed('trail', 'headroom', 'reach');
+      listServersMock.mockResolvedValue(allRows({ trail: true, headroom: true, graphify: true, reach: true }));
 
-      toggleServerMock.mockClear();
-      installed('trail', 'headroom');
-      listServersMock.mockResolvedValue([
-        toolRow(TOOL_ROWS[0], { enabled: true }),
-        toolRow(TOOL_ROWS[1], { enabled: true }),
-        toolRow(TOOL_ROWS[2], { enabled: true }),
-      ]);
-
-      listener();
+      listener(['headroom']);
       await flush();
 
       expect(toggleServerMock).toHaveBeenCalledOnce();
@@ -533,7 +609,7 @@ describe('runBackendMigrations recommended tool MCP rows', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       listServersMock.mockRejectedValue(new Error('backend down'));
 
-      expect(() => listener()).not.toThrow();
+      expect(() => listener(['trail'])).not.toThrow();
       await flush();
 
       expect(warnSpy).toHaveBeenCalledWith('[Migration] recommended tool MCP refresh failed', expect.any(Error));

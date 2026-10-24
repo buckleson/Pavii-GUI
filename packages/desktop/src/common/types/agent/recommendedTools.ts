@@ -5,71 +5,120 @@
  */
 
 /**
- * Agent tools Pavii offers to install (first-run prompt, Settings → Tools).
- * Versions are pinned; packages and commands were verified on npm / PyPI
- * and in each tool's README. Pavii never runs their global setup commands
- * (`trail init`, `headroom wrap`, `graphify install`): those write
- * `~/.claude*`, `~/.codex` or the user's repo.
+ * Agent tools Pavii installs automatically in the background at first start
+ * (Settings → Tools shows status, an on/off switch and Retry). Pavii shows
+ * its own names; the upstream projects are credited on the About page.
+ * Versions are pinned; packages and commands were verified on npm / PyPI /
+ * GitHub and in each tool's README. Pavii never runs their global setup
+ * commands (`trail init`, `headroom wrap`, `graphify install`,
+ * `agent-reach install|setup|skill --install`): those write `~/.claude*`,
+ * `~/.codex`, `~/.agents`, global npm or the user's repo.
  */
 
-export type RecommendedToolId = 'trail' | 'headroom' | 'graphify';
+export type RecommendedToolId = 'trail' | 'headroom' | 'graphify' | 'reach';
 
 export type RecommendedTool = {
   id: RecommendedToolId;
+  /** Pavii display name (brand name, not translated). */
   name: string;
+  /** Upstream project name, for the acknowledgements. */
+  upstreamName: string;
+  /** Copyright line from the upstream LICENSE (or NOTICE when LICENSE has none). */
+  upstreamCopyright: string;
   /** SPDX license id. */
   license: string;
   repoUrl: string;
   docsUrl: string;
   /** `node`: npm package in managed-tools; `uv`: `uv tool install` with managed uv. */
   runtime: 'node' | 'uv';
-  /** npm package spec or PyPI requirement, pinned. */
+  /** npm package spec or PEP 508 requirement, pinned. */
   packageSpec: string;
   version: string;
+  /** Launcher file name (without `.exe`) whose presence means the tool is installed. */
+  launcher: string;
   /** Code-map tools are only active in a workspace that looks like a code base. */
   codeBaseOnly: boolean;
+  /** Dependency packages whose executables uv also links into uv-bin (on Pavii's in-memory PATH). */
+  executablesFrom?: readonly string[];
   /** Builtin MCP server row name. */
   mcpServerName: string;
+  /**
+   * Remote MCP endpoint (http transport) the row points to. Without it, the
+   * row runs the builtin stdio wrapper (builtinMcp/codeGraphMcp.ts).
+   */
+  mcpUrl?: string;
 };
 
 export const RECOMMENDED_TOOLS: readonly RecommendedTool[] = [
   {
     id: 'trail',
-    name: 'Trail-Code',
+    name: 'Pavii Code Map',
+    upstreamName: 'Trail-Code',
+    upstreamCopyright: 'Copyright (c) 2026 Context Graph Engine contributors',
     license: 'MIT',
     repoUrl: 'https://github.com/trailhq/Trail-Code',
     docsUrl: 'https://github.com/trailhq/Trail-Code#readme',
     runtime: 'node',
     packageSpec: '@trailhq/trail-code@0.25.0',
     version: '0.25.0',
+    launcher: 'trail',
     codeBaseOnly: true,
-    mcpServerName: 'pavii-trail',
+    mcpServerName: 'pavii-code-map',
   },
   {
     id: 'headroom',
-    name: 'Headroom',
+    name: 'Pavii Compress',
+    upstreamName: 'Headroom',
+    upstreamCopyright: 'Copyright 2025 Headroom Contributors',
     license: 'Apache-2.0',
     repoUrl: 'https://github.com/headroomlabs-ai/headroom',
     docsUrl: 'https://github.com/headroomlabs-ai/headroom#readme',
     runtime: 'uv',
     packageSpec: 'headroom-ai[mcp]==0.41.0',
     version: '0.41.0',
+    launcher: 'headroom',
     codeBaseOnly: false,
-    mcpServerName: 'pavii-headroom',
+    mcpServerName: 'pavii-compress',
   },
   {
     id: 'graphify',
-    name: 'graphify',
+    name: 'Pavii Graph',
+    upstreamName: 'graphify',
+    upstreamCopyright: 'Copyright 2026 Safi Shamsi and the Graphify contributors',
     license: 'Apache-2.0',
     repoUrl: 'https://github.com/Graphify-Labs/graphify',
     docsUrl: 'https://github.com/Graphify-Labs/graphify#readme',
     runtime: 'uv',
     packageSpec: 'graphifyy[mcp]==0.9.95',
     version: '0.9.95',
+    launcher: 'graphify-mcp',
     codeBaseOnly: true,
-    mcpServerName: 'pavii-graphify',
+    mcpServerName: 'pavii-graph',
+  },
+  {
+    id: 'reach',
+    name: 'Pavii Reach',
+    upstreamName: 'Agent Reach',
+    upstreamCopyright: 'Copyright (c) 2025 Agent Eyes',
+    license: 'MIT',
+    repoUrl: 'https://github.com/Panniantong/Agent-Reach',
+    docsUrl: 'https://github.com/Panniantong/Agent-Reach#readme',
+    runtime: 'uv',
+    // v1.5.0 at commit f65526c; brings yt-dlp and feedparser into its uv environment.
+    packageSpec:
+      'agent-reach @ https://github.com/Panniantong/Agent-Reach/archive/f65526cbaaad3879473acc1ba6dbefd195caf2be.zip',
+    version: '1.5.0',
+    launcher: 'agent-reach',
+    executablesFrom: ['yt-dlp'],
+    codeBaseOnly: false,
+    // Exa's public MCP endpoint (no key): what `agent-reach install` registers via mcporter.
+    mcpServerName: 'pavii-search',
+    mcpUrl: 'https://mcp.exa.ai/mcp',
   },
 ];
+
+/** Builtin MCP row names of the Pavii tools; enabled rows join every new chat. */
+export const RECOMMENDED_TOOL_MCP_NAMES: readonly string[] = RECOMMENDED_TOOLS.map((tool) => tool.mcpServerName);
 
 /**
  * Telemetry and network switches set on every command Pavii runs for these
@@ -122,7 +171,25 @@ export type RecommendedToolStatus = {
   installed: boolean;
   /** Installed version, when known. */
   version?: string;
+  /** An install (automatic or Retry) is running now. */
+  installing?: boolean;
+  /** Error code of the last failed install attempt; absent after a success. */
+  lastError?: string;
+  /** The tool's builtin MCP row is enabled (agents get the tool). */
+  enabled?: boolean;
 };
+
+/** Last install attempt of one tool, stored in ProcessConfig `recommendedTools.installResults`. */
+export type RecommendedToolInstallRecord = {
+  /** App version that made the attempt; a failure is retried automatically only after an app update. */
+  appVersion: string;
+  success: boolean;
+  error?: string;
+  /** Epoch ms. */
+  at: number;
+};
+
+export type RecommendedToolInstallRecords = Partial<Record<RecommendedToolId, RecommendedToolInstallRecord>>;
 
 export type RecommendedToolInstallOutcome = {
   id: RecommendedToolId;

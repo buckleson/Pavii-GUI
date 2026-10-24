@@ -77,9 +77,13 @@ export function getManagedToolsPathEntries(dataDir: string, platform: NodeJS.Pla
   return platform === 'win32' ? [toolsDir] : [join(toolsDir, 'bin')];
 }
 
-/** Prepend the managed tools dir to PATH so the engine's agent detection sees it. */
+/**
+ * Prepend the managed tools dirs to PATH so the engine's agent detection sees
+ * them. `uv-bin` holds the launchers of the Pavii agent tools (uv tool
+ * installs); agents started by Pavii inherit it, nothing outside Pavii does.
+ */
 export function registerManagedToolsOnPath(dataDir: string, env: NodeJS.ProcessEnv = process.env): void {
-  const entries = getManagedToolsPathEntries(dataDir);
+  const entries = [...getManagedToolsPathEntries(dataDir), join(getManagedToolsDir(dataDir), 'uv-bin')];
   const currentPath = env.PATH ?? '';
   const parts = currentPath.split(delimiter);
   const missing = entries.filter((entry) => !parts.includes(entry));

@@ -13,10 +13,9 @@ type Handler = (payload?: unknown) => Promise<unknown>;
 
 const mocks = vi.hoisted(() => ({
   handlers: {} as Record<string, Handler>,
-  getStatus: vi.fn(),
+  getStates: vi.fn(),
+  setEnabled: vi.fn(),
   install: vi.fn(),
-  getOffer: vi.fn(),
-  dismiss: vi.fn(),
 }));
 
 vi.mock('@/common', () => {
@@ -30,19 +29,17 @@ vi.mock('@/common', () => {
       recommendedTools: {
         getStatus: provider('getStatus'),
         install: provider('install'),
-        getFirstRunOffer: provider('getFirstRunOffer'),
-        dismissFirstRunOffer: provider('dismissFirstRunOffer'),
+        setEnabled: provider('setEnabled'),
       },
     },
   };
 });
 
-vi.mock('@process/agentCli/recommendedTools/status', () => ({ getRecommendedToolStatus: mocks.getStatus }));
-vi.mock('@process/agentCli/recommendedTools/install', () => ({ installRecommendedTools: mocks.install }));
-vi.mock('@process/agentCli/recommendedTools/firstRunOffer', () => ({
-  getFirstRunOffer: mocks.getOffer,
-  dismissFirstRunOffer: mocks.dismiss,
+vi.mock('@process/agentCli/recommendedTools/toolState', () => ({
+  getRecommendedToolStates: mocks.getStates,
+  setRecommendedToolEnabled: mocks.setEnabled,
 }));
+vi.mock('@process/agentCli/recommendedTools/install', () => ({ installRecommendedTools: mocks.install }));
 
 import { initRecommendedToolsBridge } from '@process/agentCli/recommendedTools/bridge';
 
@@ -59,19 +56,20 @@ afterEach(() => {
 });
 
 describe('recommended tools bridge: getStatus', () => {
-  it('returns the service status', async () => {
-    mocks.getStatus.mockReturnValue([{ id: 'trail', installed: true, version: '0.25.0' }]);
-    await expect(mocks.handlers.getStatus()).resolves.toEqual([{ id: 'trail', installed: true, version: '0.25.0' }]);
+  it('returns the tool states', async () => {
+    mocks.getStates.mockResolvedValue([{ id: 'trail', installed: true, version: '0.25.0', enabled: true }]);
+    await expect(mocks.handlers.getStatus()).resolves.toEqual([
+      { id: 'trail', installed: true, version: '0.25.0', enabled: true },
+    ]);
   });
 
-  it('reports every tool not installed when the status check throws', async () => {
-    mocks.getStatus.mockImplementation(() => {
-      throw new Error('fs down');
-    });
+  it('reports every tool not installed when the state check throws', async () => {
+    mocks.getStates.mockRejectedValue(new Error('fs down'));
     await expect(mocks.handlers.getStatus()).resolves.toEqual([
       { id: 'trail', installed: false },
       { id: 'headroom', installed: false },
       { id: 'graphify', installed: false },
+      { id: 'reach', installed: false },
     ]);
   });
 });
@@ -94,26 +92,16 @@ describe('recommended tools bridge: install', () => {
   });
 });
 
-describe('recommended tools bridge: first-run offer', () => {
-  it('returns the service answer', async () => {
-    mocks.getOffer.mockResolvedValue(true);
-    await expect(mocks.handlers.getFirstRunOffer()).resolves.toBe(true);
+describe('recommended tools bridge: setEnabled', () => {
+  it('passes the id and the requested state to the switch', async () => {
+    mocks.setEnabled.mockResolvedValue(undefined);
+    await mocks.handlers.setEnabled({ id: 'reach', enabled: false });
+    expect(mocks.setEnabled).toHaveBeenCalledWith('reach', false);
   });
 
-  it('does not offer when the check throws', async () => {
-    mocks.getOffer.mockRejectedValue(new Error('storage down'));
-    await expect(mocks.handlers.getFirstRunOffer()).resolves.toBe(false);
-  });
-
-  it('dismisses through the service', async () => {
-    mocks.dismiss.mockResolvedValue(undefined);
-    await mocks.handlers.dismissFirstRunOffer();
-    expect(mocks.dismiss).toHaveBeenCalledTimes(1);
-  });
-
-  it('logs instead of rejecting when dismissing fails', async () => {
-    mocks.dismiss.mockRejectedValue(new Error('disk full'));
-    await expect(mocks.handlers.dismissFirstRunOffer()).resolves.toBeUndefined();
+  it('logs and rejects when switching fails, so the renderer can show an error', async () => {
+    mocks.setEnabled.mockRejectedValue(new Error('toggle failed'));
+    await expect(mocks.handlers.setEnabled({ id: 'trail', enabled: true })).rejects.toThrow('toggle failed');
     expect(warn).toHaveBeenCalled();
   });
 });

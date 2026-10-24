@@ -5,6 +5,7 @@
  */
 
 import type { AgentCliUpdateState } from '@/common/types/agent/agentCliUpdate';
+import type { RecommendedToolInstallRecords } from '@/common/types/agent/recommendedTools';
 import type { SpeechToTextConfig } from '@/common/types/provider/speech';
 import type { Theme } from '@/common/theme/types';
 import { buildStorage } from '@/common/platform/storage';
@@ -56,8 +57,8 @@ export interface IConfigStorageRefer {
   'paviiData.restoreDismissedFor'?: string;
   /** Epoch ms of the last automatic `.pavii` backup save. */
   'paviiData.lastAutoSaveAt'?: number;
-  /** User dismissed the first-run recommended agent tools prompt. */
-  'recommendedTools.firstRunDismissed'?: boolean;
+  /** Last install attempt of each Pavii agent tool (automatic install or Retry). */
+  'recommendedTools.installResults'?: RecommendedToolInstallRecords;
   /**
    * One-shot completion flag for the legacy `model.config` → backend providers
    * migration in {@link migrateProviders}. Once `true`, the migration is
