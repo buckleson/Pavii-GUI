@@ -114,12 +114,26 @@ describe('installRecommendedTools: Trail-Code via npm', () => {
 describe('installRecommendedTools: Python tools via uv', () => {
   it('runs uv tool install with Python 3.12 and the pinned headroom spec', async () => {
     await installRecommendedTools(['headroom']);
-    expect(callsTo(UV)[0][1]).toEqual(['tool', 'install', '--python', '3.12', 'headroom-ai[mcp]==0.41.0']);
+    expect(callsTo(UV)[0][1]).toEqual([
+      'tool',
+      'install',
+      '--managed-python',
+      '--python',
+      '3.12',
+      'headroom-ai[mcp]==0.41.0',
+    ]);
   });
 
   it('runs uv tool install with the pinned graphify spec', async () => {
     await installRecommendedTools(['graphify']);
-    expect(callsTo(UV)[0][1]).toEqual(['tool', 'install', '--python', '3.12', 'graphifyy[mcp]==0.9.95']);
+    expect(callsTo(UV)[0][1]).toEqual([
+      'tool',
+      'install',
+      '--managed-python',
+      '--python',
+      '3.12',
+      'graphifyy[mcp]==0.9.95',
+    ]);
   });
 
   it('keeps uv tools, launchers, Pythons and cache inside managed-tools', async () => {

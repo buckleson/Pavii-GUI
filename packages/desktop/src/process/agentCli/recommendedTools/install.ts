@@ -73,7 +73,9 @@ const installUvTool = async (tool: RecommendedTool): Promise<RecommendedToolInst
     throw error;
   }
   const paths = getRecommendedToolPaths();
-  const run = await runFile(uv, ['tool', 'install', '--python', PYTHON_VERSION, tool.packageSpec], {
+  // --managed-python: use uv's own Python under uvPythonDir, never a system
+  // install (a system Python removed or upgraded later would break the tool).
+  const run = await runFile(uv, ['tool', 'install', '--managed-python', '--python', PYTHON_VERSION, tool.packageSpec], {
     timeoutMs: UV_TOOL_TIMEOUT_MS,
     env: {
       UV_TOOL_DIR: paths.uvToolDir,
